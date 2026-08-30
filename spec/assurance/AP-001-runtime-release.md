@@ -21,7 +21,7 @@ review_policy:
   mode: require
   operations: [code-review, gap-analysis]
 relationships:
-  - target: ix://agent-ix/quire-contract-ir/issues/3
+  - target: ix://agent-ix/quire-contract-ir/PGM-01
     type: references
 ---
 # Quire contract runtime v0.1 decision profile
