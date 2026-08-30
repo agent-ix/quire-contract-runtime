@@ -25,9 +25,9 @@ source-release decision.
 
 Date: 2026-08-30
 
-Candidate source revision: `673f3ad92e07584d78750679cf1349dfdee193a0`
+Candidate source revision: `5ac3eee4b92a73e6797bb72a56dc13f6f518d893`
 
-Evidence: `evidence/runtime-v01-673f3ad92e07-20260830T220953Z/sha256sums.txt`
+Evidence: `evidence/runtime-v01-5ac3eee4b92a-20260830T223136Z/sha256sums.txt`
 
 ## Requirement audit
 
