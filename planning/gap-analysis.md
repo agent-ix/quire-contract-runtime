@@ -84,7 +84,7 @@ ordinary-comment `Implements:` bindings intact.
 
 Date: 2026-08-30
 
-Candidate source revision: `a344ce6d948c001be6c24174deeacba1beb724d3`
+Candidate source revision: `b7d4bf104224ee970217c3ce843a5b7b6b231915`
 
 Evidence: the immutable record named for this reconciliation commit is added by the immediately
 following evidence-only commit.
