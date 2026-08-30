@@ -11,9 +11,9 @@ review_set: subset
 
 ## Summary
 
-The runtime requirements and implementation have no unresolved semantic gap after disposition of the
-source review at `6a720fbf`. The candidate remains gated by upstream governance reconciliation,
-current protected checks and review, and the human source-release decision.
+The runtime requirements and implementation have no unresolved semantic gap after two executed
+source-review rounds. The candidate remains gated by upstream governance reconciliation, current
+protected checks and review, and the human source-release decision.
 
 ## Findings
 
@@ -31,7 +31,7 @@ current protected checks and review, and the human source-release decision.
 | FND-002 | Replaced the conditional `rg` gate with a status-aware `grep` audit that exits 2 when its scanner is unavailable or errors. |
 | FND-003 | Made report and counter state private; exposed read-only accessors and a typed identity-mismatch result. |
 | FND-004 | Added five downstream compile-fail doctests plus TC-008 source-policy coverage for every non-exhaustive enum. |
-| FND-005 | Added a fail-closed 262,144-byte rlib gate to local CI, manual remote CI, and retained evidence collection. |
+| FND-005 | Replaced the compiler-sensitive rlib ceiling with a fail-closed linked-section footprint gate fixed to Rust 1.75 and `thumbv7em-none-eabi`; rlib bytes remain an observation. |
 | FND-006 | Added a default-profile compile-fail doctest proving `proptest_adapter` is absent without the feature. |
 | FND-007 | Added `adapt_recording`, which records the full campaign census before returning the proptest result. |
 | FND-008 | Replaced the Boolean mismatch signal with `IdentityMismatch`, retaining expected and actual identities. |
@@ -39,18 +39,41 @@ current protected checks and review, and the human source-release decision.
 | FND-010 | Classified reserved `alloc`/`std` rows explicitly as resolver/build compatibility checks. |
 | FND-011 | Added a crate-wide `missing_docs` denial. |
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
-| GAP-002 | Added 66 requirement implementation bindings; Quire reports zero untracked production symbols. |
+| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 66/103 production symbols are owned, while zero test symbols carry an unbound trace ID. The 37 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
 | GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 27/27 with 13/13 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
-| GAP-006 | Expanded `make ci` to include explicit MSRV, release build, and enforced rlib-size gates. |
+| GAP-006 | Expanded `make ci` to check all targets/features at the explicit MSRV, build a fixed bare-metal consumer, and enforce its linked-section footprint. |
 | GAP-007 | Added `plan/PLAN-001-runtime-v01/` with five completed typed tasks and one explicitly human-owned open task. |
+
+## Re-review disposition
+
+| Review finding | Disposition |
+|---|---|
+| NEW-001 | Replaced the unsatisfiable rlib ceiling with a representative `no_std` static-library consumer built by Rust 1.75 for `thumbv7em-none-eabi`. The fixed, non-overridable gate measures only runtime/harness `.text` plus `.rodata`: 590 bytes against 4,096. |
+| NEW-002 | Removed the Makefile-text assertion. TC-007's procedure consumes the executed `make ci` output instead of claiming target behavior from a target-name string. |
+| NEW-003 | Annotated the mutable historical README: the retained `msrv_1_75=SUCCESS` is invalidated by the toolchain-precedence defect, while the Kani result applies only to its historical revision. |
+| NEW-004 | Replaced the overstated traceability row with the engine's 66/103 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
+| NEW-005 | Changed `adapt_recording` to return `TestCaseResult`; identity mismatch is now a proptest failure containing expected and observed identities, with a direct regression test. |
+| NEW-006 | Denied Clippy indexing and arithmetic-side-effect lints crate-wide, made indexing use `slice::get`, and extended the fail-closed text audit to verification source while permitting Kani proof assertions. |
+| NEW-007 | Anchored all five enum declarations exactly and asserted distinct `VerdictKind`/`Verdict` offsets. |
+| NEW-008 | Added a public `&mut self` method allowlist for accounting types plus built-in ordinary/`const` setter mutation probes. |
+| NEW-009 | Removed the attribute-order string assertion; the compile-fail doctest remains the behavioral feature-absence proof. |
+| NEW-010 | Implemented allocation-free `Display` for `IdentityMismatch`. |
+| NEW-011 | Removed the environment-overridable threshold; the linked footprint script contains the fixed target and 4,096-byte ceiling. |
+| NEW-012 | Converted every `Implements:` annotation from a doc comment to an ordinary source comment; Quire retains the bindings without publishing them in rustdoc. |
+| NEW-013 | Moved the private saturation test into an explicitly named test-only source file excluded from the shipped-source panic scan, restoring normal assertive diagnostics. |
+
+The residual noted under FND-001 is also closed: `make msrv` now checks all targets and features with
+Cargo 1.75, covering optional features, examples, and test targets rather than only the
+dependency-free library profile.
 
 Date: 2026-08-30
 
-Candidate source revision: `6457c2c3f00dcbdce84205d4f72ed7d9ddb5596b`
+Candidate source revision: `b5ce806a9f4f3315ce89e77bc80e816d696d904c`
 
-Evidence: `evidence/runtime-v01-6457c2c3f00d-20260830T230108Z/sha256sums.txt`
+Evidence: the immutable record named for this reconciliation commit is added by the immediately
+following evidence-only commit.
 
 ## Requirement audit
 
@@ -63,23 +86,23 @@ Evidence: `evidence/runtime-v01-6457c2c3f00d-20260830T230108Z/sha256sums.txt`
 | #1 three distinct terminal verdicts | `src/verdict.rs`; TC-001 output | pass |
 | #1 identity, observations, structured details | `src/identity.rs`, `src/observation.rs`; TC-001 output | pass |
 | #1 default no_std/allocation-free surface | `#![no_std]`, empty default feature set, default dependency tree containing only this crate | pass |
-| #1 size, panic, feature, compatibility contracts | crate/README docs, panic audit, feature matrix, layout and rlib measurements | pass |
+| #1 size, panic, feature, compatibility contracts | crate/README docs, semantic Clippy lints, shipped/Kani panic audit, feature matrix, layout, fixed-target linked footprint, and observational rlib measurement | pass |
 | #1 permissive generated-code surface | default dependency tree empty; crate `MIT OR Apache-2.0` | pass |
 | #3 short-circuit and total operators | `src/operators.rs`; exhaustive TC-002 truth/evaluation tests | pass |
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
-| Acceptance-criterion traceability | 27/27 rows backed; 13/13 Rust test symbols bound; 66 implementation bindings and zero untracked production symbols | pass |
+| Acceptance-criterion traceability | 27/27 rows backed; 14/14 Rust test symbols bound; 66/103 production symbols owned; 37 deliberately unowned generated/private/tooling symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
-| Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; 56 retained MP-001 files/digests | pass |
+| Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
 
 ## Gap disposition
 
-No unresolved implementation or specification gap was found. The source candidate is within the
-enforced 256 KiB rlib ceiling at 257,158 bytes, compiles under the explicit Rust 1.75 lane, has no
-default normal dependency, contains no unsafe or intentional panic surface, and passes every locally
-available gate.
+No unresolved implementation or specification gap was found. The source candidate's representative
+bare-metal linked footprint is 590 bytes against the fixed 4,096-byte ceiling, and every declared
+target/feature compiles under the explicit Rust 1.75 lane. It has no default normal dependency,
+contains no unsafe or intentional runtime panic surface, and passes every locally available gate.
 
 The following are release/workflow gates, not silently accepted gaps:
 
