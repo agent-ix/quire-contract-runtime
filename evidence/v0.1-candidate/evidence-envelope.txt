@@ -1,6 +1,6 @@
 schema=contract-evidence-envelope-v1
 tool=quire-contract-runtime/scripts/collect_evidence.sh
-input.source_revision=3d10342b56bd92ea9846020f3e6a901d9ece80d7
+input.source_revision=ab7d5af4ffec7cd1cefd4db24828716ceecbd554
 input.source_state=clean
 input.schema=quire-contract-runtime-v1
 backend.rustc=rustc 1.94.1 (e408947bf 2026-03-25)
