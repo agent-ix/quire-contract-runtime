@@ -8,5 +8,3 @@ Warning: can't set `imports_granularity = Crate`, unstable features are only ava
 Warning: can't set `group_imports = StdExternalCrate`, unstable features are only available in nightly channel.
 Warning: can't set `imports_granularity = Crate`, unstable features are only available in nightly channel.
 Warning: can't set `group_imports = StdExternalCrate`, unstable features are only available in nightly channel.
-Warning: can't set `imports_granularity = Crate`, unstable features are only available in nightly channel.
-Warning: can't set `group_imports = StdExternalCrate`, unstable features are only available in nightly channel.
