@@ -41,7 +41,7 @@ protected checks and review, and the human source-release decision.
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
 | GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 66/109 production symbols are owned, while zero test symbols carry an unbound trace ID. The 43 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
-| GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 27/27 with 13/13 Rust candidates tagged and bound. |
+| GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 27/27 with 14/14 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
 | GAP-006 | Expanded `make ci` to check all targets/features at the explicit MSRV, build a fixed bare-metal consumer, and enforce its linked-section footprint. |
 | GAP-007 | Added `plan/PLAN-001-runtime-v01/` with five completed typed tasks and one explicitly human-owned open task. |
@@ -84,7 +84,7 @@ ordinary-comment `Implements:` bindings intact.
 
 Date: 2026-08-30
 
-Candidate source revision: `b5ce806a9f4f3315ce89e77bc80e816d696d904c`
+Candidate source revision: `a344ce6d948c001be6c24174deeacba1beb724d3`
 
 Evidence: the immutable record named for this reconciliation commit is added by the immediately
 following evidence-only commit.
