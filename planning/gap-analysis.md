@@ -1,4 +1,27 @@
+---
+id: SR-001
+title: "Runtime v0.1 gap analysis"
+type: SpecReview
+analysis: gap-analysis
+scope: "runtime requirements, implementation, tests, evidence, and release gates"
+review_set: subset
+---
+
 # Runtime v0.1 gap analysis
+
+## Summary
+
+The runtime requirements and implementation have no unresolved semantic gap. The candidate remains
+blocked by upstream governance reconciliation, current protected checks and review, and the human
+source-release decision.
+
+## Findings
+
+| ID | Severity | Summary | Refs |
+|---|---|---|---|
+| FND-001 | high | PGM-01 review findings and the final merged identity remain open. | PGM-01, REV-002 |
+| FND-002 | medium | The rebased manual-CI head has no deliberately dispatched protected run. | MP-001, PR #5, PR #6 |
+| FND-003 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
 
 Date: 2026-08-30
 

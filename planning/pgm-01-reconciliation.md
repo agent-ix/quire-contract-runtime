@@ -1,3 +1,9 @@
+---
+id: REV-002
+title: "Runtime PGM-01 candidate reconciliation"
+type: Review
+---
+
 # PGM-01 candidate reconciliation
 
 Runtime source reviewed: the source commit immediately preceding refreshed candidate evidence.

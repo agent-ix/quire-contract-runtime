@@ -1,3 +1,9 @@
+---
+id: REV-003
+title: "Runtime v0.1 source-release decision"
+type: Review
+---
+
 # v0.1 source-release decision
 
 Status: open
@@ -13,4 +19,3 @@ Decision: pending human review
 
 Rationale: no automated tool or agent may accept this source candidate or claim project-specific
 validation, accreditation, or certification.
-
