@@ -34,11 +34,14 @@ Boolean truth-table rows; checked integer boundaries; verdict mappings; and acco
 ## Collection Procedure
 
 Run `scripts/collect_evidence.sh`. It records source and tool identities, feature-matrix tests, Clippy,
-license and unsafe checks, Kani availability/result, dependency metadata, release rlib size, and output
-digests beneath `evidence/`. Preserve failures and skips rather than deleting them.
+license and unsafe checks, Kani availability/result, dependency metadata, the Rust 1.75
+`thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
+`evidence/`. Preserve failures and skips rather than deleting them.
 
 ## Interpretation
 
 A green run supports only the bounded source candidate. A skipped Kani run, absent governance gate,
-or open human review remains an explicit limitation. Artifact byte size is compared with the 256 KiB
-ceiling and is not treated as target RAM/ROM utilization.
+or open human review remains an explicit limitation. The representative consumer's runtime/harness
+`.text` plus `.rodata` is compared with the fixed 4 KiB ceiling. The rlib byte count is retained only
+as an observation because it varies with compiler metadata and build paths; neither value is treated
+as whole-application RAM/ROM utilization.

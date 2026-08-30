@@ -12,8 +12,9 @@ relationships:
 
 ## Description
 
-Verify the default linked boundary remains dependency-free and unsafe-free, the release rlib remains
-within 256 KiB, and publication and dual-license controls remain explicit.
+Verify the default linked boundary remains dependency-free and unsafe-free, the Rust 1.75
+`thumbv7em-none-eabi` footprint consumer remains within 4 KiB of linked `.text` plus `.rodata`, and
+publication and dual-license controls remain explicit.
 
 ## Test Procedure
 
@@ -23,5 +24,6 @@ unsafe audit, `cargo deny` result, and the enforced release-size output retained
 ## Expected Results
 
 The source policy test passes, the default normal dependency count and unsafe-block count are zero,
-the license and publication gates pass, and `scripts/check_rlib_size.sh` exits successfully only when
-the measured rlib is no larger than 262,144 bytes.
+the license and publication gates pass, and `scripts/check_linked_footprint.sh` exits successfully
+only when the fixed-target runtime/harness sections are no larger than 4,096 bytes. The rlib byte
+count is retained separately as an unenforced compiler-sensitive observation.

@@ -33,6 +33,7 @@ git rev-parse HEAD >"$evidence_dir/source-revision.txt"
 echo "$source_state" >"$evidence_dir/source-state.txt"
 rustc --version --verbose >"$evidence_dir/rustc-version.txt"
 rustc +1.75.0 --version --verbose >"$evidence_dir/msrv-rustc-version.txt"
+size --version >"$evidence_dir/size-version.txt"
 cargo --version --verbose >"$evidence_dir/cargo-version.txt"
 python3 --version >"$evidence_dir/python-version.txt"
 python3 -c 'import jsonschema; print(jsonschema.__version__)' >"$evidence_dir/jsonschema-version.txt"
@@ -45,17 +46,18 @@ run_and_retain test-core cargo test --no-default-features
 run_and_retain test-alloc cargo test --features alloc
 run_and_retain test-std cargo test --features std
 run_and_retain test-all cargo test --all-features
-run_and_retain msrv cargo +1.75.0 check --lib --no-default-features
+run_and_retain msrv cargo +1.75.0 check --all-targets --all-features
 run_and_retain deny cargo deny check licenses
 run_and_retain unsafe-audit bash scripts/check_unsafe_comments.sh
 run_and_retain panic-audit bash scripts/check_panic_surface.sh
 run_and_retain metadata cargo metadata --format-version 1 --no-default-features
 run_and_retain default-dependencies cargo tree --edges normal --no-default-features
 run_and_retain release-build cargo build --release --lib --no-default-features
+run_and_retain linked-footprint make size
 run_and_retain layout cargo run --release --example layout --no-default-features
 run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings cargo doc --all-features --no-deps
-run_and_retain rlib-size \
-  bash scripts/check_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
+run_and_retain rlib-size-observation \
+  bash scripts/measure_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
 
 if command -v cargo-kani >/dev/null 2>&1; then
   run_and_retain kani cargo kani

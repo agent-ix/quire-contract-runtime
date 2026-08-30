@@ -5,7 +5,7 @@ use crate::ClauseId;
 /// Semantic role of one contract clause.
 ///
 /// Trace: TC-008, NFR-002-AC-3
-/// Implements: FR-001
+// Implements: FR-001
 ///
 /// ```compile_fail
 /// use quire_contract_runtime::ClauseKind;
@@ -39,7 +39,7 @@ pub enum ClauseKind {
 /// Observable result of evaluating one clause.
 ///
 /// Trace: TC-008, NFR-002-AC-3
-/// Implements: FR-001
+// Implements: FR-001
 ///
 /// ```compile_fail
 /// use quire_contract_runtime::ClauseOutcome;
@@ -73,7 +73,7 @@ pub enum ClauseOutcome {
 /// Stable category for a failure or rejection.
 ///
 /// Trace: TC-008, NFR-002-AC-3
-/// Implements: FR-001
+// Implements: FR-001
 ///
 /// ```compile_fail
 /// use quire_contract_runtime::FailureKind;
@@ -103,31 +103,31 @@ pub enum FailureKind {
 
 /// Allocation-free structured failure information.
 ///
-/// Implements: FR-001
+// Implements: FR-001
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct FailureDetail<'a> {
     /// Clause that produced this result.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub clause: ClauseId<'a>,
     /// Stable category interpreted independently of human-readable text.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub kind: FailureKind,
     /// Contract-specific numeric code. Zero is permitted and has no implicit meaning.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub code: u32,
     /// Optional borrowed diagnostic; evidence processing must not depend on its wording.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub message: Option<&'a str>,
 }
 
 impl<'a> FailureDetail<'a> {
     /// Creates structured failure information.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn new(
         clause: ClauseId<'a>,
@@ -146,31 +146,31 @@ impl<'a> FailureDetail<'a> {
 
 /// One allocation-free clause observation.
 ///
-/// Implements: FR-001
+// Implements: FR-001
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Observation<'a> {
     /// Stable clause identity.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub clause: ClauseId<'a>,
     /// Clause semantic role.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub kind: ClauseKind,
     /// Observable evaluation result.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub outcome: ClauseOutcome,
     /// Structured detail for a failure, rejection, or undefined result.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub detail: Option<FailureDetail<'a>>,
 }
 
 impl<'a> Observation<'a> {
     /// Creates an observation.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn new(
         clause: ClauseId<'a>,

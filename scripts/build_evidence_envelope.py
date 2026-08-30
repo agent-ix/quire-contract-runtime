@@ -58,7 +58,8 @@ def command_outcomes(kani_status: str) -> list[dict[str, str]]:
         "release-build",
         "layout",
         "rustdoc",
-        "rlib-size",
+        "linked-footprint",
+        "rlib-size-observation",
     )
     outcomes = [{"name": name, "status": "passed"} for name in passed]
     outcomes.append({"name": "kani", "status": kani_status})
@@ -71,6 +72,11 @@ def hash_parameter_files() -> str:
         ROOT / "Cargo.lock",
         ROOT / "Makefile",
         ROOT / "rust-toolchain.toml",
+        ROOT / "measurement" / "footprint" / "Cargo.toml",
+        ROOT / "measurement" / "footprint" / "Cargo.lock",
+        ROOT / "measurement" / "footprint" / "src" / "lib.rs",
+        ROOT / "scripts" / "check_linked_footprint.sh",
+        ROOT / "scripts" / "measure_rlib_size.sh",
         COLLECTOR,
         BUILDER,
         SCHEMA_VALIDATOR,
@@ -122,14 +128,15 @@ def build(evidence_dir: Path) -> None:
             "cargo test --features alloc",
             "cargo test --features std",
             "cargo test --all-features",
-            "cargo +1.75.0 check --lib --no-default-features",
+            "cargo +1.75.0 check --all-targets --all-features",
             "cargo deny check licenses",
             "bash scripts/check_unsafe_comments.sh",
             "bash scripts/check_panic_surface.sh",
             "cargo metadata --format-version 1 --no-default-features",
             "cargo tree --edges normal --no-default-features",
             "cargo build --release --lib --no-default-features",
-            "bash scripts/check_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
+            "make size",
+            "bash scripts/measure_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
             "cargo run --release --example layout --no-default-features",
             "RUSTDOCFLAGS=-Dwarnings cargo doc --all-features --no-deps",
             "cargo kani (when available)",
@@ -151,6 +158,9 @@ def build(evidence_dir: Path) -> None:
             .read_text(encoding="utf-8")
             .splitlines()[0],
             "rust-msrv": (evidence_dir / "msrv-rustc-version.txt")
+            .read_text(encoding="utf-8")
+            .splitlines()[0],
+            "size": (evidence_dir / "size-version.txt")
             .read_text(encoding="utf-8")
             .splitlines()[0],
         },

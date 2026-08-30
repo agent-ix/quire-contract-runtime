@@ -4,27 +4,27 @@ use crate::{ContractIdentity, ExecutionPoint, FailureDetail, Observation};
 
 /// Common provenance carried by every verdict.
 ///
-/// Implements: FR-001
+// Implements: FR-001
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct VerdictContext<'a> {
     /// Requirement and revision under evaluation.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub identity: ContractIdentity<'a>,
     /// Named point where the oracle observed the program.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub execution_point: ExecutionPoint<'a>,
     /// Per-clause observations in generated contract order.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     pub observations: &'a [Observation<'a>],
 }
 
 impl<'a> VerdictContext<'a> {
     /// Creates common verdict provenance without allocation.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn new(
         identity: ContractIdentity<'a>,
@@ -42,7 +42,7 @@ impl<'a> VerdictContext<'a> {
 /// Stable terminal category for counters and adapters.
 ///
 /// Trace: TC-008, NFR-002-AC-3
-/// Implements: FR-001
+// Implements: FR-001
 ///
 /// Downstream exhaustive matching is rejected so future terminal categories cannot be silently
 /// treated as success:
@@ -76,7 +76,7 @@ pub enum VerdictKind {
 /// must choose how to retain a rejected precondition instead of accidentally treating it as success.
 ///
 /// Trace: TC-008, FR-001-AC-3, NFR-002-AC-3
-/// Implements: FR-001
+// Implements: FR-001
 ///
 /// Downstream exhaustive matching is rejected:
 ///
@@ -115,7 +115,7 @@ pub enum Verdict<'a> {
 impl<'a> Verdict<'a> {
     /// Constructs a successful verdict.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn passed(context: VerdictContext<'a>) -> Self {
         Self::Passed(context)
@@ -123,7 +123,7 @@ impl<'a> Verdict<'a> {
 
     /// Constructs a failed-postcondition verdict.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn failed_postcondition(
         context: VerdictContext<'a>,
@@ -134,7 +134,7 @@ impl<'a> Verdict<'a> {
 
     /// Constructs a rejected-precondition verdict.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn rejected_precondition(
         context: VerdictContext<'a>,
@@ -145,7 +145,7 @@ impl<'a> Verdict<'a> {
 
     /// Returns the terminal category without discarding rejection.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn kind(&self) -> VerdictKind {
         match self {
@@ -157,7 +157,7 @@ impl<'a> Verdict<'a> {
 
     /// Returns common requirement, revision, execution-point, and observation provenance.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn context(&self) -> &VerdictContext<'a> {
         match self {
@@ -169,7 +169,7 @@ impl<'a> Verdict<'a> {
 
     /// Returns structured terminal detail for failure or rejection.
     ///
-    /// Implements: FR-001
+    // Implements: FR-001
     #[must_use]
     pub const fn detail(&self) -> Option<&FailureDetail<'a>> {
         match self {

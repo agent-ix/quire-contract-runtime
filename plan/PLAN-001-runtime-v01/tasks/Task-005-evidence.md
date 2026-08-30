@@ -23,5 +23,6 @@ PGM-01 candidate without claiming protected or human gates passed.
 
 ## Completion Evidence
 
-The current local `make ci` includes explicit MSRV and rlib-size gates. The retained evidence record
-passes local schemas plus the exact PGM-01 schema and custom validator.
+The current local `make ci` checks every target and feature at the explicit MSRV and enforces a
+fixed-target linked-section footprint while retaining rlib bytes as an observation. The retained
+evidence record passes local schemas plus the exact PGM-01 schema and custom validator.

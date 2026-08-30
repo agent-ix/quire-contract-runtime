@@ -43,7 +43,7 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 - TC-004: `tests/proptest_adapter.rs`.
 - TC-005: `tests/release_contract.rs`, compile-fail crate documentation, `make test-features`, and the
   retained default dependency record.
-- TC-007: `tests/release_contract.rs` plus retained dependency, enforced size, unsafe, license, and
-  manifest audit records.
+- TC-007: `tests/release_contract.rs` plus retained dependency, enforced linked-footprint,
+  observational rlib-size, unsafe, license, and manifest audit records.
 - TC-008: `tests/release_contract.rs`, five compile-fail enum doctests, public API documentation, and
   retained schema evidence.

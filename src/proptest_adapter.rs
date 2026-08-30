@@ -1,15 +1,16 @@
 //! Optional adaptation to proptest's tri-state test-case result.
 
+use alloc::format;
 use proptest::test_runner::{TestCaseError, TestCaseResult};
 
-use crate::{CampaignReport, IdentityMismatch, Verdict, VerdictKind};
+use crate::{CampaignReport, Verdict, VerdictKind};
 
 /// Maps a runtime verdict to proptest without converting rejected cases to success.
 ///
 /// This stateless helper does not record campaign counts. Use [`adapt_recording`] when the result
 /// contributes to campaign evidence.
 ///
-/// Implements: FR-003
+// Implements: FR-003
 pub fn adapt(verdict: &Verdict<'_>) -> TestCaseResult {
     match verdict.kind() {
         VerdictKind::Passed => Ok(()),
@@ -24,14 +25,15 @@ pub fn adapt(verdict: &Verdict<'_>) -> TestCaseResult {
 
 /// Records a verdict in its matching report before adapting it to proptest.
 ///
-/// The outer result reports an identity mismatch. The inner [`TestCaseResult`] preserves proptest's
-/// pass, failure, or rejection result.
+/// An identity mismatch becomes a proptest failure that retains both identities. Otherwise the
+/// result preserves the verdict's pass, failure, or rejection outcome.
 ///
-/// Implements: FR-003, FR-004
-pub fn adapt_recording<'report, 'verdict>(
-    report: &mut CampaignReport<'report>,
-    verdict: &Verdict<'verdict>,
-) -> Result<TestCaseResult, IdentityMismatch<'report, 'verdict>> {
-    report.record_verdict(verdict)?;
-    Ok(adapt(verdict))
+// Implements: FR-003, FR-004
+pub fn adapt_recording(report: &mut CampaignReport<'_>, verdict: &Verdict<'_>) -> TestCaseResult {
+    if let Err(mismatch) = report.record_verdict(verdict) {
+        return Err(TestCaseError::fail(format!(
+            "contract identity mismatch: {mismatch}"
+        )));
+    }
+    adapt(verdict)
 }
