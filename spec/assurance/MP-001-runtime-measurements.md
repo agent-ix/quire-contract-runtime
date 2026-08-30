@@ -31,6 +31,13 @@ validation or accreditation.
 The population is the exact source revision across core, alloc, std, and proptest features; all
 Boolean truth-table rows; checked integer boundaries; verdict mappings; and accounting transitions.
 
+The v0.1 linked-footprint population is versioned with this plan. Its static-library consumer calls
+every public runtime constructor, `CampaignReport::record_verdict`,
+`CampaignReport::record_discard`, and every Boolean, option, index, and checked-integer operator
+family. TC-007 parses the harness and requires those call expressions, so changing the population
+requires an explicit measurement-plan and test update. The harness is a workspace member and uses
+the root release profile (`lto = "thin"`, one codegen unit, and aborting panics), not a private profile.
+
 ## Collection Procedure
 
 Run `scripts/collect_evidence.sh`. It records source and tool identities, feature-matrix tests, Clippy,

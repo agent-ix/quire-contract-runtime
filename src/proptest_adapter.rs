@@ -9,7 +9,6 @@ use crate::{CampaignReport, Verdict, VerdictKind};
 ///
 /// This stateless helper does not record campaign counts. Use [`adapt_recording`] when the result
 /// contributes to campaign evidence.
-///
 // Implements: FR-003
 pub fn adapt(verdict: &Verdict<'_>) -> TestCaseResult {
     match verdict.kind() {
@@ -27,7 +26,6 @@ pub fn adapt(verdict: &Verdict<'_>) -> TestCaseResult {
 ///
 /// An identity mismatch becomes a proptest failure that retains both identities. Otherwise the
 /// result preserves the verdict's pass, failure, or rejection outcome.
-///
 // Implements: FR-003, FR-004
 pub fn adapt_recording(report: &mut CampaignReport<'_>, verdict: &Verdict<'_>) -> TestCaseResult {
     if let Err(mismatch) = report.record_verdict(verdict) {

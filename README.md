@@ -47,7 +47,8 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 - Public data enums are non-exhaustive for forward-compatible retention of future states.
 - Exact type and release artifact sizes are target-dependent and retained per candidate. The v0.1
   gate fixes Rust 1.75 and `thumbv7em-none-eabi`, then limits the representative static-library
-  consumer's linked `.text` plus `.rodata` to 4 KiB. Compiler-sensitive rlib bytes are observational.
+  fixed-population consumer's linked `.text` plus `.rodata` to 4 KiB. Compiler-sensitive rlib bytes
+  are observational; MP-001 defines the exercised API set and shared release profile.
 - The crate and generated customer-linked surface are `MIT OR Apache-2.0` and `publish = false` until
   the human v0.1 source-release decision.
 - Release evidence can support a consuming project's validation or accreditation decision; it does

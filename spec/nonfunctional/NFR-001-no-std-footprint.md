@@ -37,7 +37,7 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 |----|----------|--------------|
 | NFR-001-AC-1 | The default feature profile compiles without `std` and resolves no runtime dependencies. | compile-time-check (TC-005) |
 | NFR-001-AC-2 | Library source contains no `unsafe` block. | Inspection (TC-007) |
-| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, the representative static-library consumer's linked `.text` plus `.rodata` is no greater than 4 KiB. | Inspection (TC-007) |
+| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` no greater than 4 KiB. | Inspection (TC-007) |
 
 ## Verification
 

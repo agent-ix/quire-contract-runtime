@@ -41,11 +41,12 @@ quire provenance --pretty >"$evidence_dir/quire-provenance.json"
 run_and_retain quire-validate \
   quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
 run_and_retain fmt cargo fmt --all -- --check
-run_and_retain clippy cargo clippy --all-targets --all-features -- -D warnings
+run_and_retain clippy make lint
 run_and_retain test-core cargo test --no-default-features
 run_and_retain test-alloc cargo test --features alloc
 run_and_retain test-std cargo test --features std
 run_and_retain test-all cargo test --all-features
+run_and_retain test-footprint cargo test -p quire-contract-runtime-footprint
 run_and_retain msrv cargo +1.75.0 check --all-targets --all-features
 run_and_retain deny cargo deny check licenses
 run_and_retain unsafe-audit bash scripts/check_unsafe_comments.sh
@@ -55,7 +56,7 @@ run_and_retain default-dependencies cargo tree --edges normal --no-default-featu
 run_and_retain release-build cargo build --release --lib --no-default-features
 run_and_retain linked-footprint make size
 run_and_retain layout cargo run --release --example layout --no-default-features
-run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings cargo doc --all-features --no-deps
+run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --all-features --no-deps
 run_and_retain rlib-size-observation \
   bash scripts/measure_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
 

@@ -40,7 +40,8 @@ fmt-check:
 
 .PHONY: lint
 lint:
-	$(CARGO) clippy --all-targets --all-features -- -D warnings
+	$(CARGO) clippy -p quire-contract-runtime --all-targets --all-features -- -D warnings
+	$(CARGO) clippy -p quire-contract-runtime-footprint --lib --release --target $(FOOTPRINT_TARGET) -- -D warnings
 
 .PHONY: test
 test:
@@ -52,6 +53,7 @@ test-features:
 	$(CARGO) test --features alloc
 	$(CARGO) test --features std
 	$(CARGO) test --all-features
+	$(CARGO) test -p quire-contract-runtime-footprint
 
 .PHONY: build
 build:

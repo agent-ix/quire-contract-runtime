@@ -3,27 +3,22 @@
 use crate::{ContractIdentity, ExecutionPoint, FailureDetail, Observation};
 
 /// Common provenance carried by every verdict.
-///
 // Implements: FR-001
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct VerdictContext<'a> {
     /// Requirement and revision under evaluation.
-    ///
     // Implements: FR-001
     pub identity: ContractIdentity<'a>,
     /// Named point where the oracle observed the program.
-    ///
     // Implements: FR-001
     pub execution_point: ExecutionPoint<'a>,
     /// Per-clause observations in generated contract order.
-    ///
     // Implements: FR-001
     pub observations: &'a [Observation<'a>],
 }
 
 impl<'a> VerdictContext<'a> {
     /// Creates common verdict provenance without allocation.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn new(
@@ -114,7 +109,6 @@ pub enum Verdict<'a> {
 
 impl<'a> Verdict<'a> {
     /// Constructs a successful verdict.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn passed(context: VerdictContext<'a>) -> Self {
@@ -122,7 +116,6 @@ impl<'a> Verdict<'a> {
     }
 
     /// Constructs a failed-postcondition verdict.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn failed_postcondition(
@@ -133,7 +126,6 @@ impl<'a> Verdict<'a> {
     }
 
     /// Constructs a rejected-precondition verdict.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn rejected_precondition(
@@ -144,7 +136,6 @@ impl<'a> Verdict<'a> {
     }
 
     /// Returns the terminal category without discarding rejection.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn kind(&self) -> VerdictKind {
@@ -156,7 +147,6 @@ impl<'a> Verdict<'a> {
     }
 
     /// Returns common requirement, revision, execution-point, and observation provenance.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn context(&self) -> &VerdictContext<'a> {
@@ -168,7 +158,6 @@ impl<'a> Verdict<'a> {
     }
 
     /// Returns structured terminal detail for failure or rejection.
-    ///
     // Implements: FR-001
     #[must_use]
     pub const fn detail(&self) -> Option<&FailureDetail<'a>> {

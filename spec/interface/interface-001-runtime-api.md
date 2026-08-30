@@ -66,6 +66,7 @@ invariants:
   - a CampaignReport always contains accepted, rejected, failed, and discarded counters
 compatibility:
   enums: non-exhaustive; consumers must preserve future unknown states
+  const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at Rust 1.75
   msrv: Rust 1.75
   licensing: MIT OR Apache-2.0
   publication: disabled through the v0.1 human release decision
