@@ -5,16 +5,11 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 
 running 3 tests
-test tc_001_preserves_tri_state_identity_and_observations ... ok
 test tc_006_report_refuses_a_different_requirement ... ok
+test tc_001_preserves_tri_state_identity_and_observations ... ok
 test tc_006_report_tracks_complete_saturating_counts ... ok
 
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
 
 running 4 tests

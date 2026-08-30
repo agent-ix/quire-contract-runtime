@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 
-Candidate source revision: `72bfe3d9a459bc457ffa866d5bf7225292ba970d`
+Candidate source revision: `3d10342b56bd92ea9846020f3e6a901d9ece80d7`
 
 Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 
@@ -29,7 +29,7 @@ Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 ## Gap disposition
 
 No unresolved implementation or specification gap was found. The source candidate is within the
-256 KiB rlib ceiling at 238,814 bytes, has no default normal dependency, contains no unsafe or
+256 KiB rlib ceiling at 238,870 bytes, has no default normal dependency, contains no unsafe or
 intentional panic surface, and passes every locally available gate.
 
 The following are release/workflow gates, not silently accepted gaps:
@@ -43,4 +43,3 @@ The following are release/workflow gates, not silently accepted gaps:
    evidence is collected. No agent or automated gate may substitute for that decision.
 
 Implementation gap-analysis result: **pass, with the four named external release/workflow gates open**.
-
