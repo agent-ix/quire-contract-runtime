@@ -1,3 +1,10 @@
+---
+id: Plan-001
+title: "Runtime v0.1 implementation plan"
+type: Plan
+status: active
+---
+
 # Runtime v0.1 implementation plan
 
 ## Dependency DAG
@@ -16,4 +23,3 @@ PGM-01 -> foundation (#2) -> verdicts/observations (#1) -> operators/adapters/ac
 4. Add requirement-tagged unit, integration, property, and Kani harnesses.
 5. Collect CI, dependency, size, panic/unsafe, licensing, and provenance evidence; perform gap review.
 6. Present the candidate to the human release owner. Do not publish to crates.io.
-

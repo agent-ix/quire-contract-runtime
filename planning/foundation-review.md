@@ -1,3 +1,9 @@
+---
+id: REV-001
+title: "Runtime foundation composite review"
+type: Review
+---
+
 # Foundation composite review
 
 Date: 2026-08-30
@@ -18,4 +24,3 @@ Scope: issues #2, #1, #3, the specification under `spec/`, and PGM-01 at
 No unresolved implementation-blocking finding was identified. PGM-01 completion and the v0.1 human
 release decision are program/release gates and remain explicitly open rather than being represented as
 automated success.
-
