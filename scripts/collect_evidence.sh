@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+evidence_dir="${1:-evidence/v0.1-candidate}"
+mkdir -p "$evidence_dir"
+
+run_and_retain() {
+  local name="$1"
+  shift
+  "$@" >"$evidence_dir/$name.stdout" 2>"$evidence_dir/$name.stderr"
+}
+
+git rev-parse HEAD >"$evidence_dir/source-revision.txt"
+git status --porcelain=v1 >"$evidence_dir/source-state.txt"
+rustc --version --verbose >"$evidence_dir/rustc-version.txt"
+cargo --version --verbose >"$evidence_dir/cargo-version.txt"
+quire provenance --pretty >"$evidence_dir/quire-provenance.json"
+{
+  echo "schema=contract-evidence-envelope-v1"
+  echo "tool=quire-contract-runtime/scripts/collect_evidence.sh"
+  echo "input.source_revision=$(git rev-parse HEAD)"
+  echo "input.source_state=$([[ -s "$evidence_dir/source-state.txt" ]] && echo modified || echo clean)"
+  echo "input.schema=quire-contract-runtime-v1"
+  echo "backend.rustc=$(rustc --version)"
+  echo "backend.target=$(rustc -vV | sed -n 's/^host: //p')"
+  echo "output.identity=sha256sums.txt"
+} >"$evidence_dir/evidence-envelope.txt"
+
+run_and_retain quire-validate quire validate --scope . 'spec/**/*.md'
+run_and_retain fmt cargo fmt --all -- --check
+run_and_retain clippy cargo clippy --all-targets --all-features -- -D warnings
+run_and_retain test-core cargo test --no-default-features
+run_and_retain test-alloc cargo test --features alloc
+run_and_retain test-std cargo test --features std
+run_and_retain test-all cargo test --all-features
+run_and_retain deny cargo deny check licenses
+run_and_retain unsafe-audit bash scripts/check_unsafe_comments.sh
+run_and_retain metadata cargo metadata --format-version 1 --no-default-features
+run_and_retain release-build cargo build --release --lib --no-default-features
+run_and_retain layout cargo run --release --example layout --no-default-features
+
+rlib_path="$(find "${CARGO_TARGET_DIR:-target}/release/deps" -maxdepth 1 -type f -name 'libquire_contract_runtime-*.rlib' -print -quit)"
+if [[ -z "$rlib_path" ]]; then
+  echo "release rlib not found" >"$evidence_dir/rlib-size.stderr"
+  exit 1
+fi
+wc -c "$rlib_path" >"$evidence_dir/rlib-size.stdout"
+
+if command -v cargo-kani >/dev/null 2>&1; then
+  run_and_retain kani cargo kani --tests
+  echo passed >"$evidence_dir/kani-status.txt"
+else
+  echo skipped-unavailable >"$evidence_dir/kani-status.txt"
+fi
+
+(
+  cd "$evidence_dir"
+  find . -maxdepth 1 -type f ! -name sha256sums.txt -print0 \
+    | sort -z \
+    | xargs -0 sha256sum >sha256sums.txt
+)

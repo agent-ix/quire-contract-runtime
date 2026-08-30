@@ -11,7 +11,9 @@ help:
 	@echo "  make fmt-check        - Verify formatting (CI gate)"
 	@echo "  make lint             - Clippy with -D warnings"
 	@echo "  make test             - cargo test"
+	@echo "  make test-features    - test every supported feature set"
 	@echo "  make build            - Release build"
+	@echo "  make spec             - Quire-validate the specification"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
@@ -31,15 +33,26 @@ fmt-check:
 
 .PHONY: lint
 lint:
-	$(CARGO) clippy --all-targets -- -D warnings
+	$(CARGO) clippy --all-targets --all-features -- -D warnings
 
 .PHONY: test
 test:
-	$(CARGO) test
+	$(CARGO) test --no-default-features
+
+.PHONY: test-features
+test-features:
+	$(CARGO) test --no-default-features
+	$(CARGO) test --features alloc
+	$(CARGO) test --features std
+	$(CARGO) test --all-features
 
 .PHONY: build
 build:
-	$(CARGO) build --release
+	$(CARGO) build --release --no-default-features
+
+.PHONY: spec
+spec:
+	quire validate --scope . 'spec/**/*.md'
 
 .PHONY: clean
 clean:
@@ -66,4 +79,4 @@ audit-unsafe:
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check lint test deny audit-unsafe
+ci: fmt-check spec lint test-features deny audit-unsafe
