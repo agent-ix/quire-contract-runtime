@@ -48,9 +48,9 @@ current protected checks and review, and the human source-release decision.
 
 Date: 2026-08-30
 
-Candidate source revision: `5ac3eee4b92a73e6797bb72a56dc13f6f518d893`
+Candidate source revision: `b47d3ac9fd2329626ef6f88be01da2b40722ff25`
 
-Evidence: `evidence/runtime-v01-5ac3eee4b92a-20260830T223136Z/sha256sums.txt`
+Evidence: `evidence/runtime-v01-b47d3ac9fd23-20260830T224533Z/sha256sums.txt`
 
 ## Requirement audit
 
@@ -71,7 +71,7 @@ Evidence: `evidence/runtime-v01-5ac3eee4b92a-20260830T223136Z/sha256sums.txt`
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
 | Acceptance-criterion traceability | 27/27 rows backed; 13/13 Rust test symbols bound; 66 implementation bindings and zero untracked production symbols | pass |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
-| Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; 52 retained MP-001 files/digests | pass |
+| Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; 56 retained MP-001 files/digests | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
 
 ## Gap disposition
