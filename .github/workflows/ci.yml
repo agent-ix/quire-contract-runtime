@@ -35,7 +35,7 @@ jobs:
         run: |
           npm install --global @agent-ix/quire-cli@0.31.0 @agent-ix/quoin@0.22.5
           quoin module ensure-defaults
-          quire validate --scope . 'spec/**/*.md'
+          quire validate --scope . 'spec/**/*.md' 'planning/**/*.md'
 
       - name: Unsafe audit
         run: bash scripts/check_unsafe_comments.sh
