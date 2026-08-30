@@ -15,26 +15,47 @@
 
 #![no_std]
 #![forbid(unsafe_code)]
+#![deny(missing_docs)]
+#![cfg_attr(
+    not(feature = "proptest"),
+    doc = r#"
+## Default feature surface
+
+The proptest adapter is not available without its opt-in feature:
+
+```compile_fail
+use quire_contract_runtime::proptest_adapter;
+```
+"#
+)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+/// Implements: FR-004
 pub mod accounting;
+/// Implements: FR-001
 pub mod identity;
+/// Implements: FR-001
 pub mod observation;
+/// Implements: FR-002
 pub mod operators;
 #[cfg(feature = "proptest")]
+/// Implements: FR-003
 pub mod proptest_adapter;
+/// Implements: FR-001
 pub mod verdict;
 
 #[cfg(kani)]
 #[path = "../verification/kani.rs"]
 mod kani_proofs;
 
-pub use accounting::{CampaignCounts, CampaignReport};
+pub use accounting::{CampaignCounts, CampaignReport, IdentityMismatch};
 pub use identity::{ClauseId, ContractIdentity, ExecutionPoint, RequirementId, RevisionId};
 pub use observation::{ClauseKind, ClauseOutcome, FailureDetail, FailureKind, Observation};
 pub use verdict::{Verdict, VerdictContext, VerdictKind};
 
 /// Version of the documented public layout and semantic contract.
+///
+/// Implements: FR-001
 pub const RUNTIME_CONTRACT_VERSION: &str = "quire-contract-runtime-v1";

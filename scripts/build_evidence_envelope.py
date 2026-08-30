@@ -49,6 +49,7 @@ def command_outcomes(kani_status: str) -> list[dict[str, str]]:
         "test-alloc",
         "test-std",
         "test-all",
+        "msrv",
         "deny",
         "unsafe-audit",
         "panic-audit",
@@ -111,7 +112,7 @@ def build(evidence_dir: Path) -> None:
         "sourceRevision": revision,
         "sourceState": source_state,
         "commands": [
-            "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md'",
+            "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
             "python3 scripts/validate_json_schema.py $PGM01_SCHEMA evidence-envelope.json (when available)",
@@ -121,12 +122,14 @@ def build(evidence_dir: Path) -> None:
             "cargo test --features alloc",
             "cargo test --features std",
             "cargo test --all-features",
+            "cargo +1.75.0 check --lib --no-default-features",
             "cargo deny check licenses",
             "bash scripts/check_unsafe_comments.sh",
             "bash scripts/check_panic_surface.sh",
             "cargo metadata --format-version 1 --no-default-features",
             "cargo tree --edges normal --no-default-features",
             "cargo build --release --lib --no-default-features",
+            "bash scripts/check_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
             "cargo run --release --example layout --no-default-features",
             "RUSTDOCFLAGS=-Dwarnings cargo doc --all-features --no-deps",
             "cargo kani (when available)",
@@ -145,6 +148,9 @@ def build(evidence_dir: Path) -> None:
                 (evidence_dir / "quire-provenance.json").read_text(encoding="utf-8")
             )["cli"]["version"],
             "rustc": (evidence_dir / "rustc-version.txt")
+            .read_text(encoding="utf-8")
+            .splitlines()[0],
+            "rust-msrv": (evidence_dir / "msrv-rustc-version.txt")
             .read_text(encoding="utf-8")
             .splitlines()[0],
         },

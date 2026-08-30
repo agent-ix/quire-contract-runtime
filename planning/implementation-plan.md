@@ -1,11 +1,14 @@
 ---
-id: Plan-001
-title: "Runtime v0.1 implementation plan"
-type: Plan
-status: active
+id: REV-004
+title: "Runtime v0.1 plan-bundle migration"
+type: Review
 ---
 
-# Runtime v0.1 implementation plan
+# Runtime v0.1 plan-bundle migration
+
+The mechanically checkable implementation plan is retained at
+`plan/PLAN-001-runtime-v01/plan.md`. Its task files distinguish the five completed implementation and
+evidence-preparation tasks from the human-owned source-release decision, which remains open.
 
 ## Dependency DAG
 
@@ -14,7 +17,7 @@ PGM-01 -> foundation (#2) -> verdicts/observations (#1) -> operators/adapters/ac
                                             \---------------------------> evidence + gap review
 ```
 
-## Plan bundle
+## Historical step mapping
 
 1. Validate the requirements and five assurance artifacts with the installed Quire modules.
 2. Implement the dependency-free no_std identity, observation, verdict, operator, checked arithmetic,

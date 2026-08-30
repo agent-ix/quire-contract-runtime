@@ -35,13 +35,16 @@ jobs:
         run: |
           npm install --global @agent-ix/quire-cli@0.31.0 @agent-ix/quoin@0.22.5
           quoin module ensure-defaults
-          quire validate --scope . 'spec/**/*.md' 'planning/**/*.md'
+          quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
 
       - name: Unsafe audit
         run: bash scripts/check_unsafe_comments.sh
 
       - name: Panic-surface audit
         run: bash scripts/check_panic_surface.sh
+
+      - name: Release footprint ceiling
+        run: make size
 
   msrv:
     name: Rust 1.75 core
@@ -51,7 +54,7 @@ jobs:
       - name: Install MSRV
         uses: dtolnay/rust-toolchain@1.75.0
       - name: Check dependency-free core
-        run: cargo check --lib --no-default-features
+        run: cargo +1.75.0 check --lib --no-default-features
 
   kani:
     name: Kani operator proofs
