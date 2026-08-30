@@ -20,17 +20,6 @@ echo "$source_state" >"$evidence_dir/source-state.txt"
 rustc --version --verbose >"$evidence_dir/rustc-version.txt"
 cargo --version --verbose >"$evidence_dir/cargo-version.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"
-{
-  echo "schema=contract-evidence-envelope-v1"
-  echo "tool=quire-contract-runtime/scripts/collect_evidence.sh"
-  echo "input.source_revision=$(git rev-parse HEAD)"
-  echo "input.source_state=$(<"$evidence_dir/source-state.txt")"
-  echo "input.schema=quire-contract-runtime-v1"
-  echo "backend.rustc=$(rustc --version)"
-  echo "backend.target=$(rustc -vV | sed -n 's/^host: //p')"
-  echo "output.identity=sha256sums.txt"
-} >"$evidence_dir/evidence-envelope.txt"
-
 run_and_retain quire-validate quire validate --scope . 'spec/**/*.md'
 run_and_retain fmt cargo fmt --all -- --check
 run_and_retain clippy cargo clippy --all-targets --all-features -- -D warnings
@@ -59,6 +48,16 @@ if command -v cargo-kani >/dev/null 2>&1; then
   echo passed >"$evidence_dir/kani-status.txt"
 else
   echo skipped-unavailable >"$evidence_dir/kani-status.txt"
+fi
+
+python3 scripts/build_evidence_envelope.py "$evidence_dir"
+
+if [[ -n "${PGM01_VALIDATOR:-}" ]]; then
+  run_and_retain pgm01-envelope \
+    python3 "$PGM01_VALIDATOR" --fixture "$evidence_dir/evidence-envelope.json"
+  echo passed >"$evidence_dir/pgm01-envelope-status.txt"
+else
+  echo skipped-unavailable >"$evidence_dir/pgm01-envelope-status.txt"
 fi
 
 (

@@ -18,7 +18,8 @@ help:
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
-	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
+	@echo "  make evidence-tool    - Syntax-check the PGM-01 evidence builder"
+	@echo "  make ci               - All local CI gates"
 
 # =============================================================================
 # Format / Lint / Test
@@ -79,9 +80,13 @@ audit-unsafe:
 audit-panic:
 	bash scripts/check_panic_surface.sh
 
+.PHONY: evidence-tool
+evidence-tool:
+	python3 -m py_compile scripts/build_evidence_envelope.py
+
 # =============================================================================
 # Composite
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check spec lint test-features deny audit-unsafe audit-panic
+ci: fmt-check spec lint test-features deny audit-unsafe audit-panic evidence-tool

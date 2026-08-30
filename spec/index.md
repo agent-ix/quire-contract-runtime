@@ -6,10 +6,10 @@ component_type: rust-library
 implementation_language: rust
 tags: [contract-runtime, no-std, assurance]
 depends_on:
-  - ix://agent-ix/quire-contract-ir/issues/3
+  - ix://agent-ix/quire-contract-ir/PGM-01
 standards_alignment: [iso-iec-ieee-29148]
 relationships:
-  - target: ix://agent-ix/quire-contract-ir/issues/3
+  - target: ix://agent-ix/quire-contract-ir/PGM-01
     type: depends_on
     cardinality: "1:1"
 security_critical: false
@@ -58,6 +58,6 @@ The assurance artifacts bind the intended use, boundary, evidence, and open huma
 ## References
 
 - [Program umbrella](https://github.com/agent-ix/quire-contract-ir/issues/1).
-- [PGM-01 governance gate](https://github.com/agent-ix/quire-contract-ir/issues/3), the authoritative
-  cross-repository policy; this specification does not redefine it.
+- [PGM-01 governance gate](https://github.com/agent-ix/quire-contract-ir/issues/3), identified as
+  `ix://agent-ix/quire-contract-ir/PGM-01`; this specification does not redefine it.
 - [Runtime epic](https://github.com/agent-ix/quire-contract-runtime/issues/4).

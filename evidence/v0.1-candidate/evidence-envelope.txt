@@ -1,8 +1,0 @@
-schema=contract-evidence-envelope-v1
-tool=quire-contract-runtime/scripts/collect_evidence.sh
-input.source_revision=aac4bee923aef78838b856118cd73aad3728226e
-input.source_state=clean
-input.schema=quire-contract-runtime-v1
-backend.rustc=rustc 1.94.1 (e408947bf 2026-03-25)
-backend.target=x86_64-unknown-linux-gnu
-output.identity=sha256sums.txt

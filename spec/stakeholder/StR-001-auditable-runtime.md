@@ -28,4 +28,4 @@ runtime limits the trusted surface and allows downstream projects to validate it
 ## Dependencies
 
 The governing compatibility, provenance, evidence, and qualification policy is PGM-01 at
-`ix://agent-ix/quire-contract-ir/issues/3`.
+`ix://agent-ix/quire-contract-ir/PGM-01`.
