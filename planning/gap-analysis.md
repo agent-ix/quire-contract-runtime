@@ -25,16 +25,16 @@ source-release decision.
 
 Date: 2026-08-30
 
-Candidate source revision: `cede8c8b12cc7de6a72a08b9339d122e07de9649`
+Candidate source revision: `a596e908bda849d6b1dc0904f745cb78a3937739`
 
-Evidence: `evidence/runtime-v01-cede8c8b12cc-20260830T213741Z/sha256sums.txt`
+Evidence: `evidence/runtime-v01-a596e908bda8-20260830T214933Z/sha256sums.txt`
 
 ## Requirement audit
 
 | Requirement | Authoritative evidence | Result |
 |---|---|---|
 | #2 baseline, dual license, publication lock | `Cargo.toml`, both license files, `deny.stdout`, protected `main` API response | pass |
-| #2 stakeholder/functional/non-functional/interface/test requirements | 20 documents under `spec/`; `quire-validate` output | pass |
+| #2 stakeholder/functional/non-functional/interface/test requirements | 21 documents under `spec/`; `quire-validate` output | pass |
 | #2 composite review and assurance artifacts | `planning/foundation-review.md`; AP/AD/CAC/MP/AA under `spec/assurance/` | pass |
 | #2 implementation plan and dependency DAG | `planning/implementation-plan.md` | pass |
 | #1 three distinct terminal verdicts | `src/verdict.rs`; TC-001 output | pass |
@@ -46,6 +46,7 @@ Evidence: `evidence/runtime-v01-cede8c8b12cc-20260830T213741Z/sha256sums.txt`
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | `CampaignReport`; TC-006 mixed, mismatch, and saturation tests | pass |
+| Acceptance-criterion traceability | 8/8 Rust test symbols bound; all executable criteria directly tagged; inspection-only rows explicitly classified | pass |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`, exact PGM-01 envelope validation, and retained MP-001 outputs/digests | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
