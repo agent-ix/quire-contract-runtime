@@ -1,2 +1,3 @@
-    Finished `release` profile [optimized] target(s) in 0.01s
+   Compiling quire-contract-runtime v0.1.0 (/home/peter/dev/quire-contract-runtime)
+    Finished `release` profile [optimized] target(s) in 2.53s
      Running `/tmp/quire-contract-runtime-evidence-target/release/examples/layout`
