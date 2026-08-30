@@ -9,13 +9,18 @@ type: Review
 Runtime source reviewed: the source commit immediately preceding refreshed candidate evidence.
 
 PGM-01 candidate: `agent-ix/quire-contract-ir#12` at
-`0b8669b80f98b6c11954f922b32d9edae8a11983`.
+`7f8130d3fdb160a98a7a7f445cc1eb7419a3c179`.
 
 Envelope schema: `quire.derivation-evidence/v1`, SHA-256
 `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`.
 
 This is a provisional reconciliation against a review candidate. The identities and conclusions must
 be checked again after PGM-01 merges.
+
+The corrected candidate retains the same envelope schema digest. Its policy repository gates pass
+20/20 Quire documents, 26/26 backed criteria, the 13/13 Draft 7 corpus, and all four schema mutation
+probes. The runtime envelope is accepted by both the corrected candidate schema and its custom
+validator with zero errors.
 
 | Policy requirement | Runtime disposition | Evidence or remaining gate |
 |---|---|---|
