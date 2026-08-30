@@ -2,8 +2,8 @@
 //!
 //! # Contracts
 //!
-//! - **Features:** the default feature set is empty. `alloc` exposes owned convenience types, `std`
-//!   implies `alloc`, and `proptest` adds only the optional test adapter.
+//! - **Features:** the default feature set is empty. `alloc` and `std` reserve opt-in convenience
+//!   surfaces, `std` implies `alloc`, and `proptest` adds only the optional test adapter.
 //! - **Allocation:** the core modules neither allocate nor require a global allocator.
 //! - **Panic:** public evaluation and accounting operations contain no intentional panic path. An
 //!   undefined partial operation returns `None`, and counters saturate.

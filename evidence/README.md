@@ -9,7 +9,7 @@ successful proof evidence.
 The collector emits `evidence-envelope.json` with the canonical
 `quire.derivation-evidence/v1` identity from PGM-01, plus separately versioned collection-input and
 manifest schemas. The collector gates those local schemas with the installed `jsonschema` Draft 7
-implementation. Set `PGM01_SCHEMA` to the reviewed IR repository's envelope schema and
+implementation and records both its version and the Python version. Set `PGM01_SCHEMA` to the reviewed IR repository's envelope schema and
 `PGM01_VALIDATOR` to its `scripts/validate_governance.py` to retain independent schema and custom
 validator results. An absent optional PGM-01 gate is recorded as `skipped-unavailable`, not passed.
 
