@@ -23,7 +23,7 @@ Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | `CampaignReport`; TC-006 mixed, mismatch, and saturation tests | pass |
-| #3 Kani harness coverage | three checked-in proofs; required CI job pins Kani 0.67.0 | pending CI execution |
+| #3 Kani harness coverage | four checked-in proofs; required CI job pins Kani 0.67.0 | pending CI execution |
 | Epic CI and measurement outputs | local `make ci` and retained MP-001 outputs/digests | pass locally |
 
 ## Gap disposition
