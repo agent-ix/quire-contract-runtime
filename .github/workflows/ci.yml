@@ -22,7 +22,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Lint
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: make lint
 
       - name: Test feature matrix
         run: |
@@ -30,6 +30,7 @@ jobs:
           cargo test --features alloc
           cargo test --features std
           cargo test --all-features
+          cargo test -p quire-contract-runtime-footprint
 
       - name: Validate specification
         run: |

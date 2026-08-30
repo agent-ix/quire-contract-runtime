@@ -10,10 +10,3 @@ crate-type = ["staticlib"]
 
 [dependencies]
 quire-contract-runtime = { path = "../..", default-features = false }
-
-[profile.release]
-codegen-units = 1
-lto = "thin"
-opt-level = "s"
-panic = "abort"
-strip = "symbols"

@@ -39,7 +39,7 @@ protected checks and review, and the human source-release decision.
 | FND-010 | Classified reserved `alloc`/`std` rows explicitly as resolver/build compatibility checks. |
 | FND-011 | Added a crate-wide `missing_docs` denial. |
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
-| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 66/103 production symbols are owned, while zero test symbols carry an unbound trace ID. The 37 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, and measurement plumbing. |
+| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 66/109 production symbols are owned, while zero test symbols carry an unbound trace ID. The 43 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
 | GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 27/27 with 13/13 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
@@ -50,10 +50,10 @@ protected checks and review, and the human source-release decision.
 
 | Review finding | Disposition |
 |---|---|
-| NEW-001 | Replaced the unsatisfiable rlib ceiling with a representative `no_std` static-library consumer built by Rust 1.75 for `thumbv7em-none-eabi`. The fixed, non-overridable gate measures only runtime/harness `.text` plus `.rodata`: 590 bytes against 4,096. |
+| NEW-001 | Replaced the unsatisfiable rlib ceiling with a representative `no_std` static-library consumer built by Rust 1.75 for `thumbv7em-none-eabi`. The fixed, non-overridable gate measures only runtime/harness `.text` plus `.rodata`: 907 bytes against 4,096. |
 | NEW-002 | Removed the Makefile-text assertion. TC-007's procedure consumes the executed `make ci` output instead of claiming target behavior from a target-name string. |
 | NEW-003 | Annotated the mutable historical README: the retained `msrv_1_75=SUCCESS` is invalidated by the toolchain-precedence defect, while the Kani result applies only to its historical revision. |
-| NEW-004 | Replaced the overstated traceability row with the engine's 66/103 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
+| NEW-004 | Replaced the overstated traceability row with the engine's 66/109 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
 | NEW-005 | Changed `adapt_recording` to return `TestCaseResult`; identity mismatch is now a proptest failure containing expected and observed identities, with a direct regression test. |
 | NEW-006 | Denied Clippy indexing and arithmetic-side-effect lints crate-wide, made indexing use `slice::get`, and extended the fail-closed text audit to verification source while permitting Kani proof assertions. |
 | NEW-007 | Anchored all five enum declarations exactly and asserted distinct `VerdictKind`/`Verdict` offsets. |
@@ -67,6 +67,20 @@ protected checks and review, and the human source-release decision.
 The residual noted under FND-001 is also closed: `make msrv` now checks all targets and features with
 Cargo 1.75, covering optional features, examples, and test targets rather than only the
 dependency-free library profile.
+
+## Third re-review disposition
+
+| Review finding | Disposition |
+|---|---|
+| NEW-014 | MP-001 now versions the footprint population as every public constructor, both accounting mutations, and every operator family. TC-007 parses actual call expressions with `syn`, ignores comments, and fails if the harness population shrinks. The harness inherits the root release profile. |
+| NEW-015 | Replaced brace/string source parsing with a `syn` AST census of all top-level public accounting items, every inherent implementation block, and every public inherent method. The test constrains the complete public surface and self-probes free-function and second-impl bypasses. |
+| NEW-016 | Made the footprint crate a workspace member; workspace formatting, target-specific Clippy, host test compilation, Rust 1.75 bare-metal compilation, rustdoc, and panic scanning now cover it. |
+| NEW-017 | Replaced the broad `*_tests.rs` exclusion with the exact `accounting_tests.rs` path, scans that file separately for panic/unfinished operations, and asserts its `cfg(test)` module attachment. Arbitrary shipped `*_tests.rs` files are scanned normally. |
+| NEW-018 | Extended the fail-closed runtime pattern to the demonstrated `split_at` and `chunks` families plus other slice operations with documented precondition panics; the compiler lints continue to cover indexing and arithmetic. |
+| NEW-019 | Documented in the public interface that safe checked index lookup is runtime-only because the non-panicking slice API is not const-stable at Rust 1.75. |
+
+The harmless trailing empty rustdoc paragraphs noted by the reviewer were also removed while keeping
+ordinary-comment `Implements:` bindings intact.
 
 Date: 2026-08-30
 
@@ -92,15 +106,15 @@ following evidence-only commit.
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
-| Acceptance-criterion traceability | 27/27 rows backed; 14/14 Rust test symbols bound; 66/103 production symbols owned; 37 deliberately unowned generated/private/tooling symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
+| Acceptance-criterion traceability | 27/27 rows backed; 14/14 Rust test symbols bound; 66/109 production symbols owned; 43 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
 
 ## Gap disposition
 
-No unresolved implementation or specification gap was found. The source candidate's representative
-bare-metal linked footprint is 590 bytes against the fixed 4,096-byte ceiling, and every declared
+No unresolved implementation or specification gap was found. The source candidate's fixed-population
+bare-metal linked footprint is 907 bytes against the fixed 4,096-byte ceiling, and every declared
 target/feature compiles under the explicit Rust 1.75 lane. It has no default normal dependency,
 contains no unsafe or intentional runtime panic surface, and passes every locally available gate.
 

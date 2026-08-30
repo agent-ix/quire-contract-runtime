@@ -98,6 +98,14 @@ name = "quire-contract-runtime"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "syn",
+]
+
+[[package]]
+name = "quire-contract-runtime-footprint"
+version = "0.0.0"
+dependencies = [
+ "quire-contract-runtime",
 ]
 
 [[package]]

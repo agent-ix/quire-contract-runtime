@@ -20,6 +20,9 @@ publication and dual-license controls remain explicit.
 
 Run `make ci`. Inspect the `tc_007_release_controls_are_mandatory` result, default dependency tree,
 unsafe audit, `cargo deny` result, and the enforced release-size output retained by MP-001.
+The source-policy test parses the footprint harness and requires actual calls to every constructor,
+both accounting mutations, and every operator family; it also parses the accounting module and
+constrains its complete public surface and inherent implementations.
 
 ## Expected Results
 
