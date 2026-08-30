@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 
-Candidate source revision: `aac4bee923aef78838b856118cd73aad3728226e`
+Candidate source revision: `790fb7780e893206240ba4fa5c5b376d60ec127e`
 
 Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 
@@ -24,7 +24,8 @@ Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | `CampaignReport`; TC-006 mixed, mismatch, and saturation tests | pass |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
-| Epic CI and measurement outputs | local `make ci`, four successful GitHub checks, and retained MP-001 outputs/digests | pass |
+| Epic local gates and measurements | local `make ci`, exact PGM-01 envelope validation, and retained MP-001 outputs/digests | pass |
+| Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
 
 ## Gap disposition
 
@@ -34,13 +35,16 @@ intentional panic surface, and passes every locally available gate.
 
 The following are release/workflow gates, not silently accepted gaps:
 
-1. PGM-01 (`agent-ix/quire-contract-ir#3`) was still open when this review ran. This repository does
-   not modify or close that upstream governance ticket.
-2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`; pinned Kani
-   0.67.0 executed all five proofs successfully in GitHub CI.
-3. Protected-branch code-owner review must complete on the pull request.
+1. PGM-01 (`agent-ix/quire-contract-ir#3`) is in review at PR #12. This candidate reconciles exact
+   revision `0b8669b80f98b6c11954f922b32d9edae8a11983` and its envelope schema digest, but must reconcile
+   again after the policy merges.
+2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
+   0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
+   rebased candidate requires a fresh manual CI dispatch.
+3. Manual-CI PR #6 must merge, protected checks must pass on the rebased candidate, and protected
+   code-owner review must complete on runtime PR #5.
 4. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
 
-Implementation gap-analysis result: **pass, with PGM-01, code-owner review, and the human release
-decision still open**.
+Implementation gap-analysis result: **pass, with PGM-01 merge/reconciliation, current protected
+checks, code-owner review, and the human release decision still open**.
