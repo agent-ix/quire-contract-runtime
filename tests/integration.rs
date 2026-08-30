@@ -29,6 +29,7 @@ fn fixture() -> (
     (identity, context, OBSERVATIONS[0].detail.unwrap())
 }
 
+/// Trace: TC-001, FR-001-AC-1, FR-001-AC-2
 #[test]
 fn tc_001_preserves_tri_state_identity_and_observations() {
     let (identity, context, detail) = fixture();
@@ -58,6 +59,7 @@ fn tc_001_preserves_tri_state_identity_and_observations() {
     assert_eq!(verdicts[1].detail(), Some(&detail));
 }
 
+/// Trace: TC-006, FR-004-AC-1, FR-004-AC-2
 #[test]
 fn tc_006_report_tracks_complete_saturating_counts() {
     let (identity, context, detail) = fixture();
@@ -82,6 +84,7 @@ fn tc_006_report_tracks_complete_saturating_counts() {
     assert_eq!(report.counts.accepted, u64::MAX);
 }
 
+/// Trace: TC-006, FR-004-AC-1, FR-004-AC-2
 #[test]
 fn tc_006_report_refuses_a_different_requirement() {
     let (identity, _, _) = fixture();
