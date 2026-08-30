@@ -4,7 +4,7 @@ use crate::{ContractIdentity, Verdict, VerdictKind};
 
 /// Complete campaign counters. No constructor or formatter can omit a metric.
 ///
-/// Implements: FR-004
+// Implements: FR-004
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct CampaignCounts {
     accepted: u64,
@@ -16,7 +16,7 @@ pub struct CampaignCounts {
 impl CampaignCounts {
     /// Creates an all-zero, complete counter set.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn new() -> Self {
         Self {
@@ -46,7 +46,7 @@ impl CampaignCounts {
 
     /// Returns accepted cases, including passed and failed postconditions.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn accepted(self) -> u64 {
         self.accepted
@@ -54,7 +54,7 @@ impl CampaignCounts {
 
     /// Returns cases excluded by a contract precondition.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn rejected(self) -> u64 {
         self.rejected
@@ -62,7 +62,7 @@ impl CampaignCounts {
 
     /// Returns accepted cases with a failed postcondition.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn failed(self) -> u64 {
         self.failed
@@ -70,7 +70,7 @@ impl CampaignCounts {
 
     /// Returns cases discarded by an external campaign framework before a verdict.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn discarded(self) -> u64 {
         self.discarded
@@ -78,7 +78,7 @@ impl CampaignCounts {
 
     /// Returns the total number of observed campaign cases, saturating on overflow.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn total(self) -> u64 {
         self.accepted
@@ -99,7 +99,7 @@ impl core::fmt::Display for CampaignCounts {
 
 /// Describes a verdict whose requirement or revision does not match its report.
 ///
-/// Implements: FR-004
+// Implements: FR-004
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IdentityMismatch<'expected, 'actual> {
     expected: ContractIdentity<'expected>,
@@ -109,7 +109,7 @@ pub struct IdentityMismatch<'expected, 'actual> {
 impl<'expected, 'actual> IdentityMismatch<'expected, 'actual> {
     /// Returns the report identity that was required.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn expected(&self) -> ContractIdentity<'expected> {
         self.expected
@@ -117,16 +117,29 @@ impl<'expected, 'actual> IdentityMismatch<'expected, 'actual> {
 
     /// Returns the identity carried by the refused verdict.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn actual(&self) -> ContractIdentity<'actual> {
         self.actual
     }
 }
 
+impl core::fmt::Display for IdentityMismatch<'_, '_> {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            formatter,
+            "expected requirement={} revision={}, observed requirement={} revision={}",
+            self.expected.requirement,
+            self.expected.revision,
+            self.actual.requirement,
+            self.actual.revision
+        )
+    }
+}
+
 /// Complete campaign report for exactly one requirement revision.
 ///
-/// Implements: FR-004
+// Implements: FR-004
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct CampaignReport<'a> {
     identity: ContractIdentity<'a>,
@@ -136,7 +149,7 @@ pub struct CampaignReport<'a> {
 impl<'a> CampaignReport<'a> {
     /// Creates an empty report that already contains every required metric.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn new(identity: ContractIdentity<'a>) -> Self {
         Self {
@@ -147,7 +160,7 @@ impl<'a> CampaignReport<'a> {
 
     /// Returns the requirement/revision identity shared by every counter.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn identity(&self) -> ContractIdentity<'a> {
         self.identity
@@ -155,7 +168,7 @@ impl<'a> CampaignReport<'a> {
 
     /// Returns the indivisible complete counter set.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     #[must_use]
     pub const fn counts(&self) -> CampaignCounts {
         self.counts
@@ -163,7 +176,7 @@ impl<'a> CampaignReport<'a> {
 
     /// Records one verdict if its requirement and revision match this report.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     pub fn record_verdict<'verdict>(
         &mut self,
         verdict: &Verdict<'verdict>,
@@ -182,7 +195,7 @@ impl<'a> CampaignReport<'a> {
 
     /// Records one external framework discard.
     ///
-    /// Implements: FR-004
+    // Implements: FR-004
     pub fn record_discard(&mut self) {
         self.counts.record_discard();
     }
@@ -199,33 +212,5 @@ impl core::fmt::Display for CampaignReport<'_> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::CampaignCounts;
-    use crate::VerdictKind;
-
-    /// Trace: TC-006, FR-004-AC-2
-    #[test]
-    fn tc_006_private_counters_saturate() -> Result<(), &'static str> {
-        let mut counts = CampaignCounts {
-            accepted: u64::MAX,
-            rejected: u64::MAX,
-            failed: u64::MAX,
-            discarded: u64::MAX,
-        };
-
-        counts.record_kind(VerdictKind::FailedPostcondition);
-        counts.record_kind(VerdictKind::RejectedPrecondition);
-        counts.record_discard();
-
-        if counts.accepted() == u64::MAX
-            && counts.rejected() == u64::MAX
-            && counts.failed() == u64::MAX
-            && counts.discarded() == u64::MAX
-            && counts.total() == u64::MAX
-        {
-            Ok(())
-        } else {
-            Err("private counters did not saturate")
-        }
-    }
-}
+#[path = "accounting_tests.rs"]
+mod tests;

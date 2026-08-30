@@ -16,6 +16,7 @@
 #![no_std]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+#![deny(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 #![cfg_attr(
     not(feature = "proptest"),
     doc = r#"
@@ -32,18 +33,18 @@ use quire_contract_runtime::proptest_adapter;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-/// Implements: FR-004
+// Implements: FR-004
 pub mod accounting;
-/// Implements: FR-001
+// Implements: FR-001
 pub mod identity;
-/// Implements: FR-001
+// Implements: FR-001
 pub mod observation;
-/// Implements: FR-002
+// Implements: FR-002
 pub mod operators;
 #[cfg(feature = "proptest")]
-/// Implements: FR-003
+// Implements: FR-003
 pub mod proptest_adapter;
-/// Implements: FR-001
+// Implements: FR-001
 pub mod verdict;
 
 #[cfg(kani)]
@@ -57,5 +58,5 @@ pub use verdict::{Verdict, VerdictContext, VerdictKind};
 
 /// Version of the documented public layout and semantic contract.
 ///
-/// Implements: FR-001
+// Implements: FR-001
 pub const RUNTIME_CONTRACT_VERSION: &str = "quire-contract-runtime-v1";

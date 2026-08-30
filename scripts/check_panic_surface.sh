@@ -1,28 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pattern='panic!|unreachable!|todo!|unimplemented!|assert!|assert_eq!|assert_ne!|[.]unwrap\(|[.]expect\('
+runtime_pattern='panic!|unreachable!|todo!|unimplemented!|assert!|assert_eq!|assert_ne!|[.]unwrap\(|[.]expect\('
+verification_pattern='panic!|unreachable!|todo!|unimplemented!|[.]unwrap\(|[.]expect\('
 if ! command -v grep >/dev/null 2>&1; then
   echo "grep is required for the panic-surface audit" >&2
   exit 2
 fi
 
-set +e
-grep -R -n -E --include='*.rs' "$pattern" src
-status=$?
-set -e
+scan() {
+  local path="$1"
+  local pattern="$2"
+  shift 2
+  local status
 
-case "$status" in
-  0)
-    echo "intentional panic surface found in runtime source" >&2
-    exit 1
-    ;;
-  1)
-    ;;
-  *)
-    echo "panic-surface audit could not run (grep exit $status)" >&2
-    exit 2
-    ;;
-esac
+  set +e
+  grep -R -n -E --include='*.rs' "$@" "$pattern" "$path"
+  status=$?
+  set -e
 
-echo "runtime panic-surface audit passed"
+  case "$status" in
+    0)
+      echo "intentional panic surface found beneath $path" >&2
+      exit 1
+      ;;
+    1)
+      ;;
+    *)
+      echo "panic-surface audit could not scan $path (grep exit $status)" >&2
+      exit 2
+      ;;
+  esac
+}
+
+scan src "$runtime_pattern" --exclude='*_tests.rs'
+scan verification "$verification_pattern"
+
+echo "runtime and verification panic-surface audit passed"

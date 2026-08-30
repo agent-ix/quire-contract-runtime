@@ -56,8 +56,8 @@ operations:
   - name: adapt_to_proptest_and_record
     feature: proptest
     inputs: [per-requirement report, Verdict]
-    output: typed identity mismatch or a recorded proptest TestCaseResult
-    semantics: record the verdict before mapping so the campaign census retains rejection
+    output: recorded proptest TestCaseResult
+    semantics: record the verdict before mapping so the campaign census retains rejection; map identity mismatch to a proptest failure retaining expected and observed identity
 invariants:
   - every evidence-bearing value retains exact borrowed source identity
   - rejected preconditions are never successful evidence

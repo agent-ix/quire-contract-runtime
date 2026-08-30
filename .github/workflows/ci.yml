@@ -43,18 +43,19 @@ jobs:
       - name: Panic-surface audit
         run: bash scripts/check_panic_surface.sh
 
-      - name: Release footprint ceiling
-        run: make size
-
   msrv:
-    name: Rust 1.75 core
+    name: Rust 1.75 surface and footprint
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install MSRV
         uses: dtolnay/rust-toolchain@1.75.0
-      - name: Check dependency-free core
-        run: cargo +1.75.0 check --lib --no-default-features
+        with:
+          targets: thumbv7em-none-eabi
+      - name: Check full declared surface
+        run: make msrv
+      - name: Linked release footprint ceiling
+        run: make size
 
   kani:
     name: Kani operator proofs

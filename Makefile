@@ -4,6 +4,8 @@
 
 CARGO ?= cargo
 MSRV ?= 1.75.0
+FOOTPRINT_TARGET := thumbv7em-none-eabi
+FOOTPRINT_TARGET_DIR := target/footprint-msrv
 
 .PHONY: help
 help:
@@ -14,8 +16,8 @@ help:
 	@echo "  make test             - cargo test"
 	@echo "  make test-features    - test every supported feature set"
 	@echo "  make build            - Release build"
-	@echo "  make msrv             - Check the dependency-free core with Rust $(MSRV)"
-	@echo "  make size             - Enforce the 256 KiB release rlib ceiling"
+	@echo "  make msrv             - Check all targets and features with Rust $(MSRV)"
+	@echo "  make size             - Enforce the 4 KiB linked footprint on $(FOOTPRINT_TARGET)"
 	@echo "  make spec             - Quire-validate the specification"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo deny check licenses"
@@ -57,11 +59,12 @@ build:
 
 .PHONY: msrv
 msrv:
-	$(CARGO) +$(MSRV) check --lib --no-default-features
+	$(CARGO) +$(MSRV) check --all-targets --all-features
 
 .PHONY: size
-size: build
-	bash scripts/check_rlib_size.sh
+size:
+	CARGO_TARGET_DIR=$(FOOTPRINT_TARGET_DIR) $(CARGO) +$(MSRV) build --locked --release --manifest-path measurement/footprint/Cargo.toml --target $(FOOTPRINT_TARGET)
+	bash scripts/check_linked_footprint.sh $(FOOTPRINT_TARGET_DIR)/$(FOOTPRINT_TARGET)/release/libquire_contract_runtime_footprint.a
 
 .PHONY: spec
 spec:
