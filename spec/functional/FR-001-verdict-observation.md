@@ -5,6 +5,8 @@ type: FR
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/StR-001
     type: satisfies
+  - target: ix://agent-ix/quire-contract-runtime/interface-001
+    type: implements
 ---
 # FR-001: Represent verdicts and clause observations
 
@@ -40,4 +42,3 @@ point, and per-clause observations.
 ## Dependencies
 
 - **Upstream**: [StR-001](../stakeholder/StR-001-auditable-runtime.md).
-

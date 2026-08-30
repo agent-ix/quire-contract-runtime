@@ -11,7 +11,7 @@ Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 | Requirement | Authoritative evidence | Result |
 |---|---|---|
 | #2 baseline, dual license, publication lock | `Cargo.toml`, both license files, `deny.stdout`, protected `main` API response | pass |
-| #2 stakeholder/functional/non-functional/interface/test requirements | 19 documents under `spec/`; `quire-validate` output | pass |
+| #2 stakeholder/functional/non-functional/interface/test requirements | 20 documents under `spec/`; `quire-validate` output | pass |
 | #2 composite review and assurance artifacts | `planning/foundation-review.md`; AP/AD/CAC/MP/AA under `spec/assurance/` | pass |
 | #2 implementation plan and dependency DAG | `planning/implementation-plan.md` | pass |
 | #1 three distinct terminal verdicts | `src/verdict.rs`; TC-001 output | pass |

@@ -1,6 +1,7 @@
 use crate::operators::{
     and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem, checked_sub,
-    implies_short_circuit, implies_total, index, or_short_circuit, or_total,
+    implies_short_circuit, implies_total, index, option_copied, option_ref, or_short_circuit,
+    or_total,
 };
 
 #[kani::proof]
@@ -39,4 +40,10 @@ fn tc_003_slice_index_is_defined_exactly_in_bounds() {
     let values: [u8; 4] = kani::any();
     let at = usize::from(kani::any::<u8>());
     assert_eq!(index(&values, at).is_some(), at < values.len());
+}
+
+#[kani::proof]
+fn tc_003_option_helpers_preserve_definedness() {
+    let value: Option<u8> = kani::any();
+    assert_eq!(option_copied(option_ref(&value)), value);
 }

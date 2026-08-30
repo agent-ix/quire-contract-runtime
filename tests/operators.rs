@@ -57,6 +57,38 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
     );
     assert!(!result);
     assert_eq!(sequence.get(), 2);
+
+    sequence.set(0);
+    let result = or_total(
+        || {
+            assert_eq!(sequence.get(), 0);
+            sequence.set(1);
+            true
+        },
+        || {
+            assert_eq!(sequence.get(), 1);
+            sequence.set(2);
+            false
+        },
+    );
+    assert!(result);
+    assert_eq!(sequence.get(), 2);
+
+    sequence.set(0);
+    let result = implies_total(
+        || {
+            assert_eq!(sequence.get(), 0);
+            sequence.set(1);
+            false
+        },
+        || {
+            assert_eq!(sequence.get(), 1);
+            sequence.set(2);
+            false
+        },
+    );
+    assert!(result);
+    assert_eq!(sequence.get(), 2);
 }
 
 #[test]
