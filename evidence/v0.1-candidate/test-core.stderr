@@ -1,4 +1,5 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+   Compiling quire-contract-runtime v0.1.0 (/home/peter/dev/quire-contract-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.36s
      Running unittests src/lib.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/quire_contract_runtime-61c5ad8b8da82aaf)
      Running tests/integration.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/integration-f7a3812b40e07476)
      Running tests/operators.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/operators-41ab3c78965383a4)
