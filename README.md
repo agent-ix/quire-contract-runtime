@@ -59,9 +59,9 @@ make ci
 bash scripts/collect_evidence.sh
 ```
 
-The checked-in Kani harnesses are run when `cargo kani` is installed; absence is reported as skipped,
-never as passed. Requirements and assurance artifacts live under `spec/`, with planning and review
-records under `planning/`.
+The checked-in Kani harnesses are a required CI job using pinned Kani 0.67.0. A local evidence run
+records an unavailable Kani installation as skipped, never as passed. Requirements and assurance
+artifacts live under `spec/`, with planning and review records under `planning/`.
 
 Agent-assisted contributions remain subject to the same traceability, review, evidence, and human
 release gates as every other contribution.
@@ -69,4 +69,3 @@ release gates as every other contribution.
 ## License
 
 Licensed under either Apache License, Version 2.0 or the MIT license at your option.
-
