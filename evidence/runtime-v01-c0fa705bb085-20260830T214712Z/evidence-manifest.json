@@ -1,0 +1,268 @@
+{
+  "artifacts": [
+    {
+      "path": "cargo-version.txt",
+      "sha256": "fcfafeedf9e1047337cbc09d4b2279bbf73c68b0230dadfa2551a3122a92fe7c",
+      "size": 336
+    },
+    {
+      "path": "clippy.stderr",
+      "sha256": "ee1d3fffa2022e962e63e0dbe4d35c9c198450a20c29fc09030f635dbb38bfcd",
+      "size": 72
+    },
+    {
+      "path": "clippy.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "default-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "default-dependencies.stdout",
+      "sha256": "152a1a12bb3fba2a97ef8ec6b0e4929fd6f0e153ea3d3de1a59f6dd5f531f6a6",
+      "size": 71
+    },
+    {
+      "path": "deny.stderr",
+      "sha256": "7e28b1654e4414b18b2b72a4396bbd0ff44a10c249c5422a8b41a4c78977f43b",
+      "size": 1364
+    },
+    {
+      "path": "deny.stdout",
+      "sha256": "71dadc8c8978da797b94dc581b666330c737551839c8fc820d7647130930c4b7",
+      "size": 12
+    },
+    {
+      "path": "fmt.stderr",
+      "sha256": "744382fc6197a31a0fb33c8cb09487f7a387e348188d685786a796d88b6b965a",
+      "size": 1095
+    },
+    {
+      "path": "fmt.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "kani-status.txt",
+      "sha256": "5ce6ae3e95179f7a71f850fa79dad9115cf4c98edbaf4a8ebc58abcddc8c39ff",
+      "size": 20
+    },
+    {
+      "path": "layout.stderr",
+      "sha256": "1e725ae411146afe1b4fe9996843629ee04df986de0bbe8923a00017afc343f6",
+      "size": 145
+    },
+    {
+      "path": "layout.stdout",
+      "sha256": "792ccd060ef8e3cf3139d6df8c14c6533b9809062b1c28005ee18c84a1db52dc",
+      "size": 118
+    },
+    {
+      "path": "metadata.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "metadata.stdout",
+      "sha256": "c086042e982b3a52429d725eac7c7f443ccc9a47cd69de3d9ce7da1e6c5505d7",
+      "size": 118796
+    },
+    {
+      "path": "panic-audit.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "panic-audit.stdout",
+      "sha256": "9a792a459c99e03cdc7cc63d17dbeb9baa326adb783f5f3a390aa3e41ed928a0",
+      "size": 35
+    },
+    {
+      "path": "quire-provenance.json",
+      "sha256": "6df2f8c787012733dbcaab24f8810dd127a508513ba521a852592539c938ec91",
+      "size": 664
+    },
+    {
+      "path": "quire-validate.stderr",
+      "sha256": "b490d70ffe44774238fa50820f6579c975ca17aecd4f1b03f8b24ad119f724eb",
+      "size": 689
+    },
+    {
+      "path": "quire-validate.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "release-build.stderr",
+      "sha256": "6bfa9e18ffdef821c711a542cfebd7db0982665615563e5a191285e489609c6f",
+      "size": 62
+    },
+    {
+      "path": "release-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "rlib-size.stdout",
+      "sha256": "ba209363f3610006af0dd3c2b26051da3c31095dae59428693f7bba4ca7da370",
+      "size": 112
+    },
+    {
+      "path": "rustc-version.txt",
+      "sha256": "a834181975ab3494d51a1a01e4a9d4321fecd674a52e3db3cf93b3b84b6fc2c1",
+      "size": 196
+    },
+    {
+      "path": "rustdoc.stderr",
+      "sha256": "289a2aeef0ef4031751d127fa75a2d02b39554c3d81c541fe614e2bd5fbd7049",
+      "size": 251
+    },
+    {
+      "path": "rustdoc.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "source-revision.txt",
+      "sha256": "a4080b1f14654dab68f97e53aaf78e343e5a6db40a81027393cd98243c00da92",
+      "size": 41
+    },
+    {
+      "path": "source-state.txt",
+      "sha256": "2e22da2ab13713309ac75219e525b8e06ed02f3f1963b8feef203fa25827f93d",
+      "size": 6
+    },
+    {
+      "path": "test-all.stderr",
+      "sha256": "deb739453e06374d7b32a4ec2e150970dd881a1ea90812604a3eda7854dcb888",
+      "size": 606
+    },
+    {
+      "path": "test-all.stdout",
+      "sha256": "46e5e87980dea3b9796b83b292539dce3dab9a5343af3e4f144668c158102ee9",
+      "size": 1028
+    },
+    {
+      "path": "test-alloc.stderr",
+      "sha256": "b97466f472810d19e0a4812f0339a225fdd4143da6d502a768ac54bfc285f5c9",
+      "size": 606
+    },
+    {
+      "path": "test-alloc.stdout",
+      "sha256": "76ec58fbb3c3a17f41fb1753e22ea1f78f7c6fa8dd92b1424e4037130c79f60b",
+      "size": 973
+    },
+    {
+      "path": "test-core.stderr",
+      "sha256": "5a6c91b974afe85aa7b8cbc27ca593c28ba404318035f64474a19dd0049ec466",
+      "size": 606
+    },
+    {
+      "path": "test-core.stdout",
+      "sha256": "e9a4f38162aac9bf983434f02f99cdde2de6d25a1fb0d0942b370d74d8e39b4c",
+      "size": 973
+    },
+    {
+      "path": "test-std.stderr",
+      "sha256": "cf96364d74819207d3390d110267a439e3f8e8ab6b769c5b02f17b6317bb2a51",
+      "size": 606
+    },
+    {
+      "path": "test-std.stdout",
+      "sha256": "76ec58fbb3c3a17f41fb1753e22ea1f78f7c6fa8dd92b1424e4037130c79f60b",
+      "size": 973
+    },
+    {
+      "path": "unsafe-audit.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "unsafe-audit.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "collectedAt": "2026-08-30T21:47:14Z",
+  "limitations": [
+    "PGM-01 candidate is under review and must be reconciled again after merge",
+    "rebased candidate has no deliberately dispatched remote CI run",
+    "CODEOWNER approval and the human source-release decision are pending",
+    "local Kani status is skipped-unavailable"
+  ],
+  "outcomes": [
+    {
+      "name": "quire-validate",
+      "status": "passed"
+    },
+    {
+      "name": "fmt",
+      "status": "passed"
+    },
+    {
+      "name": "clippy",
+      "status": "passed"
+    },
+    {
+      "name": "test-core",
+      "status": "passed"
+    },
+    {
+      "name": "test-alloc",
+      "status": "passed"
+    },
+    {
+      "name": "test-std",
+      "status": "passed"
+    },
+    {
+      "name": "test-all",
+      "status": "passed"
+    },
+    {
+      "name": "deny",
+      "status": "passed"
+    },
+    {
+      "name": "unsafe-audit",
+      "status": "passed"
+    },
+    {
+      "name": "panic-audit",
+      "status": "passed"
+    },
+    {
+      "name": "metadata",
+      "status": "passed"
+    },
+    {
+      "name": "default-dependencies",
+      "status": "passed"
+    },
+    {
+      "name": "release-build",
+      "status": "passed"
+    },
+    {
+      "name": "layout",
+      "status": "passed"
+    },
+    {
+      "name": "rustdoc",
+      "status": "passed"
+    },
+    {
+      "name": "rlib-size",
+      "status": "passed"
+    },
+    {
+      "name": "kani",
+      "status": "skipped-unavailable"
+    }
+  ],
+  "schemaVersion": "quire.runtime-evidence-manifest/v1",
+  "sourceRevision": "c0fa705bb0853ca4472b0d128923d6eaedeb6d70"
+}
