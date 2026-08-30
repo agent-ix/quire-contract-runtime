@@ -39,9 +39,12 @@ run_and_retain test-std cargo test --features std
 run_and_retain test-all cargo test --all-features
 run_and_retain deny cargo deny check licenses
 run_and_retain unsafe-audit bash scripts/check_unsafe_comments.sh
+run_and_retain panic-audit bash scripts/check_panic_surface.sh
 run_and_retain metadata cargo metadata --format-version 1 --no-default-features
+run_and_retain default-dependencies cargo tree --edges normal --no-default-features
 run_and_retain release-build cargo build --release --lib --no-default-features
 run_and_retain layout cargo run --release --example layout --no-default-features
+run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings cargo doc --all-features --no-deps
 
 rlib_path="$(find "${CARGO_TARGET_DIR:-target}/release/deps" -maxdepth 1 -type f -name 'libquire_contract_runtime-*.rlib' -print -quit)"
 if [[ -z "$rlib_path" ]]; then
