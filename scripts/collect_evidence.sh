@@ -11,7 +11,11 @@ run_and_retain() {
 }
 
 git rev-parse HEAD >"$evidence_dir/source-revision.txt"
-git status --porcelain=v1 >"$evidence_dir/source-state.txt"
+if git diff --quiet && git diff --cached --quiet; then
+  echo clean >"$evidence_dir/source-state.txt"
+else
+  echo modified >"$evidence_dir/source-state.txt"
+fi
 rustc --version --verbose >"$evidence_dir/rustc-version.txt"
 cargo --version --verbose >"$evidence_dir/cargo-version.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"
@@ -19,7 +23,7 @@ quire provenance --pretty >"$evidence_dir/quire-provenance.json"
   echo "schema=contract-evidence-envelope-v1"
   echo "tool=quire-contract-runtime/scripts/collect_evidence.sh"
   echo "input.source_revision=$(git rev-parse HEAD)"
-  echo "input.source_state=$([[ -s "$evidence_dir/source-state.txt" ]] && echo modified || echo clean)"
+  echo "input.source_state=$(<"$evidence_dir/source-state.txt")"
   echo "input.schema=quire-contract-runtime-v1"
   echo "backend.rustc=$(rustc --version)"
   echo "backend.target=$(rustc -vV | sed -n 's/^host: //p')"
