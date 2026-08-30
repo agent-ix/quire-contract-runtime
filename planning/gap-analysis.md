@@ -48,9 +48,9 @@ current protected checks and review, and the human source-release decision.
 
 Date: 2026-08-30
 
-Candidate source revision: `b47d3ac9fd2329626ef6f88be01da2b40722ff25`
+Candidate source revision: `6457c2c3f00dcbdce84205d4f72ed7d9ddb5596b`
 
-Evidence: `evidence/runtime-v01-b47d3ac9fd23-20260830T224533Z/sha256sums.txt`
+Evidence: `evidence/runtime-v01-6457c2c3f00d-20260830T230108Z/sha256sums.txt`
 
 ## Requirement audit
 
