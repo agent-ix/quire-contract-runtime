@@ -2,6 +2,11 @@
 set -euo pipefail
 
 evidence_dir="${1:-evidence/v0.1-candidate}"
+if git diff --quiet && git diff --cached --quiet; then
+  source_state=clean
+else
+  source_state=modified
+fi
 mkdir -p "$evidence_dir"
 
 run_and_retain() {
@@ -11,11 +16,7 @@ run_and_retain() {
 }
 
 git rev-parse HEAD >"$evidence_dir/source-revision.txt"
-if git diff --quiet && git diff --cached --quiet; then
-  echo clean >"$evidence_dir/source-state.txt"
-else
-  echo modified >"$evidence_dir/source-state.txt"
-fi
+echo "$source_state" >"$evidence_dir/source-state.txt"
 rustc --version --verbose >"$evidence_dir/rustc-version.txt"
 cargo --version --verbose >"$evidence_dir/cargo-version.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"
