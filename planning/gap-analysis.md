@@ -4,7 +4,7 @@ Date: 2026-08-30
 
 Candidate source revision: `790fb7780e893206240ba4fa5c5b376d60ec127e`
 
-Evidence: `evidence/v0.1-candidate/sha256sums.txt`
+Evidence: `evidence/runtime-v01-790fb7780e89-20260830T212212Z/sha256sums.txt`
 
 ## Requirement audit
 

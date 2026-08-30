@@ -1,8 +1,10 @@
 # Retained evidence
 
-Run `scripts/collect_evidence.sh` from the repository root. Each output preserves stdout and stderr
-separately, along with source/tool identities and SHA-256 digests. A missing optional Kani installation
-is recorded as `skipped-unavailable`; it is never represented as successful proof evidence.
+Run `scripts/collect_evidence.sh` from the repository root. By default it creates a new
+revision-and-UTC-timestamp-scoped directory and refuses to overwrite an existing record. Each output
+preserves stdout and stderr separately, along with source/tool identities and SHA-256 digests. A
+missing optional Kani installation is recorded as `skipped-unavailable`; it is never represented as
+successful proof evidence.
 
 The collector emits `evidence-envelope.json` with the canonical
 `quire.derivation-evidence/v1` identity from PGM-01, plus separately versioned collection-input and
