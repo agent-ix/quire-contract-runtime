@@ -15,6 +15,7 @@ help:
 	@echo "  make lint             - Clippy with -D warnings"
 	@echo "  make test             - cargo test"
 	@echo "  make test-features    - test every supported feature set"
+	@echo "  make doc              - warning-denied docs for runtime and footprint"
 	@echo "  make build            - Release build"
 	@echo "  make msrv             - Check all targets and features with Rust $(MSRV)"
 	@echo "  make size             - Enforce the 4 KiB linked footprint on $(FOOTPRINT_TARGET)"
@@ -54,6 +55,11 @@ test-features:
 	$(CARGO) test --features std
 	$(CARGO) test --all-features
 	$(CARGO) test -p quire-contract-runtime-footprint
+
+.PHONY: doc
+doc:
+	$(CARGO) doc -p quire-contract-runtime --all-features --no-deps
+	$(CARGO) doc -p quire-contract-runtime-footprint --no-deps --target $(FOOTPRINT_TARGET)
 
 .PHONY: build
 build:

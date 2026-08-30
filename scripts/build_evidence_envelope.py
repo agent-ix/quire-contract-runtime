@@ -139,7 +139,7 @@ def build(evidence_dir: Path) -> None:
             "make size",
             "bash scripts/measure_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
             "cargo run --release --example layout --no-default-features",
-            "RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --all-features --no-deps",
+            "RUSTDOCFLAGS=-Dwarnings make doc",
             "cargo kani (when available)",
         ],
         "tools": {
