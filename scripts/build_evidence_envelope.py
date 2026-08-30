@@ -275,7 +275,10 @@ def build(evidence_dir: Path) -> None:
 
 
 def main() -> int:
-    evidence_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "evidence" / "v0.1-candidate"
+    if len(sys.argv) != 2:
+        print("usage: build_evidence_envelope.py EVIDENCE_DIR", file=sys.stderr)
+        return 2
+    evidence_dir = Path(sys.argv[1])
     build(evidence_dir)
     return 0
 
