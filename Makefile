@@ -17,6 +17,7 @@ help:
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
+	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
 	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
 
 # =============================================================================
@@ -74,9 +75,13 @@ cargo-audit:
 audit-unsafe:
 	bash scripts/check_unsafe_comments.sh
 
+.PHONY: audit-panic
+audit-panic:
+	bash scripts/check_panic_surface.sh
+
 # =============================================================================
 # Composite
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check spec lint test-features deny audit-unsafe
+ci: fmt-check spec lint test-features deny audit-unsafe audit-panic
