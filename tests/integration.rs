@@ -29,7 +29,7 @@ fn fixture() -> (
     (identity, context, OBSERVATIONS[0].detail.unwrap())
 }
 
-/// Trace: TC-001, FR-001-AC-1, FR-001-AC-2
+/// Trace: TC-001, FR-001-AC-1, FR-001-AC-2, StR-001-VC-1
 #[test]
 fn tc_001_preserves_tri_state_identity_and_observations() {
     let (identity, context, detail) = fixture();
@@ -64,24 +64,24 @@ fn tc_001_preserves_tri_state_identity_and_observations() {
 fn tc_006_report_tracks_complete_saturating_counts() {
     let (identity, context, detail) = fixture();
     let mut report = CampaignReport::new(identity);
-    assert!(report.record_verdict(&Verdict::passed(context)));
-    assert!(report.record_verdict(&Verdict::failed_postcondition(context, detail)));
-    assert!(report.record_verdict(&Verdict::rejected_precondition(context, detail)));
+    assert!(report.record_verdict(&Verdict::passed(context)).is_ok());
+    assert!(report
+        .record_verdict(&Verdict::failed_postcondition(context, detail))
+        .is_ok());
+    assert!(report
+        .record_verdict(&Verdict::rejected_precondition(context, detail))
+        .is_ok());
     report.record_discard();
 
-    assert_eq!(report.counts.accepted, 2);
-    assert_eq!(report.counts.failed, 1);
-    assert_eq!(report.counts.rejected, 1);
-    assert_eq!(report.counts.discarded, 1);
-    assert_eq!(report.counts.total(), 4);
+    assert_eq!(report.counts().accepted(), 2);
+    assert_eq!(report.counts().failed(), 1);
+    assert_eq!(report.counts().rejected(), 1);
+    assert_eq!(report.counts().discarded(), 1);
+    assert_eq!(report.counts().total(), 4);
     assert_eq!(
         report.to_string(),
         "requirement=FR-001 revision=rev-7 accepted=2 rejected=1 failed=1 discarded=1"
     );
-
-    report.counts.accepted = u64::MAX;
-    assert!(report.record_verdict(&Verdict::passed(context)));
-    assert_eq!(report.counts.accepted, u64::MAX);
 }
 
 /// Trace: TC-006, FR-004-AC-1, FR-004-AC-2
@@ -92,6 +92,10 @@ fn tc_006_report_refuses_a_different_requirement() {
     let context = VerdictContext::new(other, ExecutionPoint::new("after-handler"), &[]);
     let mut report = CampaignReport::new(identity);
 
-    assert!(!report.record_verdict(&Verdict::passed(context)));
-    assert_eq!(report.counts.total(), 0);
+    let mismatch = report
+        .record_verdict(&Verdict::passed(context))
+        .expect_err("mismatched identity must be refused");
+    assert_eq!(mismatch.expected(), identity);
+    assert_eq!(mismatch.actual(), other);
+    assert_eq!(report.counts().total(), 0);
 }

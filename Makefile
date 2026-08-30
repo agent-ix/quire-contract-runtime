@@ -3,6 +3,7 @@
 # =============================================================================
 
 CARGO ?= cargo
+MSRV ?= 1.75.0
 
 .PHONY: help
 help:
@@ -13,6 +14,8 @@ help:
 	@echo "  make test             - cargo test"
 	@echo "  make test-features    - test every supported feature set"
 	@echo "  make build            - Release build"
+	@echo "  make msrv             - Check the dependency-free core with Rust $(MSRV)"
+	@echo "  make size             - Enforce the 256 KiB release rlib ceiling"
 	@echo "  make spec             - Quire-validate the specification"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo deny check licenses"
@@ -52,9 +55,17 @@ test-features:
 build:
 	$(CARGO) build --release --no-default-features
 
+.PHONY: msrv
+msrv:
+	$(CARGO) +$(MSRV) check --lib --no-default-features
+
+.PHONY: size
+size: build
+	bash scripts/check_rlib_size.sh
+
 .PHONY: spec
 spec:
-	quire validate --scope . 'spec/**/*.md' 'planning/**/*.md'
+	quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
 
 .PHONY: clean
 clean:
@@ -89,4 +100,4 @@ evidence-tool:
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check spec lint test-features deny audit-unsafe audit-panic evidence-tool
+ci: fmt-check spec lint test-features msrv size deny audit-unsafe audit-panic evidence-tool

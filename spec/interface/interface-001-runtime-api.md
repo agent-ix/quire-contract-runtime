@@ -46,13 +46,18 @@ operations:
     semantics: return None for absence, invalid index, overflow, zero division, or signed division overflow
   - name: record_campaign_verdict
     inputs: [per-requirement report, Verdict]
-    output: match indicator and updated complete counters
+    output: updated complete counters or typed identity mismatch
     semantics: refuse identity mismatch; saturate accepted, rejected, failed, and discarded counts
   - name: adapt_to_proptest
     feature: proptest
     inputs: [Verdict]
     output: proptest TestCaseResult
     semantics: map pass to success, failure to Fail, and rejection to Reject
+  - name: adapt_to_proptest_and_record
+    feature: proptest
+    inputs: [per-requirement report, Verdict]
+    output: typed identity mismatch or a recorded proptest TestCaseResult
+    semantics: record the verdict before mapping so the campaign census retains rejection
 invariants:
   - every evidence-bearing value retains exact borrowed source identity
   - rejected preconditions are never successful evidence
@@ -65,4 +70,3 @@ compatibility:
   licensing: MIT OR Apache-2.0
   publication: disabled through the v0.1 human release decision
 ```
-

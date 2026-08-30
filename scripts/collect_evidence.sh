@@ -32,17 +32,20 @@ run_and_retain() {
 git rev-parse HEAD >"$evidence_dir/source-revision.txt"
 echo "$source_state" >"$evidence_dir/source-state.txt"
 rustc --version --verbose >"$evidence_dir/rustc-version.txt"
+rustc +1.75.0 --version --verbose >"$evidence_dir/msrv-rustc-version.txt"
 cargo --version --verbose >"$evidence_dir/cargo-version.txt"
 python3 --version >"$evidence_dir/python-version.txt"
 python3 -c 'import jsonschema; print(jsonschema.__version__)' >"$evidence_dir/jsonschema-version.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"
-run_and_retain quire-validate quire validate --scope . 'spec/**/*.md' 'planning/**/*.md'
+run_and_retain quire-validate \
+  quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
 run_and_retain fmt cargo fmt --all -- --check
 run_and_retain clippy cargo clippy --all-targets --all-features -- -D warnings
 run_and_retain test-core cargo test --no-default-features
 run_and_retain test-alloc cargo test --features alloc
 run_and_retain test-std cargo test --features std
 run_and_retain test-all cargo test --all-features
+run_and_retain msrv cargo +1.75.0 check --lib --no-default-features
 run_and_retain deny cargo deny check licenses
 run_and_retain unsafe-audit bash scripts/check_unsafe_comments.sh
 run_and_retain panic-audit bash scripts/check_panic_surface.sh
@@ -51,13 +54,8 @@ run_and_retain default-dependencies cargo tree --edges normal --no-default-featu
 run_and_retain release-build cargo build --release --lib --no-default-features
 run_and_retain layout cargo run --release --example layout --no-default-features
 run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings cargo doc --all-features --no-deps
-
-rlib_path="$(find "${CARGO_TARGET_DIR:-target}/release/deps" -maxdepth 1 -type f -name 'libquire_contract_runtime-*.rlib' -print -quit)"
-if [[ -z "$rlib_path" ]]; then
-  echo "release rlib not found" >"$evidence_dir/rlib-size.stderr"
-  exit 1
-fi
-wc -c "$rlib_path" >"$evidence_dir/rlib-size.stdout"
+run_and_retain rlib-size \
+  bash scripts/check_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
 
 if command -v cargo-kani >/dev/null 2>&1; then
   run_and_retain kani cargo kani
