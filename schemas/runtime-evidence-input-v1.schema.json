@@ -14,9 +14,11 @@
     "tools": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["cargo", "quire", "rustc"],
+      "required": ["cargo", "jsonschema", "python", "quire", "rustc"],
       "properties": {
         "cargo": {"type": "string", "minLength": 1},
+        "jsonschema": {"type": "string", "minLength": 1},
+        "python": {"type": "string", "minLength": 1},
         "quire": {"type": "string", "minLength": 1},
         "rustc": {"type": "string", "minLength": 1}
       }
