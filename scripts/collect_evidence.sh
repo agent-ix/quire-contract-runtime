@@ -56,7 +56,7 @@ run_and_retain default-dependencies cargo tree --edges normal --no-default-featu
 run_and_retain release-build cargo build --release --lib --no-default-features
 run_and_retain linked-footprint make size
 run_and_retain layout cargo run --release --example layout --no-default-features
-run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --all-features --no-deps
+run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings make doc
 run_and_retain rlib-size-observation \
   bash scripts/measure_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
 
