@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 
-Candidate source revision: `ab7d5af4ffec7cd1cefd4db24828716ceecbd554`
+Candidate source revision: `aac4bee923aef78838b856118cd73aad3728226e`
 
 Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 
@@ -23,7 +23,7 @@ Evidence: `evidence/v0.1-candidate/sha256sums.txt`
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | `CampaignReport`; TC-006 mixed, mismatch, and saturation tests | pass |
-| #3 Kani harness coverage | four checked-in proofs; pinned Kani 0.67.0 CI result | pass |
+| #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic CI and measurement outputs | local `make ci`, four successful GitHub checks, and retained MP-001 outputs/digests | pass |
 
 ## Gap disposition
@@ -37,7 +37,7 @@ The following are release/workflow gates, not silently accepted gaps:
 1. PGM-01 (`agent-ix/quire-contract-ir#3`) was still open when this review ran. This repository does
    not modify or close that upstream governance ticket.
 2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`; pinned Kani
-   0.67.0 executed all four proofs successfully in GitHub CI.
+   0.67.0 executed all five proofs successfully in GitHub CI.
 3. Protected-branch code-owner review must complete on the pull request.
 4. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
