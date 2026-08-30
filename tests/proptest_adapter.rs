@@ -6,6 +6,7 @@ use quire_contract_runtime::{
     RequirementId, RevisionId, Verdict, VerdictContext,
 };
 
+/// Trace: TC-004, FR-003-AC-1
 #[test]
 fn tc_004_adapter_preserves_all_three_outcomes() {
     let context = VerdictContext::new(

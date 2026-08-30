@@ -7,6 +7,7 @@ use quire_contract_runtime::operators::{
     or_total,
 };
 
+/// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
 #[test]
 fn tc_002_boolean_truth_tables() {
     for left in [false, true] {
@@ -21,6 +22,7 @@ fn tc_002_boolean_truth_tables() {
     }
 }
 
+/// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
 #[test]
 fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
     let calls = Cell::new(0);
@@ -91,6 +93,7 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
     assert_eq!(sequence.get(), 2);
 }
 
+/// Trace: TC-003, FR-002-AC-3, NFR-002-AC-1
 #[test]
 fn tc_003_definedness_boundaries_do_not_panic() {
     let values = [10_u8, 20];
@@ -108,6 +111,7 @@ fn tc_003_definedness_boundaries_do_not_panic() {
 }
 
 proptest! {
+    /// Trace: TC-003, FR-002-AC-3, NFR-002-AC-1
     #[test]
     fn tc_003_checked_i32_helpers_match_primitive_semantics(left: i32, right: i32) {
         prop_assert_eq!(checked_add(left, right), left.checked_add(right));
