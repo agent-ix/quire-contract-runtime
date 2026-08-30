@@ -28,9 +28,17 @@ must be explicit to downstream users.
 
 | Metric | Target | Threshold | Method |
 |--------|--------|-----------|--------|
-| Intentional panic sites in library code | 0 | 0 | source inspection and Clippy |
-| License policy violations | 0 | 0 | cargo-deny |
-| Registry publication enabled | false | false | manifest inspection |
+| Intentional panic sites in library code | 0 | 0 | static-quality |
+| License policy violations | 0 | 0 | sca-sbom |
+| Registry publication enabled | false | false | inspection |
+
+## Acceptance Criteria
+
+| ID | Criteria | Verification |
+|----|----------|--------------|
+| NFR-002-AC-1 | Valid public evaluation and accounting inputs encounter no intentional panic path. | property-based-testing (TC-003) |
+| NFR-002-AC-2 | The manifest remains unpublished and declares `MIT OR Apache-2.0`. | Inspection (TC-007) |
+| NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive. | Inspection (TC-008) |
 
 ## Verification
 
@@ -40,4 +48,3 @@ documentation states its size, panic, feature, and compatibility contracts.
 ## Dependencies
 
 - **Upstream**: [FR-002](../functional/FR-002-safe-operators.md).
-
