@@ -1,0 +1,6 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/quire_contract_runtime-5d668a7e8601481e)
+     Running tests/integration.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/integration-e0065fe0f71884f2)
+     Running tests/operators.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/operators-3e9f7caff408af99)
+     Running tests/proptest_adapter.rs (/tmp/quire-contract-runtime-evidence-target/debug/deps/proptest_adapter-af4563608c77a346)
+   Doc-tests quire_contract_runtime
