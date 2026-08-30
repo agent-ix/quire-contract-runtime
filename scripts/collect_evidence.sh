@@ -54,7 +54,7 @@ fi
 wc -c "$rlib_path" >"$evidence_dir/rlib-size.stdout"
 
 if command -v cargo-kani >/dev/null 2>&1; then
-  run_and_retain kani cargo kani --tests
+  run_and_retain kani cargo kani
   echo passed >"$evidence_dir/kani-status.txt"
 else
   echo skipped-unavailable >"$evidence_dir/kani-status.txt"

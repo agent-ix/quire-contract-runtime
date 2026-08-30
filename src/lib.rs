@@ -27,6 +27,10 @@ pub mod operators;
 pub mod proptest_adapter;
 pub mod verdict;
 
+#[cfg(kani)]
+#[path = "../verification/kani.rs"]
+mod kani_proofs;
+
 pub use accounting::{CampaignCounts, CampaignReport};
 pub use identity::{ClauseId, ContractIdentity, ExecutionPoint, RequirementId, RevisionId};
 pub use observation::{ClauseKind, ClauseOutcome, FailureDetail, FailureKind, Observation};
