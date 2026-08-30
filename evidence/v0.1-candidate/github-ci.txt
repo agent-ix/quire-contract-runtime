@@ -1,0 +1,10 @@
+schema=contract-ci-evidence-v1
+pull_request=https://github.com/agent-ix/quire-contract-runtime/pull/5
+head_revision=ab7d5af4ffec7cd1cefd4db24828716ceecbd554
+rust_checks=SUCCESS https://github.com/agent-ix/quire-contract-runtime/actions/runs/33334650645/job/99319262800
+msrv_1_75=SUCCESS https://github.com/agent-ix/quire-contract-runtime/actions/runs/33334650645/job/99319262664
+kani_0_67_0=SUCCESS https://github.com/agent-ix/quire-contract-runtime/actions/runs/33334650645/job/99319262802
+license_check=SUCCESS https://github.com/agent-ix/quire-contract-runtime/actions/runs/33334650645/job/99319262761
+review=REQUIRED
+merge_state=BLOCKED
+
