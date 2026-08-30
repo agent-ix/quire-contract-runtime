@@ -84,7 +84,7 @@ available gate.
 The following are release/workflow gates, not silently accepted gaps:
 
 1. PGM-01 (`agent-ix/quire-contract-ir#3`) is in review at PR #12. This candidate reconciles exact
-   revision `7f8130d3fdb160a98a7a7f445cc1eb7419a3c179` and its envelope schema digest, but must reconcile
+   revision `e928ce3703d238856544c65bc4aa7c30ea16dac1` and its envelope schema digest, but must reconcile
    again after the policy merges.
 2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
    0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
