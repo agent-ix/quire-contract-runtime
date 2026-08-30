@@ -21,6 +21,7 @@ INPUT_SCHEMA = ROOT / "schemas" / "runtime-evidence-input-v1.schema.json"
 MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
 COLLECTOR = ROOT / "scripts" / "collect_evidence.sh"
 BUILDER = Path(__file__).resolve()
+SCHEMA_VALIDATOR = ROOT / "scripts" / "validate_json_schema.py"
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -71,6 +72,7 @@ def hash_parameter_files() -> str:
         ROOT / "rust-toolchain.toml",
         COLLECTOR,
         BUILDER,
+        SCHEMA_VALIDATOR,
         INPUT_SCHEMA,
         MANIFEST_SCHEMA,
     )
@@ -110,6 +112,9 @@ def build(evidence_dir: Path) -> None:
         "sourceState": source_state,
         "commands": [
             "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md'",
+            "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
+            "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
+            "python3 scripts/validate_json_schema.py $PGM01_SCHEMA evidence-envelope.json (when available)",
             "cargo fmt --all -- --check",
             "cargo clippy --all-targets --all-features -- -D warnings",
             "cargo test --no-default-features",
