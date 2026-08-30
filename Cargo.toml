@@ -1,0 +1,22 @@
+[package]
+name = "quire-contract-runtime"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Small no_std runtime support for generated contract oracles and harness verdicts."
+authors = ["Peter Krenesky <kreneskyp@gmail.com>"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository = "https://github.com/agent-ix/quire-contract-runtime"
+
+[lib]
+name = "quire_contract_runtime"
+path = "src/lib.rs"
+
+[dependencies]
+
+[dev-dependencies]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
