@@ -1,6 +1,4 @@
-#![cfg(kani)]
-
-use quire_contract_runtime::operators::{
+use crate::operators::{
     and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem, checked_sub,
     implies_short_circuit, implies_total, index, or_short_circuit, or_total,
 };
