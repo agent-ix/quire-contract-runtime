@@ -51,8 +51,9 @@ adapters. Reviewers and release owners rely on retained traceability and measure
 ## Requirements Architecture
 
 Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004 and
-quality requirements NFR-001 and NFR-002. Test cases TC-001 through TC-006 provide the verification
-matrix. The assurance artifacts bind the intended use, boundary, evidence, and open human decision.
+quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral runtime API
+contract implemented by those FRs. Test cases TC-001 through TC-006 provide the verification matrix.
+The assurance artifacts bind the intended use, boundary, evidence, and open human decision.
 
 ## References
 
@@ -60,4 +61,3 @@ matrix. The assurance artifacts bind the intended use, boundary, evidence, and o
 - [PGM-01 governance gate](https://github.com/agent-ix/quire-contract-ir/issues/3), the authoritative
   cross-repository policy; this specification does not redefine it.
 - [Runtime epic](https://github.com/agent-ix/quire-contract-runtime/issues/4).
-

@@ -5,6 +5,8 @@ type: FR
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/FR-001
     type: depends_on
+  - target: ix://agent-ix/quire-contract-runtime/interface-001
+    type: implements
 ---
 # FR-004: Account for every campaign outcome
 
