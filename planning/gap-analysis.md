@@ -11,7 +11,7 @@ review_set: subset
 
 ## Summary
 
-The runtime requirements and implementation have no unresolved semantic gap after eight executed
+The runtime requirements and implementation have no unresolved semantic gap after nine executed
 source-review rounds. The candidate remains gated by current protected checks and review, and the
 human source-release decision.
 
@@ -22,6 +22,7 @@ human source-release decision.
 | FND-013 | medium | The main-based candidate has no deliberately dispatched protected run after manual-CI PR #6 merged. | MP-001, PR #5, PR #6 |
 | FND-014 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
 | FND-015 | medium | The manual-only hosted workflow does not yet execute the local rustdoc and evidence-tool gates; its externally owned reconciliation remains pending. | MP-001, PR #5, PR #6 |
+| FND-301 | medium | Branch protection still requires obsolete context `Rust 1.75 core`, while the strengthened workflow job is named `Rust 1.75 surface and footprint`; repository settings reconciliation remains pending. | PR #5, branch protection |
 
 ## Source-review disposition
 
@@ -206,3 +207,17 @@ the panic-audit residual, and the ungated PGM pin. Its new findings are disposit
 FND-015 remains externally owned and this branch neither edits nor dispatches the manual-only hosted
 workflow. Local Kani remains unavailable, so the five checked-in harnesses remain truthfully
 `skipped-unavailable` for the current source candidate.
+
+## Ninth re-review disposition
+
+The ninth review closed all six eighth-review findings and reconfirmed the two prior high-severity
+gates under fresh mutations. Its new findings are dispositioned as follows:
+
+| Review finding | Disposition |
+|---|---|
+| FND-301 | Open repository-settings reconciliation: branch protection must replace obsolete required context `Rust 1.75 core` with the existing strengthened job context `Rust 1.75 surface and footprint`. This branch does not rename or dispatch the externally owned manual-only workflow. |
+| FND-302 | The TC-008 use-tree self-probe now includes `pub use accounting::*;` and requires the exact `src/lib.rs::use accounting::*` census label, making the `UseTree::Glob` arm load-bearing. |
+| FND-303 | NFR-002-AC-4 now explicitly owns collector transcript/status capture, command and fixed-point failure behavior, and the builder's transcript consistency. The collector carries an implementation marker enforced by the ownership test, and TC-007 describes the collector self-test, named exclusions, and contradiction checks. |
+
+Kani remains truthfully `skipped-unavailable`; the current source requires a deliberate protected run
+after FND-301 is reconciled. Task-006 remains an explicitly human-authored release decision.

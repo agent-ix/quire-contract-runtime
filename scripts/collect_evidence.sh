@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Implements: NFR-002
 run_and_retain() {
   local name="$1"
   shift
