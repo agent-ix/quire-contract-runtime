@@ -39,7 +39,7 @@ must be explicit to downstream users.
 | NFR-002-AC-1 | Valid public evaluation and accounting inputs encounter no intentional panic path. | property-based-testing (TC-003) |
 | NFR-002-AC-2 | The manifest remains unpublished and declares `MIT OR Apache-2.0`. | Inspection (TC-007) |
 | NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive. | Inspection (TC-008) |
-| NFR-002-AC-4 | The evidence builder verifies its vendored PGM-01 schema and raw Git commit identities, derives each declared command outcome from its retained exit status, preserves failed or inconclusive outcomes, and is tested for identity, digest, role, extension, outcome truthfulness, and validation behavior. | Inspection (TC-007) |
+| NFR-002-AC-4 | The evidence collector records every invoked gate's transcripts and numeric exit status, fails closed on command or checksum-fixed-point failure, and is tested for status propagation; the builder verifies its vendored PGM-01 schema and raw Git commit identities, derives outcomes without contradicting retained transcripts, preserves failed or inconclusive outcomes, and is tested for identity, digest, role, extension, outcome truthfulness, and validation behavior. | Inspection (TC-007) |
 
 ## Verification
 

@@ -37,7 +37,7 @@ class EvidenceBuilderTests(unittest.TestCase):
             chr(code) for code in (73, 109, 112, 108, 101, 109, 101, 110, 116, 115)
         )
         ownership_marker = f"# {ownership_label}: NFR-002"
-        for path in (BUILDER_PATH, VALIDATOR_PATH):
+        for path in (BUILDER_PATH, COLLECTOR_PATH, VALIDATOR_PATH):
             self.assertIn(ownership_marker, path.read_text(encoding="utf-8"), path.name)
 
     # Trace: TC-007, NFR-002-AC-4

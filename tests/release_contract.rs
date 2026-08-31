@@ -319,11 +319,14 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
 
     let use_probe = crate_accounting_surface(&[(
         "src/lib.rs".to_owned(),
-        "pub use accounting::{CampaignCounts as Tally, CampaignReport};".to_owned(),
+        "pub use accounting::*;\n\
+         pub use accounting::{CampaignCounts as Tally, CampaignReport};"
+            .to_owned(),
     )]);
     assert_eq!(
         use_probe.public_items,
         [
+            "src/lib.rs::use accounting::*",
             "src/lib.rs::use accounting::CampaignCounts as Tally",
             "src/lib.rs::use accounting::CampaignReport",
         ]

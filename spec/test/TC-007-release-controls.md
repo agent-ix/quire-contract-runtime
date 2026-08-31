@@ -16,7 +16,8 @@ Verify the default linked boundary remains dependency-free and unsafe-free, the 
 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte population floor and 4 KiB
 ceiling for linked `.text` plus `.rodata`, retains no runtime/harness panic-path reference, and publication and dual-license
 controls remain explicit. Verify the evidence toolchain binds the vendored PGM-01 schema to the
-recorded revision/digest and preserves semantic envelope identities.
+recorded revision/digest, preserves semantic envelope identities, and fails closed when collection,
+outcome, transcript, or checksum-fixed-point records disagree.
 
 ## Test Procedure
 
@@ -28,7 +29,11 @@ population at two fixed inputs and compares exact results. The source-policy tes
 parses every shipped runtime source file and constrains accounting inherent and trait implementations,
 private aliases, cross-file functions, and macros that could add a reset seam.
 Python unit tests assemble a fixture evidence bundle, verify its digests, roles, extension block,
-and schema pin, exercise accepted/rejected local validation, and reject a mismatched PGM schema pin.
+and schema pin, exercise accepted/rejected local validation, reject a mismatched PGM schema pin,
+reject zero-status records contradicted by retained failure transcripts, and pin the validator
+transcript exclusion names. The collector self-test executes the production status recorder and
+status-word/fixed-point helpers, requiring nonzero commands to mark collection failure and changed
+envelopes to fail their checksum comparison.
 
 ## Expected Results
 
@@ -38,4 +43,6 @@ unsafe-block count are zero, the license and publication gates pass, and
 sections are at least 500 and no larger than 4,096 bytes and no runtime/harness panic-path reference is linked. The rlib byte
 count is retained separately as an unenforced compiler-sensitive observation.
 The evidence builder fails before emitting an envelope if the vendored PGM schema differs from the
-pinned digest, and the planning copies of the revision and digest agree with the executable pin.
+pinned digest, and the planning copies of the revision and digest agree with the executable pin. The
+collector self-test fails if command-status propagation, status-word derivation, or envelope
+fixed-point detection is weakened.
