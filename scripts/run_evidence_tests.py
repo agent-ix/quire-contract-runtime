@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MINIMUM_EVIDENCE_TESTS = 43
+MINIMUM_EVIDENCE_TESTS = 44
 
 
 # Implements: NFR-002

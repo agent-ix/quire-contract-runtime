@@ -90,7 +90,7 @@ VALIDATOR_TRANSCRIPTS = (
 PASS_CONTRADICTION_MARKERS = {
     "ci-guard": ("must resolve to", "swallowed failure", "unsafe MAKEFLAGS"),
     "kani-census": ("KANI_CENSUS_FAILED", "KANI_CENSUS_STATUS=unavailable"),
-    "evidence-tool": ("FAILED", "EVIDENCE_TEST_CENSUS_FAILED"),
+    "evidence-tool": ("\nFAILED (failures=", "\nFAILED (errors="),
     "quire-validate": ('"valid": false', "validation failed"),
     "fmt": ("Diff in ",),
     "clippy": ("error: could not compile",),

@@ -200,6 +200,29 @@ class EvidenceBuilderTests(unittest.TestCase):
             self.assertEqual(outcomes["test-all"], "inconclusive")
 
     # Trace: TC-007, NFR-002-AC-4
+    def test_evidence_suite_distinguishes_negative_fixtures_from_suite_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            evidence_dir = Path(directory)
+            self.write_fixture_inputs(evidence_dir)
+            (evidence_dir / "evidence-tool.stderr").write_text(
+                "KANI_FAILED: intentional negative control\n",
+                encoding="utf-8",
+            )
+            outcomes = {
+                item["name"]: item["status"]
+                for item in builder.command_outcomes(evidence_dir)
+            }
+            self.assertEqual(outcomes["evidence-tool"], "passed")
+            (evidence_dir / "evidence-tool.stderr").write_text(
+                "\nFAILED (failures=1)\n", encoding="utf-8"
+            )
+            outcomes = {
+                item["name"]: item["status"]
+                for item in builder.command_outcomes(evidence_dir)
+            }
+            self.assertEqual(outcomes["evidence-tool"], "failed")
+
+    # Trace: TC-007, NFR-002-AC-4
     def test_kani_pass_requires_numeric_success_complete_summary_and_every_harness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             evidence_dir = Path(directory)
@@ -818,7 +841,7 @@ class EvidenceBuilderTests(unittest.TestCase):
         successful_stdout = {
             "ci-guard": "all 15 mandatory local-check targets propagate failures\n",
             "kani-census": "verified 7 declared and trace-bound Kani harnesses\n",
-            "evidence-tool": "verified 43 evidence-tool behavioral tests\n",
+            "evidence-tool": "verified 44 evidence-tool behavioral tests\n",
             "quire-validate": "QUIRE_VALIDATION_PASSED\n",
             "clippy": "Finished `dev` profile\n",
             "test-core": "test result: ok. 17 passed\n",
