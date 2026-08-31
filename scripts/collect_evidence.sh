@@ -115,7 +115,7 @@ sha256sum "$pgm01_validator_path" | cut -d' ' -f1 >"$evidence_dir/pgm01-validato
 git -C "$pgm01_repo" rev-parse HEAD >"$evidence_dir/pgm01-revision.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"
 run_and_retain quire-validate \
-  quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
+  bash -c "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED"
 run_and_retain fmt cargo fmt --all -- --check
 run_and_retain clippy make lint
 run_and_retain test-core cargo test --no-default-features
@@ -202,5 +202,9 @@ if (( collection_failed != 0 )); then
   exit 1
 fi
 
-python3 scripts/update_evidence_anchors.py
-python3 scripts/verify_evidence.py
+python3 -c '
+import pathlib, sys
+from scripts.verify_evidence import verify_record
+verify_record(pathlib.Path(sys.argv[1]))
+' "$evidence_dir"
+echo "collected and verified $evidence_dir; update evidence/ANCHORS as a separate review-boundary step"

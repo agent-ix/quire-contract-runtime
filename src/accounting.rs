@@ -26,6 +26,7 @@ impl CampaignCounts {
     }
 
     #[cfg(kani)]
+    // Implements: FR-004
     pub(crate) const fn from_proof_counts(
         accepted: u64,
         rejected: u64,
@@ -162,6 +163,7 @@ impl<'a> CampaignReport<'a> {
     }
 
     #[cfg(kani)]
+    // Implements: FR-004
     pub(crate) const fn from_proof_counts(
         identity: ContractIdentity<'a>,
         accepted: u64,

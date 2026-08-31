@@ -10,6 +10,11 @@ top_claim:
   statement: the identified runtime source candidate is acceptable for bounded v0.1 use
   subject: quire-contract-runtime v0.1 source candidate
   status: open
+evidence_binding:
+  anchor: evidence/ANCHORS
+  authoritative_records: 1
+  outcomes: 26
+  required_result: conclusive
 reasoning:
   - id: reasoning-semantic-conformance
     statement: evaluate requirement-tagged tests and measurements against the declared boundary
@@ -60,4 +65,3 @@ candidate after PGM-01, code review, CI, and gap analysis are complete.
 
 The cross-repository governance issue and human decision are deliberately open. Kani evidence may be
 unavailable in a local environment and must then be recorded as skipped, not passed.
-

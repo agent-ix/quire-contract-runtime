@@ -16,8 +16,13 @@ paths, revisions, and digests are retained.
 
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
-schema formats, artifact links, source identity, and re-derived outcomes. The current authoritative
-record is `runtime-v01-cc48ce2ff505-20260831T190534Z`.
+schema formats, artifact links, source identity, and re-derived outcomes. No authoritative record is
+named while the Round 3 control-strengthening source awaits its mandatory Kani execution.
+
+Collection verifies a new record directly but does not rewrite `evidence/ANCHORS`. Retiring the old
+record, updating the authoritative record named above, regenerating anchors, and running the full
+verifier are explicit review-boundary steps. The anchor updater rejects silent top-level removals,
+and both updater and verifier enforce the minimum retained-history census.
 
 Candidate output supports the human release decision described by `spec/assurance/MP-001`; it is not
 itself a release approval.
@@ -27,3 +32,8 @@ remain immutable diagnostic records and must not be read as current-candidate as
 The prior `runtime-v01-f3f1c28d1703-20260831T174552Z` record is retained under
 `historical/retired-pre-head-binding/`: its outcomes remain intact, but it predates exact HEAD
 binding and the repository-owned coverage-status classifier introduced by the current record.
+
+`historical/retired-round3-control-strengthening/` retains the prior authoritative record. Its
+transcripts remain intact, but it predates positive transcript corroboration, per-harness proof
+obligation counts, conclusive-verdict enforcement, independent parameter re-derivation, and the
+Round 3 Make/coverage/history controls, so it is explicitly non-authoritative.

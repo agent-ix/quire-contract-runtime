@@ -22,6 +22,8 @@ VERIFIER_PATH = ROOT / "scripts" / "verify_evidence.py"
 ANCHOR_UPDATER_PATH = ROOT / "scripts" / "update_evidence_anchors.py"
 COVERAGE_PATH = ROOT / "scripts" / "check_coverage_status.py"
 KANI_CENSUS_PATH = ROOT / "scripts" / "check_kani_harnesses.py"
+FAILURE_PROPAGATION_PATH = ROOT / "scripts" / "check_failure_propagation.py"
+ASSURANCE_CHECKER_PATH = ROOT / "scripts" / "check_assurance_anchor.py"
 
 
 def load_module(name: str, path: Path):
@@ -37,6 +39,7 @@ builder = load_module("runtime_evidence_builder", BUILDER_PATH)
 verifier = load_module("runtime_evidence_verifier", VERIFIER_PATH)
 anchor_updater = load_module("runtime_anchor_updater", ANCHOR_UPDATER_PATH)
 coverage = load_module("runtime_coverage_status", COVERAGE_PATH)
+assurance = load_module("runtime_assurance_anchor", ASSURANCE_CHECKER_PATH)
 
 
 class EvidenceBuilderTests(unittest.TestCase):
@@ -57,6 +60,9 @@ class EvidenceBuilderTests(unittest.TestCase):
             ANCHOR_UPDATER_PATH,
             COVERAGE_PATH,
             KANI_CENSUS_PATH,
+            FAILURE_PROPAGATION_PATH,
+            ROOT / "scripts" / "run_kani_gate.py",
+            ASSURANCE_CHECKER_PATH,
         ):
             self.assertIn(ownership_marker, path.read_text(encoding="utf-8"), path.name)
             self.assertIn(f"`scripts/{path.name}`", plan, path.name)
@@ -173,6 +179,19 @@ class EvidenceBuilderTests(unittest.TestCase):
             self.assertEqual(envelope["result"]["status"], "inconclusive")
 
     # Trace: TC-007, NFR-002-AC-4
+    def test_zero_exit_without_positive_corroboration_is_inconclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            evidence_dir = Path(directory)
+            self.write_fixture_inputs(evidence_dir)
+            (evidence_dir / "test-all.stdout").write_text("", encoding="utf-8")
+
+            outcomes = {
+                item["name"]: item["status"]
+                for item in builder.command_outcomes(evidence_dir)
+            }
+            self.assertEqual(outcomes["test-all"], "inconclusive")
+
+    # Trace: TC-007, NFR-002-AC-4
     def test_kani_pass_requires_numeric_success_complete_summary_and_every_harness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             evidence_dir = Path(directory)
@@ -182,7 +201,9 @@ class EvidenceBuilderTests(unittest.TestCase):
                 builder.EXPECTED_KANI_VERSION + "\n", encoding="utf-8"
             )
             transcript = "Kani Rust Verifier 0.67.0 (cargo plugin)\n" + "\n".join(
-                f"kani_proofs::{name} SUCCESSFUL"
+                f"Checking harness kani_proofs::{name}...\n"
+                f"SUMMARY:\n ** 0 of {builder.EXPECTED_KANI_CHECK_FLOORS[name]} failed\n"
+                "VERIFICATION:- SUCCESSFUL"
                 for name in builder.EXPECTED_KANI_HARNESSES
             )
             transcript += (
@@ -192,6 +213,18 @@ class EvidenceBuilderTests(unittest.TestCase):
             (evidence_dir / "kani.stdout").write_text(transcript, encoding="utf-8")
             outcomes = {item["name"]: item["status"] for item in builder.command_outcomes(evidence_dir)}
             self.assertEqual(outcomes["kani"], "passed")
+            self.assertEqual(
+                builder.kani_proof_checks(transcript),
+                {
+                    name: builder.EXPECTED_KANI_CHECK_FLOORS[name]
+                    for name in builder.EXPECTED_KANI_HARNESSES
+                },
+            )
+            hollow = transcript.replace(
+                f" ** 0 of {builder.EXPECTED_KANI_CHECK_FLOORS[builder.EXPECTED_KANI_HARNESSES[0]]} failed",
+                " ** 0 of 0 failed",
+            )
+            self.assertFalse(builder.validate_kani_success(hollow))
             (evidence_dir / "kani.stdout").write_text(
                 "VERIFICATION:- FAILED\nComplete - 0 successfully verified harnesses, 6 failures, 6 total.\n",
                 encoding="utf-8",
@@ -216,6 +249,8 @@ class EvidenceBuilderTests(unittest.TestCase):
     def test_every_declared_command_has_contradiction_markers(self) -> None:
         declared = {name for name, _ in builder.COMMAND_TRANSCRIPTS}
         self.assertEqual(declared, set(builder.PASS_CONTRADICTION_MARKERS))
+        special = {"fmt", "metadata", "kani"}
+        self.assertEqual(declared - special, set(builder.PASS_CORROBORATION_PATTERNS))
 
     # Trace: TC-007, NFR-002-AC-4
     def test_skipped_outcome_forces_pending_result_and_limitation(self) -> None:
@@ -286,7 +321,7 @@ class EvidenceBuilderTests(unittest.TestCase):
     # Trace: TC-007, NFR-002-AC-4
     def test_kani_census_and_local_coverage_classifier_are_executable(self) -> None:
         for path, expected in (
-            (KANI_CENSUS_PATH, "6 declared and trace-bound Kani harnesses"),
+            (KANI_CENSUS_PATH, "7 declared and trace-bound Kani harnesses"),
             (COVERAGE_PATH, '"statusLies": 0'),
         ):
             completed = subprocess.run(
@@ -298,6 +333,206 @@ class EvidenceBuilderTests(unittest.TestCase):
             )
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertIn(expected, completed.stdout)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_kani_census_process_rejects_a_mutated_fixture_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "verification" / "kani.rs"
+            source.parent.mkdir(parents=True)
+            text = (ROOT / "verification" / "kani.rs").read_text(encoding="utf-8")
+            source.write_text(
+                text.replace(
+                    "fn tc_003_option_helpers_preserve_definedness()",
+                    "fn removed_option_helper_harness()",
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
+            rejected = subprocess.run(
+                [sys.executable, str(KANI_CENSUS_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("KANI_CENSUS_FAILED", rejected.stderr)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_coverage_process_rejects_a_mutated_matrix_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            matrix = root / "spec" / "test-matrix.md"
+            matrix.parent.mkdir(parents=True)
+            text = (ROOT / "spec" / "test-matrix.md").read_text(encoding="utf-8")
+            matrix.write_text(
+                text.replace(
+                    "| FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |\n", ""
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
+            rejected = subprocess.run(
+                [sys.executable, str(COVERAGE_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("row census", rejected.stderr)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_anchor_updater_process_rejects_an_implicit_removal(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            evidence = root / "evidence"
+            for required in anchor_updater.REQUIRED_HISTORICAL_DIRECTORIES:
+                (evidence / "historical" / required).mkdir(parents=True)
+            records = evidence / "historical" / "retired-pre-head-binding"
+            for index in range(anchor_updater.MINIMUM_HISTORICAL_RECORDS):
+                record = records / f"record-{index:02}"
+                record.mkdir()
+                (record / "evidence-envelope.json").write_text("{}\n", encoding="utf-8")
+            support = evidence / "support.txt"
+            support.write_text("retained\n", encoding="utf-8")
+            environment = os.environ.copy()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
+            accepted = subprocess.run(
+                [sys.executable, str(ANCHOR_UPDATER_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            support.unlink()
+            rejected = subprocess.run(
+                [sys.executable, str(ANCHOR_UPDATER_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("refusing to remove committed evidence anchors", rejected.stderr)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_failure_propagation_process_rejects_make_controls_and_shadowed_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            makefile = root / "Makefile"
+            makefile.write_text(
+                (ROOT / "Makefile").read_text(encoding="utf-8") + "\n.IGNORE:\n",
+                encoding="utf-8",
+            )
+            rejected = subprocess.run(
+                [
+                    sys.executable,
+                    str(FAILURE_PROPAGATION_PATH),
+                    "--makefile",
+                    str(makefile),
+                    "--static-only",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(rejected.returncode, 1)
+            self.assertIn("global recipe-control directive", rejected.stderr)
+
+            cargo = root / "cargo"
+            cargo.write_text("#!/bin/sh\necho 'cargo 1.94.1'\n", encoding="utf-8")
+            cargo.chmod(0o755)
+            environment = os.environ.copy()
+            environment["PATH"] = f"{root}:/usr/bin"
+            rejected = subprocess.run(
+                [sys.executable, str(FAILURE_PROPAGATION_PATH), "--inspect-only"],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("cargo must resolve", rejected.stderr)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_assurance_anchor_consumes_the_verifier_status_and_record_verdict(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            argument = root / "AA-001.md"
+            argument.write_text(
+                "evidence_binding:\n"
+                "  anchor: evidence/ANCHORS\n"
+                "  authoritative_records: 1\n"
+                "  outcomes: 26\n"
+                "  required_result: conclusive\n",
+                encoding="utf-8",
+            )
+            record = root / "runtime-v01-aaaaaaaaaaaa-20260831T000000Z"
+            record.mkdir()
+            manifest = {"outcomes": [{"name": f"gate-{index}"} for index in range(26)]}
+            envelope = {"result": {"status": "conclusive"}}
+            for name, value in (
+                ("evidence-manifest.json", manifest),
+                ("evidence-envelope.json", envelope),
+            ):
+                (record / name).write_text(json.dumps(value) + "\n", encoding="utf-8")
+            (record / "sha256sums.txt").write_text(
+                "".join(
+                    f"{verifier.sha256_file(record / name)}  {name}\n"
+                    for name in ("evidence-envelope.json", "evidence-manifest.json")
+                ),
+                encoding="utf-8",
+            )
+            status = root / "verification-status.json"
+            status.write_text(
+                '{"exitCode": 0, "message": "verified", "status": "passed"}\n',
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.object(assurance, "ARGUMENT", argument),
+                mock.patch.object(assurance.verifier, "VERIFICATION_STATUS", status),
+                mock.patch.object(assurance.verifier, "verify_anchors", return_value=[record]),
+            ):
+                self.assertEqual(assurance.main(), 0)
+                status.write_text(
+                    '{"exitCode": 1, "message": "failed", "status": "failed"}\n',
+                    encoding="utf-8",
+                )
+                self.assertEqual(assurance.main(), 1)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_coverage_and_kani_census_use_the_unavailable_exit_channel(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            matrix = root / "spec" / "test-matrix.md"
+            matrix.parent.mkdir(parents=True)
+            shutil.copy2(ROOT / "spec" / "test-matrix.md", matrix)
+            environment = os.environ.copy()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
+            environment["PATH"] = directory
+            coverage_unavailable = subprocess.run(
+                [sys.executable, str(COVERAGE_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            kani_unavailable = subprocess.run(
+                [sys.executable, str(KANI_CENSUS_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(coverage_unavailable.returncode, 2)
+        self.assertIn("COVERAGE_STATUS=unavailable", coverage_unavailable.stderr)
+        self.assertEqual(kani_unavailable.returncode, 2)
+        self.assertIn("KANI_CENSUS_STATUS=unavailable", kani_unavailable.stderr)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_local_coverage_classifier_rejects_unbacked_and_false_missing_rows(self) -> None:
@@ -315,6 +550,86 @@ class EvidenceBuilderTests(unittest.TestCase):
         self.assertTrue(
             coverage.coverage_contradictions(["✅ Complete"], report),
         )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_matrix_integrity_rejects_empty_and_unknown_test_citations(self) -> None:
+        original = (ROOT / "spec" / "test-matrix.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            matrix = Path(directory) / "test-matrix.md"
+            with mock.patch.object(coverage, "MATRIX", matrix):
+                matrix.write_text(
+                    original.replace(
+                        "| FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |",
+                        "| FR-004 | FR-004-AC-3 |  | ✅ Complete |",
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "no test citation"):
+                    coverage.functional_rows()
+                matrix.write_text(
+                    original.replace(
+                        "| FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |",
+                        "| FR-004 | FR-004-AC-3 | TC-999 | ✅ Complete |",
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "unknown tests"):
+                    coverage.functional_rows()
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_coverage_process_finds_cfg_attr_ignore_anywhere_in_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            matrix = root / "spec" / "test-matrix.md"
+            matrix.parent.mkdir(parents=True)
+            shutil.copy2(ROOT / "spec" / "test-matrix.md", matrix)
+            harness = root / "harness" / "operators_impl.rs"
+            harness.parent.mkdir(parents=True)
+            harness.write_text(
+                "// Trace: TC-002\n"
+                + "// deliberately distant trace context\n" * 15
+                + "#[cfg_attr(all(), ignore)]\n#[test]\nfn tc_002_hidden() {}\n",
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
+            rejected = subprocess.run(
+                [sys.executable, str(COVERAGE_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("ignored trace-bearing test", rejected.stderr)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_coverage_accepts_upstream_status_classifier_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            matrix = root / "spec" / "test-matrix.md"
+            matrix.parent.mkdir(parents=True)
+            shutil.copy2(ROOT / "spec" / "test-matrix.md", matrix)
+            executable = root / "quire"
+            executable.write_text(
+                "#!/bin/sh\n"
+                "echo '{\"unbacked_rows\":[],\"status_lies\":[],"
+                "\"diagnostics\":[],\"totals\":{\"backed\":28,\"total\":28}}'\n",
+                encoding="utf-8",
+            )
+            executable.chmod(0o755)
+            environment = os.environ.copy()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
+            environment["PATH"] = directory
+            accepted = subprocess.run(
+                [sys.executable, str(COVERAGE_PATH)],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertIn("COVERAGE_STATUS_NOTICE", accepted.stderr)
 
     @staticmethod
     def read_json(path: Path):
@@ -341,11 +656,38 @@ class EvidenceBuilderTests(unittest.TestCase):
         }
         for name, value in values.items():
             (evidence_dir / name).write_text(value, encoding="utf-8")
+        successful_stdout = {
+            "quire-validate": "QUIRE_VALIDATION_PASSED\n",
+            "clippy": "Finished `dev` profile\n",
+            "test-core": "test result: ok. 1 passed\n",
+            "test-alloc": "test result: ok. 1 passed\n",
+            "test-std": "test result: ok. 1 passed\n",
+            "test-all": "test result: ok. 1 passed\n",
+            "test-footprint": "test result: ok. 1 passed\n",
+            "msrv": "Finished dev profile\n",
+            "deny": "licenses ok\n",
+            "unsafe-audit": "unsafe audit passed\n",
+            "panic-audit": "runtime and verification panic-surface audit passed\n",
+            "default-dependencies": "quire-contract-runtime v0.1.0\n",
+            "release-build": "Finished `release` profile\n",
+            "layout": "CampaignCounts=32\n",
+            "rustdoc": "Generated /tmp/doc/quire_contract_runtime/index.html\n",
+            "linked-footprint": "bytes=907 panic_references=0\n",
+            "rlib-size-observation": "bytes=1 enforcement=observation-only\n",
+            "coverage": '{"statusLies": 0}\n',
+            "pgm01-pinned-schema": '{"valid": true}\n',
+            "input-schema": '{"valid": true}\n',
+            "manifest-schema": '{"valid": true}\n',
+            "pgm01-schema": '{"valid": true}\n',
+            "pgm01-envelope": '{"valid": true}\n',
+        }
         for _, transcript in builder.COMMAND_TRANSCRIPTS:
             (evidence_dir / f"{transcript}.status.txt").write_text(
                 "0\n", encoding="utf-8"
             )
-            (evidence_dir / f"{transcript}.stdout").write_text("", encoding="utf-8")
+            (evidence_dir / f"{transcript}.stdout").write_text(
+                successful_stdout.get(transcript, ""), encoding="utf-8"
+            )
             (evidence_dir / f"{transcript}.stderr").write_text("", encoding="utf-8")
         (evidence_dir / "metadata.stdout").write_text(
             json.dumps(
@@ -430,6 +772,33 @@ class SchemaValidatorTests(unittest.TestCase):
 
 class EvidenceVerifierTests(unittest.TestCase):
     # Trace: TC-007, NFR-002-AC-4
+    def test_record_identity_and_conclusive_verdict_are_mandatory(self) -> None:
+        record = Path("runtime-v01-aaaaaaaaaaaa-20260831T000000Z")
+        envelope = {"recordId": record.name, "result": {"status": "conclusive"}}
+        verifier.verify_record_identity(record, envelope)
+        verifier.verify_conclusive_result(record, envelope)
+        with self.assertRaisesRegex(verifier.EvidenceError, "record identity mismatch"):
+            verifier.verify_record_identity(
+                record, {"recordId": "runtime-v01-clone-20260831T000000Z"}
+            )
+        with self.assertRaisesRegex(verifier.EvidenceError, "not conclusive"):
+            verifier.verify_conclusive_result(
+                record, {"result": {"status": "inconclusive"}}
+            )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_anchor_root_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "outside-anchors"
+            target.write_text("# external\n", encoding="utf-8")
+            anchor = root / "ANCHORS"
+            anchor.symlink_to(target)
+            with mock.patch.object(verifier, "ANCHORS", anchor):
+                with self.assertRaisesRegex(verifier.EvidenceError, "must not be a symlink"):
+                    verifier.verify_anchors()
+
+    # Trace: TC-007, NFR-002-AC-4
     def test_checksum_census_rejects_additions_and_listed_symlinks(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             record = Path(directory) / "runtime-v01-fixture"
@@ -470,6 +839,48 @@ class EvidenceVerifierTests(unittest.TestCase):
         with mock.patch.object(verifier, "git_result", return_value=failed):
             with self.assertRaisesRegex(verifier.EvidenceError, "does not exist"):
                 verifier.verify_source_binding("0" * 40)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_source_binding_ignores_only_committed_repository_rules(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / ".gitignore").write_text("/target\n__pycache__/\n*.pyc\n", encoding="utf-8")
+            (root / "tracked.txt").write_text("tracked\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore", "tracked.txt"], cwd=root, check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Runtime Test",
+                    "-c",
+                    "user.email=runtime@example.invalid",
+                    "commit",
+                    "-q",
+                    "-m",
+                    "fixture",
+                ],
+                cwd=root,
+                check=True,
+            )
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (root / "target").mkdir()
+            (root / "target" / "ignored").write_text("ignored\n", encoding="utf-8")
+            hidden = root / ".cargo"
+            hidden.mkdir()
+            (hidden / ".gitignore").write_text("*\n", encoding="utf-8")
+            (hidden / "config.toml").write_text(
+                '[build]\nrustflags=["--cfg","smuggled"]\n', encoding="utf-8"
+            )
+            with mock.patch.object(verifier, "ROOT", root):
+                with self.assertRaisesRegex(verifier.EvidenceError, "config.toml"):
+                    verifier.verify_source_binding(revision)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_unavailable_and_failed_channels_survive_in_status_json(self) -> None:

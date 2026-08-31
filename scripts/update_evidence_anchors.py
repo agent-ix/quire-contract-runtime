@@ -3,13 +3,20 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import os
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("QUIRE_RUNTIME_REPO_ROOT", Path(__file__).resolve().parent.parent))
 EVIDENCE_ROOT = ROOT / "evidence"
 ANCHORS = EVIDENCE_ROOT / "ANCHORS"
+MINIMUM_HISTORICAL_RECORDS = 29
+REQUIRED_HISTORICAL_DIRECTORIES = {
+    "retired-pre-head-binding",
+    "retired-pre-verifier",
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -36,6 +43,22 @@ def tree_digest(root: Path) -> str:
 
 
 def rendered_anchors() -> str:
+    history = EVIDENCE_ROOT / "historical"
+    if not history.is_dir() or history.is_symlink():
+        raise ValueError("retained evidence history is absent or unsafe")
+    directories = {
+        path.name for path in history.iterdir() if path.is_dir() and not path.is_symlink()
+    }
+    missing = REQUIRED_HISTORICAL_DIRECTORIES - directories
+    record_count = sum(
+        1 for path in history.rglob("evidence-envelope.json") if path.is_file()
+    )
+    if missing or record_count < MINIMUM_HISTORICAL_RECORDS:
+        raise ValueError(
+            "retained evidence history census regressed: "
+            f"missing={sorted(missing)}, records={record_count}, "
+            f"minimum={MINIMUM_HISTORICAL_RECORDS}"
+        )
     entries: list[tuple[Path, str]] = []
     for path in EVIDENCE_ROOT.iterdir():
         if path == ANCHORS:
@@ -63,7 +86,31 @@ def rendered_anchors() -> str:
 
 # Implements: NFR-002
 def main() -> int:
-    ANCHORS.write_text(rendered_anchors(), encoding="utf-8")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--allow-removals",
+        action="store_true",
+        help="permit an explicitly reviewed reduction of the anchored top-level census",
+    )
+    args = parser.parse_args()
+    rendered = rendered_anchors()
+    if ANCHORS.exists() and not args.allow_removals:
+        previous = {
+            line.split("  ", 1)[1]
+            for line in ANCHORS.read_text(encoding="utf-8").splitlines()
+            if line and not line.startswith("#")
+        }
+        proposed = {
+            line.split("  ", 1)[1]
+            for line in rendered.splitlines()
+            if line and not line.startswith("#")
+        }
+        removed = sorted(previous - proposed)
+        if removed:
+            raise ValueError(
+                f"refusing to remove committed evidence anchors without --allow-removals: {removed}"
+            )
+    ANCHORS.write_text(rendered, encoding="utf-8")
     print(f"updated {ANCHORS.relative_to(ROOT)}")
     return 0
 

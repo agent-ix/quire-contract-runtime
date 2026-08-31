@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 import platform
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,7 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from check_kani_harnesses import EXPECTED_KANI_HARNESSES
+from check_kani_harnesses import EXPECTED_KANI_CHECK_FLOORS, EXPECTED_KANI_HARNESSES
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,6 +37,9 @@ EVIDENCE_VERIFIER = ROOT / "scripts" / "verify_evidence.py"
 ANCHOR_UPDATER = ROOT / "scripts" / "update_evidence_anchors.py"
 COVERAGE_CHECKER = ROOT / "scripts" / "check_coverage_status.py"
 KANI_CENSUS = ROOT / "scripts" / "check_kani_harnesses.py"
+FAILURE_PROPAGATION = ROOT / "scripts" / "check_failure_propagation.py"
+KANI_RUNNER = ROOT / "scripts" / "run_kani_gate.py"
+ASSURANCE_CHECKER = ROOT / "scripts" / "check_assurance_anchor.py"
 EVIDENCE_REQUIREMENTS = ROOT / "requirements-evidence.txt"
 EXPECTED_KANI_VERSION = "cargo-kani 0.67.0"
 COMMAND_TRANSCRIPTS = (
@@ -87,7 +91,7 @@ PASS_CONTRADICTION_MARKERS = {
     "deny": ("error:", "FAILED"),
     "unsafe-audit": ("unsafe audit failed", "missing // SAFETY:"),
     "panic-audit": ("panic surface audit failed",),
-    "metadata": ("error:", "error["),
+    "metadata": ("\nerror:", "\nerror["),
     "default-dependencies": ("error:",),
     "layout": ("panicked at",),
     "rustdoc": ("error: could not document",),
@@ -101,6 +105,33 @@ PASS_CONTRADICTION_MARKERS = {
     "pgm01-schema": ('"valid": false',),
     "pgm01-envelope": ('"valid": false', "governance validation error:"),
 }
+PASS_CORROBORATION_PATTERNS = {
+    "quire-validate": r"(?m)^QUIRE_VALIDATION_PASSED$",
+    "clippy": r"Finished `(?:dev|release)` profile",
+    "test-core": r"test result: ok\. \d+ passed",
+    "test-alloc": r"test result: ok\. \d+ passed",
+    "test-std": r"test result: ok\. \d+ passed",
+    "test-all": r"test result: ok\. \d+ passed",
+    "test-footprint": r"test result: ok\. \d+ passed",
+    "msrv": r"Finished (?:`dev`|dev) ",
+    "deny": r"(?m)^licenses ok$",
+    "unsafe-audit": r"(?m)^unsafe audit passed$",
+    "panic-audit": r"(?m)^runtime and verification panic-surface audit passed$",
+    "default-dependencies": r"(?m)^quire-contract-runtime v\d",
+    "release-build": r"Finished `release` profile",
+    "layout": r"(?m)^CampaignCounts=\d+$",
+    "rustdoc": r"Generated .*/quire_contract_runtime/index\.html",
+    "linked-footprint": r"\bbytes=\d+\b.*\bpanic_references=0\b",
+    "rlib-size-observation": r"\bbytes=\d+\b.*\benforcement=observation-only\b",
+    "coverage": r'"statusLies"\s*:\s*0',
+    "pgm01-pinned-schema": r'"valid"\s*:\s*true',
+    "input-schema": r'"valid"\s*:\s*true',
+    "manifest-schema": r'"valid"\s*:\s*true',
+    "pgm01-schema": r'"valid"\s*:\s*true',
+    "pgm01-envelope": r'"valid"\s*:\s*true',
+}
+KANI_HARNESS_START = re.compile(r"(?m)^Checking harness kani_proofs::([a-z0-9_]+)\.\.\.$")
+KANI_CHECK_SUMMARY = re.compile(r"(?m)^ \*\* 0 of ([1-9][0-9]*) failed$")
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -145,18 +176,59 @@ def verified_pgm01_revision() -> str:
     return actual
 
 
+def kani_proof_checks(combined: str) -> dict[str, int]:
+    """Return each successfully discharged harness's positive obligation count."""
+    starts = list(KANI_HARNESS_START.finditer(combined))
+    counts: dict[str, int] = {}
+    for index, start in enumerate(starts):
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(combined)
+        block = combined[start.end() : end]
+        summary = KANI_CHECK_SUMMARY.search(block)
+        if (
+            summary is None
+            or "VERIFICATION:- SUCCESSFUL" not in block
+            or start.group(1) in counts
+        ):
+            return {}
+        counts[start.group(1)] = int(summary.group(1))
+    return counts
+
+
 def validate_kani_success(combined: str) -> bool:
     expected_summary = (
         f"Complete - {len(EXPECTED_KANI_HARNESSES)} successfully verified harnesses, "
         f"0 failures, {len(EXPECTED_KANI_HARNESSES)} total."
     )
+    checks = kani_proof_checks(combined)
     return (
         "Kani Rust Verifier 0.67.0 (cargo plugin)" in combined
         and expected_summary in combined
+        and set(checks) == set(EXPECTED_KANI_HARNESSES)
         and all(
-        f"kani_proofs::{name}" in combined for name in EXPECTED_KANI_HARNESSES
+            checks[name] >= EXPECTED_KANI_CHECK_FLOORS[name]
+            for name in EXPECTED_KANI_HARNESSES
         )
     )
+
+
+def transcript_corroborates(name: str, stdout: str, stderr: str) -> bool:
+    """Require positive evidence that a zero-exit command performed its check."""
+    if name == "fmt":
+        return not stdout and not stderr
+    if name == "metadata":
+        try:
+            metadata = json.loads(stdout)
+        except json.JSONDecodeError:
+            return False
+        return any(
+            item.get("name") == "quire-contract-runtime"
+            for item in metadata.get("packages", [])
+            if isinstance(item, dict)
+        )
+    if name == "kani":
+        return validate_kani_success(stdout + "\n" + stderr)
+    pattern = PASS_CORROBORATION_PATTERNS.get(name)
+    return pattern is not None and re.search(pattern, stdout + "\n" + stderr) is not None
 
 
 def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
@@ -198,10 +270,11 @@ def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
                 if not all(path.exists() for path in transcript_paths):
                     status = "inconclusive"
                 else:
-                    combined = "\n".join(
+                    stdout, stderr = (
                         path.read_text(encoding="utf-8", errors="replace")
                         for path in transcript_paths
                     )
+                    combined = stdout + "\n" + stderr
                     contradiction = next(
                         (
                             marker
@@ -213,11 +286,13 @@ def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
                     if contradiction is not None:
                         status = "failed"
                     elif name == "kani" and (
-                        not validate_kani_success(combined)
+                        not transcript_corroborates(name, stdout, stderr)
                         or (evidence_dir / "kani-version.txt").read_text(encoding="utf-8").strip()
                         != EXPECTED_KANI_VERSION
                     ):
                         status = "failed"
+                    elif not transcript_corroborates(name, stdout, stderr):
+                        status = "inconclusive"
                     else:
                         status = "passed"
             else:
@@ -269,6 +344,13 @@ def hash_parameter_files() -> str:
         ANCHOR_UPDATER,
         COVERAGE_CHECKER,
         KANI_CENSUS,
+        FAILURE_PROPAGATION,
+        KANI_RUNNER,
+        ASSURANCE_CHECKER,
+        ROOT / "tests" / "test_evidence_tooling.py",
+        ROOT / "spec" / "test-matrix.md",
+        ROOT / "spec" / "assurance" / "AA-001-runtime-argument.md",
+        ROOT / "spec" / "nonfunctional" / "NFR-002-panic-compatibility-license.md",
         EVIDENCE_REQUIREMENTS,
         INPUT_SCHEMA,
         MANIFEST_SCHEMA,
@@ -333,7 +415,7 @@ def build(evidence_dir: Path) -> None:
         "sourceRevision": revision,
         "sourceState": source_state,
         "commands": [
-            "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'",
+            "bash -c \"quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED\"",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
             "python3 scripts/validate_json_schema.py schemas/pgm01-derivation-evidence-envelope-v1.schema.json evidence-envelope.json",
@@ -440,6 +522,13 @@ def build(evidence_dir: Path) -> None:
             )
 
     outcomes = command_outcomes(evidence_dir)
+    kani_checks = {}
+    if next(item["status"] for item in outcomes if item["name"] == "kani") == "passed":
+        kani_checks = kani_proof_checks(
+            (evidence_dir / "kani.stdout").read_text(encoding="utf-8", errors="replace")
+            + "\n"
+            + (evidence_dir / "kani.stderr").read_text(encoding="utf-8", errors="replace")
+        )
     result_status, result_summary, outcome_limitations = summarize_outcomes(outcomes)
     limitations = [
         "current main-based candidate has no deliberately dispatched remote CI run",
@@ -454,6 +543,9 @@ def build(evidence_dir: Path) -> None:
         "sourceRevision": revision,
         "collectedAt": recorded_at,
         "outcomes": outcomes,
+        "kaniProofChecks": [
+            {"harness": name, "checks": kani_checks[name]} for name in sorted(kani_checks)
+        ],
         "artifacts": entries,
         "limitations": limitations,
     }

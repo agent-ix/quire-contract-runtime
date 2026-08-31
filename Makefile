@@ -2,6 +2,19 @@
 # Quire Contract Runtime Makefile
 # =============================================================================
 
+ifneq ($(filter ci,$(MAKECMDGOALS)),)
+ifneq ($(strip $(MAKEFLAGS)),)
+$(error local checks refuse non-empty MAKEFLAGS)
+endif
+ifneq ($(strip $(PYTHONOPTIMIZE)),)
+$(error local checks refuse optimized Python policy execution)
+endif
+runtime_ci_static_status := $(shell env -u PYTHONOPTIMIZE MAKEFLAGS= /usr/bin/python3 scripts/check_failure_propagation.py --makefile '$(firstword $(MAKEFILE_LIST))' --static-only >/dev/null 2>&1; echo $$?)
+ifneq ($(runtime_ci_static_status),0)
+$(error local checks refuse unsafe Make recipe controls)
+endif
+endif
+
 override CARGO := cargo
 override MSRV := 1.75.0
 override PYTHON := python3
@@ -27,8 +40,10 @@ help:
 	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
 	@echo "  make evidence-tool    - Test the local evidence toolchain and PGM-01 pin"
 	@echo "  make verify-evidence  - Verify the anchored retained evidence set"
+	@echo "  make assurance-anchor - Bind AA-001 to the authoritative evidence verdict"
 	@echo "  make coverage         - Run strict repository-owned traceability classification"
 	@echo "  make kani             - Run the complete declared Kani harness set (required)"
+	@echo "  make ci-guard         - prove required command failures and tool identities"
 	@echo "  make update-evidence-anchors - Regenerate evidence/ANCHORS for review"
 	@echo "  make ci               - All local CI gates"
 
@@ -109,12 +124,16 @@ audit-panic:
 
 .PHONY: evidence-tool
 evidence-tool:
-	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_coverage_status.py scripts/check_kani_harnesses.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
+	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_assurance_anchor.py scripts/check_coverage_status.py scripts/check_failure_propagation.py scripts/check_kani_harnesses.py scripts/run_kani_gate.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
 	$(PYTHON) -m unittest discover -s tests -p '*.py'
 
 .PHONY: verify-evidence
 verify-evidence:
 	$(PYTHON) scripts/verify_evidence.py
+
+.PHONY: assurance-anchor
+assurance-anchor:
+	$(PYTHON) scripts/check_assurance_anchor.py
 
 .PHONY: coverage
 coverage:
@@ -126,12 +145,7 @@ kani-census:
 
 .PHONY: kani
 kani: kani-census
-	@if command -v cargo-kani >/dev/null 2>&1; then \
-		$(CARGO) kani; \
-	else \
-		echo "KANI_STATUS=unavailable; cargo-kani is required for this gate" >&2; \
-		exit 2; \
-	fi
+	/usr/bin/python3 scripts/run_kani_gate.py
 
 .PHONY: update-evidence-anchors
 update-evidence-anchors:
@@ -141,5 +155,10 @@ update-evidence-anchors:
 # Composite
 # =============================================================================
 
+.PHONY: ci-guard
+ci-guard:
+	/usr/bin/python3 scripts/check_failure_propagation.py
+
+.NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic coverage kani evidence-tool verify-evidence
+ci: ci-guard fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic coverage kani evidence-tool verify-evidence assurance-anchor

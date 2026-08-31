@@ -47,22 +47,30 @@ Run `scripts/collect_evidence.sh`. It records source and tool identities, featur
 license and unsafe checks, Kani availability/result, dependency metadata, the Rust 1.75
 `thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
 `evidence/`. Every invoked gate retains stdout, stderr, and its numeric exit status; the builder
-`scripts/build_evidence_envelope.py` derives manifest outcomes from the complete status-file census, represents missing records as
-inconclusive, and records zero-status transcript contradictions as durable failed outcomes. Kani
-passes only when its numeric status is zero, every declared harness is named successful, the exact
-complete-summary count is present, and no failure marker occurs. Its exact version is retained.
+`scripts/build_evidence_envelope.py` derives manifest outcomes from the complete status-file census,
+represents missing or uncorroborated records as inconclusive, and records zero-status transcript
+contradictions as durable failed outcomes. Kani passes only when its numeric status is zero, every
+declared harness is named successful, each harness discharges a positive recorded check count, the
+exact complete-summary count is present, and no failure marker occurs. Its exact version is retained.
 The collector's local self-test exercises nonzero propagation and checksum fixed-point detection;
 the builder never manufactures a pass from a command name or transcript text. The builder derives and verifies
 the digest of the vendored PGM-01 envelope schema and the identity of its vendored raw merge commit;
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
 
-`scripts/check_kani_harnesses.py` makes the six proof names and their TC-002/TC-003 ownership an
+`scripts/check_kani_harnesses.py` makes the seven proof names and their TC-001/TC-002/TC-003 ownership an
 executable census before every Kani run. Absence of `cargo-kani` is a failed local gate, not a skip.
 `scripts/check_coverage_status.py` independently enforces the schema-valid `Coverage Status` column,
 complete backing, and the absence of ignored trace-bearing tests while the installed module still
 configures the incompatible `Status` header. `scripts/update_evidence_anchors.py` deterministically
 regenerates the complete anchor census for diff review after collection.
+
+`scripts/check_failure_propagation.py` rejects ambient or in-file Make failure suppression, probes
+every mandatory recipe position, and verifies the exact local `cargo`, `python3`, `quire`, and Make
+executables before composite local checks. `scripts/run_kani_gate.py` preserves Kani's numeric result
+and uses the unavailable exit channel when the mandatory tool is absent.
+`scripts/check_assurance_anchor.py` executes AA-001's declared authoritative-record, outcome-count,
+and conclusive-result binding after evidence verification.
 
 `scripts/verify_evidence.py` independently verifies the committed `evidence/ANCHORS` record-set
 boundary, every flat-record checksum and artifact/link digest, the recursively anchored historical
@@ -83,9 +91,9 @@ its runtime/harness objects are rejected if they retain a panic-path reference. 
 as an observation because it varies with compiler metadata and build paths; neither value is treated
 as whole-application RAM/ROM utilization.
 
-The six Kani harnesses are bounded verification controls, not a whole-crate proof. Boolean and most
-checked-operation assertions gate generic dispatch against declared primitive semantics; i8 addition
-also uses an independent i16 widening oracle. Division/remainder uses symbolic invalid inputs, index
+The seven Kani harnesses are bounded verification controls, not a whole-crate proof. Public-model
+provenance and Boolean assertions gate constructors and dispatch, while i8 checked arithmetic uses
+independent i16 widening oracles. Division/remainder uses symbolic invalid inputs, index
 definedness quantifies over full `usize`, and campaign accounting drives the public record/discard
 paths from symbolic near-overflow states to cover all five increments and the saturating total. The Kani
 toolchain may differ from both the shipped stable compiler and the Rust 1.75 compatibility compiler;

@@ -17,7 +17,14 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from build_evidence_envelope import COMMAND_TRANSCRIPTS, command_outcomes, summarize_outcomes
+from build_evidence_envelope import (
+    COMMAND_TRANSCRIPTS,
+    EXPECTED_KANI_CHECK_FLOORS,
+    EXPECTED_KANI_HARNESSES,
+    command_outcomes,
+    kani_proof_checks,
+    summarize_outcomes,
+)
 from validate_json_schema import checked_format_checker
 
 
@@ -29,6 +36,41 @@ MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
 VERIFICATION_STATUS = ROOT / "target" / "evidence-verification-status.json"
 CHECKSUM_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
 REVISION = re.compile(r"^[0-9a-f]{40}$")
+AUTHORITATIVE_RECORD = re.compile(r"runtime-v01-[0-9a-f]{12}-[0-9]{8}T[0-9]{6}Z")
+MINIMUM_HISTORICAL_RECORDS = 29
+REQUIRED_HISTORICAL_DIRECTORIES = {
+    "retired-pre-head-binding",
+    "retired-pre-verifier",
+}
+PARAMETER_PATHS = (
+    "Cargo.toml",
+    "Cargo.lock",
+    "Makefile",
+    "rust-toolchain.toml",
+    "measurement/footprint/Cargo.toml",
+    "measurement/footprint/src/lib.rs",
+    "scripts/check_linked_footprint.sh",
+    "scripts/measure_rlib_size.sh",
+    "scripts/collect_evidence.sh",
+    "scripts/build_evidence_envelope.py",
+    "scripts/validate_json_schema.py",
+    "scripts/verify_evidence.py",
+    "scripts/update_evidence_anchors.py",
+    "scripts/check_coverage_status.py",
+    "scripts/check_kani_harnesses.py",
+    "scripts/check_failure_propagation.py",
+    "scripts/run_kani_gate.py",
+    "scripts/check_assurance_anchor.py",
+    "tests/test_evidence_tooling.py",
+    "spec/test-matrix.md",
+    "spec/assurance/AA-001-runtime-argument.md",
+    "spec/nonfunctional/NFR-002-panic-compatibility-license.md",
+    "requirements-evidence.txt",
+    "schemas/runtime-evidence-input-v1.schema.json",
+    "schemas/runtime-evidence-manifest-v1.schema.json",
+    "schemas/pgm01-derivation-evidence-envelope-v1.schema.json",
+    "schemas/pgm01-merged-commit.txt",
+)
 
 
 class EvidenceError(ValueError):
@@ -161,10 +203,37 @@ def verify_envelope_links(record: Path, envelope: dict[str, Any]) -> None:
             raise EvidenceError(f"envelope artifact mismatch in {record.name}: {path.name}")
 
 
+def verify_record_identity(record: Path, envelope: dict[str, Any]) -> None:
+    if envelope.get("recordId") != record.name or AUTHORITATIVE_RECORD.fullmatch(record.name) is None:
+        raise EvidenceError(f"record identity mismatch in {record.name}")
+
+
+def verify_conclusive_result(record: Path, envelope: dict[str, Any]) -> None:
+    if envelope.get("result", {}).get("status") != "conclusive":
+        raise EvidenceError(f"authoritative record is not conclusive: {record.name}")
+
+
 def git_result(arguments: list[str]) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         ["git", *arguments], cwd=ROOT, check=False, capture_output=True
     )
+
+
+def git_blob(revision: str, relative: str) -> bytes:
+    result = git_result(["show", f"{revision}:{relative}"])
+    if result.returncode != 0:
+        raise EvidenceError(f"cannot read source-bound parameter {relative} at {revision}")
+    return result.stdout
+
+
+def source_parameter_digest(revision: str) -> str:
+    state = hashlib.sha256()
+    for relative in PARAMETER_PATHS:
+        state.update(relative.encode("utf-8"))
+        state.update(b"\0")
+        state.update(git_blob(revision, relative))
+        state.update(b"\0")
+    return state.hexdigest()
 
 
 def verify_source_binding(revision: str) -> None:
@@ -191,7 +260,16 @@ def verify_source_binding(revision: str) -> None:
             raise EvidenceError("current worktree differs from HEAD outside evidence/")
         if worktree.returncode != 0:
             raise VerificationUnavailable("cannot compare the current worktree with HEAD")
-    untracked = git_result(["ls-files", "--others", "--exclude-standard", "-z"])
+    untracked = git_result(
+        [
+            "-c",
+            "core.excludesFile=/dev/null",
+            "ls-files",
+            "--others",
+            "--exclude-from=.gitignore",
+            "-z",
+        ]
+    )
     if untracked.returncode != 0:
         raise VerificationUnavailable("cannot enumerate untracked worktree inputs")
     outside_evidence = sorted(
@@ -229,8 +307,26 @@ def verify_outcome_census(record: Path, manifest: dict[str, Any]) -> None:
 
 
 def verify_anchors() -> list[Path]:
+    if ANCHORS.is_symlink():
+        raise EvidenceError("evidence/ANCHORS must not be a symlink")
     if not ANCHORS.is_file():
         raise VerificationUnavailable("committed evidence/ANCHORS is missing")
+    history = EVIDENCE_ROOT / "historical"
+    if not history.is_dir() or history.is_symlink():
+        raise EvidenceError("retained evidence history is absent or unsafe")
+    history_directories = {
+        path.name for path in history.iterdir() if path.is_dir() and not path.is_symlink()
+    }
+    missing_history = REQUIRED_HISTORICAL_DIRECTORIES - history_directories
+    historical_records = sum(
+        1 for path in history.rglob("evidence-envelope.json") if path.is_file()
+    )
+    if missing_history or historical_records < MINIMUM_HISTORICAL_RECORDS:
+        raise EvidenceError(
+            "retained evidence history census regressed: "
+            f"missing={sorted(missing_history)}, records={historical_records}, "
+            f"minimum={MINIMUM_HISTORICAL_RECORDS}"
+        )
     expected: dict[Path, str] = {}
     for line in ANCHORS.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("#"):
@@ -246,9 +342,9 @@ def verify_anchors() -> list[Path]:
     for path in EVIDENCE_ROOT.iterdir():
         if path == ANCHORS:
             continue
-        if path.is_dir() and path.name.startswith("runtime-v01-") and (
-            path / "evidence-envelope.json"
-        ).is_file():
+        if path.is_dir() and path.name.startswith("runtime-v01-"):
+            if not (path / "evidence-envelope.json").is_file():
+                raise EvidenceError(f"incomplete authoritative evidence directory: {path.name}")
             actual.add(path / "sha256sums.txt")
         else:
             actual.add(path)
@@ -266,11 +362,20 @@ def verify_anchors() -> list[Path]:
             raise EvidenceError(
                 f"evidence anchor mismatch for {path.relative_to(ROOT)}: expected {digest}, got {observed}"
             )
-    return sorted(
+    records = sorted(
         path.parent
         for path in expected
         if path.name == "sha256sums.txt" and path.parent.name.startswith("runtime-v01-")
     )
+    if not records:
+        raise VerificationUnavailable("no authoritative records are anchored")
+    if len(records) != 1:
+        raise EvidenceError(f"expected exactly one authoritative record, found {len(records)}")
+    readme = (EVIDENCE_ROOT / "README.md").read_text(encoding="utf-8")
+    declared = re.search(r"current authoritative\s+record is `([^`]+)`", readme)
+    if declared is None or declared.group(1) != records[0].name:
+        raise EvidenceError("evidence README authoritative record does not match ANCHORS")
+    return records
 
 
 # Implements: NFR-002
@@ -287,6 +392,7 @@ def verify_record(record: Path) -> tuple[int, int]:
         raise EvidenceError(f"PGM-01 schema anchor mismatch in {record.name}")
     artifacts = verify_artifacts(record, manifest)
     verify_envelope_links(record, envelope)
+    verify_record_identity(record, envelope)
     revision = (record / "source-revision.txt").read_text(encoding="utf-8").strip()
     identities = {
         revision,
@@ -297,6 +403,16 @@ def verify_record(record: Path) -> tuple[int, int]:
     if len(identities) != 1:
         raise EvidenceError(f"source revision mismatch in {record.name}: {sorted(identities)}")
     verify_source_binding(revision)
+    if envelope["parametersDigest"]["value"] != source_parameter_digest(revision):
+        raise EvidenceError(f"parameters digest mismatch in {record.name}")
+    if envelope["producer"]["executableDigest"]["value"] != hashlib.sha256(
+        git_blob(revision, "scripts/collect_evidence.sh")
+    ).hexdigest():
+        raise EvidenceError(f"collector executable digest mismatch in {record.name}")
+    if envelope["environment"]["dependenciesDigest"]["value"] != hashlib.sha256(
+        git_blob(revision, "Cargo.lock")
+    ).hexdigest():
+        raise EvidenceError(f"dependency lock digest mismatch in {record.name}")
     verify_outcome_census(record, manifest)
     derived = command_outcomes(record)
     if manifest["outcomes"] != derived:
@@ -308,6 +424,23 @@ def verify_record(record: Path) -> tuple[int, int]:
         raise EvidenceError(f"derived result mismatch in {record.name}")
     if not set(limitations).issubset(set(manifest["limitations"])):
         raise EvidenceError(f"derived limitations missing in {record.name}")
+    verify_conclusive_result(record, envelope)
+    combined_kani = (record / "kani.stdout").read_text(encoding="utf-8") + "\n" + (
+        record / "kani.stderr"
+    ).read_text(encoding="utf-8")
+    checks = kani_proof_checks(combined_kani)
+    declared_checks = {
+        item["harness"]: item["checks"] for item in manifest["kaniProofChecks"]
+    }
+    if (
+        checks != declared_checks
+        or set(checks) != set(EXPECTED_KANI_HARNESSES)
+        or any(
+            checks[name] < EXPECTED_KANI_CHECK_FLOORS[name]
+            for name in EXPECTED_KANI_HARNESSES
+        )
+    ):
+        raise EvidenceError(f"Kani proof-obligation census mismatch in {record.name}")
     return checksums, artifacts
 
 
