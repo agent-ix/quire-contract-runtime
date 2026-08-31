@@ -47,6 +47,10 @@ COMMAND_TRANSCRIPTS = (
     ("linked-footprint", "linked-footprint"),
     ("rlib-size-observation", "rlib-size-observation"),
     ("pgm01-pinned-schema", "pgm01-pinned-schema"),
+    ("input-schema", "input-schema"),
+    ("manifest-schema", "manifest-schema"),
+    ("pgm01-schema", "pgm01-schema"),
+    ("pgm01-envelope", "pgm01-envelope"),
 )
 
 
@@ -96,6 +100,15 @@ def command_outcomes(evidence_dir: Path, kani_status: str) -> list[dict[str, str
     outcomes = []
     for name, transcript in COMMAND_TRANSCRIPTS:
         status_path = evidence_dir / f"{transcript}.status.txt"
+        availability_path = evidence_dir / f"{transcript}-status.txt"
+        availability = (
+            availability_path.read_text(encoding="utf-8").strip()
+            if availability_path.exists()
+            else None
+        )
+        if availability == "skipped-unavailable":
+            outcomes.append({"name": name, "status": availability})
+            continue
         if not status_path.exists():
             status = "inconclusive"
         else:
@@ -153,12 +166,17 @@ def build(evidence_dir: Path) -> None:
     package = next(
         item for item in metadata["packages"] if item["name"] == "quire-contract-runtime"
     )
-    recorded_at = (
-        dt.datetime.now(dt.timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    recorded_at_path = evidence_dir / "recorded-at.txt"
+    if recorded_at_path.exists():
+        recorded_at = recorded_at_path.read_text(encoding="utf-8").strip()
+    else:
+        recorded_at = (
+            dt.datetime.now(dt.timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        recorded_at_path.write_text(recorded_at + "\n", encoding="utf-8")
 
     collection_input = {
         "schemaVersion": "quire.runtime-evidence-input/v1",
@@ -232,6 +250,15 @@ def build(evidence_dir: Path) -> None:
         "pgm01-envelope-status.txt",
         "sha256sums.txt",
     }
+    for _, transcript in COMMAND_TRANSCRIPTS[-5:]:
+        excluded.update(
+            {
+                f"{transcript}.status.txt",
+                f"{transcript}.stderr",
+                f"{transcript}.stdout",
+                f"{transcript}-status.txt",
+            }
+        )
     entries = []
     for path in sorted(evidence_dir.iterdir(), key=lambda item: item.name):
         if path.is_file() and path.name not in excluded:
