@@ -17,12 +17,13 @@ paths, revisions, and digests are retained.
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
 schema formats, artifact links, source identity, and re-derived outcomes. The current authoritative
-record is `runtime-v01-624a98fab510-20260831T215242Z`.
+record is `runtime-v01-0f00c43eada0-20260831T230836Z`.
 
 Collection verifies a new record directly but does not rewrite `evidence/ANCHORS`. Retiring the old
 record, updating the authoritative record named above, regenerating anchors, and running the full
 verifier are explicit review-boundary steps. The anchor updater rejects silent top-level removals,
-and both updater and verifier enforce the minimum retained-history census.
+and both updater and verifier enforce a digest for every retained historical record through
+`evidence/HISTORY`, in addition to the minimum retained-history census.
 
 Candidate output supports the human release decision described by `spec/assurance/MP-001`; it is not
 itself a release approval.
@@ -42,3 +43,11 @@ Round 3 Make/coverage/history controls, so it is explicitly non-authoritative.
 is inconclusive because Quire rejected an assurance binding placed in structured frontmatter and
 the panic audit rejected proof-only `expect` calls; both numeric failures and their transcripts are
 preserved rather than rewritten as successful evidence.
+
+`historical/retired-round4-control-strengthening/` retains the preceding authoritative record. It
+predates the live test census, trusted-home and executable-digest controls, Kani obligation floors
+and mutation campaign, per-lane Rust test counts, and per-record history anchors.
+
+`historical/failed-round4-collection/` retains two fail-closed Round 4 collection attempts: one
+observed its own transient staging directory, and one exposed an over-broad transcript
+contradiction marker. Their dispositions and original command results are preserved.
