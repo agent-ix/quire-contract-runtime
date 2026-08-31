@@ -15,7 +15,7 @@ ROOT = Path(os.environ.get("QUIRE_RUNTIME_REPO_ROOT", Path(__file__).resolve().p
 EVIDENCE_ROOT = ROOT / "evidence"
 ANCHORS = EVIDENCE_ROOT / "ANCHORS"
 HISTORY_ANCHORS = EVIDENCE_ROOT / "HISTORY"
-MINIMUM_HISTORICAL_RECORDS = 29
+MINIMUM_HISTORICAL_RECORDS = 34
 REQUIRED_HISTORICAL_DIRECTORIES = {
     "retired-pre-head-binding",
     "retired-pre-verifier",

@@ -42,7 +42,7 @@ VERIFICATION_STATUS = ROOT / "target" / "evidence-verification-status.json"
 CHECKSUM_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
 REVISION = re.compile(r"^[0-9a-f]{40}$")
 AUTHORITATIVE_RECORD = re.compile(r"runtime-v01-[0-9a-f]{12}-[0-9]{8}T[0-9]{6}Z")
-MINIMUM_HISTORICAL_RECORDS = 29
+MINIMUM_HISTORICAL_RECORDS = 34
 REQUIRED_HISTORICAL_DIRECTORIES = {
     "retired-pre-head-binding",
     "retired-pre-verifier",

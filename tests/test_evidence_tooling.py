@@ -671,6 +671,15 @@ class EvidenceBuilderTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(ValueError, "unknown tests"):
                     coverage.functional_rows()
+                matrix.write_text(
+                    original.replace(
+                        "| TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-004-AC-3, NFR-002-AC-3 | ✅ Complete |",
+                        "| TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-004-AC-3, NFR-002-AC-3 | ❌ Missing |",
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "registry identity/status drift"):
+                    coverage.functional_rows()
 
     # Trace: TC-007, NFR-002-AC-4
     def test_coverage_process_finds_cfg_attr_ignore_anywhere_in_repository(self) -> None:

@@ -20,6 +20,7 @@ TEST_CITATION = re.compile(r"\b(?:TC|SUITE)-\d{3}\b")
 FUNCTION = re.compile(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([a-zA-Z0-9_]+)\s*\(")
 ATTRIBUTE = re.compile(r"#\s*\[(.*?)\]", re.DOTALL)
 EXPECTED_FUNCTIONAL_ROWS = 8
+EXPECTED_TEST_IDS = {f"TC-{number:03d}" for number in range(1, 9)}
 EXPECTED_FUNCTIONAL_TUPLES = {
     ("FR-001", "FR-001-AC-1, FR-001-AC-2", "TC-001"),
     ("FR-001", "FR-001-AC-3", "TC-008"),
@@ -30,7 +31,9 @@ EXPECTED_FUNCTIONAL_TUPLES = {
     ("FR-004", "FR-004-AC-1, FR-004-AC-2", "TC-006"),
     ("FR-004", "FR-004-AC-3", "TC-008"),
 }
-DISABLED_TRACE = re.compile(r"#\s*\[\s*cfg(?:_attr)?\s*\([^\]]*\bany\s*\(\s*\)", re.DOTALL)
+DISABLED_TRACE = re.compile(
+    r"#\s*!?\s*\[\s*cfg(?:_attr)?\s*\([^\]]*\bany\s*\(\s*\)", re.DOTALL
+)
 
 
 def rust_sources() -> list[Path]:
@@ -116,13 +119,21 @@ def functional_rows() -> list[dict[str, str]]:
         raise ValueError(
             f"functional coverage row census is {len(rows)}, expected {EXPECTED_FUNCTIONAL_ROWS}"
         )
-    registry = {
-        columns[0]
+    registry_rows = {
+        columns[0]: columns[-1]
         for line in lines
         if line.startswith("|") and not line.startswith("|---")
         for columns in [[column.strip() for column in line.strip("|").split("|")]]
         if columns and re.fullmatch(r"(?:TC|SUITE)-\d{3}", columns[0])
     }
+    if set(registry_rows) != EXPECTED_TEST_IDS or any(
+        status != "✅ Complete" for status in registry_rows.values()
+    ):
+        raise ValueError(
+            "test registry identity/status drift: "
+            f"observed={sorted(registry_rows.items())}"
+        )
+    registry = set(registry_rows)
     for row in rows:
         citations = set(TEST_CITATION.findall(row["tests"]))
         if not citations:
