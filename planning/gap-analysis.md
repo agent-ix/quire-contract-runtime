@@ -21,6 +21,7 @@ human source-release decision.
 |---|---|---|---|
 | FND-013 | medium | The main-based candidate has no deliberately dispatched protected run after manual-CI PR #6 merged. | MP-001, PR #5, PR #6 |
 | FND-014 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
+| FND-015 | medium | The manual-only hosted workflow does not yet execute the local rustdoc and evidence-tool gates; its externally owned reconciliation remains pending. | MP-001, PR #5, PR #6 |
 
 ## Source-review disposition
 
@@ -38,9 +39,9 @@ human source-release decision.
 | FND-010 | Classified reserved `alloc`/`std` rows explicitly as resolver/build compatibility checks. |
 | FND-011 | Added a crate-wide `missing_docs` denial. |
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
-| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 66/109 production symbols are owned, while zero test symbols carry an unbound trace ID. The 43 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
+| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 70/129 production symbols are owned, while zero test symbols carry an unbound trace ID. The 59 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
-| GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 28/28 with 14/14 Rust candidates tagged and bound. |
+| GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 28/28 with 15/15 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
 | GAP-006 | Expanded `make ci` to check all targets/features at the explicit MSRV, build a fixed bare-metal consumer, and enforce its linked-section footprint. |
 | GAP-007 | Added `plan/PLAN-001-runtime-v01/` with five completed typed tasks and one explicitly human-owned open task. |
@@ -52,7 +53,7 @@ human source-release decision.
 | NEW-001 | Replaced the unsatisfiable rlib ceiling with a representative `no_std` static-library consumer built by Rust 1.75 for `thumbv7em-none-eabi`. The fixed, non-overridable gate measures only runtime/harness `.text` plus `.rodata`: 907 bytes against 4,096. |
 | NEW-002 | Removed the Makefile-text assertion. TC-007's procedure consumes the executed `make ci` output instead of claiming target behavior from a target-name string. |
 | NEW-003 | Annotated the mutable historical README: the retained `msrv_1_75=SUCCESS` is invalidated by the toolchain-precedence defect, while the Kani result applies only to its historical revision. |
-| NEW-004 | Replaced the overstated traceability row with the engine's 66/109 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
+| NEW-004 | Replaced the overstated traceability row with the engine's current 70/129 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
 | NEW-005 | Changed `adapt_recording` to return `TestCaseResult`; identity mismatch is now a proptest failure containing expected and observed identities, with a direct regression test. |
 | NEW-006 | Denied Clippy indexing and arithmetic-side-effect lints crate-wide, made indexing use `slice::get`, and extended the fail-closed text audit to verification source while permitting Kani proof assertions. |
 | NEW-007 | Anchored all five enum declarations exactly and asserted distinct `VerdictKind`/`Verdict` offsets. |
@@ -83,10 +84,9 @@ ordinary-comment `Implements:` bindings intact.
 
 Date: 2026-08-30
 
-Candidate source revision: `b7d4bf104224ee970217c3ce843a5b7b6b231915`
-
-Evidence: the immutable record named for this reconciliation commit is added by the immediately
-following evidence-only commit.
+Source identity is recorded once in each immutable evidence bundle's `source-revision.txt` and
+manifest. This mutable review document deliberately does not duplicate a source hash that would
+become stale on its own next commit.
 
 ## Requirement audit
 
@@ -105,7 +105,7 @@ following evidence-only commit.
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
-| Acceptance-criterion traceability | 28/28 rows backed; 14/14 Rust test symbols bound; 66/109 production symbols owned; 43 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
+| Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/129 production symbols owned; 59 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
@@ -113,9 +113,10 @@ following evidence-only commit.
 ## Gap disposition
 
 No unresolved implementation or specification gap was found. The source candidate's fixed-population
-bare-metal linked footprint is 907 bytes against the fixed 4,096-byte ceiling, and every declared
-target/feature compiles under the explicit Rust 1.75 lane. It has no default normal dependency,
-contains no unsafe or intentional runtime panic surface, and passes every locally available gate.
+bare-metal linked footprint is 907 bytes inside the fixed 500-to-4,096-byte interval with zero linked
+runtime/harness panic-path references, and every declared target/feature compiles under the explicit Rust 1.75 lane. It has
+no default normal dependency, contains no unsafe or intentional runtime panic surface, and passes
+every locally available gate.
 
 PGM-01 PR #12 is merged at `7dac9d8c19952412b56a0347387666e2ca81e01d`. Its tree is
 byte-identical to reviewed head `d8d376d887c40255e87ef9656bc0faf79216b321`; the complete merged-main
@@ -128,7 +129,8 @@ The following are release/workflow gates, not silently accepted gaps:
    0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
    main-based candidate requires a fresh manual CI dispatch.
 2. Manual-CI PR #6 is merged. Protected checks must pass on the main-based candidate, and protected
-   code-owner review must complete on runtime PR #5.
+   code-owner review must complete on runtime PR #5. The externally owned manual-only workflow must
+   also reconcile the local rustdoc and evidence-tool lanes without restoring automatic triggers.
 3. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
 
@@ -145,3 +147,24 @@ surface census. NEW-020 is closed by a vendored PGM-01 schema whose computed dig
 executable pin plus tests that require both planning copies to agree. NEW-021 is closed by fixture
 tests for envelope assembly, digests, roles, extensions, pin mismatch, and accepted/rejected local
 schema validation. Kani remains truthfully `skipped-unavailable` and is not converted into a pass.
+
+## Fifth re-review disposition
+
+The fifth review was executed from source `cc2d2188ea897a9570039f05b7f9401a770fe5fe` and attached to a
+later PR head. Its source probes still applied because the intervening changes only reconciled merged
+PGM-01 and refreshed evidence. They are dispositioned as follows:
+
+| Review finding | Disposition |
+|---|---|
+| NEW-022 | TC-008 now recursively parses every shipped runtime source file. It resolves private aliases, counts inherent blocks across files, constrains trait implementations on both accounting types, rejects unexpected accounting-typed public functions, constrains macros, and self-probes the four demonstrated trait/alias/extra-file/cross-file bypasses. |
+| NEW-023 | The linked-footprint gate now fails below a fixed 500-byte population floor as well as above 4,096 bytes. A footprint-crate test executes inputs 0 and 1 and requires exact results 6 and 14, so lexically present but unreachable population code also fails. |
+| NEW-024 | The retained `test-footprint` outcome now executes the fixed-result TC-007 unit test rather than reporting a zero-test host build. |
+| NEW-025 | The source audit adds `windows` and `copy_within`, while the linked static-library gate now independently rejects runtime/harness object references to `rust_begin_unwind`, bounds-check, core-panicking, or slice-index-failure symbols. This turns the representative population into a durable compiled panic-path check rather than relying only on a name denylist. |
+| NEW-026 | Local `make ci` now runs both rustdoc and the evidence-tool tests. The manual-only hosted workflow is externally owned and intentionally untouched here; adding those two lanes there remains explicit FND-015 rather than risking a collision with the CI-trigger work. |
+| NEW-027 | Every Python evidence-tool test now carries an explicit `Trace: TC-007, NFR-002-AC-4` comment, and the ownership test constructs its marker from separate strings so it is no longer misread as an implementation binding. |
+| NEW-028 | Removed the inherently stale mutable source-revision declaration. Every immutable record already binds and checksums its exact clean source revision. |
+| NEW-029 | Closed before this review arrived: both executable and planning pins name merged PGM-01 revision `7dac9d8c19952412b56a0347387666e2ca81e01d`, validated against its byte-identical merged schema and complete merged-main release check. |
+
+The style note is also closed by replacing the target-specific `as usize` conversion with explicit
+`usize::try_from` handling. Kani remains truthfully `skipped-unavailable` and is not converted into a
+pass.

@@ -79,10 +79,12 @@ pub extern "C" fn quire_runtime_footprint(input: u32) -> u64 {
         .saturating_add(u64::from(operators::and_total(|| flag, || !flag)))
         .saturating_add(u64::from(operators::or_total(|| flag, || !flag)))
         .saturating_add(u64::from(operators::implies_total(|| flag, || !flag)));
+    let indexed = match usize::try_from(input) {
+        Ok(at) => operators::index(&values, at).copied(),
+        Err(_) => None,
+    };
     let operator_score = option_u32(copied)
-        .saturating_add(option_u32(
-            operators::index(&values, input as usize).copied(),
-        ))
+        .saturating_add(option_u32(indexed))
         .saturating_add(option_u32(operators::checked_add(input, 1)))
         .saturating_add(option_u32(operators::checked_sub(input, 1)))
         .saturating_add(option_u32(operators::checked_mul(input, 2)))
@@ -102,3 +104,6 @@ fn option_u32(value: Option<u32>) -> u64 {
         None => 0,
     }
 }
+
+#[cfg(test)]
+mod population_tests;

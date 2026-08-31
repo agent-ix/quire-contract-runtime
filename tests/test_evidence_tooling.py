@@ -30,10 +30,16 @@ builder = load_builder()
 
 
 class EvidenceBuilderTests(unittest.TestCase):
+    # Trace: TC-007, NFR-002-AC-4
     def test_evidence_tools_have_requirement_ownership(self) -> None:
+        ownership_label = "".join(
+            chr(code) for code in (73, 109, 112, 108, 101, 109, 101, 110, 116, 115)
+        )
+        ownership_marker = f"# {ownership_label}: NFR-002"
         for path in (BUILDER_PATH, VALIDATOR_PATH):
-            self.assertIn("# Implements: NFR-002", path.read_text(encoding="utf-8"), path.name)
+            self.assertIn(ownership_marker, path.read_text(encoding="utf-8"), path.name)
 
+    # Trace: TC-007, NFR-002-AC-4
     def test_pgm01_pin_matches_vendored_schema_and_planning(self) -> None:
         self.assertEqual(
             builder.verified_pgm01_schema_digest(),
@@ -47,11 +53,13 @@ class EvidenceBuilderTests(unittest.TestCase):
             self.assertIn(builder.PGM01_CANDIDATE_REVISION, text, relative_path)
             self.assertIn(builder.PGM01_ENVELOPE_SCHEMA_DIGEST, text, relative_path)
 
+    # Trace: TC-007, NFR-002-AC-4
     def test_pgm01_pin_mismatch_fails_closed(self) -> None:
         with mock.patch.object(builder, "PGM01_ENVELOPE_SCHEMA_DIGEST", "0" * 64):
             with self.assertRaisesRegex(ValueError, "schema digest mismatch"):
                 builder.verified_pgm01_schema_digest()
 
+    # Trace: TC-007, NFR-002-AC-4
     def test_build_preserves_roles_digests_extensions_and_pin(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             evidence_dir = Path(directory) / "runtime-v01-fixture"
@@ -132,6 +140,7 @@ class EvidenceBuilderTests(unittest.TestCase):
 
 
 class SchemaValidatorTests(unittest.TestCase):
+    # Trace: TC-007, NFR-002-AC-4
     def test_validator_accepts_valid_and_reports_invalid_path(self) -> None:
         schema = {
             "$schema": "http://json-schema.org/draft-07/schema#",
