@@ -39,7 +39,10 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 ## Evidence Locations
 
 - TC-001 and TC-006: `tests/integration.rs`.
-- TC-002 and TC-003: `tests/operators.rs`; TC-003 also has five Kani harnesses.
+- TC-002 and TC-003: `tests/operators.rs`; TC-003 also has six Kani harnesses. The proof scope is
+  bounded: it checks dispatch/truth-table wiring, an independent widened i8 addition oracle,
+  symbolic invalid division/remainder, full-width `usize` index definedness, option definedness, and
+  saturating campaign totals. It does not prove unlisted module behavior.
 - TC-004: `tests/proptest_adapter.rs`.
 - TC-005: `tests/release_contract.rs`, compile-fail crate documentation, `make test-features`, and the
   retained default dependency record.

@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILDER_PATH = ROOT / "scripts" / "build_evidence_envelope.py"
 COLLECTOR_PATH = ROOT / "scripts" / "collect_evidence.sh"
 VALIDATOR_PATH = ROOT / "scripts" / "validate_json_schema.py"
+VERIFIER_PATH = ROOT / "scripts" / "verify_evidence.py"
 
 
 def load_builder():
@@ -37,8 +38,12 @@ class EvidenceBuilderTests(unittest.TestCase):
             chr(code) for code in (73, 109, 112, 108, 101, 109, 101, 110, 116, 115)
         )
         ownership_marker = f"# {ownership_label}: NFR-002"
-        for path in (BUILDER_PATH, COLLECTOR_PATH, VALIDATOR_PATH):
+        plan = (ROOT / "spec" / "assurance" / "MP-001-runtime-measurements.md").read_text(
+            encoding="utf-8"
+        )
+        for path in (BUILDER_PATH, COLLECTOR_PATH, VALIDATOR_PATH, VERIFIER_PATH):
             self.assertIn(ownership_marker, path.read_text(encoding="utf-8"), path.name)
+            self.assertIn(f"`scripts/{path.name}`", plan, path.name)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_pgm01_pin_matches_vendored_schema_and_planning(self) -> None:
@@ -135,7 +140,7 @@ class EvidenceBuilderTests(unittest.TestCase):
             self.assertNotIn("all executed", envelope["result"]["summary"])
 
     # Trace: TC-007, NFR-002-AC-4
-    def test_passed_status_cannot_contradict_retained_transcript(self) -> None:
+    def test_passed_status_contradiction_is_retained_as_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             evidence_dir = Path(directory) / "runtime-v01-fixture"
             evidence_dir.mkdir()
@@ -144,8 +149,65 @@ class EvidenceBuilderTests(unittest.TestCase):
                 "test result: FAILED. 0 passed; 7 failed\n", encoding="utf-8"
             )
 
-            with self.assertRaisesRegex(ValueError, "contradicts retained transcript"):
-                builder.build(evidence_dir)
+            builder.build(evidence_dir)
+            manifest = self.read_json(evidence_dir / "evidence-manifest.json")
+            envelope = self.read_json(evidence_dir / "evidence-envelope.json")
+            outcomes = {item["name"]: item["status"] for item in manifest["outcomes"]}
+            self.assertEqual(outcomes["test-all"], "failed")
+            self.assertEqual(envelope["result"]["status"], "inconclusive")
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_kani_pass_requires_numeric_success_complete_summary_and_every_harness(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            evidence_dir = Path(directory)
+            self.write_fixture_inputs(evidence_dir)
+            (evidence_dir / "kani-status.txt").write_text("passed\n", encoding="utf-8")
+            transcript = "\n".join(
+                f"kani_proofs::{name} SUCCESSFUL"
+                for name in builder.EXPECTED_KANI_HARNESSES
+            )
+            transcript += (
+                f"\nComplete - {len(builder.EXPECTED_KANI_HARNESSES)} successfully verified "
+                f"harnesses, 0 failures, {len(builder.EXPECTED_KANI_HARNESSES)} total.\n"
+            )
+            (evidence_dir / "kani.stdout").write_text(transcript, encoding="utf-8")
+            outcomes = {item["name"]: item["status"] for item in builder.command_outcomes(evidence_dir)}
+            self.assertEqual(outcomes["kani"], "passed")
+            (evidence_dir / "kani.stdout").write_text(
+                "VERIFICATION:- FAILED\nComplete - 0 successfully verified harnesses, 6 failures, 6 total.\n",
+                encoding="utf-8",
+            )
+            outcomes = {item["name"]: item["status"] for item in builder.command_outcomes(evidence_dir)}
+            self.assertEqual(outcomes["kani"], "failed")
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_collector_and_declared_command_sets_agree(self) -> None:
+        collector = COLLECTOR_PATH.read_text(encoding="utf-8").split(
+            'quire provenance --pretty >"$evidence_dir/quire-provenance.json"', 1
+        )[1]
+        collected = set(
+            __import__("re").findall(
+                r"(?m)^\s*run_and_retain ([a-z0-9-]+)(?: |$)", collector
+            )
+        )
+        declared = {transcript for _, transcript in builder.COMMAND_TRANSCRIPTS}
+        self.assertEqual(collected, declared)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_every_declared_command_has_contradiction_markers(self) -> None:
+        declared = {name for name, _ in builder.COMMAND_TRANSCRIPTS}
+        self.assertEqual(declared, set(builder.PASS_CONTRADICTION_MARKERS))
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_skipped_outcome_forces_pending_result_and_limitation(self) -> None:
+        status, _, limitations = builder.summarize_outcomes(
+            [{"name": "pgm01-envelope", "status": "skipped-unavailable"}]
+        )
+        self.assertEqual(status, "pending")
+        self.assertEqual(
+            limitations,
+            ["skipped-unavailable runtime outcome: pgm01-envelope"],
+        )
 
     # Trace: TC-007, NFR-002-AC-4
     def test_validator_transcript_exclusions_are_explicitly_named(self) -> None:
@@ -181,12 +243,18 @@ class EvidenceBuilderTests(unittest.TestCase):
             "source-revision.txt": "a" * 40 + "\n",
             "source-state.txt": "clean\n",
             "kani-status.txt": "skipped-unavailable\n",
+            "kani-version.txt": "skipped-unavailable\n",
             "cargo-version.txt": "cargo 1.94.1\n",
             "jsonschema-version.txt": "3.2.0\n",
             "python-version.txt": "Python 3.10.12\n",
             "rustc-version.txt": "rustc 1.94.1\nhost: x86_64-unknown-linux-gnu\n",
             "msrv-rustc-version.txt": "rustc 1.75.0\nhost: x86_64-unknown-linux-gnu\n",
             "size-version.txt": "GNU size 2.38\n",
+            "pgm01-schema-path.txt": "/tmp/quire-contract-ir/schemas/derivation-evidence-envelope-v1.schema.json\n",
+            "pgm01-schema-sha256.txt": builder.PGM01_ENVELOPE_SCHEMA_DIGEST + "\n",
+            "pgm01-validator-path.txt": "/tmp/quire-contract-ir/scripts/validate_governance.py\n",
+            "pgm01-validator-sha256.txt": "b" * 64 + "\n",
+            "pgm01-revision.txt": builder.PGM01_CANDIDATE_REVISION + "\n",
         }
         for name, value in values.items():
             (evidence_dir / name).write_text(value, encoding="utf-8")
@@ -235,6 +303,21 @@ class SchemaValidatorTests(unittest.TestCase):
             result = json.loads(rejected.stdout)
             self.assertFalse(result["valid"])
             self.assertEqual(result["errors"][0]["path"], "$.value")
+
+    def test_validator_rejects_invalid_date_time_format(self) -> None:
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {"recordedAt": {"type": "string", "format": "date-time"}},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            schema_path = root / "schema.json"
+            instance_path = root / "instance.json"
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+            instance_path.write_text('{"recordedAt":"NOT-A-TIMESTAMP"}', encoding="utf-8")
+            rejected = self.run_validator(schema_path, instance_path)
+            self.assertEqual(rejected.returncode, 1, rejected.stderr)
 
     @staticmethod
     def run_validator(schema_path: Path, instance_path: Path) -> subprocess.CompletedProcess[str]:

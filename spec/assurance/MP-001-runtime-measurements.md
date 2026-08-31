@@ -47,13 +47,22 @@ Run `scripts/collect_evidence.sh`. It records source and tool identities, featur
 license and unsafe checks, Kani availability/result, dependency metadata, the Rust 1.75
 `thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
 `evidence/`. Every invoked gate retains stdout, stderr, and its numeric exit status; the builder
-derives manifest outcomes from those status records, represents missing records as inconclusive, and
-rejects zero-status records whose retained transcripts contain command-specific failure markers.
+`scripts/build_evidence_envelope.py` derives manifest outcomes from the complete status-file census, represents missing records as
+inconclusive, and records zero-status transcript contradictions as durable failed outcomes. Kani
+passes only when its numeric status is zero, every declared harness is named successful, the exact
+complete-summary count is present, and no failure marker occurs. Its exact version is retained.
 The collector's local self-test exercises nonzero propagation and checksum fixed-point detection;
 the builder never manufactures a pass from a command name or transcript text. The builder derives and verifies
 the digest of the vendored PGM-01 envelope schema and the identity of its vendored raw merge commit;
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
+
+`scripts/verify_evidence.py` independently verifies the committed `evidence/ANCHORS` record-set
+boundary, every flat-record checksum and artifact/link digest, the recursively anchored historical
+tree, exact JSON Schema formats, the external merged-PGM schema digest, complete re-derived outcome
+values, result status/summary, and limitations. Missing anchors or an empty record set mean
+verification unavailable, never success. `scripts/validate_json_schema.py` fails closed unless the
+exact packages in `requirements-evidence.txt` provide the required date-time and URI formats.
 
 ## Interpretation
 
@@ -63,3 +72,10 @@ or open human review remains an explicit limitation. The representative consumer
 its runtime/harness objects are rejected if they retain a panic-path reference. The rlib byte count is retained only
 as an observation because it varies with compiler metadata and build paths; neither value is treated
 as whole-application RAM/ROM utilization.
+
+The six Kani harnesses are bounded verification controls, not a whole-crate proof. Boolean and most
+checked-operation assertions gate generic dispatch against declared primitive semantics; i8 addition
+also uses an independent i16 widening oracle. Division/remainder uses symbolic invalid inputs, index
+definedness quantifies over full `usize`, and campaign total saturation covers accounting. The Kani
+toolchain may differ from both the shipped stable compiler and the Rust 1.75 compatibility compiler;
+that tool identity is retained rather than treated as compiler equivalence.

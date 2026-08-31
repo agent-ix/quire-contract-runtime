@@ -26,6 +26,16 @@ MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
 COLLECTOR = ROOT / "scripts" / "collect_evidence.sh"
 BUILDER = Path(__file__).resolve()
 SCHEMA_VALIDATOR = ROOT / "scripts" / "validate_json_schema.py"
+EVIDENCE_VERIFIER = ROOT / "scripts" / "verify_evidence.py"
+EVIDENCE_REQUIREMENTS = ROOT / "requirements-evidence.txt"
+EXPECTED_KANI_HARNESSES = (
+    "tc_002_boolean_truth_tables",
+    "tc_003_campaign_counts_total_saturates",
+    "tc_003_checked_i8_arithmetic_matches_primitives",
+    "tc_003_i32_division_boundaries_are_undefined",
+    "tc_003_option_helpers_preserve_definedness",
+    "tc_003_slice_index_is_defined_exactly_in_bounds",
+)
 COMMAND_TRANSCRIPTS = (
     ("quire-validate", "quire-validate"),
     ("fmt", "fmt"),
@@ -46,6 +56,8 @@ COMMAND_TRANSCRIPTS = (
     ("rustdoc", "rustdoc"),
     ("linked-footprint", "linked-footprint"),
     ("rlib-size-observation", "rlib-size-observation"),
+    ("coverage", "coverage"),
+    ("kani", "kani"),
     ("pgm01-pinned-schema", "pgm01-pinned-schema"),
     ("input-schema", "input-schema"),
     ("manifest-schema", "manifest-schema"),
@@ -60,6 +72,8 @@ VALIDATOR_TRANSCRIPTS = (
     "pgm01-envelope",
 )
 PASS_CONTRADICTION_MARKERS = {
+    "quire-validate": ('"valid": false', "validation failed"),
+    "fmt": ("Diff in ",),
     "clippy": ("error: could not compile",),
     "test-core": ("test result: FAILED", "error: test failed"),
     "test-alloc": ("test result: FAILED", "error: test failed"),
@@ -68,6 +82,22 @@ PASS_CONTRADICTION_MARKERS = {
     "test-footprint": ("test result: FAILED", "error: test failed"),
     "msrv": ("error: could not compile",),
     "release-build": ("error: could not compile",),
+    "deny": ("error:", "FAILED"),
+    "unsafe-audit": ("unsafe audit failed", "missing // SAFETY:"),
+    "panic-audit": ("panic surface audit failed",),
+    "metadata": ("error:", "error["),
+    "default-dependencies": ("error:",),
+    "layout": ("panicked at",),
+    "rustdoc": ("error: could not document",),
+    "linked-footprint": ("linked footprint check failed",),
+    "rlib-size-observation": ("error:",),
+    "coverage": ("claims `", "COVERAGE_STATUS_CONTRADICTION"),
+    "kani": ("VERIFICATION:- FAILED", "UNSUCCESSFUL"),
+    "pgm01-pinned-schema": ('"valid": false',),
+    "input-schema": ('"valid": false',),
+    "manifest-schema": ('"valid": false',),
+    "pgm01-schema": ('"valid": false',),
+    "pgm01-envelope": ('"valid": false', "governance validation error:"),
 }
 
 
@@ -113,9 +143,30 @@ def verified_pgm01_revision() -> str:
     return actual
 
 
-def command_outcomes(evidence_dir: Path, kani_status: str) -> list[dict[str, str]]:
+def validate_kani_success(combined: str) -> bool:
+    expected_summary = (
+        f"Complete - {len(EXPECTED_KANI_HARNESSES)} successfully verified harnesses, "
+        f"0 failures, {len(EXPECTED_KANI_HARNESSES)} total."
+    )
+    return expected_summary in combined and all(
+        f"kani_proofs::{name}" in combined for name in EXPECTED_KANI_HARNESSES
+    )
+
+
+def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
     outcomes = []
-    for name, transcript in COMMAND_TRANSCRIPTS:
+    numeric = {
+        path.name.removesuffix(".status.txt")
+        for path in evidence_dir.glob("*.status.txt")
+    }
+    availability = {
+        path.name.removesuffix("-status.txt")
+        for path in evidence_dir.glob("*-status.txt")
+        if not path.name.endswith(".status.txt")
+    }
+    required = {transcript for _, transcript in COMMAND_TRANSCRIPTS}
+    for transcript in sorted(required | numeric | availability):
+        name = transcript
         status_path = evidence_dir / f"{transcript}.status.txt"
         availability_path = evidence_dir / f"{transcript}-status.txt"
         availability = (
@@ -154,16 +205,41 @@ def command_outcomes(evidence_dir: Path, kani_status: str) -> list[dict[str, str
                         None,
                     )
                     if contradiction is not None:
-                        raise ValueError(
-                            f"passed status for {name} contradicts retained transcript: "
-                            f"{contradiction}"
-                        )
-                    status = "passed"
+                        status = "failed"
+                    elif name == "kani" and not validate_kani_success(combined):
+                        status = "failed"
+                    else:
+                        status = "passed"
             else:
                 status = "failed"
         outcomes.append({"name": name, "status": status})
-    outcomes.append({"name": "kani", "status": kani_status})
     return outcomes
+
+
+def summarize_outcomes(
+    outcomes: list[dict[str, str]],
+) -> tuple[str, str, list[str]]:
+    failed = sorted(item["name"] for item in outcomes if item["status"] == "failed")
+    inconclusive = sorted(
+        item["name"] for item in outcomes if item["status"] == "inconclusive"
+    )
+    skipped = sorted(
+        item["name"]
+        for item in outcomes
+        if item["status"] == "skipped-unavailable"
+    )
+    limitations = [
+        *(f"failed runtime outcome: {name}" for name in failed),
+        *(f"inconclusive runtime outcome: {name}" for name in inconclusive),
+        *(f"skipped-unavailable runtime outcome: {name}" for name in skipped),
+    ]
+    if failed:
+        return "inconclusive", f"{len(failed)} locally collected runtime checks failed", limitations
+    if inconclusive:
+        return "pending", f"{len(inconclusive)} runtime outcomes are inconclusive", limitations
+    if skipped:
+        return "pending", f"{len(skipped)} runtime checks were skipped-unavailable", limitations
+    return "conclusive", "all retained local runtime checks, including Kani, passed", limitations
 
 
 def hash_parameter_files() -> str:
@@ -179,6 +255,8 @@ def hash_parameter_files() -> str:
         COLLECTOR,
         BUILDER,
         SCHEMA_VALIDATOR,
+        EVIDENCE_VERIFIER,
+        EVIDENCE_REQUIREMENTS,
         INPUT_SCHEMA,
         MANIFEST_SCHEMA,
         PGM01_ENVELOPE_SCHEMA,
@@ -198,6 +276,22 @@ def build(evidence_dir: Path) -> None:
     pgm01_schema_digest = verified_pgm01_schema_digest()
     verified_pgm01_revision()
     evidence_dir = evidence_dir.resolve()
+    recorded_pgm01_revision = (evidence_dir / "pgm01-revision.txt").read_text(
+        encoding="utf-8"
+    ).strip()
+    if recorded_pgm01_revision != PGM01_CANDIDATE_REVISION:
+        raise ValueError(
+            f"PGM-01 checkout mismatch: expected {PGM01_CANDIDATE_REVISION}, "
+            f"got {recorded_pgm01_revision}"
+        )
+    recorded_pgm01_schema_digest = (evidence_dir / "pgm01-schema-sha256.txt").read_text(
+        encoding="utf-8"
+    ).strip()
+    if recorded_pgm01_schema_digest != pgm01_schema_digest:
+        raise ValueError(
+            f"external PGM-01 schema mismatch: expected {pgm01_schema_digest}, "
+            f"got {recorded_pgm01_schema_digest}"
+        )
     invocation_directory = (
         str(evidence_dir.relative_to(ROOT))
         if evidence_dir.is_relative_to(ROOT)
@@ -205,7 +299,6 @@ def build(evidence_dir: Path) -> None:
     )
     revision = (evidence_dir / "source-revision.txt").read_text(encoding="utf-8").strip()
     source_state = (evidence_dir / "source-state.txt").read_text(encoding="utf-8").strip()
-    kani_status = (evidence_dir / "kani-status.txt").read_text(encoding="utf-8").strip()
     metadata = json.loads((evidence_dir / "metadata.stdout").read_text(encoding="utf-8"))
     package = next(
         item for item in metadata["packages"] if item["name"] == "quire-contract-runtime"
@@ -251,12 +344,16 @@ def build(evidence_dir: Path) -> None:
             "cargo run --release --example layout --no-default-features",
             "RUSTDOCFLAGS=-Dwarnings make doc",
             "cargo kani (when available)",
+            "quire coverage --scope . --strict",
         ],
         "tools": {
             "cargo": (evidence_dir / "cargo-version.txt")
             .read_text(encoding="utf-8")
             .splitlines()[0],
             "jsonschema": (evidence_dir / "jsonschema-version.txt")
+            .read_text(encoding="utf-8")
+            .strip(),
+            "kani": (evidence_dir / "kani-version.txt")
             .read_text(encoding="utf-8")
             .strip(),
             "python": (evidence_dir / "python-version.txt")
@@ -280,6 +377,19 @@ def build(evidence_dir: Path) -> None:
             "candidateRevision": PGM01_CANDIDATE_REVISION,
             "envelopeSchema": "quire.derivation-evidence/v1",
             "envelopeSchemaDigest": digest(pgm01_schema_digest),
+            "schemaPath": (evidence_dir / "pgm01-schema-path.txt")
+            .read_text(encoding="utf-8")
+            .strip(),
+            "schemaDigest": digest(recorded_pgm01_schema_digest),
+            "validatorPath": (evidence_dir / "pgm01-validator-path.txt")
+            .read_text(encoding="utf-8")
+            .strip(),
+            "validatorDigest": digest(
+                (evidence_dir / "pgm01-validator-sha256.txt")
+                .read_text(encoding="utf-8")
+                .strip()
+            ),
+            "validatorRevision": recorded_pgm01_revision,
         },
     }
     input_path = evidence_dir / "collection-input.json"
@@ -314,15 +424,15 @@ def build(evidence_dir: Path) -> None:
                 }
             )
 
+    outcomes = command_outcomes(evidence_dir)
+    result_status, result_summary, outcome_limitations = summarize_outcomes(outcomes)
     limitations = [
         "current main-based candidate has no deliberately dispatched remote CI run",
         "merged PGM-01 revision was integrated under a bounded admin exception without protected checks; that exception excludes runtime release qualification",
         "CODEOWNER approval and the human source-release decision are pending",
+        "Kani proofs cover the dispatch layer and bounded requirements named by each harness; they do not establish semantics outside that declared scope",
+        *outcome_limitations,
     ]
-    if kani_status != "passed":
-        limitations.append(f"local Kani status is {kani_status}")
-
-    outcomes = command_outcomes(evidence_dir, kani_status)
     manifest = {
         "schemaVersion": "quire.runtime-evidence-manifest/v1",
         "sourceRevision": revision,
@@ -334,24 +444,6 @@ def build(evidence_dir: Path) -> None:
     manifest_path = evidence_dir / "evidence-manifest.json"
     write_json(manifest_path, manifest)
 
-    failed = [item["name"] for item in outcomes if item["status"] == "failed"]
-    inconclusive = [
-        item["name"] for item in outcomes if item["status"] == "inconclusive"
-    ]
-    if failed:
-        result_status = "inconclusive"
-        result_summary = f"{len(failed)} locally collected runtime checks failed"
-    elif inconclusive:
-        result_status = "pending"
-        result_summary = f"{len(inconclusive)} local runtime check outcomes are inconclusive"
-    elif kani_status == "passed":
-        result_status = "conclusive"
-        result_summary = "all locally collected runtime checks, including Kani, passed"
-    else:
-        result_status = "pending"
-        result_summary = (
-            "all executed local runtime checks passed; " f"Kani is {kani_status}"
-        )
     envelope = {
         "schemaVersion": "quire.derivation-evidence/v1",
         "recordId": evidence_dir.name,

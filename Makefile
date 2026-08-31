@@ -2,8 +2,9 @@
 # Quire Contract Runtime Makefile
 # =============================================================================
 
-CARGO ?= cargo
-MSRV ?= 1.75.0
+override CARGO := cargo
+override MSRV := 1.75.0
+override PYTHON := python3
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
 
@@ -25,6 +26,9 @@ help:
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
 	@echo "  make evidence-tool    - Test the local evidence toolchain and PGM-01 pin"
+	@echo "  make verify-evidence  - Verify the anchored retained evidence set"
+	@echo "  make coverage         - Run strict specification traceability coverage"
+	@echo "  make kani             - Run Kani when installed; report unavailable explicitly"
 	@echo "  make ci               - All local CI gates"
 
 # =============================================================================
@@ -104,12 +108,28 @@ audit-panic:
 
 .PHONY: evidence-tool
 evidence-tool:
-	python3 -m py_compile scripts/build_evidence_envelope.py scripts/validate_json_schema.py
-	python3 -m unittest discover -s tests -p 'test_*.py'
+	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/validate_json_schema.py scripts/verify_evidence.py
+	$(PYTHON) -m unittest discover -s tests -p '*.py'
+
+.PHONY: verify-evidence
+verify-evidence:
+	$(PYTHON) scripts/verify_evidence.py
+
+.PHONY: coverage
+coverage:
+	quire coverage --scope . --strict
+
+.PHONY: kani
+kani:
+	@if command -v cargo-kani >/dev/null 2>&1; then \
+		$(CARGO) kani; \
+	else \
+		echo "KANI_STATUS=skipped-unavailable"; \
+	fi
 
 # =============================================================================
 # Composite
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic evidence-tool
+ci: fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic coverage kani evidence-tool verify-evidence

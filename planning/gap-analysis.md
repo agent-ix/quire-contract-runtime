@@ -204,8 +204,8 @@ the panic-audit residual, and the ungated PGM pin. Its new findings are disposit
 | FND-206 | The census exclusion now matches only the exact `src/accounting_tests.rs` relative path for both directory-discovered and path-attached sources. |
 
 FND-015 remains externally owned and this branch neither edits nor dispatches the manual-only hosted
-workflow. Local Kani remains unavailable, so the five checked-in harnesses remain truthfully
-`skipped-unavailable` for the current source candidate.
+workflow. This statement is historical: Kani was unavailable during that round; post-merge evidence
+later executed the checked-in harnesses.
 
 ## Ninth re-review disposition
 
@@ -218,14 +218,25 @@ gates under fresh mutations. Its new findings are dispositioned as follows:
 | FND-302 | The TC-008 use-tree self-probe now includes `pub use accounting::*;` and requires the exact `src/lib.rs::use accounting::*` census label, making the `UseTree::Glob` arm load-bearing. |
 | FND-303 | NFR-002-AC-4 now explicitly owns collector transcript/status capture, command and fixed-point failure behavior, and the builder's transcript consistency. The collector carries an implementation marker enforced by the ownership test, and TC-007 describes the collector self-test, named exclusions, and contradiction checks. |
 
-Kani remains truthfully `skipped-unavailable`; with FND-301 reconciled, the current source requires a
-deliberate protected run. Task-006 remains an explicitly human-authored release decision.
+This statement is also round-scoped history: Kani was then `skipped-unavailable`. Task-006 remains an
+explicitly human-authored release decision.
 
 ## Post-merge local evidence disposition
 
 PR #5 was admin-merged at `e360dad8a3e0e54f9b8457ff7f3748be0f2acdb3`, whose Git tree is identical
 to the Round-10-reviewed head. The immutable record
 `evidence/runtime-v01-e360dad8a3e0-20260831T160256Z` binds that exact clean merged revision and
-retains 25/25 passing local outcomes: the full local gate, pinned Kani 0.67.0 with 5/5 harnesses and
+retains 25/25 passing local outcomes: the full local gate, pinned Kani 0.67.0 with 5/5 historical harnesses and
 zero failures, and both merged-PGM validators. All 91 retained checksums verify. This closes the
 current-source Kani evidence gap without making a hosted-CI or human-release claim.
+
+## Post-merge evidence review disposition
+
+The post-merge evidence review demonstrated that the result was accurate but its recorder could not
+distinguish it from a forgery. This branch now derives Kani from numeric status, exact successful
+harness names/count, version, and transcript markers; treats every skipped outcome as pending with a
+named limitation; censes unknown status files; verifies anchored records independently; binds the
+external merged-PGM schema; adds strict coverage and local Kani targets; and runs all Python test
+filenames. Proof scope is narrowed and stated: i8 addition uses independent widening arithmetic,
+invalid division is symbolic, index proof covers full `usize`, and accounting saturation has its own
+harness. Hosted workflow changes remain outside this branch by operator direction.

@@ -25,6 +25,21 @@ impl CampaignCounts {
         }
     }
 
+    #[cfg(kani)]
+    pub(crate) const fn from_proof_counts(
+        accepted: u64,
+        rejected: u64,
+        failed: u64,
+        discarded: u64,
+    ) -> Self {
+        Self {
+            accepted,
+            rejected,
+            failed,
+            discarded,
+        }
+    }
+
     fn record_kind(&mut self, kind: VerdictKind) {
         match kind {
             VerdictKind::Passed => self.accepted = self.accepted.saturating_add(1),
