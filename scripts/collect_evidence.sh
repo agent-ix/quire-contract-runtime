@@ -80,48 +80,56 @@ else
   echo skipped-unavailable >"$evidence_dir/kani-status.txt"
 fi
 
-# The first build creates an instance for the pinned PGM-01 schema check. The
-# second build incorporates that retained exit status into the final manifest.
-python3 scripts/build_evidence_envelope.py "$evidence_dir"
-run_and_retain pgm01-pinned-schema \
-  python3 scripts/validate_json_schema.py \
-  schemas/pgm01-derivation-evidence-envelope-v1.schema.json \
-  "$evidence_dir/evidence-envelope.json"
-python3 scripts/build_evidence_envelope.py "$evidence_dir"
-run_and_retain pgm01-pinned-schema \
-  python3 scripts/validate_json_schema.py \
-  schemas/pgm01-derivation-evidence-envelope-v1.schema.json \
-  "$evidence_dir/evidence-envelope.json"
-run_and_retain input-schema \
-  python3 scripts/validate_json_schema.py \
-  schemas/runtime-evidence-input-v1.schema.json "$evidence_dir/collection-input.json"
-run_and_retain manifest-schema \
-  python3 scripts/validate_json_schema.py \
-  schemas/runtime-evidence-manifest-v1.schema.json "$evidence_dir/evidence-manifest.json"
-
-if [[ -n "${PGM01_SCHEMA:-}" ]]; then
-  run_and_retain pgm01-schema \
+run_schema_validators() {
+  run_and_retain pgm01-pinned-schema \
     python3 scripts/validate_json_schema.py \
-    "$PGM01_SCHEMA" "$evidence_dir/evidence-envelope.json"
-  if [[ "$(<"$evidence_dir/pgm01-schema.status.txt")" == 0 ]]; then
-    echo passed >"$evidence_dir/pgm01-schema-status.txt"
-  else
-    echo failed >"$evidence_dir/pgm01-schema-status.txt"
-  fi
-else
-  echo skipped-unavailable >"$evidence_dir/pgm01-schema-status.txt"
-fi
+    schemas/pgm01-derivation-evidence-envelope-v1.schema.json \
+    "$evidence_dir/evidence-envelope.json"
+  run_and_retain input-schema \
+    python3 scripts/validate_json_schema.py \
+    schemas/runtime-evidence-input-v1.schema.json "$evidence_dir/collection-input.json"
+  run_and_retain manifest-schema \
+    python3 scripts/validate_json_schema.py \
+    schemas/runtime-evidence-manifest-v1.schema.json "$evidence_dir/evidence-manifest.json"
 
-if [[ -n "${PGM01_VALIDATOR:-}" ]]; then
-  run_and_retain pgm01-envelope \
-    python3 "$PGM01_VALIDATOR" --fixture "$evidence_dir/evidence-envelope.json"
-  if [[ "$(<"$evidence_dir/pgm01-envelope.status.txt")" == 0 ]]; then
-    echo passed >"$evidence_dir/pgm01-envelope-status.txt"
+  if [[ -n "${PGM01_SCHEMA:-}" ]]; then
+    run_and_retain pgm01-schema \
+      python3 scripts/validate_json_schema.py \
+      "$PGM01_SCHEMA" "$evidence_dir/evidence-envelope.json"
+    if [[ "$(<"$evidence_dir/pgm01-schema.status.txt")" == 0 ]]; then
+      echo passed >"$evidence_dir/pgm01-schema-status.txt"
+    else
+      echo failed >"$evidence_dir/pgm01-schema-status.txt"
+    fi
   else
-    echo failed >"$evidence_dir/pgm01-envelope-status.txt"
+    echo skipped-unavailable >"$evidence_dir/pgm01-schema-status.txt"
   fi
-else
-  echo skipped-unavailable >"$evidence_dir/pgm01-envelope-status.txt"
+
+  if [[ -n "${PGM01_VALIDATOR:-}" ]]; then
+    run_and_retain pgm01-envelope \
+      python3 "$PGM01_VALIDATOR" --fixture "$evidence_dir/evidence-envelope.json"
+    if [[ "$(<"$evidence_dir/pgm01-envelope.status.txt")" == 0 ]]; then
+      echo passed >"$evidence_dir/pgm01-envelope-status.txt"
+    else
+      echo failed >"$evidence_dir/pgm01-envelope-status.txt"
+    fi
+  else
+    echo skipped-unavailable >"$evidence_dir/pgm01-envelope-status.txt"
+  fi
+}
+
+# Build once to create validator inputs, validate them, then rebuild with those
+# retained outcomes. Revalidating the final form ensures the accepted document
+# is exactly the deterministic form that will be checksummed.
+python3 scripts/build_evidence_envelope.py "$evidence_dir"
+run_schema_validators
+python3 scripts/build_evidence_envelope.py "$evidence_dir"
+run_schema_validators
+validated_envelope_sha256="$(sha256sum "$evidence_dir/evidence-envelope.json")"
+python3 scripts/build_evidence_envelope.py "$evidence_dir"
+if [[ "$(sha256sum "$evidence_dir/evidence-envelope.json")" != "$validated_envelope_sha256" ]]; then
+  echo "evidence envelope changed after final validation" >&2
+  collection_failed=1
 fi
 
 (
