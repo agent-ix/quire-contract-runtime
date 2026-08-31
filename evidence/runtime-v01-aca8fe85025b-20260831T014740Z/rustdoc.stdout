@@ -1,0 +1,2 @@
+RUSTDOCFLAGS=-Dwarnings cargo doc -p quire-contract-runtime --all-features --no-deps
+RUSTDOCFLAGS=-Dwarnings cargo doc -p quire-contract-runtime-footprint --no-deps --target thumbv7em-none-eabi
