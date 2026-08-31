@@ -11,7 +11,7 @@ review_set: subset
 
 ## Summary
 
-The runtime requirements and implementation have no unresolved semantic gap after seven executed
+The runtime requirements and implementation have no unresolved semantic gap after eight executed
 source-review rounds. The candidate remains gated by current protected checks and review, and the
 human source-release decision.
 
@@ -39,7 +39,7 @@ human source-release decision.
 | FND-010 | Classified reserved `alloc`/`std` rows explicitly as resolver/build compatibility checks. |
 | FND-011 | Added a crate-wide `missing_docs` denial. |
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
-| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 70/132 production symbols are owned, while zero test symbols carry an unbound trace ID. The 62 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
+| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 70/137 production symbols are owned, while zero test symbols carry an unbound trace ID. The 67 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
 | GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 28/28 with 15/15 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
@@ -53,7 +53,7 @@ human source-release decision.
 | NEW-001 | Replaced the unsatisfiable rlib ceiling with a representative `no_std` static-library consumer built by Rust 1.75 for `thumbv7em-none-eabi`. The fixed, non-overridable gate measures only runtime/harness `.text` plus `.rodata`: 907 bytes against 4,096. |
 | NEW-002 | Removed the Makefile-text assertion. TC-007's procedure consumes the executed `make ci` output instead of claiming target behavior from a target-name string. |
 | NEW-003 | Annotated the mutable historical README: the retained `msrv_1_75=SUCCESS` is invalidated by the toolchain-precedence defect, while the Kani result applies only to its historical revision. |
-| NEW-004 | Replaced the overstated traceability row with the engine's current 70/132 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
+| NEW-004 | Replaced the overstated traceability row with the engine's current 70/137 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
 | NEW-005 | Changed `adapt_recording` to return `TestCaseResult`; identity mismatch is now a proptest failure containing expected and observed identities, with a direct regression test. |
 | NEW-006 | Denied Clippy indexing and arithmetic-side-effect lints crate-wide, made indexing use `slice::get`, and extended the fail-closed text audit to verification source while permitting Kani proof assertions. |
 | NEW-007 | Anchored all five enum declarations exactly and asserted distinct `VerdictKind`/`Verdict` offsets. |
@@ -105,7 +105,7 @@ become stale on its own next commit.
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
-| Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/132 production symbols owned; 62 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
+| Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/137 production symbols owned; 67 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
@@ -188,3 +188,21 @@ probes now fail. Its remaining findings are dispositioned as follows:
 
 FND-015 remains externally owned: this branch does not edit or dispatch the manual-only hosted
 workflow. Kani remains truthfully `skipped-unavailable` and is not converted into a pass.
+
+## Eighth re-review disposition
+
+The eighth review closed both standing high-severity accounting and evidence-truthfulness findings,
+the panic-audit residual, and the ungated PGM pin. Its new findings are dispositioned as follows:
+
+| Review finding | Disposition |
+|---|---|
+| FND-201 | Moved the retained failed `runtime-v01-aca8fe85025b-20260831T014740Z` collection beneath `evidence/historical/` and documented why its obsolete producer's all-pass manifest contradicts the custom PGM validator's exit status 2. It is explicitly not current evidence. |
+| FND-202 | Added a collector self-test that exercises the production transcript/status recorder, proves nonzero commands set the collection failure flag, checks status-word mapping, and detects a changed envelope at the checksum fixed point. The evidence-tool suite executes it on every local gate. |
+| FND-203 | Replaced positional validator-transcript exclusions with an explicit immutable name set covered by a regression test. |
+| FND-204 | The TC-008 public-surface census now records every `pub use` leaf with its full use-tree path and rename, with a rename self-probe. |
+| FND-205 | A zero status is rejected if the retained command transcript contains a command-specific failure marker; missing stdout or stderr is inconclusive rather than passed. A negative regression test proves the contradiction fails closed. |
+| FND-206 | The census exclusion now matches only the exact `src/accounting_tests.rs` relative path for both directory-discovered and path-attached sources. |
+
+FND-015 remains externally owned and this branch neither edits nor dispatches the manual-only hosted
+workflow. Local Kani remains unavailable, so the five checked-in harnesses remain truthfully
+`skipped-unavailable` for the current source candidate.

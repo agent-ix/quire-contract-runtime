@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use syn::visit::{self, Visit};
-use syn::{Expr, ExprCall, ExprMethodCall, ImplItem, Item, Type, Visibility};
+use syn::{Expr, ExprCall, ExprMethodCall, ImplItem, Item, Type, UseTree, Visibility};
 
 const CARGO_MANIFEST: &str = include_str!("../Cargo.toml");
 const CRATE_ROOT: &str = include_str!("../src/lib.rs");
@@ -11,6 +11,7 @@ const FOOTPRINT_MANIFEST: &str = include_str!("../measurement/footprint/Cargo.to
 const FOOTPRINT_HARNESS: &str = include_str!("../measurement/footprint/src/lib.rs");
 const FOOTPRINT_AUDIT: &str = include_str!("../scripts/check_linked_footprint.sh");
 const MAKEFILE: &str = include_str!("../Makefile");
+const TEST_ONLY_ACCOUNTING_SOURCE: &str = "src/accounting_tests.rs";
 
 /// Trace: TC-005, FR-003-AC-2, NFR-001-AC-1, StR-001-VC-2
 #[test]
@@ -130,10 +131,22 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             "src/lib.rs::mod operators",
             "src/lib.rs::mod proptest_adapter",
             "src/lib.rs::mod verdict",
-            "src/lib.rs::use",
-            "src/lib.rs::use",
-            "src/lib.rs::use",
-            "src/lib.rs::use",
+            "src/lib.rs::use accounting::CampaignCounts",
+            "src/lib.rs::use accounting::CampaignReport",
+            "src/lib.rs::use accounting::IdentityMismatch",
+            "src/lib.rs::use identity::ClauseId",
+            "src/lib.rs::use identity::ContractIdentity",
+            "src/lib.rs::use identity::ExecutionPoint",
+            "src/lib.rs::use identity::RequirementId",
+            "src/lib.rs::use identity::RevisionId",
+            "src/lib.rs::use observation::ClauseKind",
+            "src/lib.rs::use observation::ClauseOutcome",
+            "src/lib.rs::use observation::FailureDetail",
+            "src/lib.rs::use observation::FailureKind",
+            "src/lib.rs::use observation::Observation",
+            "src/lib.rs::use verdict::Verdict",
+            "src/lib.rs::use verdict::VerdictContext",
+            "src/lib.rs::use verdict::VerdictKind",
             "src/observation.rs::enum ClauseKind",
             "src/observation.rs::enum ClauseOutcome",
             "src/observation.rs::enum FailureKind",
@@ -303,6 +316,18 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             .to_owned(),
     )]);
     assert!(!macro_probe.macros.is_empty());
+
+    let use_probe = crate_accounting_surface(&[(
+        "src/lib.rs".to_owned(),
+        "pub use accounting::{CampaignCounts as Tally, CampaignReport};".to_owned(),
+    )]);
+    assert_eq!(
+        use_probe.public_items,
+        [
+            "src/lib.rs::use accounting::CampaignCounts as Tally",
+            "src/lib.rs::use accounting::CampaignReport",
+        ]
+    );
 }
 
 fn assert_non_exhaustive(source: &str, declaration: &str, enum_name: &str) -> usize {
@@ -340,18 +365,18 @@ fn runtime_source_files() -> Vec<(String, String)> {
             let path = entry.path();
             if path.is_dir() {
                 visit(&path, files);
-            } else if path.extension().and_then(|value| value.to_str()) == Some("rs")
-                && path.file_name().and_then(|value| value.to_str()) != Some("accounting_tests.rs")
-            {
+            } else if path.extension().and_then(|value| value.to_str()) == Some("rs") {
                 let relative = path
                     .strip_prefix(env!("CARGO_MANIFEST_DIR"))
                     .expect("runtime source is beneath the manifest")
                     .to_string_lossy()
                     .replace('\\', "/");
-                files.push((
-                    relative,
-                    fs::read_to_string(path).expect("runtime source is readable"),
-                ));
+                if relative != TEST_ONLY_ACCOUNTING_SOURCE {
+                    files.push((
+                        relative,
+                        fs::read_to_string(path).expect("runtime source is readable"),
+                    ));
+                }
             }
         }
     }
@@ -405,9 +430,7 @@ fn runtime_source_files() -> Vec<(String, String)> {
                 .expect("path-attached runtime source stays beneath the manifest")
                 .to_string_lossy()
                 .replace('\\', "/");
-            if known.insert(relative.clone())
-                && path.file_name().and_then(|value| value.to_str()) != Some("accounting_tests.rs")
-            {
+            if known.insert(relative.clone()) && relative != TEST_ONLY_ACCOUNTING_SOURCE {
                 files.push((
                     relative,
                     fs::read_to_string(path).expect("path-attached runtime source is readable"),
@@ -494,7 +517,7 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
                     public_items.push(format!("{path}::union {}", item.ident));
                 }
                 Item::Use(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    public_items.push(format!("{path}::use"));
+                    public_items.extend(public_use_labels(path, &item.tree));
                 }
                 Item::Macro(item) => macros.push(macro_label(path, &item)),
                 Item::Impl(item) => {
@@ -599,6 +622,51 @@ fn macro_label(path: &str, item: &syn::ItemMacro) -> String {
             item.mac.path.segments.last().expect("macro path").ident
         ),
     }
+}
+
+fn public_use_labels(path: &str, tree: &UseTree) -> Vec<String> {
+    fn visit(tree: &UseTree, prefix: &str, labels: &mut Vec<String>) {
+        match tree {
+            UseTree::Path(branch) => {
+                let prefix = if prefix.is_empty() {
+                    branch.ident.to_string()
+                } else {
+                    format!("{prefix}::{}", branch.ident)
+                };
+                visit(&branch.tree, &prefix, labels);
+            }
+            UseTree::Name(leaf) => labels.push(if prefix.is_empty() {
+                leaf.ident.to_string()
+            } else {
+                format!("{prefix}::{}", leaf.ident)
+            }),
+            UseTree::Rename(leaf) => {
+                let source = if prefix.is_empty() {
+                    leaf.ident.to_string()
+                } else {
+                    format!("{prefix}::{}", leaf.ident)
+                };
+                labels.push(format!("{source} as {}", leaf.rename));
+            }
+            UseTree::Glob(_) => labels.push(if prefix.is_empty() {
+                "*".to_owned()
+            } else {
+                format!("{prefix}::*")
+            }),
+            UseTree::Group(group) => {
+                for item in &group.items {
+                    visit(item, prefix, labels);
+                }
+            }
+        }
+    }
+
+    let mut labels = Vec::new();
+    visit(tree, "", &mut labels);
+    labels
+        .into_iter()
+        .map(|label| format!("{path}::use {label}"))
+        .collect()
 }
 
 #[derive(Default)]

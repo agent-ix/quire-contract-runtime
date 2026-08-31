@@ -15,3 +15,6 @@ validator results. An absent optional PGM-01 gate is recorded as `skipped-unavai
 
 Candidate output supports the human release decision described by `spec/assurance/MP-001`; it is not
 itself a release approval.
+
+Failed or superseded records live beneath `evidence/historical/` with an explicit disposition. They
+remain immutable diagnostic records and must not be read as current-candidate assurance evidence.

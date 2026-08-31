@@ -48,7 +48,9 @@ license and unsafe checks, Kani availability/result, dependency metadata, the Ru
 `thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
 `evidence/`. Every invoked gate retains stdout, stderr, and its numeric exit status; the builder
 derives manifest outcomes from those status records, represents missing records as inconclusive, and
-never manufactures a pass from a command name or transcript text. The builder derives and verifies
+rejects zero-status records whose retained transcripts contain command-specific failure markers.
+The collector's local self-test exercises nonzero propagation and checksum fixed-point detection;
+the builder never manufactures a pass from a command name or transcript text. The builder derives and verifies
 the digest of the vendored PGM-01 envelope schema and the identity of its vendored raw merge commit;
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
