@@ -239,4 +239,7 @@ named limitation; censes unknown status files; verifies anchored records indepen
 external merged-PGM schema; adds strict coverage and local Kani targets; and runs all Python test
 filenames. Proof scope is narrowed and stated: i8 addition uses independent widening arithmetic,
 invalid division is symbolic, index proof covers full `usize`, and accounting saturation has its own
-harness. Hosted workflow changes remain outside this branch by operator direction.
+harness. The authoritative `runtime-v01-f3f1c28d1703-20260831T174552Z` record binds the clean
+remediation source, retains 26/26 passing outcomes including 6/6 Kani harnesses, and verifies 101
+checksums plus 81 manifest artifacts. Hosted workflow changes remain outside this branch by operator
+direction.
