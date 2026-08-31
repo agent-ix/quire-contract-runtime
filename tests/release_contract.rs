@@ -7,6 +7,7 @@ const CARGO_MANIFEST: &str = include_str!("../Cargo.toml");
 const CRATE_ROOT: &str = include_str!("../src/lib.rs");
 const FOOTPRINT_MANIFEST: &str = include_str!("../measurement/footprint/Cargo.toml");
 const FOOTPRINT_HARNESS: &str = include_str!("../measurement/footprint/src/lib.rs");
+const MAKEFILE: &str = include_str!("../Makefile");
 
 /// Trace: TC-005, FR-003-AC-2, NFR-001-AC-1, StR-001-VC-2
 #[test]
@@ -15,7 +16,7 @@ fn tc_005_optional_surface_is_explicitly_feature_gated() {
     assert!(CARGO_MANIFEST.contains("proptest = [\"std\", \"dep:proptest\"]"));
 }
 
-/// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, StR-001-VC-2
+/// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, NFR-002-AC-4, StR-001-VC-2
 #[test]
 fn tc_007_release_controls_are_mandatory() {
     assert!(CARGO_MANIFEST.contains("license = \"MIT OR Apache-2.0\""));
@@ -24,6 +25,7 @@ fn tc_007_release_controls_are_mandatory() {
     assert!(CRATE_ROOT.contains("#![forbid(unsafe_code)]"));
     assert!(CARGO_MANIFEST.contains("panic = \"abort\""));
     assert!(!FOOTPRINT_MANIFEST.contains("[profile.release]"));
+    assert!(MAKEFILE.contains("python3 -m unittest discover -s tests -p 'test_*.py'"));
     let footprint_call_set = footprint_calls(FOOTPRINT_HARNESS);
     assert!(!footprint_calls(
         "// operators::checked_add(1, 2);\n\
@@ -161,6 +163,17 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
         mutation_probe.public_methods.get("CampaignReport"),
         Some(&vec!["first".to_owned(), "second".to_owned()])
     );
+
+    let macro_probe = accounting_surface(
+        "macro_rules! census_setter { () => { pub fn set_counts(&mut self) {} } }\n\
+         pub struct CampaignReport;\n\
+         impl CampaignReport { census_setter!(); }",
+    );
+    assert!(macro_probe.has_macros);
+    assert!(
+        !surface.has_macros,
+        "accounting surface must not use macros"
+    );
 }
 
 fn assert_non_exhaustive(source: &str, declaration: &str, enum_name: &str) -> usize {
@@ -182,6 +195,7 @@ struct AccountingSurface {
     public_items: Vec<String>,
     inherent_blocks: BTreeMap<String, usize>,
     public_methods: BTreeMap<String, Vec<String>>,
+    has_macros: bool,
 }
 
 fn accounting_surface(source: &str) -> AccountingSurface {
@@ -189,6 +203,7 @@ fn accounting_surface(source: &str) -> AccountingSurface {
     let mut public_items = Vec::new();
     let mut inherent_blocks = BTreeMap::new();
     let mut public_methods: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut has_macros = false;
 
     for item in file.items {
         match item {
@@ -222,6 +237,7 @@ fn accounting_surface(source: &str) -> AccountingSurface {
             Item::Use(item) if matches!(item.vis, Visibility::Public(_)) => {
                 public_items.push("use".to_owned());
             }
+            Item::Macro(_) => has_macros = true,
             Item::Impl(item) if item.trait_.is_none() => {
                 let Type::Path(self_type) = &*item.self_ty else {
                     continue;
@@ -232,13 +248,17 @@ fn accounting_surface(source: &str) -> AccountingSurface {
                 let name = segment.ident.to_string();
                 *inherent_blocks.entry(name.clone()).or_insert(0) += 1;
                 for implementation_item in item.items {
-                    if let ImplItem::Fn(method) = implementation_item {
-                        if matches!(method.vis, Visibility::Public(_)) {
-                            public_methods
-                                .entry(name.clone())
-                                .or_default()
-                                .push(method.sig.ident.to_string());
+                    match implementation_item {
+                        ImplItem::Fn(method) => {
+                            if matches!(method.vis, Visibility::Public(_)) {
+                                public_methods
+                                    .entry(name.clone())
+                                    .or_default()
+                                    .push(method.sig.ident.to_string());
+                            }
                         }
+                        ImplItem::Macro(_) => has_macros = true,
+                        _ => {}
                     }
                 }
             }
@@ -250,6 +270,7 @@ fn accounting_surface(source: &str) -> AccountingSurface {
         public_items,
         inherent_blocks,
         public_methods,
+        has_macros,
     }
 }
 

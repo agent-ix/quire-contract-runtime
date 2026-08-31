@@ -17,6 +17,9 @@ PGM01_CANDIDATE_REVISION = "942670a0db78be57cfa9bdd6d04302b453781a49"
 PGM01_ENVELOPE_SCHEMA_DIGEST = (
     "0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256"
 )
+PGM01_ENVELOPE_SCHEMA = (
+    ROOT / "schemas" / "pgm01-derivation-evidence-envelope-v1.schema.json"
+)
 INPUT_SCHEMA = ROOT / "schemas" / "runtime-evidence-input-v1.schema.json"
 MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
 COLLECTOR = ROOT / "scripts" / "collect_evidence.sh"
@@ -40,6 +43,17 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def verified_pgm01_schema_digest() -> str:
+    """Return the vendored PGM-01 schema digest, failing on pin drift."""
+    actual = sha256_file(PGM01_ENVELOPE_SCHEMA)
+    if actual != PGM01_ENVELOPE_SCHEMA_DIGEST:
+        raise ValueError(
+            "vendored PGM-01 envelope schema digest mismatch: "
+            f"expected {PGM01_ENVELOPE_SCHEMA_DIGEST}, got {actual}"
+        )
+    return actual
+
+
 def command_outcomes(kani_status: str) -> list[dict[str, str]]:
     passed = (
         "quire-validate",
@@ -61,6 +75,7 @@ def command_outcomes(kani_status: str) -> list[dict[str, str]]:
         "rustdoc",
         "linked-footprint",
         "rlib-size-observation",
+        "pgm01-pinned-schema",
     )
     outcomes = [{"name": name, "status": "passed"} for name in passed]
     outcomes.append({"name": "kani", "status": kani_status})
@@ -82,6 +97,7 @@ def hash_parameter_files() -> str:
         SCHEMA_VALIDATOR,
         INPUT_SCHEMA,
         MANIFEST_SCHEMA,
+        PGM01_ENVELOPE_SCHEMA,
     )
     state = hashlib.sha256()
     for path in paths:
@@ -92,7 +108,9 @@ def hash_parameter_files() -> str:
     return state.hexdigest()
 
 
+# Implements: NFR-002
 def build(evidence_dir: Path) -> None:
+    pgm01_schema_digest = verified_pgm01_schema_digest()
     evidence_dir = evidence_dir.resolve()
     invocation_directory = (
         str(evidence_dir.relative_to(ROOT))
@@ -121,6 +139,7 @@ def build(evidence_dir: Path) -> None:
             "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
+            "python3 scripts/validate_json_schema.py schemas/pgm01-derivation-evidence-envelope-v1.schema.json evidence-envelope.json",
             "python3 scripts/validate_json_schema.py $PGM01_SCHEMA evidence-envelope.json (when available)",
             "cargo fmt --all -- --check",
             "make lint",
@@ -169,7 +188,7 @@ def build(evidence_dir: Path) -> None:
             "policy": "ix://agent-ix/quire-contract-ir/PGM-01",
             "candidateRevision": PGM01_CANDIDATE_REVISION,
             "envelopeSchema": "quire.derivation-evidence/v1",
-            "envelopeSchemaDigest": digest(PGM01_ENVELOPE_SCHEMA_DIGEST),
+            "envelopeSchemaDigest": digest(pgm01_schema_digest),
         },
     }
     input_path = evidence_dir / "collection-input.json"
@@ -292,7 +311,7 @@ def build(evidence_dir: Path) -> None:
         "extensions": {
             "dev.agent-ix.runtime": {
                 "componentClass": "linked-runtime",
-                "envelopeSchemaDigest": PGM01_ENVELOPE_SCHEMA_DIGEST,
+                "envelopeSchemaDigest": pgm01_schema_digest,
                 "pgm01CandidateRevision": PGM01_CANDIDATE_REVISION,
                 "reviewState": "pending",
                 "sourceState": source_state,

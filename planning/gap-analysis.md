@@ -41,7 +41,7 @@ protected checks and review, and the human source-release decision.
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
 | GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 66/109 production symbols are owned, while zero test symbols carry an unbound trace ID. The 43 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
-| GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 27/27 with 14/14 Rust candidates tagged and bound. |
+| GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 28/28 with 14/14 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
 | GAP-006 | Expanded `make ci` to check all targets/features at the explicit MSRV, build a fixed bare-metal consumer, and enforce its linked-section footprint. |
 | GAP-007 | Added `plan/PLAN-001-runtime-v01/` with five completed typed tasks and one explicitly human-owned open task. |
@@ -106,7 +106,7 @@ following evidence-only commit.
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
-| Acceptance-criterion traceability | 27/27 rows backed; 14/14 Rust test symbols bound; 66/109 production symbols owned; 43 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
+| Acceptance-criterion traceability | 28/28 rows backed; 14/14 Rust test symbols bound; 66/109 production symbols owned; 43 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
@@ -121,8 +121,9 @@ contains no unsafe or intentional runtime panic surface, and passes every locall
 The following are release/workflow gates, not silently accepted gaps:
 
 1. PGM-01 (`agent-ix/quire-contract-ir#3`) is in review at PR #12. This candidate reconciles exact
-   revision `942670a0db78be57cfa9bdd6d04302b453781a49` and its envelope schema digest, but must reconcile
-   again after the policy merges.
+   revision `942670a0db78be57cfa9bdd6d04302b453781a49` and envelope schema digest
+   `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`, but must reconcile again
+   after the policy merges.
 2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
    0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
    rebased candidate requires a fresh manual CI dispatch.
@@ -133,3 +134,14 @@ The following are release/workflow gates, not silently accepted gaps:
 
 Implementation gap-analysis result: **pass, with PGM-01 merge/reconciliation, current protected
 checks, code-owner review, and the human release decision still open**.
+
+## Fourth re-review disposition
+
+The fourth review was queued from source `2a6aa82628c34b52a958ede822ed57285f73b75e`
+and attached after the branch advanced, so its repeated NEW-014 through NEW-019 observations do not
+describe the current AST-based, workspace-gated source. Its additional macro-generated accounting
+variation is nevertheless closed by rejecting module- and impl-level macros in the accounting
+surface census. NEW-020 is closed by a vendored PGM-01 schema whose computed digest must equal the
+executable pin plus tests that require both planning copies to agree. NEW-021 is closed by fixture
+tests for envelope assembly, digests, roles, extensions, pin mismatch, and accepted/rejected local
+schema validation. Kani remains truthfully `skipped-unavailable` and is not converted into a pass.

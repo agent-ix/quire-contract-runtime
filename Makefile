@@ -24,7 +24,7 @@ help:
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
-	@echo "  make evidence-tool    - Syntax-check the PGM-01 evidence builder"
+	@echo "  make evidence-tool    - Test the local evidence toolchain and PGM-01 pin"
 	@echo "  make ci               - All local CI gates"
 
 # =============================================================================
@@ -105,6 +105,7 @@ audit-panic:
 .PHONY: evidence-tool
 evidence-tool:
 	python3 -m py_compile scripts/build_evidence_envelope.py scripts/validate_json_schema.py
+	python3 -m unittest discover -s tests -p 'test_*.py'
 
 # =============================================================================
 # Composite

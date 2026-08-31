@@ -23,6 +23,11 @@ mutation probes. The runtime envelope is accepted by both the candidate schema a
 validator with zero errors. PGM-01's own remaining review findings stay open and are not converted to
 runtime claims.
 
+The exact candidate schema is vendored at
+`schemas/pgm01-derivation-evidence-envelope-v1.schema.json`. The evidence builder derives its digest,
+fails on disagreement with the executable pin, and TC-007 asserts that the executable revision and
+digest agree with this reconciliation and `planning/gap-analysis.md`.
+
 | Policy requirement | Runtime disposition | Evidence or remaining gate |
 |---|---|---|
 | PGM-01-R01 schema compatibility | canonical policy URI and explicit v1 identities adopted; unknown-version handling applies to evidence consumers, while the runtime public API has no serialized wire boundary | `spec/index.md`; versioned local evidence schemas |

@@ -68,6 +68,10 @@ else
 fi
 
 python3 scripts/build_evidence_envelope.py "$evidence_dir"
+run_and_retain pgm01-pinned-schema \
+  python3 scripts/validate_json_schema.py \
+  schemas/pgm01-derivation-evidence-envelope-v1.schema.json \
+  "$evidence_dir/evidence-envelope.json"
 run_and_retain input-schema \
   python3 scripts/validate_json_schema.py \
   schemas/runtime-evidence-input-v1.schema.json "$evidence_dir/collection-input.json"

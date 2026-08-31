@@ -23,5 +23,5 @@ harnesses for finite operator properties.
 
 ## Completion Evidence
 
-`quire coverage --scope . --json` reports 27/27 backed rows, every Rust candidate bound, and zero
+`quire coverage --scope . --json` reports 28/28 backed rows, every Rust candidate bound, and zero
 untracked production symbols.
