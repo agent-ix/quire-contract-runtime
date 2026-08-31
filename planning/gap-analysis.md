@@ -12,14 +12,13 @@ review_set: subset
 ## Summary
 
 The runtime requirements and implementation have no unresolved semantic gap after two executed
-source-review rounds. The candidate remains gated by upstream governance reconciliation, current
-protected checks and review, and the human source-release decision.
+source-review rounds. The candidate remains gated by current protected checks and review, and the
+human source-release decision.
 
 ## Findings
 
 | ID | Severity | Summary | Refs |
 |---|---|---|---|
-| FND-012 | high | PGM-01 review and the final merged identity remain open. | PGM-01, REV-002 |
 | FND-013 | medium | The main-based candidate has no deliberately dispatched protected run after manual-CI PR #6 merged. | MP-001, PR #5, PR #6 |
 | FND-014 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
 
@@ -118,22 +117,23 @@ bare-metal linked footprint is 907 bytes against the fixed 4,096-byte ceiling, a
 target/feature compiles under the explicit Rust 1.75 lane. It has no default normal dependency,
 contains no unsafe or intentional runtime panic surface, and passes every locally available gate.
 
+PGM-01 PR #12 is merged at `7dac9d8c19952412b56a0347387666e2ca81e01d`. Its tree is
+byte-identical to reviewed head `d8d376d887c40255e87ef9656bc0faf79216b321`; the complete merged-main
+release check passes, and this candidate reconciles that exact merged revision and envelope schema
+digest `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`.
+
 The following are release/workflow gates, not silently accepted gaps:
 
-1. PGM-01 (`agent-ix/quire-contract-ir#3`) is in review at PR #12. This candidate reconciles exact
-   revision `d8d376d887c40255e87ef9656bc0faf79216b321` and envelope schema digest
-   `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`, but must reconcile again
-   after the policy merges.
-2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
+1. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
    0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
    main-based candidate requires a fresh manual CI dispatch.
-3. Manual-CI PR #6 is merged. Protected checks must pass on the main-based candidate, and protected
+2. Manual-CI PR #6 is merged. Protected checks must pass on the main-based candidate, and protected
    code-owner review must complete on runtime PR #5.
-4. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
+3. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
 
-Implementation gap-analysis result: **pass, with PGM-01 merge/reconciliation, current protected
-checks, code-owner review, and the human release decision still open**.
+Implementation gap-analysis result: **pass, with current protected checks, code-owner review, and
+the human release decision still open**.
 
 ## Fourth re-review disposition
 

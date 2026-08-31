@@ -13,7 +13,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PGM01_CANDIDATE_REVISION = "d8d376d887c40255e87ef9656bc0faf79216b321"
+PGM01_CANDIDATE_REVISION = "7dac9d8c19952412b56a0347387666e2ca81e01d"
 PGM01_ENVELOPE_SCHEMA_DIGEST = (
     "0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256"
 )
@@ -215,7 +215,6 @@ def build(evidence_dir: Path) -> None:
             )
 
     limitations = [
-        "PGM-01 candidate is under review and must be reconciled again after merge",
         "current main-based candidate has no deliberately dispatched remote CI run",
         "CODEOWNER approval and the human source-release decision are pending",
     ]
