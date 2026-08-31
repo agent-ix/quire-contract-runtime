@@ -20,11 +20,34 @@ PGM01_ENVELOPE_SCHEMA_DIGEST = (
 PGM01_ENVELOPE_SCHEMA = (
     ROOT / "schemas" / "pgm01-derivation-evidence-envelope-v1.schema.json"
 )
+PGM01_COMMIT_OBJECT = ROOT / "schemas" / "pgm01-merged-commit.txt"
 INPUT_SCHEMA = ROOT / "schemas" / "runtime-evidence-input-v1.schema.json"
 MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
 COLLECTOR = ROOT / "scripts" / "collect_evidence.sh"
 BUILDER = Path(__file__).resolve()
 SCHEMA_VALIDATOR = ROOT / "scripts" / "validate_json_schema.py"
+COMMAND_TRANSCRIPTS = (
+    ("quire-validate", "quire-validate"),
+    ("fmt", "fmt"),
+    ("clippy", "clippy"),
+    ("test-core", "test-core"),
+    ("test-alloc", "test-alloc"),
+    ("test-std", "test-std"),
+    ("test-all", "test-all"),
+    ("test-footprint", "test-footprint"),
+    ("msrv", "msrv"),
+    ("deny", "deny"),
+    ("unsafe-audit", "unsafe-audit"),
+    ("panic-audit", "panic-audit"),
+    ("metadata", "metadata"),
+    ("default-dependencies", "default-dependencies"),
+    ("release-build", "release-build"),
+    ("layout", "layout"),
+    ("rustdoc", "rustdoc"),
+    ("linked-footprint", "linked-footprint"),
+    ("rlib-size-observation", "rlib-size-observation"),
+    ("pgm01-pinned-schema", "pgm01-pinned-schema"),
+)
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -54,30 +77,34 @@ def verified_pgm01_schema_digest() -> str:
     return actual
 
 
-def command_outcomes(kani_status: str) -> list[dict[str, str]]:
-    passed = (
-        "quire-validate",
-        "fmt",
-        "clippy",
-        "test-core",
-        "test-alloc",
-        "test-std",
-        "test-all",
-        "test-footprint",
-        "msrv",
-        "deny",
-        "unsafe-audit",
-        "panic-audit",
-        "metadata",
-        "default-dependencies",
-        "release-build",
-        "layout",
-        "rustdoc",
-        "linked-footprint",
-        "rlib-size-observation",
-        "pgm01-pinned-schema",
-    )
-    outcomes = [{"name": name, "status": "passed"} for name in passed]
+def verified_pgm01_revision() -> str:
+    """Verify that the vendored raw Git commit object has the pinned object identity."""
+    # The repository text fixture carries a conventional terminal newline; the
+    # upstream commit message does not, so canonicalize that transport detail.
+    content = PGM01_COMMIT_OBJECT.read_bytes().removesuffix(b"\n")
+    header = f"commit {len(content)}\0".encode()
+    actual = hashlib.sha1(header + content, usedforsecurity=False).hexdigest()
+    if actual != PGM01_CANDIDATE_REVISION:
+        raise ValueError(
+            "vendored PGM-01 commit identity mismatch: "
+            f"expected {PGM01_CANDIDATE_REVISION}, got {actual}"
+        )
+    return actual
+
+
+def command_outcomes(evidence_dir: Path, kani_status: str) -> list[dict[str, str]]:
+    outcomes = []
+    for name, transcript in COMMAND_TRANSCRIPTS:
+        status_path = evidence_dir / f"{transcript}.status.txt"
+        if not status_path.exists():
+            status = "inconclusive"
+        else:
+            try:
+                exit_status = int(status_path.read_text(encoding="utf-8").strip())
+            except ValueError as error:
+                raise ValueError(f"invalid exit status in {status_path}") from error
+            status = "passed" if exit_status == 0 else "failed"
+        outcomes.append({"name": name, "status": status})
     outcomes.append({"name": "kani", "status": kani_status})
     return outcomes
 
@@ -98,6 +125,7 @@ def hash_parameter_files() -> str:
         INPUT_SCHEMA,
         MANIFEST_SCHEMA,
         PGM01_ENVELOPE_SCHEMA,
+        PGM01_COMMIT_OBJECT,
     )
     state = hashlib.sha256()
     for path in paths:
@@ -111,6 +139,7 @@ def hash_parameter_files() -> str:
 # Implements: NFR-002
 def build(evidence_dir: Path) -> None:
     pgm01_schema_digest = verified_pgm01_schema_digest()
+    verified_pgm01_revision()
     evidence_dir = evidence_dir.resolve()
     invocation_directory = (
         str(evidence_dir.relative_to(ROOT))
@@ -216,28 +245,42 @@ def build(evidence_dir: Path) -> None:
 
     limitations = [
         "current main-based candidate has no deliberately dispatched remote CI run",
+        "merged PGM-01 revision was integrated under a bounded admin exception without protected checks; that exception excludes runtime release qualification",
         "CODEOWNER approval and the human source-release decision are pending",
     ]
     if kani_status != "passed":
         limitations.append(f"local Kani status is {kani_status}")
 
+    outcomes = command_outcomes(evidence_dir, kani_status)
     manifest = {
         "schemaVersion": "quire.runtime-evidence-manifest/v1",
         "sourceRevision": revision,
         "collectedAt": recorded_at,
-        "outcomes": command_outcomes(kani_status),
+        "outcomes": outcomes,
         "artifacts": entries,
         "limitations": limitations,
     }
     manifest_path = evidence_dir / "evidence-manifest.json"
     write_json(manifest_path, manifest)
 
-    result_status = "conclusive" if kani_status == "passed" else "pending"
-    result_summary = (
-        "all locally collected runtime checks, including Kani, passed"
-        if result_status == "conclusive"
-        else f"all available local runtime checks passed; Kani is {kani_status}"
-    )
+    failed = [item["name"] for item in outcomes if item["status"] == "failed"]
+    inconclusive = [
+        item["name"] for item in outcomes if item["status"] == "inconclusive"
+    ]
+    if failed:
+        result_status = "inconclusive"
+        result_summary = f"{len(failed)} locally collected runtime checks failed"
+    elif inconclusive:
+        result_status = "pending"
+        result_summary = f"{len(inconclusive)} local runtime check outcomes are inconclusive"
+    elif kani_status == "passed":
+        result_status = "conclusive"
+        result_summary = "all locally collected runtime checks, including Kani, passed"
+    else:
+        result_status = "pending"
+        result_summary = (
+            "all executed local runtime checks passed; " f"Kani is {kani_status}"
+        )
     envelope = {
         "schemaVersion": "quire.derivation-evidence/v1",
         "recordId": evidence_dir.name,

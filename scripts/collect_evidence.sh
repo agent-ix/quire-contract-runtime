@@ -22,11 +22,20 @@ if ! python3 -c 'import jsonschema' >/dev/null 2>&1; then
   exit 2
 fi
 mkdir -p "$evidence_dir"
+collection_failed=0
 
 run_and_retain() {
   local name="$1"
   shift
+  set +e
   "$@" >"$evidence_dir/$name.stdout" 2>"$evidence_dir/$name.stderr"
+  local status=$?
+  set -e
+  echo "$status" >"$evidence_dir/$name.status.txt"
+  if (( status != 0 )); then
+    collection_failed=1
+  fi
+  return 0
 }
 
 git rev-parse HEAD >"$evidence_dir/source-revision.txt"
@@ -62,11 +71,22 @@ run_and_retain rlib-size-observation \
 
 if command -v cargo-kani >/dev/null 2>&1; then
   run_and_retain kani cargo kani
-  echo passed >"$evidence_dir/kani-status.txt"
+  if [[ "$(<"$evidence_dir/kani.status.txt")" == 0 ]]; then
+    echo passed >"$evidence_dir/kani-status.txt"
+  else
+    echo failed >"$evidence_dir/kani-status.txt"
+  fi
 else
   echo skipped-unavailable >"$evidence_dir/kani-status.txt"
 fi
 
+# The first build creates an instance for the pinned PGM-01 schema check. The
+# second build incorporates that retained exit status into the final manifest.
+python3 scripts/build_evidence_envelope.py "$evidence_dir"
+run_and_retain pgm01-pinned-schema \
+  python3 scripts/validate_json_schema.py \
+  schemas/pgm01-derivation-evidence-envelope-v1.schema.json \
+  "$evidence_dir/evidence-envelope.json"
 python3 scripts/build_evidence_envelope.py "$evidence_dir"
 run_and_retain pgm01-pinned-schema \
   python3 scripts/validate_json_schema.py \
@@ -83,7 +103,11 @@ if [[ -n "${PGM01_SCHEMA:-}" ]]; then
   run_and_retain pgm01-schema \
     python3 scripts/validate_json_schema.py \
     "$PGM01_SCHEMA" "$evidence_dir/evidence-envelope.json"
-  echo passed >"$evidence_dir/pgm01-schema-status.txt"
+  if [[ "$(<"$evidence_dir/pgm01-schema.status.txt")" == 0 ]]; then
+    echo passed >"$evidence_dir/pgm01-schema-status.txt"
+  else
+    echo failed >"$evidence_dir/pgm01-schema-status.txt"
+  fi
 else
   echo skipped-unavailable >"$evidence_dir/pgm01-schema-status.txt"
 fi
@@ -91,7 +115,11 @@ fi
 if [[ -n "${PGM01_VALIDATOR:-}" ]]; then
   run_and_retain pgm01-envelope \
     python3 "$PGM01_VALIDATOR" --fixture "$evidence_dir/evidence-envelope.json"
-  echo passed >"$evidence_dir/pgm01-envelope-status.txt"
+  if [[ "$(<"$evidence_dir/pgm01-envelope.status.txt")" == 0 ]]; then
+    echo passed >"$evidence_dir/pgm01-envelope-status.txt"
+  else
+    echo failed >"$evidence_dir/pgm01-envelope-status.txt"
+  fi
 else
   echo skipped-unavailable >"$evidence_dir/pgm01-envelope-status.txt"
 fi
@@ -102,3 +130,8 @@ fi
     | sort -z \
     | xargs -0 sha256sum >sha256sums.txt
 )
+
+if (( collection_failed != 0 )); then
+  echo "one or more retained evidence commands failed" >&2
+  exit 1
+fi

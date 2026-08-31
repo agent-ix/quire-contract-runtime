@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use syn::visit::{self, Visit};
 use syn::{Expr, ExprCall, ExprMethodCall, ImplItem, Item, Type, Visibility};
@@ -111,13 +111,54 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
         );
     }
 
-    let surface = crate_accounting_surface(&runtime_source_files());
+    let runtime_sources = runtime_source_files();
+    assert!(runtime_sources
+        .iter()
+        .any(|(path, _)| path == "verification/kani.rs"));
+    let surface = crate_accounting_surface(&runtime_sources);
     assert_eq!(
         surface.public_items,
         [
-            "struct CampaignCounts",
-            "struct IdentityMismatch",
-            "struct CampaignReport"
+            "src/accounting.rs::struct CampaignCounts",
+            "src/accounting.rs::struct CampaignReport",
+            "src/accounting.rs::struct IdentityMismatch",
+            "src/identity.rs::struct ContractIdentity",
+            "src/lib.rs::const RUNTIME_CONTRACT_VERSION",
+            "src/lib.rs::mod accounting",
+            "src/lib.rs::mod identity",
+            "src/lib.rs::mod observation",
+            "src/lib.rs::mod operators",
+            "src/lib.rs::mod proptest_adapter",
+            "src/lib.rs::mod verdict",
+            "src/lib.rs::use",
+            "src/lib.rs::use",
+            "src/lib.rs::use",
+            "src/lib.rs::use",
+            "src/observation.rs::enum ClauseKind",
+            "src/observation.rs::enum ClauseOutcome",
+            "src/observation.rs::enum FailureKind",
+            "src/observation.rs::struct FailureDetail",
+            "src/observation.rs::struct Observation",
+            "src/operators.rs::fn and_short_circuit",
+            "src/operators.rs::fn and_total",
+            "src/operators.rs::fn checked_add",
+            "src/operators.rs::fn checked_div",
+            "src/operators.rs::fn checked_mul",
+            "src/operators.rs::fn checked_rem",
+            "src/operators.rs::fn checked_sub",
+            "src/operators.rs::fn implies_short_circuit",
+            "src/operators.rs::fn implies_total",
+            "src/operators.rs::fn index",
+            "src/operators.rs::fn option_copied",
+            "src/operators.rs::fn option_ref",
+            "src/operators.rs::fn or_short_circuit",
+            "src/operators.rs::fn or_total",
+            "src/operators.rs::trait CheckedInteger",
+            "src/proptest_adapter.rs::fn adapt",
+            "src/proptest_adapter.rs::fn adapt_recording",
+            "src/verdict.rs::enum Verdict",
+            "src/verdict.rs::enum VerdictKind",
+            "src/verdict.rs::struct VerdictContext",
         ]
     );
     assert_eq!(surface.inherent_blocks.get("CampaignCounts"), Some(&1));
@@ -173,6 +214,7 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             "src/identity.rs::invoke:borrowed_id",
             "src/identity.rs::invoke:borrowed_id",
             "src/operators.rs::define:checked_integer",
+            "src/operators.rs::inline-mod:sealed",
             "src/operators.rs::invoke:checked_integer",
         ]
     );
@@ -187,7 +229,7 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     )]);
     assert!(mutation_probe
         .public_items
-        .contains(&"fn restate_census".to_owned()));
+        .contains(&"src/accounting.rs::fn restate_census".to_owned()));
     assert_eq!(
         mutation_probe.inherent_blocks.get("CampaignReport"),
         Some(&2)
@@ -228,6 +270,29 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     assert_eq!(
         bypass_probe.public_accounting_functions,
         ["src/lib.rs::restate_census"]
+    );
+
+    let alias_and_reference_probe = crate_accounting_surface(&[
+        (
+            "src/accounting.rs".to_owned(),
+            "pub struct CampaignReport<'a>(&'a ());\n\
+             pub type Census<'a> = CampaignReport<'a>;"
+                .to_owned(),
+        ),
+        (
+            "src/observation.rs".to_owned(),
+            "pub fn restated<'a>(value: &Census<'a>) -> Census<'a> { *value }\n\
+             impl Restate for &mut CampaignReport<'_> { fn restate(&mut self) {} }"
+                .to_owned(),
+        ),
+    ]);
+    assert_eq!(
+        alias_and_reference_probe.public_accounting_functions,
+        ["src/observation.rs::restated"]
+    );
+    assert_eq!(
+        alias_and_reference_probe.trait_impls.get("CampaignReport"),
+        Some(&vec!["Restate".to_owned()])
     );
 
     let macro_probe = crate_accounting_surface(&[(
@@ -296,6 +361,62 @@ fn runtime_source_files() -> Vec<(String, String)> {
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
         &mut files,
     );
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut known = files
+        .iter()
+        .map(|(path, _)| path.clone())
+        .collect::<BTreeSet<_>>();
+    let mut index = 0;
+    while index < files.len() {
+        let (relative, source) = &files[index];
+        let parsed = syn::parse_file(source).expect("runtime source parses");
+        let parent = manifest
+            .join(relative)
+            .parent()
+            .expect("runtime source has a parent")
+            .to_path_buf();
+        let mut attached = Vec::<PathBuf>::new();
+        for item in parsed.items {
+            let Item::Mod(module) = item else {
+                continue;
+            };
+            for attribute in module.attrs {
+                if !attribute.path().is_ident("path") {
+                    continue;
+                }
+                let syn::Meta::NameValue(value) = attribute.meta else {
+                    continue;
+                };
+                let Expr::Lit(value) = value.value else {
+                    continue;
+                };
+                let syn::Lit::Str(value) = value.lit else {
+                    continue;
+                };
+                attached.push(parent.join(value.value()));
+            }
+        }
+        for path in attached {
+            let path = path
+                .canonicalize()
+                .expect("path-attached runtime source resolves");
+            let relative = path
+                .strip_prefix(manifest)
+                .expect("path-attached runtime source stays beneath the manifest")
+                .to_string_lossy()
+                .replace('\\', "/");
+            if known.insert(relative.clone())
+                && path.file_name().and_then(|value| value.to_str()) != Some("accounting_tests.rs")
+            {
+                files.push((
+                    relative,
+                    fs::read_to_string(path).expect("path-attached runtime source is readable"),
+                ));
+            }
+        }
+        index += 1;
+    }
+    files.sort_by(|left, right| left.0.cmp(&right.0));
     files
 }
 
@@ -333,84 +454,73 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
         for item in file.items {
             match item {
                 Item::Struct(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("struct {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::struct {}", item.ident));
                 }
                 Item::Fn(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("fn {}", item.sig.ident));
-                    }
+                    public_items.push(format!("{path}::fn {}", item.sig.ident));
                     let mut names = TypeNameCollector::default();
                     names.visit_signature(&item.sig);
-                    if names.names.contains("CampaignCounts")
-                        || names.names.contains("CampaignReport")
-                    {
+                    if names.names.iter().any(|name| {
+                        let resolved = resolve_alias(name.clone(), &aliases);
+                        resolved == "CampaignCounts" || resolved == "CampaignReport"
+                    }) {
                         public_accounting_functions.push(format!("{path}::{}", item.sig.ident));
                     }
                 }
                 Item::Static(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("static {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::static {}", item.ident));
                 }
                 Item::Const(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("const {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::const {}", item.ident));
                 }
-                Item::Mod(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("mod {}", item.ident));
+                Item::Mod(item) => {
+                    if matches!(item.vis, Visibility::Public(_)) {
+                        public_items.push(format!("{path}::mod {}", item.ident));
+                    }
+                    if item.content.is_some() {
+                        macros.push(format!("{path}::inline-mod:{}", item.ident));
                     }
                 }
                 Item::Enum(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("enum {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::enum {}", item.ident));
                 }
                 Item::Type(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("type {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::type {}", item.ident));
                 }
                 Item::Trait(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("trait {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::trait {}", item.ident));
                 }
                 Item::Union(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push(format!("union {}", item.ident));
-                    }
+                    public_items.push(format!("{path}::union {}", item.ident));
                 }
                 Item::Use(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    if path.ends_with("accounting.rs") {
-                        public_items.push("use".to_owned());
-                    }
+                    public_items.push(format!("{path}::use"));
                 }
                 Item::Macro(item) => macros.push(macro_label(path, &item)),
                 Item::Impl(item) => {
-                    let Some(mut name) = type_name(&item.self_ty) else {
-                        continue;
-                    };
-                    let mut seen = BTreeSet::new();
-                    while let Some(target) = aliases.get(&name) {
-                        if !seen.insert(name.clone()) {
-                            break;
-                        }
-                        name.clone_from(target);
-                    }
-                    if name != "CampaignCounts" && name != "CampaignReport" {
-                        continue;
-                    }
                     if let Some((_, trait_path, _)) = &item.trait_ {
+                        let mut names = TypeNameCollector::default();
+                        names.visit_type(&item.self_ty);
+                        let Some(name) = names.names.iter().find_map(|name| {
+                            let resolved = resolve_alias(name.clone(), &aliases);
+                            (resolved == "CampaignCounts" || resolved == "CampaignReport")
+                                .then_some(resolved)
+                        }) else {
+                            continue;
+                        };
                         if let Some(trait_name) = trait_path.segments.last() {
                             trait_impls
                                 .entry(name)
                                 .or_default()
                                 .push(trait_name.ident.to_string());
                         }
+                        continue;
+                    }
+                    let Some(name) = type_name(&item.self_ty) else {
+                        continue;
+                    };
+                    let name = resolve_alias(name, &aliases);
+                    if name != "CampaignCounts" && name != "CampaignReport" {
                         continue;
                     }
                     *inherent_blocks.entry(name.clone()).or_insert(0) += 1;
@@ -439,6 +549,7 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
         }
     }
 
+    public_items.sort();
     public_accounting_functions.sort();
     macros.sort();
     for values in trait_impls.values_mut() {
@@ -456,13 +567,28 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
 }
 
 fn type_name(value: &Type) -> Option<String> {
-    let Type::Path(path) = value else {
-        return None;
-    };
-    path.path
-        .segments
-        .last()
-        .map(|segment| segment.ident.to_string())
+    match value {
+        Type::Path(path) => path
+            .path
+            .segments
+            .last()
+            .map(|segment| segment.ident.to_string()),
+        Type::Reference(reference) => type_name(&reference.elem),
+        Type::Group(group) => type_name(&group.elem),
+        Type::Paren(paren) => type_name(&paren.elem),
+        _ => None,
+    }
+}
+
+fn resolve_alias(mut name: String, aliases: &BTreeMap<String, String>) -> String {
+    let mut seen = BTreeSet::new();
+    while let Some(target) = aliases.get(&name) {
+        if !seen.insert(name.clone()) {
+            break;
+        }
+        name.clone_from(target);
+    }
+    name
 }
 
 fn macro_label(path: &str, item: &syn::ItemMacro) -> String {
