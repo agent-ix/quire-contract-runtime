@@ -121,7 +121,7 @@ contains no unsafe or intentional runtime panic surface, and passes every locall
 The following are release/workflow gates, not silently accepted gaps:
 
 1. PGM-01 (`agent-ix/quire-contract-ir#3`) is in review at PR #12. This candidate reconciles exact
-   revision `942670a0db78be57cfa9bdd6d04302b453781a49` and envelope schema digest
+   revision `d8d376d887c40255e87ef9656bc0faf79216b321` and envelope schema digest
    `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`, but must reconcile again
    after the policy merges.
 2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
