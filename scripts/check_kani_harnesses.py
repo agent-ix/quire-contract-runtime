@@ -29,9 +29,50 @@ EXPECTED_KANI_CHECK_FLOORS = {
     "tc_003_option_helpers_preserve_definedness": 52,
     "tc_003_slice_index_is_defined_exactly_in_bounds": 24,
 }
+EXPECTED_KANI_VERSION = "Kani Rust Verifier 0.67.0 (cargo plugin)"
+KANI_HARNESS_START = re.compile(
+    r"(?m)^Checking harness kani_proofs::([a-z0-9_]+)\.\.\.$"
+)
+KANI_CHECK_SUMMARY = re.compile(r"(?m)^ \*\* 0 of ([1-9][0-9]*) failed$")
 PROOF_FUNCTION = re.compile(
     r"(?m)^// Implements: (TC-\d{3})\n#\[kani::proof\]\nfn ([a-z0-9_]+)\(\)"
 )
+
+
+def proof_check_counts(combined: str) -> dict[str, int]:
+    """Return each successfully discharged harness's positive obligation count."""
+    starts = list(KANI_HARNESS_START.finditer(combined))
+    counts: dict[str, int] = {}
+    for index, start in enumerate(starts):
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(combined)
+        block = combined[start.end() : end]
+        summary = KANI_CHECK_SUMMARY.search(block)
+        if (
+            summary is None
+            or "VERIFICATION:- SUCCESSFUL" not in block
+            or start.group(1) in counts
+        ):
+            return {}
+        counts[start.group(1)] = int(summary.group(1))
+    return counts
+
+
+def validate_kani_success(combined: str) -> bool:
+    """Require the exact harness census and positive obligation floors."""
+    expected_summary = (
+        f"Complete - {len(EXPECTED_KANI_HARNESSES)} successfully verified harnesses, "
+        f"0 failures, {len(EXPECTED_KANI_HARNESSES)} total."
+    )
+    checks = proof_check_counts(combined)
+    return (
+        EXPECTED_KANI_VERSION in combined
+        and expected_summary in combined
+        and set(checks) == set(EXPECTED_KANI_HARNESSES)
+        and all(
+            checks[name] >= EXPECTED_KANI_CHECK_FLOORS[name]
+            for name in EXPECTED_KANI_HARNESSES
+        )
+    )
 
 
 # Implements: NFR-002

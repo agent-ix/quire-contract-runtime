@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import pwd
 import re
 import shlex
 import shutil
@@ -35,10 +36,27 @@ CI_ORDER = (
     "assurance-anchor",
 )
 CI_PROBES = set(CI_ORDER) - {GUARD_TARGET}
-TRANSITIVE_PROBES = {"kani-census"}
+TRANSITIVE_PROBES = {"kani-census", "kani-mutations"}
 TARGET = re.compile(r"^([A-Za-z0-9_.-]+):(?:\s+(.*?))?\s*$")
-SHELL_CONTROL = re.compile(r"&&|\|\||[;|]")
-MAKEFLAGS_ASSIGNMENT = re.compile(r"^\s*MAKEFLAGS\s*(?::|\+|\?)?=\s*(.*)$")
+SHELL_CONTROL = re.compile(r"&&|\|\||[;|&]")
+MAKEFLAGS_ASSIGNMENT = re.compile(
+    r"^\s*(?:(?:export|override)\s+)*MAKEFLAGS\s*(?::|\+|\?)?=\s*(.*)$"
+)
+
+
+def trusted_home() -> Path:
+    return Path(pwd.getpwuid(os.getuid()).pw_dir)
+
+
+def trusted_environment() -> dict[str, str]:
+    home = trusted_home()
+    environment = dict(os.environ)
+    environment.update(
+        HOME=str(home),
+        CARGO_HOME=str(home / ".cargo"),
+        RUSTUP_HOME=str(home / ".rustup"),
+    )
+    return environment
 
 
 def parse_makefile(text: str) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
@@ -61,17 +79,30 @@ def parse_makefile(text: str) -> tuple[dict[str, list[str]], dict[str, list[str]
     return dependencies, recipes
 
 
-def makeflags_ignore_errors(value: str) -> bool:
+def makeflags_errors(value: str) -> list[str]:
+    """Allow only GNU Make parallelism/load flags; reject execution modifiers."""
     try:
         tokens = shlex.split(value)
     except ValueError:
-        return True
-    return any(
-        token == "--ignore-errors"
-        or (token.startswith("-") and not token.startswith("--") and "i" in token[1:])
-        or (token and not token.startswith("-") and "=" not in token and "i" in token)
-        for token in tokens
-    )
+        return ["MAKEFLAGS cannot be parsed safely"]
+    errors: list[str] = []
+    optional_value = False
+    for token in tokens:
+        if optional_value and re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", token):
+            optional_value = False
+            continue
+        optional_value = False
+        if token in {"-j", "--jobs", "-l", "--load-average"}:
+            optional_value = True
+        elif re.fullmatch(r"-[jl][0-9]+(?:\.[0-9]+)?", token):
+            continue
+        elif re.fullmatch(r"--(?:jobs|load-average)=[0-9]+(?:\.[0-9]+)?", token):
+            continue
+        elif re.fullmatch(r"--jobserver-(?:auth|fds)=.+", token):
+            continue
+        elif token:
+            errors.append(f"unsafe MAKEFLAGS token: {token}")
+    return errors
 
 
 def command_parts(command: str) -> tuple[str, str]:
@@ -96,14 +127,17 @@ def inspect(makefile: Path) -> list[str]:
             f"missing={sorted(required_ci - observed)}, extra={sorted(observed - required_ci)}, "
             f"observed={observed_order}"
         )
-    if dependencies.get("kani") != ["kani-census"]:
-        errors.append("kani must depend exactly on kani-census")
+    if dependencies.get("kani") != ["kani-census", "kani-mutations"]:
+        errors.append("kani must depend exactly on kani-census and kani-mutations")
     for number, line in enumerate(text.splitlines(), start=1):
         if re.match(r"^\s*\.(?:IGNORE|SILENT)\s*(?::|$)", line):
             errors.append(f"Makefile:{number} declares a global recipe-control directive")
         assignment = MAKEFLAGS_ASSIGNMENT.match(line)
-        if assignment is not None and makeflags_ignore_errors(assignment.group(1)):
-            errors.append(f"Makefile:{number} enables MAKEFLAGS ignore-errors")
+        if assignment is not None:
+            errors.extend(
+                f"Makefile:{number} {error}"
+                for error in makeflags_errors(assignment.group(1))
+            )
     for target in sorted(required_ci | TRANSITIVE_PROBES):
         commands = recipes.get(target, [])
         if not commands:
@@ -155,11 +189,12 @@ def probe_command_positions(makefile: Path) -> list[str]:
 
 
 def inspect_toolchain() -> list[str]:
+    home = trusted_home()
     expected = {
-        "cargo": str(Path.home() / ".cargo" / "bin" / "cargo"),
+        "cargo": str(home / ".cargo" / "bin" / "cargo"),
         "make": "/usr/bin/make",
         "python3": "/usr/bin/python3",
-        "quire": str(Path.home() / ".npm-global" / "bin" / "quire"),
+        "quire": str(home / ".npm-global" / "bin" / "quire"),
     }
     errors = [
         f"{name} must resolve to {path}, got {shutil.which(name)}"
@@ -173,7 +208,13 @@ def inspect_toolchain() -> list[str]:
     }
     for name, (command, pattern) in version_commands.items():
         try:
-            completed = subprocess.run(command, check=False, capture_output=True, text=True)
+            completed = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                env=trusted_environment(),
+            )
         except OSError as error:
             errors.append(f"cannot execute {name}: {error}")
             continue
@@ -191,8 +232,7 @@ def main() -> int:
     parser.add_argument("--static-only", action="store_true")
     args = parser.parse_args()
     errors = inspect(args.makefile)
-    if os.environ.get("MAKEFLAGS"):
-        errors.append("ambient MAKEFLAGS is not permitted for local checks")
+    errors.extend(makeflags_errors(os.environ.get("MAKEFLAGS", "")))
     if os.environ.get("MAKE"):
         errors.append("ambient MAKE override is not permitted")
     if os.environ.get("PYTHONOPTIMIZE") or sys.flags.optimize:

@@ -5,7 +5,7 @@
   "description": "SPDX-License-Identifier: MIT OR Apache-2.0",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "sourceRevision", "collectedAt", "outcomes", "kaniProofChecks", "artifacts", "limitations"],
+  "required": ["schemaVersion", "sourceRevision", "collectedAt", "outcomes", "testPassCounts", "kaniProofChecks", "artifacts", "limitations"],
   "properties": {
     "schemaVersion": {"const": "quire.runtime-evidence-manifest/v1"},
     "sourceRevision": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
@@ -32,6 +32,19 @@
         "properties": {
           "harness": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "checks": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "testPassCounts": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lane", "testsPassed"],
+        "properties": {
+          "lane": {"type": "string", "minLength": 1},
+          "testsPassed": {"type": "integer", "minimum": 1}
         }
       }
     },

@@ -10,6 +10,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from check_kani_harnesses import EXPECTED_KANI_HARNESSES, PROOF_FUNCTION
+
 
 ROOT = Path(os.environ.get("QUIRE_RUNTIME_REPO_ROOT", Path(__file__).resolve().parent.parent))
 MATRIX = ROOT / "spec" / "test-matrix.md"
@@ -18,6 +20,17 @@ TEST_CITATION = re.compile(r"\b(?:TC|SUITE)-\d{3}\b")
 FUNCTION = re.compile(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([a-zA-Z0-9_]+)\s*\(")
 ATTRIBUTE = re.compile(r"#\s*\[(.*?)\]", re.DOTALL)
 EXPECTED_FUNCTIONAL_ROWS = 8
+EXPECTED_FUNCTIONAL_TUPLES = {
+    ("FR-001", "FR-001-AC-1, FR-001-AC-2", "TC-001"),
+    ("FR-001", "FR-001-AC-3", "TC-008"),
+    ("FR-002", "FR-002-AC-1, FR-002-AC-2", "TC-002"),
+    ("FR-002", "FR-002-AC-3", "TC-003"),
+    ("FR-003", "FR-003-AC-1", "TC-004"),
+    ("FR-003", "FR-003-AC-2", "TC-005"),
+    ("FR-004", "FR-004-AC-1, FR-004-AC-2", "TC-006"),
+    ("FR-004", "FR-004-AC-3", "TC-008"),
+}
+DISABLED_TRACE = re.compile(r"#\s*\[\s*cfg(?:_attr)?\s*\([^\]]*\bany\s*\(\s*\)", re.DOTALL)
 
 
 def rust_sources() -> list[Path]:
@@ -25,7 +38,7 @@ def rust_sources() -> list[Path]:
     return sorted(
         path
         for path in ROOT.rglob("*.rs")
-        if not any(part in excluded for part in path.relative_to(ROOT).parts)
+        if path.relative_to(ROOT).parts[0] not in excluded
     )
 
 
@@ -59,6 +72,10 @@ def ignored_trace_tests() -> list[str]:
     findings = []
     for path in rust_sources():
         source = path.read_text(encoding="utf-8")
+        if TRACE_ID.search(source) and DISABLED_TRACE.search(source):
+            findings.append(
+                f"{path.relative_to(ROOT)}: disabled cfg(any()) in trace-bearing Rust source"
+            )
         for line, name, prefix in ignored_functions(source):
             identifiers = sorted(set(TRACE_ID.findall(prefix)))
             label = ", ".join(identifiers) if identifiers else name
@@ -117,11 +134,33 @@ def functional_rows() -> list[dict[str, str]]:
             raise ValueError(
                 f"functional row {row['requirement']} cites unknown tests {sorted(unknown)}"
             )
+    observed_tuples = {
+        (row["requirement"], row["criteria"], row["tests"]) for row in rows
+    }
+    if observed_tuples != EXPECTED_FUNCTIONAL_TUPLES:
+        raise ValueError(
+            "functional coverage semantic tuples drifted: "
+            f"missing={sorted(EXPECTED_FUNCTIONAL_TUPLES - observed_tuples)}, "
+            f"unexpected={sorted(observed_tuples - EXPECTED_FUNCTIONAL_TUPLES)}"
+        )
     return rows
 
 
 def functional_statuses() -> list[str]:
     return [row["status"] for row in functional_rows()]
+
+
+def kani_coverage_bindings(rows: list[dict[str, str]]) -> list[str]:
+    source = (ROOT / "verification" / "kani.rs").read_text(encoding="utf-8")
+    proofs = {name: trace for trace, name in PROOF_FUNCTION.findall(source)}
+    findings = []
+    if set(proofs) != set(EXPECTED_KANI_HARNESSES):
+        findings.append("Kani proof census is not bound to coverage")
+    cited_tests = set().union(*(set(TEST_CITATION.findall(row["tests"])) for row in rows))
+    for name, trace in proofs.items():
+        if trace not in cited_tests:
+            findings.append(f"Kani proof {name} traces uncited {trace}")
+    return findings
 
 
 def coverage_contradictions(statuses: list[str], report: dict[str, object]) -> list[str]:
@@ -154,6 +193,15 @@ def main() -> int:
     except (OSError, ValueError) as error:
         print(f"COVERAGE_STATUS_CONTRADICTION: {error}", file=sys.stderr)
         return 2 if isinstance(error, OSError) else 1
+    try:
+        proof_findings = kani_coverage_bindings(rows)
+    except OSError as error:
+        print(f"COVERAGE_STATUS=unavailable; cannot bind Kani proofs: {error}", file=sys.stderr)
+        return 2
+    if proof_findings:
+        for finding in proof_findings:
+            print(f"COVERAGE_STATUS_CONTRADICTION: {finding}", file=sys.stderr)
+        return 1
 
     try:
         completed = subprocess.run(

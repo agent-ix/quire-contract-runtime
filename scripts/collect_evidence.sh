@@ -79,6 +79,12 @@ if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
   exit 2
 fi
 source_state=clean
+trusted_home="$(/usr/bin/python3 -c 'import os,pwd; print(pwd.getpwuid(os.getuid()).pw_dir)')"
+export HOME="$trusted_home"
+export CARGO_HOME="$trusted_home/.cargo"
+export RUSTUP_HOME="$trusted_home/.rustup"
+export CARGO_TARGET_DIR="$PWD/target"
+export PATH="$trusted_home/.cargo/bin:$trusted_home/.npm-global/bin:/usr/bin:/bin"
 : "${PGM01_SCHEMA:?PGM01_SCHEMA must name the exact merged PGM-01 schema}"
 : "${PGM01_VALIDATOR:?PGM01_VALIDATOR must name the exact merged PGM-01 validator}"
 pgm01_schema_path="$(realpath "$PGM01_SCHEMA")"
@@ -99,6 +105,25 @@ fi
 mkdir -p "$evidence_dir"
 collection_failed=0
 
+record_tool_identity() {
+  local name="$1"
+  local path="$2"
+  if [[ ! -f "$path" ]]; then
+    echo "required tool is unavailable: $name at $path" >&2
+    exit 2
+  fi
+  echo "$path" >"$evidence_dir/$name-path.txt"
+  sha256sum "$path" | cut -d' ' -f1 >"$evidence_dir/$name-sha256.txt"
+}
+
+record_tool_identity cargo "$trusted_home/.cargo/bin/cargo"
+record_tool_identity cargo-kani "$trusted_home/.cargo/bin/cargo-kani"
+record_tool_identity make /usr/bin/make
+record_tool_identity python /usr/bin/python3
+record_tool_identity quire "$trusted_home/.npm-global/bin/quire"
+record_tool_identity rustc "$trusted_home/.cargo/bin/rustc"
+record_tool_identity size /usr/bin/size
+
 git rev-parse HEAD >"$evidence_dir/source-revision.txt"
 echo "$source_state" >"$evidence_dir/source-state.txt"
 rustc --version --verbose >"$evidence_dir/rustc-version.txt"
@@ -114,6 +139,9 @@ echo "$pgm01_validator_path" >"$evidence_dir/pgm01-validator-path.txt"
 sha256sum "$pgm01_validator_path" | cut -d' ' -f1 >"$evidence_dir/pgm01-validator-sha256.txt"
 git -C "$pgm01_repo" rev-parse HEAD >"$evidence_dir/pgm01-revision.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"
+run_and_retain ci-guard /usr/bin/python3 scripts/check_failure_propagation.py
+run_and_retain kani-census /usr/bin/python3 scripts/check_kani_harnesses.py
+run_and_retain evidence-tool /usr/bin/python3 scripts/run_evidence_tests.py
 run_and_retain quire-validate \
   bash -c "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED"
 run_and_retain fmt cargo fmt --all -- --check
@@ -137,7 +165,7 @@ run_and_retain rlib-size-observation \
   bash scripts/measure_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
 run_and_retain coverage python3 scripts/check_coverage_status.py
 
-if command -v cargo-kani >/dev/null 2>&1; then
+if [[ -f "$trusted_home/.cargo/bin/cargo-kani" ]]; then
   cargo kani --version >"$evidence_dir/kani-version.txt"
   run_and_retain kani make kani
   record_status_word "$evidence_dir/kani.status.txt" "$evidence_dir/kani-status.txt"

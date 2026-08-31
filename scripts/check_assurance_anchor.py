@@ -44,6 +44,12 @@ def main() -> int:
         anchor = declared_text(text, "anchor")
         if anchor != "evidence/ANCHORS":
             raise ValueError(f"AA-001 names unexpected anchor {anchor}")
+        if declared_text(text, "record_selection") != "evidence/README.md":
+            raise ValueError("AA-001 does not bind authoritative record selection")
+        if declared_text(text, "checksum_binding") != "sha256sums.txt":
+            raise ValueError("AA-001 does not bind the record checksum census")
+        if declared_text(text, "history_anchor") != "evidence/HISTORY":
+            raise ValueError("AA-001 does not bind per-record historical anchors")
         records = verifier.verify_anchors()
         verification_status = json.loads(
             verifier.VERIFICATION_STATUS.read_text(encoding="utf-8")

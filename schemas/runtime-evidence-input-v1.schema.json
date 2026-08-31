@@ -5,7 +5,7 @@
   "description": "SPDX-License-Identifier: MIT OR Apache-2.0",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "sourceRevision", "sourceState", "commands", "tools", "pgm01"],
+  "required": ["schemaVersion", "sourceRevision", "sourceState", "commands", "tools", "toolDigests", "pgm01"],
   "properties": {
     "schemaVersion": {"const": "quire.runtime-evidence-input/v1"},
     "sourceRevision": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
@@ -26,6 +26,20 @@
         "size": {"type": "string", "minLength": 1}
       }
     },
+    "toolDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cargo", "cargo-kani", "make", "python", "quire", "rustc", "size"],
+      "properties": {
+        "cargo": {"$ref": "#/definitions/toolIdentity"},
+        "cargo-kani": {"$ref": "#/definitions/toolIdentity"},
+        "make": {"$ref": "#/definitions/toolIdentity"},
+        "python": {"$ref": "#/definitions/toolIdentity"},
+        "quire": {"$ref": "#/definitions/toolIdentity"},
+        "rustc": {"$ref": "#/definitions/toolIdentity"},
+        "size": {"$ref": "#/definitions/toolIdentity"}
+      }
+    },
     "pgm01": {
       "type": "object",
       "additionalProperties": false,
@@ -44,6 +58,15 @@
     }
   },
   "definitions": {
+    "toolIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/definitions/digest"}
+      }
+    },
     "digest": {
       "type": "object",
       "additionalProperties": false,

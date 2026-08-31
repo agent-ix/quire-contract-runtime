@@ -59,7 +59,9 @@ TC-007 tests the builder and local validator semantics before evidence collectio
 failures and skips rather than deleting them.
 
 `scripts/check_kani_harnesses.py` makes the seven proof names and their TC-001/TC-002/TC-003 ownership an
-executable census before every Kani run. Absence of `cargo-kani` is a failed local gate, not a skip.
+executable census before every Kani run. `scripts/check_kani_mutations.py` injects representative
+Boolean, arithmetic, and accounting defects and requires the owning proofs to reject them. Absence
+of `cargo-kani` is a failed local gate, not a skip.
 `scripts/check_coverage_status.py` independently enforces the schema-valid `Coverage Status` column,
 complete backing, and the absence of ignored trace-bearing tests while the installed module still
 configures the incompatible `Status` header. `scripts/update_evidence_anchors.py` deterministically
@@ -68,7 +70,9 @@ regenerates the complete anchor census for diff review after collection.
 `scripts/check_failure_propagation.py` rejects ambient or in-file Make failure suppression, probes
 every mandatory recipe position, and verifies the exact local `cargo`, `python3`, `quire`, and Make
 executables before composite local checks. `scripts/run_kani_gate.py` preserves Kani's numeric result
-and uses the unavailable exit channel when the mandatory tool is absent.
+and rejects success unless every harness meets its proof-obligation floor; it uses the unavailable
+exit channel when the mandatory tool is absent. `scripts/run_evidence_tests.py` enforces a minimum
+behavioral-test census before running the evidence-tool suite.
 `scripts/check_assurance_anchor.py` executes AA-001's declared authoritative-record, outcome-count,
 and conclusive-result binding after evidence verification.
 
@@ -100,3 +104,8 @@ toolchain may differ from both the shipped stable compiler and the Rust 1.75 com
 that exact tool identity is retained rather than treated as compiler equivalence. Retained local
 transcripts are source-bound and Git-tamper-evident, but they are not externally signed runner
 attestations.
+
+An empty `cargo fmt --check` transcript is its documented success form; its numeric zero status is
+still bound to the source and tool digests. Historical local oracle records are corroborating audit
+history only, never an independent attestation or substitute for fresh human review of this source
+candidate.

@@ -61,8 +61,11 @@ The automated evidence consumer enforces this bounded input declaration before t
 ```yaml
 evidence_binding:
   anchor: evidence/ANCHORS
+  history_anchor: evidence/HISTORY
+  record_selection: evidence/README.md
+  checksum_binding: sha256sums.txt
   authoritative_records: 1
-  outcomes: 26
+  outcomes: 29
   required_result: conclusive
 ```
 

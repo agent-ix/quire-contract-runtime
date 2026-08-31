@@ -3,8 +3,8 @@
 # =============================================================================
 
 ifneq ($(filter ci,$(MAKECMDGOALS)),)
-ifneq ($(strip $(MAKEFLAGS)),)
-$(error local checks refuse non-empty MAKEFLAGS)
+ifneq ($(filter-out -j% -l% --jobs% --load-average% --jobserver-auth=% --jobserver-fds=%,$(MAKEFLAGS)),)
+$(error local checks refuse execution-changing MAKEFLAGS)
 endif
 ifneq ($(strip $(PYTHONOPTIMIZE)),)
 $(error local checks refuse optimized Python policy execution)
@@ -15,9 +15,15 @@ $(error local checks refuse unsafe Make recipe controls)
 endif
 endif
 
-override CARGO := cargo
+TRUSTED_HOME := $(shell /usr/bin/python3 -c 'import os,pwd; print(pwd.getpwuid(os.getuid()).pw_dir)')
+override export HOME := $(TRUSTED_HOME)
+override export CARGO_HOME := $(TRUSTED_HOME)/.cargo
+override export RUSTUP_HOME := $(TRUSTED_HOME)/.rustup
+override export CARGO_TARGET_DIR := $(CURDIR)/target
+override CARGO := $(TRUSTED_HOME)/.cargo/bin/cargo
 override MSRV := 1.75.0
-override PYTHON := python3
+override PYTHON := /usr/bin/python3
+override QUIRE := $(TRUSTED_HOME)/.npm-global/bin/quire
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
 
@@ -96,7 +102,7 @@ size:
 
 .PHONY: spec
 spec:
-	quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
+	$(QUIRE) validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md'
 
 .PHONY: clean
 clean:
@@ -124,8 +130,8 @@ audit-panic:
 
 .PHONY: evidence-tool
 evidence-tool:
-	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_assurance_anchor.py scripts/check_coverage_status.py scripts/check_failure_propagation.py scripts/check_kani_harnesses.py scripts/run_kani_gate.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
-	$(PYTHON) -m unittest discover -s tests -p '*.py'
+	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_assurance_anchor.py scripts/check_coverage_status.py scripts/check_failure_propagation.py scripts/check_kani_harnesses.py scripts/check_kani_mutations.py scripts/run_evidence_tests.py scripts/run_kani_gate.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
+	$(PYTHON) scripts/run_evidence_tests.py
 
 .PHONY: verify-evidence
 verify-evidence:
@@ -144,8 +150,12 @@ kani-census:
 	$(PYTHON) scripts/check_kani_harnesses.py
 
 .PHONY: kani
-kani: kani-census
+kani: kani-census kani-mutations
 	/usr/bin/python3 scripts/run_kani_gate.py
+
+.PHONY: kani-mutations
+kani-mutations:
+	/usr/bin/python3 scripts/check_kani_mutations.py
 
 .PHONY: update-evidence-anchors
 update-evidence-anchors:

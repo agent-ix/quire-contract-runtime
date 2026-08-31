@@ -1,4 +1,5 @@
 # Complete SHA-256 census for committed runtime evidence.
+46220e9957ef5345e127eb13b940e7e9aacd9133c8fe168b03abaaef54b4e6c9  evidence/HISTORY
 23ace6b102c85e5e8a8e9429006e65c1875eb5269b2bb6eeafa6dbd4d90945bf  evidence/README.md
 b209bde1f51ec163193a79f9a13bd85709fa06486792b6e85af470150b3d5787  evidence/historical
 f730dd26d61c00cd33113067be2c71c1357490c941aca3a9c6839749be3461e3  evidence/runtime-v01-624a98fab510-20260831T215242Z/sha256sums.txt

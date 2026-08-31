@@ -16,7 +16,12 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from check_kani_harnesses import EXPECTED_KANI_CHECK_FLOORS, EXPECTED_KANI_HARNESSES
+from check_kani_harnesses import (
+    EXPECTED_KANI_CHECK_FLOORS,
+    EXPECTED_KANI_HARNESSES,
+    proof_check_counts as kani_proof_checks,
+    validate_kani_success,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,12 +42,17 @@ EVIDENCE_VERIFIER = ROOT / "scripts" / "verify_evidence.py"
 ANCHOR_UPDATER = ROOT / "scripts" / "update_evidence_anchors.py"
 COVERAGE_CHECKER = ROOT / "scripts" / "check_coverage_status.py"
 KANI_CENSUS = ROOT / "scripts" / "check_kani_harnesses.py"
+KANI_MUTATIONS = ROOT / "scripts" / "check_kani_mutations.py"
 FAILURE_PROPAGATION = ROOT / "scripts" / "check_failure_propagation.py"
 KANI_RUNNER = ROOT / "scripts" / "run_kani_gate.py"
+EVIDENCE_TEST_RUNNER = ROOT / "scripts" / "run_evidence_tests.py"
 ASSURANCE_CHECKER = ROOT / "scripts" / "check_assurance_anchor.py"
 EVIDENCE_REQUIREMENTS = ROOT / "requirements-evidence.txt"
 EXPECTED_KANI_VERSION = "cargo-kani 0.67.0"
 COMMAND_TRANSCRIPTS = (
+    ("ci-guard", "ci-guard"),
+    ("kani-census", "kani-census"),
+    ("evidence-tool", "evidence-tool"),
     ("quire-validate", "quire-validate"),
     ("fmt", "fmt"),
     ("clippy", "clippy"),
@@ -78,6 +88,9 @@ VALIDATOR_TRANSCRIPTS = (
     "pgm01-envelope",
 )
 PASS_CONTRADICTION_MARKERS = {
+    "ci-guard": ("must resolve to", "swallowed failure", "unsafe MAKEFLAGS"),
+    "kani-census": ("KANI_CENSUS_FAILED", "KANI_CENSUS_STATUS=unavailable"),
+    "evidence-tool": ("FAILED", "EVIDENCE_TEST_CENSUS_FAILED"),
     "quire-validate": ('"valid": false', "validation failed"),
     "fmt": ("Diff in ",),
     "clippy": ("error: could not compile",),
@@ -106,6 +119,9 @@ PASS_CONTRADICTION_MARKERS = {
     "pgm01-envelope": ('"valid": false', "governance validation error:"),
 }
 PASS_CORROBORATION_PATTERNS = {
+    "ci-guard": r"all 15 mandatory local-check targets propagate failures",
+    "kani-census": r"verified 7 declared and trace-bound Kani harnesses",
+    "evidence-tool": r"verified [1-9][0-9]* evidence-tool behavioral tests",
     "quire-validate": r"(?m)^QUIRE_VALIDATION_PASSED$",
     "clippy": r"Finished `(?:dev|release)` profile",
     "test-core": r"test result: ok\. \d+ passed",
@@ -130,8 +146,14 @@ PASS_CORROBORATION_PATTERNS = {
     "pgm01-schema": r'"valid"\s*:\s*true',
     "pgm01-envelope": r'"valid"\s*:\s*true',
 }
-KANI_HARNESS_START = re.compile(r"(?m)^Checking harness kani_proofs::([a-z0-9_]+)\.\.\.$")
-KANI_CHECK_SUMMARY = re.compile(r"(?m)^ \*\* 0 of ([1-9][0-9]*) failed$")
+TEST_PASS_FLOORS = {
+    "test-core": 17,
+    "test-alloc": 17,
+    "test-std": 17,
+    "test-all": 19,
+    "test-footprint": 1,
+}
+TEST_RESULT = re.compile(r"test result: ok\. ([0-9]+) passed")
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -176,41 +198,6 @@ def verified_pgm01_revision() -> str:
     return actual
 
 
-def kani_proof_checks(combined: str) -> dict[str, int]:
-    """Return each successfully discharged harness's positive obligation count."""
-    starts = list(KANI_HARNESS_START.finditer(combined))
-    counts: dict[str, int] = {}
-    for index, start in enumerate(starts):
-        end = starts[index + 1].start() if index + 1 < len(starts) else len(combined)
-        block = combined[start.end() : end]
-        summary = KANI_CHECK_SUMMARY.search(block)
-        if (
-            summary is None
-            or "VERIFICATION:- SUCCESSFUL" not in block
-            or start.group(1) in counts
-        ):
-            return {}
-        counts[start.group(1)] = int(summary.group(1))
-    return counts
-
-
-def validate_kani_success(combined: str) -> bool:
-    expected_summary = (
-        f"Complete - {len(EXPECTED_KANI_HARNESSES)} successfully verified harnesses, "
-        f"0 failures, {len(EXPECTED_KANI_HARNESSES)} total."
-    )
-    checks = kani_proof_checks(combined)
-    return (
-        "Kani Rust Verifier 0.67.0 (cargo plugin)" in combined
-        and expected_summary in combined
-        and set(checks) == set(EXPECTED_KANI_HARNESSES)
-        and all(
-            checks[name] >= EXPECTED_KANI_CHECK_FLOORS[name]
-            for name in EXPECTED_KANI_HARNESSES
-        )
-    )
-
-
 def transcript_corroborates(name: str, stdout: str, stderr: str) -> bool:
     """Require positive evidence that a zero-exit command performed its check."""
     if name == "fmt":
@@ -227,6 +214,12 @@ def transcript_corroborates(name: str, stdout: str, stderr: str) -> bool:
         )
     if name == "kani":
         return validate_kani_success(stdout + "\n" + stderr)
+    if name in TEST_PASS_FLOORS:
+        count = sum(
+            int(value)
+            for value in TEST_RESULT.findall(stdout + "\n" + stderr)
+        )
+        return count >= TEST_PASS_FLOORS[name]
     pattern = PASS_CORROBORATION_PATTERNS.get(name)
     return pattern is not None and re.search(pattern, stdout + "\n" + stderr) is not None
 
@@ -301,6 +294,21 @@ def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
     return outcomes
 
 
+def test_pass_counts(evidence_dir: Path) -> dict[str, int]:
+    return {
+        name: sum(
+            int(value)
+            for value in TEST_RESULT.findall(
+                (evidence_dir / f"{transcript}.stdout").read_text(
+                    encoding="utf-8", errors="replace"
+                )
+            )
+        )
+        for name, transcript in COMMAND_TRANSCRIPTS
+        if name in TEST_PASS_FLOORS
+    }
+
+
 def summarize_outcomes(
     outcomes: list[dict[str, str]],
 ) -> tuple[str, str, list[str]]:
@@ -331,11 +339,15 @@ def hash_parameter_files() -> str:
     paths = (
         ROOT / "Cargo.toml",
         ROOT / "Cargo.lock",
+        ROOT / ".gitignore",
         ROOT / "Makefile",
         ROOT / "rust-toolchain.toml",
         ROOT / "measurement" / "footprint" / "Cargo.toml",
         ROOT / "measurement" / "footprint" / "src" / "lib.rs",
         ROOT / "scripts" / "check_linked_footprint.sh",
+        ROOT / "scripts" / "check_unsafe_comments.sh",
+        ROOT / "scripts" / "unsafe_comment_baseline.txt",
+        ROOT / "scripts" / "check_panic_surface.sh",
         ROOT / "scripts" / "measure_rlib_size.sh",
         COLLECTOR,
         BUILDER,
@@ -344,12 +356,28 @@ def hash_parameter_files() -> str:
         ANCHOR_UPDATER,
         COVERAGE_CHECKER,
         KANI_CENSUS,
+        KANI_MUTATIONS,
         FAILURE_PROPAGATION,
         KANI_RUNNER,
+        EVIDENCE_TEST_RUNNER,
         ASSURANCE_CHECKER,
         ROOT / "tests" / "test_evidence_tooling.py",
+        ROOT / "tests" / "integration.rs",
+        ROOT / "tests" / "operators.rs",
+        ROOT / "tests" / "proptest_adapter.rs",
+        ROOT / "tests" / "release_contract.rs",
+        ROOT / "src" / "accounting.rs",
+        ROOT / "src" / "accounting_tests.rs",
+        ROOT / "src" / "identity.rs",
+        ROOT / "src" / "lib.rs",
+        ROOT / "src" / "observation.rs",
+        ROOT / "src" / "operators.rs",
+        ROOT / "src" / "proptest_adapter.rs",
+        ROOT / "src" / "verdict.rs",
+        ROOT / "verification" / "kani.rs",
         ROOT / "spec" / "test-matrix.md",
         ROOT / "spec" / "assurance" / "AA-001-runtime-argument.md",
+        ROOT / "spec" / "assurance" / "MP-001-runtime-measurements.md",
         ROOT / "spec" / "nonfunctional" / "NFR-002-panic-compatibility-license.md",
         EVIDENCE_REQUIREMENTS,
         INPUT_SCHEMA,
@@ -415,6 +443,9 @@ def build(evidence_dir: Path) -> None:
         "sourceRevision": revision,
         "sourceState": source_state,
         "commands": [
+            "python3 scripts/check_failure_propagation.py",
+            "python3 scripts/check_kani_harnesses.py",
+            "python3 scripts/run_evidence_tests.py",
             "bash -c \"quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED\"",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
             "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
@@ -468,6 +499,27 @@ def build(evidence_dir: Path) -> None:
             "size": (evidence_dir / "size-version.txt")
             .read_text(encoding="utf-8")
             .splitlines()[0],
+        },
+        "toolDigests": {
+            name: {
+                "path": (evidence_dir / f"{name}-path.txt")
+                .read_text(encoding="utf-8")
+                .strip(),
+                "digest": digest(
+                    (evidence_dir / f"{name}-sha256.txt")
+                    .read_text(encoding="utf-8")
+                    .strip()
+                ),
+            }
+            for name in (
+                "cargo",
+                "cargo-kani",
+                "make",
+                "python",
+                "quire",
+                "rustc",
+                "size",
+            )
         },
         "pgm01": {
             "policy": "ix://agent-ix/quire-contract-ir/PGM-01",
@@ -543,6 +595,10 @@ def build(evidence_dir: Path) -> None:
         "sourceRevision": revision,
         "collectedAt": recorded_at,
         "outcomes": outcomes,
+        "testPassCounts": [
+            {"lane": name, "testsPassed": count}
+            for name, count in sorted(test_pass_counts(evidence_dir).items())
+        ],
         "kaniProofChecks": [
             {"harness": name, "checks": kani_checks[name]} for name in sorted(kani_checks)
         ],
