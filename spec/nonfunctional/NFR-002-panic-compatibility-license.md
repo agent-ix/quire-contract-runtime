@@ -17,7 +17,7 @@ using non-exhaustive public data enums where downstream exhaustive matching woul
 
 ## Scope
 
-Public v0.1 runtime APIs and optional dependency surfaces.
+Public v0.1 runtime APIs, optional dependency surfaces, and the local evidence-construction toolchain.
 
 ## Rationale
 
@@ -39,11 +39,12 @@ must be explicit to downstream users.
 | NFR-002-AC-1 | Valid public evaluation and accounting inputs encounter no intentional panic path. | property-based-testing (TC-003) |
 | NFR-002-AC-2 | The manifest remains unpublished and declares `MIT OR Apache-2.0`. | Inspection (TC-007) |
 | NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive. | Inspection (TC-008) |
+| NFR-002-AC-4 | The evidence builder verifies its vendored PGM-01 schema pin and is tested for identity, digest, role, extension, and validation behavior. | Inspection (TC-007) |
 
 ## Verification
 
-CI runs Clippy, unit/property tests, manifest inspection, unsafe audit, and cargo-deny. The public API
-documentation states its size, panic, feature, and compatibility contracts.
+CI runs Clippy, unit/property tests, evidence-tool unit tests, manifest inspection, unsafe audit, and
+cargo-deny. The public API documentation states its size, panic, feature, and compatibility contracts.
 
 ## Dependencies
 

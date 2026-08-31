@@ -43,7 +43,9 @@ the root release profile (`lto = "thin"`, one codegen unit, and aborting panics)
 Run `scripts/collect_evidence.sh`. It records source and tool identities, feature-matrix tests, Clippy,
 license and unsafe checks, Kani availability/result, dependency metadata, the Rust 1.75
 `thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
-`evidence/`. Preserve failures and skips rather than deleting them.
+`evidence/`. The builder derives and verifies the digest of the vendored PGM-01 envelope schema;
+TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
+failures and skips rather than deleting them.
 
 ## Interpretation
 
