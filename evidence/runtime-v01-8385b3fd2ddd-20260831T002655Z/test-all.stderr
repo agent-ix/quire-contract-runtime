@@ -1,0 +1,8 @@
+   Compiling quire-contract-runtime v0.1.0 (/home/peter/dev/quire-contract-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.90s
+     Running unittests src/lib.rs (target/evidence-pgm-d8d-8385b3f/debug/deps/quire_contract_runtime-8d2e16b20b62c800)
+     Running tests/integration.rs (target/evidence-pgm-d8d-8385b3f/debug/deps/integration-76cad6dae7cfb080)
+     Running tests/operators.rs (target/evidence-pgm-d8d-8385b3f/debug/deps/operators-4ad1c74115807da2)
+     Running tests/proptest_adapter.rs (target/evidence-pgm-d8d-8385b3f/debug/deps/proptest_adapter-06e5492f45bf66bd)
+     Running tests/release_contract.rs (target/evidence-pgm-d8d-8385b3f/debug/deps/release_contract-3a1214ee6aeb59f8)
+   Doc-tests quire_contract_runtime
