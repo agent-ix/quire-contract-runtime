@@ -1,0 +1,8 @@
+DuplicateArchetype: 'ADR' contributed by modules ["spec-artifacts-process", "spec-artifacts-process"]; first-wins
+DuplicateArchetype: 'Plan' contributed by modules ["spec-artifacts-process", "spec-artifacts-process"]; first-wins
+DuplicateArchetype: 'Review' contributed by modules ["spec-artifacts-process", "spec-artifacts-process"]; first-wins
+DuplicateArchetype: 'SpecReview' contributed by modules ["spec-artifacts-process", "spec-artifacts-process"]; first-wins
+DuplicateArchetype: 'Standard' contributed by modules ["spec-artifacts-process", "spec-artifacts-process"]; first-wins
+DuplicateInverseEdge: inverse label 'part_of' declared by verbs ["aggregates", "contains"]; first-wins
+/home/peter/dev/quire-contract-runtime/spec/assurance/AA-001-runtime-argument.md: [AssuranceArgument] frontmatter: Additional properties are not allowed ('evidence_binding' was unexpected) (at <frontmatter>) [frontmatter]
+1 document(s) failed structural validation

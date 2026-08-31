@@ -37,3 +37,8 @@ binding and the repository-owned coverage-status classifier introduced by the cu
 transcripts remain intact, but it predates positive transcript corroboration, per-harness proof
 obligation counts, conclusive-verdict enforcement, independent parameter re-derivation, and the
 Round 3 Make/coverage/history controls, so it is explicitly non-authoritative.
+
+`historical/failed-round3-collection/` retains the first clean-tree Round 3 collection attempt. It
+is inconclusive because Quire rejected an assurance binding placed in structured frontmatter and
+the panic audit rejected proof-only `expect` calls; both numeric failures and their transcripts are
+preserved rather than rewritten as successful evidence.

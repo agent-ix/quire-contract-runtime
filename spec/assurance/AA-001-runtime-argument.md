@@ -10,11 +10,6 @@ top_claim:
   statement: the identified runtime source candidate is acceptable for bounded v0.1 use
   subject: quire-contract-runtime v0.1 source candidate
   status: open
-evidence_binding:
-  anchor: evidence/ANCHORS
-  authoritative_records: 1
-  outcomes: 26
-  required_result: conclusive
 reasoning:
   - id: reasoning-semantic-conformance
     statement: evaluate requirement-tagged tests and measurements against the declared boundary
@@ -60,6 +55,16 @@ failure scenarios without treating any one tool output as a release decision.
 
 No automated sufficiency decision is recorded. The human release owner must accept or reject the
 candidate after PGM-01, code review, CI, and gap analysis are complete.
+
+The automated evidence consumer enforces this bounded input declaration before the human decision:
+
+```yaml
+evidence_binding:
+  anchor: evidence/ANCHORS
+  authoritative_records: 1
+  outcomes: 26
+  required_result: conclusive
+```
 
 ## Challenges
 

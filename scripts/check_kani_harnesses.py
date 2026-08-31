@@ -21,10 +21,10 @@ EXPECTED_KANI_HARNESSES = (
     "tc_003_slice_index_is_defined_exactly_in_bounds",
 )
 EXPECTED_KANI_CHECK_FLOORS = {
-    "tc_001_public_model_preserves_provenance": 132,
+    "tc_001_public_model_preserves_provenance": 140,
     "tc_002_boolean_truth_tables": 136,
     "tc_003_campaign_accounting_saturates": 264,
-    "tc_003_checked_i8_arithmetic_matches_primitives": 47,
+    "tc_003_checked_i8_arithmetic_matches_primitives": 59,
     "tc_003_i32_division_boundaries_are_undefined": 43,
     "tc_003_option_helpers_preserve_definedness": 52,
     "tc_003_slice_index_is_defined_exactly_in_bounds": 24,

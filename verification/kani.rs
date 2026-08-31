@@ -69,13 +69,13 @@ fn tc_001_public_model_preserves_provenance() {
     let failed = Verdict::failed_postcondition(context, detail);
     assert!(matches!(failed.kind(), VerdictKind::FailedPostcondition));
     assert!(core::ptr::eq(failed.context().observations, &observations));
-    let failed_detail = failed.detail().expect("failed verdict retains detail");
+    assert!(failed.detail().is_some());
+    let failed_detail = failed.detail().unwrap_or(&detail);
     assert_eq!(failed_detail.code, 7);
     assert!(matches!(failed_detail.kind, FailureKind::Postcondition));
-    assert!(core::ptr::eq(
-        failed_detail.message.expect("message retained"),
-        message_text,
-    ));
+    assert!(failed_detail.message.is_some());
+    let failed_message = failed_detail.message.unwrap_or(message_text);
+    assert!(core::ptr::eq(failed_message, message_text));
 
     let rejected = Verdict::rejected_precondition(context, detail);
     assert!(matches!(rejected.kind(), VerdictKind::RejectedPrecondition));
@@ -83,13 +83,9 @@ fn tc_001_public_model_preserves_provenance() {
         rejected.context().observations,
         &observations
     ));
-    assert_eq!(
-        rejected
-            .detail()
-            .expect("rejected verdict retains detail")
-            .code,
-        7,
-    );
+    assert!(rejected.detail().is_some());
+    let rejected_detail = rejected.detail().unwrap_or(&detail);
+    assert_eq!(rejected_detail.code, 7);
 }
 
 // Implements: TC-003
