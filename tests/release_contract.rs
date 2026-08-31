@@ -30,9 +30,6 @@ fn tc_007_release_controls_are_mandatory() {
     assert!(CARGO_MANIFEST.contains("panic = \"abort\""));
     assert!(!FOOTPRINT_MANIFEST.contains("[profile.release]"));
     assert!(MAKEFILE.contains("$(PYTHON) -m unittest discover -s tests -p '*.py'"));
-    assert!(MAKEFILE.contains("scripts/verify_evidence.py"));
-    assert!(MAKEFILE.contains("quire coverage --scope . --strict"));
-    assert!(MAKEFILE.contains("KANI_STATUS=skipped-unavailable"));
     assert!(FOOTPRINT_AUDIT.contains("readonly minimum_bytes=500"));
     assert!(FOOTPRINT_AUDIT.contains("section_bytes < minimum_bytes"));
     assert!(FOOTPRINT_AUDIT.contains("rust_begin_unwind"));

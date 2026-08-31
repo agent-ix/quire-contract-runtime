@@ -161,6 +161,20 @@ impl<'a> CampaignReport<'a> {
         }
     }
 
+    #[cfg(kani)]
+    pub(crate) const fn from_proof_counts(
+        identity: ContractIdentity<'a>,
+        accepted: u64,
+        rejected: u64,
+        failed: u64,
+        discarded: u64,
+    ) -> Self {
+        Self {
+            identity,
+            counts: CampaignCounts::from_proof_counts(accepted, rejected, failed, discarded),
+        }
+    }
+
     /// Returns the requirement/revision identity shared by every counter.
     // Implements: FR-004
     #[must_use]

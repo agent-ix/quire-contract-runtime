@@ -11,6 +11,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from check_kani_harnesses import EXPECTED_KANI_HARNESSES
+
 
 ROOT = Path(__file__).resolve().parent.parent
 PGM01_CANDIDATE_REVISION = "7dac9d8c19952412b56a0347387666e2ca81e01d"
@@ -27,15 +33,11 @@ COLLECTOR = ROOT / "scripts" / "collect_evidence.sh"
 BUILDER = Path(__file__).resolve()
 SCHEMA_VALIDATOR = ROOT / "scripts" / "validate_json_schema.py"
 EVIDENCE_VERIFIER = ROOT / "scripts" / "verify_evidence.py"
+ANCHOR_UPDATER = ROOT / "scripts" / "update_evidence_anchors.py"
+COVERAGE_CHECKER = ROOT / "scripts" / "check_coverage_status.py"
+KANI_CENSUS = ROOT / "scripts" / "check_kani_harnesses.py"
 EVIDENCE_REQUIREMENTS = ROOT / "requirements-evidence.txt"
-EXPECTED_KANI_HARNESSES = (
-    "tc_002_boolean_truth_tables",
-    "tc_003_campaign_counts_total_saturates",
-    "tc_003_checked_i8_arithmetic_matches_primitives",
-    "tc_003_i32_division_boundaries_are_undefined",
-    "tc_003_option_helpers_preserve_definedness",
-    "tc_003_slice_index_is_defined_exactly_in_bounds",
-)
+EXPECTED_KANI_VERSION = "cargo-kani 0.67.0"
 COMMAND_TRANSCRIPTS = (
     ("quire-validate", "quire-validate"),
     ("fmt", "fmt"),
@@ -148,8 +150,12 @@ def validate_kani_success(combined: str) -> bool:
         f"Complete - {len(EXPECTED_KANI_HARNESSES)} successfully verified harnesses, "
         f"0 failures, {len(EXPECTED_KANI_HARNESSES)} total."
     )
-    return expected_summary in combined and all(
+    return (
+        "Kani Rust Verifier 0.67.0 (cargo plugin)" in combined
+        and expected_summary in combined
+        and all(
         f"kani_proofs::{name}" in combined for name in EXPECTED_KANI_HARNESSES
+        )
     )
 
 
@@ -206,7 +212,11 @@ def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
                     )
                     if contradiction is not None:
                         status = "failed"
-                    elif name == "kani" and not validate_kani_success(combined):
+                    elif name == "kani" and (
+                        not validate_kani_success(combined)
+                        or (evidence_dir / "kani-version.txt").read_text(encoding="utf-8").strip()
+                        != EXPECTED_KANI_VERSION
+                    ):
                         status = "failed"
                     else:
                         status = "passed"
@@ -256,6 +266,9 @@ def hash_parameter_files() -> str:
         BUILDER,
         SCHEMA_VALIDATOR,
         EVIDENCE_VERIFIER,
+        ANCHOR_UPDATER,
+        COVERAGE_CHECKER,
+        KANI_CENSUS,
         EVIDENCE_REQUIREMENTS,
         INPUT_SCHEMA,
         MANIFEST_SCHEMA,
@@ -343,8 +356,10 @@ def build(evidence_dir: Path) -> None:
             "bash scripts/measure_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
             "cargo run --release --example layout --no-default-features",
             "RUSTDOCFLAGS=-Dwarnings make doc",
-            "cargo kani (when available)",
-            "quire coverage --scope . --strict",
+            "make kani (requires cargo-kani and exact harness census)",
+            "python3 scripts/check_coverage_status.py",
+            "python3 scripts/update_evidence_anchors.py",
+            "python3 scripts/verify_evidence.py",
         ],
         "tools": {
             "cargo": (evidence_dir / "cargo-version.txt")
@@ -431,6 +446,7 @@ def build(evidence_dir: Path) -> None:
         "merged PGM-01 revision was integrated under a bounded admin exception without protected checks; that exception excludes runtime release qualification",
         "CODEOWNER approval and the human source-release decision are pending",
         "Kani proofs cover the dispatch layer and bounded requirements named by each harness; they do not establish semantics outside that declared scope",
+        "retained local transcripts are Git-tamper-evident and source-bound, not externally signed runner attestations",
         *outcome_limitations,
     ]
     manifest = {

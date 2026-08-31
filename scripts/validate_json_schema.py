@@ -20,7 +20,21 @@ REQUIRED_PACKAGES = {
 REQUIRED_FORMATS = {"date-time", "uri", "uri-reference"}
 
 
-def checked_format_checker() -> FormatChecker:
+def schema_formats(value: object) -> set[str]:
+    if isinstance(value, dict):
+        found = {value["format"]} if isinstance(value.get("format"), str) else set()
+        for child in value.values():
+            found.update(schema_formats(child))
+        return found
+    if isinstance(value, list):
+        found: set[str] = set()
+        for child in value:
+            found.update(schema_formats(child))
+        return found
+    return set()
+
+
+def checked_format_checker(schema: object | None = None) -> FormatChecker:
     for package, expected in REQUIRED_PACKAGES.items():
         try:
             actual = importlib.metadata.version(package)
@@ -36,7 +50,8 @@ def checked_format_checker() -> FormatChecker:
             f"found {jsonschema.__version__}"
         )
     checker = FormatChecker()
-    missing = REQUIRED_FORMATS.difference(checker.checkers)
+    required = REQUIRED_FORMATS | (schema_formats(schema) if schema is not None else set())
+    missing = required.difference(checker.checkers)
     if missing:
         raise RuntimeError(
             "required JSON Schema format checkers are unavailable: "
@@ -60,7 +75,7 @@ def main() -> int:
 
     schema = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     instance = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-    checker = checked_format_checker()
+    checker = checked_format_checker(schema)
     Draft7Validator.check_schema(schema)
     errors = sorted(
         Draft7Validator(schema, format_checker=checker).iter_errors(instance),

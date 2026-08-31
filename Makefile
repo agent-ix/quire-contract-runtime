@@ -27,8 +27,9 @@ help:
 	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
 	@echo "  make evidence-tool    - Test the local evidence toolchain and PGM-01 pin"
 	@echo "  make verify-evidence  - Verify the anchored retained evidence set"
-	@echo "  make coverage         - Run strict specification traceability coverage"
-	@echo "  make kani             - Run Kani when installed; report unavailable explicitly"
+	@echo "  make coverage         - Run strict repository-owned traceability classification"
+	@echo "  make kani             - Run the complete declared Kani harness set (required)"
+	@echo "  make update-evidence-anchors - Regenerate evidence/ANCHORS for review"
 	@echo "  make ci               - All local CI gates"
 
 # =============================================================================
@@ -108,7 +109,7 @@ audit-panic:
 
 .PHONY: evidence-tool
 evidence-tool:
-	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/validate_json_schema.py scripts/verify_evidence.py
+	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_coverage_status.py scripts/check_kani_harnesses.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
 	$(PYTHON) -m unittest discover -s tests -p '*.py'
 
 .PHONY: verify-evidence
@@ -117,15 +118,24 @@ verify-evidence:
 
 .PHONY: coverage
 coverage:
-	quire coverage --scope . --strict
+	$(PYTHON) scripts/check_coverage_status.py
+
+.PHONY: kani-census
+kani-census:
+	$(PYTHON) scripts/check_kani_harnesses.py
 
 .PHONY: kani
-kani:
+kani: kani-census
 	@if command -v cargo-kani >/dev/null 2>&1; then \
 		$(CARGO) kani; \
 	else \
-		echo "KANI_STATUS=skipped-unavailable"; \
+		echo "KANI_STATUS=unavailable; cargo-kani is required for this gate" >&2; \
+		exit 2; \
 	fi
+
+.PHONY: update-evidence-anchors
+update-evidence-anchors:
+	$(PYTHON) scripts/update_evidence_anchors.py
 
 # =============================================================================
 # Composite

@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,7 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from build_evidence_envelope import command_outcomes, summarize_outcomes
+from build_evidence_envelope import COMMAND_TRANSCRIPTS, command_outcomes, summarize_outcomes
 from validate_json_schema import checked_format_checker
 
 
@@ -25,7 +26,9 @@ EVIDENCE_ROOT = ROOT / "evidence"
 ANCHORS = EVIDENCE_ROOT / "ANCHORS"
 ENVELOPE_SCHEMA = ROOT / "schemas" / "pgm01-derivation-evidence-envelope-v1.schema.json"
 MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
+VERIFICATION_STATUS = ROOT / "target" / "evidence-verification-status.json"
 CHECKSUM_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
+REVISION = re.compile(r"^[0-9a-f]{40}$")
 
 
 class EvidenceError(ValueError):
@@ -91,8 +94,12 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def validate_json(instance: dict[str, Any], schema_path: Path, label: str) -> None:
     schema = load_json(schema_path)
+    try:
+        format_checker = checked_format_checker(schema)
+    except RuntimeError as error:
+        raise VerificationUnavailable(str(error)) from error
     errors = sorted(
-        Draft7Validator(schema, format_checker=checked_format_checker()).iter_errors(instance),
+        Draft7Validator(schema, format_checker=format_checker).iter_errors(instance),
         key=lambda error: (list(error.absolute_path), error.message),
     )
     if errors:
@@ -120,6 +127,10 @@ def verify_checksums(record: Path) -> int:
             f"checksum census mismatch in {record.name}: unlisted={unlisted}, absent={absent}"
         )
     for path, digest in expected.items():
+        if path.is_symlink():
+            raise EvidenceError(
+                f"symlink is not allowed in retained evidence: {record.name}/{path.name}"
+            )
         observed = sha256_file(path)
         if observed != digest:
             raise EvidenceError(
@@ -148,6 +159,73 @@ def verify_envelope_links(record: Path, envelope: dict[str, Any]) -> None:
         path = safe_record_path(record, uri)
         if not path.is_file() or sha256_file(path) != artifact["contentDigest"]["value"]:
             raise EvidenceError(f"envelope artifact mismatch in {record.name}: {path.name}")
+
+
+def git_result(arguments: list[str]) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        ["git", *arguments], cwd=ROOT, check=False, capture_output=True
+    )
+
+
+def verify_source_binding(revision: str) -> None:
+    if not REVISION.fullmatch(revision):
+        raise EvidenceError(f"invalid source revision: {revision!r}")
+    exists = git_result(["cat-file", "-e", f"{revision}^{{commit}}"])
+    if exists.returncode != 0:
+        raise EvidenceError(f"recorded source revision does not exist: {revision}")
+    comparison = git_result(
+        ["diff", "--quiet", revision, "HEAD", "--", ".", ":(exclude)evidence"]
+    )
+    if comparison.returncode == 1:
+        raise EvidenceError(
+            f"recorded source tree {revision} differs from current HEAD outside evidence/"
+        )
+    if comparison.returncode != 0:
+        raise VerificationUnavailable("cannot compare the recorded source tree with HEAD")
+    for arguments in (
+        ["diff", "--quiet", "--", ".", ":(exclude)evidence"],
+        ["diff", "--cached", "--quiet", "--", ".", ":(exclude)evidence"],
+    ):
+        worktree = git_result(arguments)
+        if worktree.returncode == 1:
+            raise EvidenceError("current worktree differs from HEAD outside evidence/")
+        if worktree.returncode != 0:
+            raise VerificationUnavailable("cannot compare the current worktree with HEAD")
+    untracked = git_result(["ls-files", "--others", "--exclude-standard", "-z"])
+    if untracked.returncode != 0:
+        raise VerificationUnavailable("cannot enumerate untracked worktree inputs")
+    outside_evidence = sorted(
+        value.decode("utf-8")
+        for value in untracked.stdout.split(b"\0")
+        if value and not value.decode("utf-8").startswith("evidence/")
+    )
+    if outside_evidence:
+        raise EvidenceError(
+            f"untracked worktree inputs exist outside evidence/: {outside_evidence}"
+        )
+
+
+def verify_outcome_census(record: Path, manifest: dict[str, Any]) -> None:
+    declared = {transcript for _, transcript in COMMAND_TRANSCRIPTS}
+    retained = {
+        path.name.removesuffix(".status.txt")
+        for path in record.glob("*.status.txt")
+    }
+    retained.update(
+        path.name.removesuffix("-status.txt")
+        for path in record.glob("*-status.txt")
+        if not path.name.endswith(".status.txt")
+        and path.read_text(encoding="utf-8").strip() == "skipped-unavailable"
+    )
+    recorded = [item.get("name") for item in manifest.get("outcomes", [])]
+    if len(recorded) != len(set(recorded)):
+        raise EvidenceError(f"duplicate declared outcome in {record.name}")
+    if retained != declared or set(recorded) != declared:
+        raise EvidenceError(
+            f"outcome census mismatch in {record.name}: "
+            f"retained={sorted(retained)}, declared={sorted(declared)}, "
+            f"manifest={sorted(str(item) for item in recorded)}"
+        )
 
 
 def verify_anchors() -> list[Path]:
@@ -218,6 +296,8 @@ def verify_record(record: Path) -> tuple[int, int]:
     }
     if len(identities) != 1:
         raise EvidenceError(f"source revision mismatch in {record.name}: {sorted(identities)}")
+    verify_source_binding(revision)
+    verify_outcome_census(record, manifest)
     derived = command_outcomes(record)
     if manifest["outcomes"] != derived:
         raise EvidenceError(
@@ -231,6 +311,18 @@ def verify_record(record: Path) -> tuple[int, int]:
     return checksums, artifacts
 
 
+def write_verification_status(status: str, message: str, exit_code: int) -> None:
+    VERIFICATION_STATUS.parent.mkdir(parents=True, exist_ok=True)
+    VERIFICATION_STATUS.write_text(
+        json.dumps(
+            {"exitCode": exit_code, "message": message, "status": status},
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     try:
         records = verify_anchors()
@@ -238,16 +330,22 @@ def main() -> int:
             raise VerificationUnavailable("no authoritative records are anchored")
         totals = [verify_record(record) for record in records]
     except VerificationUnavailable as error:
-        print(f"runtime evidence verification unavailable: {error}", file=sys.stderr)
+        message = f"runtime evidence verification unavailable: {error}"
+        write_verification_status("unavailable", message, 2)
+        print(message, file=sys.stderr)
         return 2
-    except (EvidenceError, KeyError, OSError, TypeError) as error:
-        print(f"runtime evidence verification failed: {error}", file=sys.stderr)
+    except (EvidenceError, KeyError, OSError, RuntimeError, TypeError) as error:
+        message = f"runtime evidence verification failed: {error}"
+        write_verification_status("failed", message, 1)
+        print(message, file=sys.stderr)
         return 1
-    print(
+    message = (
         f"verified {len(records)} authoritative records, "
         f"{sum(item[0] for item in totals)} checksums, "
         f"{sum(item[1] for item in totals)} manifest artifacts"
     )
+    write_verification_status("passed", message, 0)
+    print(message)
     return 0
 
 

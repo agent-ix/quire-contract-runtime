@@ -57,12 +57,22 @@ the digest of the vendored PGM-01 envelope schema and the identity of its vendor
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
 
+`scripts/check_kani_harnesses.py` makes the six proof names and their TC-002/TC-003 ownership an
+executable census before every Kani run. Absence of `cargo-kani` is a failed local gate, not a skip.
+`scripts/check_coverage_status.py` independently enforces the schema-valid `Coverage Status` column,
+complete backing, and the absence of ignored trace-bearing tests while the installed module still
+configures the incompatible `Status` header. `scripts/update_evidence_anchors.py` deterministically
+regenerates the complete anchor census for diff review after collection.
+
 `scripts/verify_evidence.py` independently verifies the committed `evidence/ANCHORS` record-set
 boundary, every flat-record checksum and artifact/link digest, the recursively anchored historical
-tree, exact JSON Schema formats, the external merged-PGM schema digest, complete re-derived outcome
-values, result status/summary, and limitations. Missing anchors or an empty record set mean
-verification unavailable, never success. `scripts/validate_json_schema.py` fails closed unless the
-exact packages in `requirements-evidence.txt` provide the required date-time and URI formats.
+tree, exact JSON Schema formats, the external merged-PGM schema digest, independent outcome-name
+census, complete re-derived outcome values, result status/summary, and limitations. It also binds
+the recorded non-evidence source tree and clean worktree to current `HEAD`. Missing anchors, an empty
+record set, or unavailable schema tooling mean verification unavailable, never success; a JSON
+status file preserves that channel across GNU Make's exit-code collapse. `scripts/validate_json_schema.py`
+fails closed unless the exact packages in `requirements-evidence.txt` provide checkers for every
+format named by the supplied schema.
 
 ## Interpretation
 
@@ -76,6 +86,9 @@ as whole-application RAM/ROM utilization.
 The six Kani harnesses are bounded verification controls, not a whole-crate proof. Boolean and most
 checked-operation assertions gate generic dispatch against declared primitive semantics; i8 addition
 also uses an independent i16 widening oracle. Division/remainder uses symbolic invalid inputs, index
-definedness quantifies over full `usize`, and campaign total saturation covers accounting. The Kani
+definedness quantifies over full `usize`, and campaign accounting drives the public record/discard
+paths from symbolic near-overflow states to cover all five increments and the saturating total. The Kani
 toolchain may differ from both the shipped stable compiler and the Rust 1.75 compatibility compiler;
-that tool identity is retained rather than treated as compiler equivalence.
+that exact tool identity is retained rather than treated as compiler equivalence. Retained local
+transcripts are source-bound and Git-tamper-evident, but they are not externally signed runner
+attestations.

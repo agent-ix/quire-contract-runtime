@@ -135,11 +135,11 @@ run_and_retain layout cargo run --release --example layout --no-default-features
 run_and_retain rustdoc env RUSTDOCFLAGS=-Dwarnings make doc
 run_and_retain rlib-size-observation \
   bash scripts/measure_rlib_size.sh "${CARGO_TARGET_DIR:-target}/release/deps"
-run_and_retain coverage quire coverage --scope . --strict
+run_and_retain coverage python3 scripts/check_coverage_status.py
 
 if command -v cargo-kani >/dev/null 2>&1; then
   cargo kani --version >"$evidence_dir/kani-version.txt"
-  run_and_retain kani cargo kani
+  run_and_retain kani make kani
   record_status_word "$evidence_dir/kani.status.txt" "$evidence_dir/kani-status.txt"
 else
   echo skipped-unavailable >"$evidence_dir/kani-version.txt"
@@ -201,3 +201,6 @@ if (( collection_failed != 0 )); then
   echo "one or more retained evidence commands failed" >&2
   exit 1
 fi
+
+python3 scripts/update_evidence_anchors.py
+python3 scripts/verify_evidence.py

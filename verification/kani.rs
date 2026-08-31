@@ -1,12 +1,14 @@
 use crate::{
-    accounting::CampaignCounts,
     operators::{
         and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem,
         checked_sub, implies_short_circuit, implies_total, index, option_copied, option_ref,
         or_short_circuit, or_total,
     },
+    ClauseId, ContractIdentity, ExecutionPoint, FailureDetail, FailureKind, RequirementId,
+    RevisionId, Verdict, VerdictContext,
 };
 
+// Implements: TC-003
 #[kani::proof]
 fn tc_003_checked_i8_arithmetic_matches_primitives() {
     let left: i8 = kani::any();
@@ -24,6 +26,7 @@ fn tc_003_checked_i8_arithmetic_matches_primitives() {
     assert_eq!(checked_rem(left, right), left.checked_rem(right));
 }
 
+// Implements: TC-003
 #[kani::proof]
 fn tc_003_i32_division_boundaries_are_undefined() {
     let left: i32 = kani::any();
@@ -33,6 +36,7 @@ fn tc_003_i32_division_boundaries_are_undefined() {
     assert_eq!(checked_rem(left, right), None);
 }
 
+// Implements: TC-002
 #[kani::proof]
 fn tc_002_boolean_truth_tables() {
     let left: bool = kani::any();
@@ -45,6 +49,7 @@ fn tc_002_boolean_truth_tables() {
     assert_eq!(implies_total(|| left, || right), !left | right);
 }
 
+// Implements: TC-003
 #[kani::proof]
 fn tc_003_slice_index_is_defined_exactly_in_bounds() {
     let values: [u8; 4] = kani::any();
@@ -52,20 +57,63 @@ fn tc_003_slice_index_is_defined_exactly_in_bounds() {
     assert_eq!(index(&values, at).is_some(), at < values.len());
 }
 
+// Implements: TC-003
 #[kani::proof]
-fn tc_003_campaign_counts_total_saturates() {
+fn tc_003_campaign_accounting_saturates() {
     let accepted: u64 = kani::any();
     let rejected: u64 = kani::any();
     let failed: u64 = kani::any();
     let discarded: u64 = kani::any();
-    let counts = CampaignCounts::from_proof_counts(accepted, rejected, failed, discarded);
-    let expected = counts
-        .accepted()
-        .saturating_add(counts.rejected())
-        .saturating_add(counts.discarded());
-    assert_eq!(counts.total(), expected);
+    let identity = ContractIdentity::new(RequirementId::new("FR-004"), RevisionId::new("1"));
+    let context = VerdictContext::new(identity, ExecutionPoint::new("proof"), &[]);
+    let detail = FailureDetail::new(ClauseId::new("accounting"), FailureKind::Contract, 1, None);
+
+    let mut passed =
+        crate::CampaignReport::from_proof_counts(identity, accepted, rejected, failed, discarded);
+    assert!(passed.record_verdict(&Verdict::passed(context)).is_ok());
+    assert_eq!(passed.counts().accepted(), accepted.saturating_add(1));
+    assert_eq!(passed.counts().failed(), failed);
+
+    let mut failed_postcondition =
+        crate::CampaignReport::from_proof_counts(identity, accepted, rejected, failed, discarded);
+    assert!(failed_postcondition
+        .record_verdict(&Verdict::failed_postcondition(context, detail))
+        .is_ok());
+    assert_eq!(
+        failed_postcondition.counts().accepted(),
+        accepted.saturating_add(1)
+    );
+    assert_eq!(
+        failed_postcondition.counts().failed(),
+        failed.saturating_add(1)
+    );
+
+    let mut rejected_precondition =
+        crate::CampaignReport::from_proof_counts(identity, accepted, rejected, failed, discarded);
+    assert!(rejected_precondition
+        .record_verdict(&Verdict::rejected_precondition(context, detail))
+        .is_ok());
+    assert_eq!(
+        rejected_precondition.counts().rejected(),
+        rejected.saturating_add(1)
+    );
+
+    let mut discarded_report =
+        crate::CampaignReport::from_proof_counts(identity, accepted, rejected, failed, discarded);
+    discarded_report.record_discard();
+    assert_eq!(
+        discarded_report.counts().discarded(),
+        discarded.saturating_add(1)
+    );
+    assert_eq!(
+        discarded_report.counts().total(),
+        accepted
+            .saturating_add(rejected)
+            .saturating_add(discarded.saturating_add(1))
+    );
 }
 
+// Implements: TC-003
 #[kani::proof]
 fn tc_003_option_helpers_preserve_definedness() {
     let value: Option<u8> = kani::any();

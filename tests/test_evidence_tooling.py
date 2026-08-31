@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,18 +19,24 @@ BUILDER_PATH = ROOT / "scripts" / "build_evidence_envelope.py"
 COLLECTOR_PATH = ROOT / "scripts" / "collect_evidence.sh"
 VALIDATOR_PATH = ROOT / "scripts" / "validate_json_schema.py"
 VERIFIER_PATH = ROOT / "scripts" / "verify_evidence.py"
+ANCHOR_UPDATER_PATH = ROOT / "scripts" / "update_evidence_anchors.py"
+COVERAGE_PATH = ROOT / "scripts" / "check_coverage_status.py"
+KANI_CENSUS_PATH = ROOT / "scripts" / "check_kani_harnesses.py"
 
 
-def load_builder():
-    spec = importlib.util.spec_from_file_location("runtime_evidence_builder", BUILDER_PATH)
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError("could not load runtime evidence builder")
+        raise RuntimeError(f"could not load {name}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-builder = load_builder()
+builder = load_module("runtime_evidence_builder", BUILDER_PATH)
+verifier = load_module("runtime_evidence_verifier", VERIFIER_PATH)
+anchor_updater = load_module("runtime_anchor_updater", ANCHOR_UPDATER_PATH)
+coverage = load_module("runtime_coverage_status", COVERAGE_PATH)
 
 
 class EvidenceBuilderTests(unittest.TestCase):
@@ -41,7 +49,15 @@ class EvidenceBuilderTests(unittest.TestCase):
         plan = (ROOT / "spec" / "assurance" / "MP-001-runtime-measurements.md").read_text(
             encoding="utf-8"
         )
-        for path in (BUILDER_PATH, COLLECTOR_PATH, VALIDATOR_PATH, VERIFIER_PATH):
+        for path in (
+            BUILDER_PATH,
+            COLLECTOR_PATH,
+            VALIDATOR_PATH,
+            VERIFIER_PATH,
+            ANCHOR_UPDATER_PATH,
+            COVERAGE_PATH,
+            KANI_CENSUS_PATH,
+        ):
             self.assertIn(ownership_marker, path.read_text(encoding="utf-8"), path.name)
             self.assertIn(f"`scripts/{path.name}`", plan, path.name)
 
@@ -162,7 +178,10 @@ class EvidenceBuilderTests(unittest.TestCase):
             evidence_dir = Path(directory)
             self.write_fixture_inputs(evidence_dir)
             (evidence_dir / "kani-status.txt").write_text("passed\n", encoding="utf-8")
-            transcript = "\n".join(
+            (evidence_dir / "kani-version.txt").write_text(
+                builder.EXPECTED_KANI_VERSION + "\n", encoding="utf-8"
+            )
+            transcript = "Kani Rust Verifier 0.67.0 (cargo plugin)\n" + "\n".join(
                 f"kani_proofs::{name} SUCCESSFUL"
                 for name in builder.EXPECTED_KANI_HARNESSES
             )
@@ -232,6 +251,70 @@ class EvidenceBuilderTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("collector fail-closed self-test passed", completed.stdout)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_make_graph_requires_real_coverage_kani_and_verification_gates(self) -> None:
+        database = subprocess.run(
+            ["make", "-qp", "-f", str(ROOT / "Makefile")],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        ci_line = next(line for line in database.stdout.splitlines() if line.startswith("ci:"))
+        prerequisites = set(ci_line.removeprefix("ci:").split())
+        self.assertTrue({"coverage", "kani", "verify-evidence"}.issubset(prerequisites))
+
+        with tempfile.TemporaryDirectory() as directory:
+            python_link = Path(directory) / "python3"
+            python_link.symlink_to(sys.executable)
+            environment = os.environ.copy()
+            environment["PATH"] = directory
+            make = shutil.which("make")
+            self.assertIsNotNone(make)
+            unavailable = subprocess.run(
+                [str(make), "-f", str(ROOT / "Makefile"), "kani"],
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertNotEqual(unavailable.returncode, 0)
+        self.assertIn("cargo-kani is required", unavailable.stderr)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_kani_census_and_local_coverage_classifier_are_executable(self) -> None:
+        for path, expected in (
+            (KANI_CENSUS_PATH, "6 declared and trace-bound Kani harnesses"),
+            (COVERAGE_PATH, '"statusLies": 0'),
+        ):
+            completed = subprocess.run(
+                [sys.executable, str(path)],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn(expected, completed.stdout)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_local_coverage_classifier_rejects_unbacked_and_false_missing_rows(self) -> None:
+        report = {
+            "status_lies": [],
+            "totals": {"backed": 1, "total": 1},
+            "unbacked_rows": [],
+        }
+        self.assertEqual(coverage.coverage_contradictions(["✅ Complete"], report), [])
+        self.assertTrue(
+            coverage.coverage_contradictions(["❌ Missing"], report),
+        )
+        report["unbacked_rows"] = [{"id": "FR-001"}]
+        report["totals"] = {"backed": 0, "total": 1}
+        self.assertTrue(
+            coverage.coverage_contradictions(["✅ Complete"], report),
+        )
 
     @staticmethod
     def read_json(path: Path):
@@ -319,6 +402,22 @@ class SchemaValidatorTests(unittest.TestCase):
             rejected = self.run_validator(schema_path, instance_path)
             self.assertEqual(rejected.returncode, 1, rejected.stderr)
 
+    def test_validator_rejects_an_undeclared_format_checker(self) -> None:
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "string",
+            "format": "runtime-format-with-no-checker",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            schema_path = root / "schema.json"
+            instance_path = root / "instance.json"
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+            instance_path.write_text('"value"', encoding="utf-8")
+            rejected = self.run_validator(schema_path, instance_path)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("format checkers are unavailable", rejected.stderr)
+
     @staticmethod
     def run_validator(schema_path: Path, instance_path: Path) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -326,6 +425,77 @@ class SchemaValidatorTests(unittest.TestCase):
             check=False,
             capture_output=True,
             text=True,
+        )
+
+
+class EvidenceVerifierTests(unittest.TestCase):
+    # Trace: TC-007, NFR-002-AC-4
+    def test_checksum_census_rejects_additions_and_listed_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            record = Path(directory) / "runtime-v01-fixture"
+            record.mkdir()
+            retained = record / "retained.txt"
+            retained.write_text("retained\n", encoding="utf-8")
+            (record / "sha256sums.txt").write_text(
+                f"{verifier.sha256_file(retained)}  retained.txt\n", encoding="utf-8"
+            )
+            self.assertEqual(verifier.verify_checksums(record), 1)
+            extra = record / "extra.txt"
+            extra.write_text("extra\n", encoding="utf-8")
+            with self.assertRaisesRegex(verifier.EvidenceError, "checksum census mismatch"):
+                verifier.verify_checksums(record)
+            extra.unlink()
+            target = Path(directory) / "outside.txt"
+            target.write_text("retained\n", encoding="utf-8")
+            retained.unlink()
+            retained.symlink_to(target)
+            with self.assertRaisesRegex(verifier.EvidenceError, "symlink is not allowed"):
+                verifier.verify_checksums(record)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_outcome_census_rejects_an_unknown_retained_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            record = Path(directory)
+            EvidenceBuilderTests.write_fixture_inputs(record)
+            builder.build(record)
+            manifest = EvidenceBuilderTests.read_json(record / "evidence-manifest.json")
+            verifier.verify_outcome_census(record, manifest)
+            (record / "rogue.status.txt").write_text("0\n", encoding="utf-8")
+            with self.assertRaisesRegex(verifier.EvidenceError, "outcome census mismatch"):
+                verifier.verify_outcome_census(record, manifest)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_nonexistent_source_revision_fails_binding(self) -> None:
+        failed = subprocess.CompletedProcess(["git"], 1, b"", b"missing")
+        with mock.patch.object(verifier, "git_result", return_value=failed):
+            with self.assertRaisesRegex(verifier.EvidenceError, "does not exist"):
+                verifier.verify_source_binding("0" * 40)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_unavailable_and_failed_channels_survive_in_status_json(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            status = Path(directory) / "status.json"
+            with mock.patch.object(verifier, "VERIFICATION_STATUS", status):
+                with mock.patch.object(
+                    verifier,
+                    "verify_anchors",
+                    side_effect=verifier.VerificationUnavailable("missing dependency"),
+                ):
+                    self.assertEqual(verifier.main(), 2)
+                    self.assertEqual(json.loads(status.read_text())["status"], "unavailable")
+                with mock.patch.object(
+                    verifier,
+                    "verify_anchors",
+                    side_effect=verifier.EvidenceError("tampered record"),
+                ):
+                    self.assertEqual(verifier.main(), 1)
+                    self.assertEqual(json.loads(status.read_text())["status"], "failed")
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_anchor_file_is_generated_from_the_complete_evidence_census(self) -> None:
+        self.assertEqual(
+            (ROOT / "evidence" / "ANCHORS").read_text(encoding="utf-8"),
+            anchor_updater.rendered_anchors(),
         )
 
 

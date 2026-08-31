@@ -106,7 +106,7 @@ become stale on its own next commit.
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
 | Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/137 production symbols owned; 67 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
-| #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 local result on merged `main` | pass; 5/5 harnesses, 0 failures |
+| #3 Kani harness coverage | six checked-in, trace-censed proofs; pinned Kani 0.67.0 local result | pass; 6/6 harnesses, 0 failures |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
 
@@ -125,7 +125,7 @@ digest `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`.
 
 The following are release/workflow gates, not silently accepted gaps:
 
-1. Pinned Kani 0.67.0 executed all five proofs successfully on merged `main`; the exact transcript,
+1. Pinned Kani 0.67.0 executed all six proofs successfully on the current candidate; the exact transcript,
    zero exit status, and `passed` outcome are retained in the post-merge evidence record. A hosted
    run is deferred rather than represented as complete.
 2. Manual-CI PR #6 is merged. The externally owned manual-only workflow must eventually run on
@@ -243,3 +243,27 @@ harness. The authoritative `runtime-v01-f3f1c28d1703-20260831T174552Z` record bi
 remediation source, retains 26/26 passing outcomes including 6/6 Kani harnesses, and verifies 101
 checksums plus 81 manifest artifacts. Hosted workflow changes remain outside this branch by operator
 direction.
+
+## Post-merge evidence review Round 2 disposition
+
+Round 2 reconfirmed every first-round remediation and identified two new fail-open local gates plus
+twelve hardening findings. They are dispositioned as follows:
+
+| Review finding | Disposition |
+|---|---|
+| FND-101 | `make kani` now fails nonzero when `cargo-kani` is absent. Its prerequisite first checks the exact declared harness census, so a green `make ci` means Kani was available and executed. |
+| FND-102 | `scripts/check_coverage_status.py` owns the installed module's `Status` versus schema-valid `Coverage Status` compatibility seam. It consumes strict JSON, requires every functional row and report row to be fully backed/complete, and rejects ignored trace-bearing tests. The retained transcript reports this local classification instead of recording the upstream skipped classifier as passed. |
+| FND-103 / FND-112 | `scripts/check_kani_harnesses.py` requires the exact six-function census and a TC-002/TC-003 marker on every proof before Kani runs. Deletion, rename, untraced proof, and unexpected proof all fail the local gate. |
+| FND-104 | `scripts/update_evidence_anchors.py` deterministically regenerates the complete anchor census; the human operation is review of its diff, not digest transcription. A regression test requires the committed file to equal generated output. |
+| FND-105 | Verifier tests now execute checksum and symlink rejection, anchor generation, outcome census, revision binding, and distinct unavailable/failed channels instead of checking only for an ownership marker. |
+| FND-106 | The verifier requires the recorded revision to be an existing commit whose complete non-`evidence/` tree equals current `HEAD`, and requires the non-evidence worktree to equal `HEAD`. Evidence-only seal commits remain possible without allowing stale source/spec claims. |
+| FND-107 | Missing schema packages are mapped to `VerificationUnavailable`. The verifier writes `target/evidence-verification-status.json`, preserving passed/failed/unavailable and the original exit code even though GNU Make collapses recipe failures to exit 2. |
+| FND-108 | The weak Makefile substring assertions were removed. Tests interrogate Make's actual `ci` dependency graph and execute `make kani` under a PATH with Python but no `cargo-kani`, proving the gate is wired and fails closed. |
+| FND-109 | The accounting proof now drives the public `CampaignReport::record_verdict` and `record_discard` paths from symbolic near-overflow counts and independently asserts all five saturating increments plus the saturating total. |
+| FND-110 | Every checksummed record member is rejected if it is a symlink, matching the recursive tree-anchor rule. |
+| FND-111 | Current proof-count statements now say six; older 5/5 statements are explicitly historical records. |
+| FND-113 | The validator recursively inventories every `format` used by the supplied schema and refuses validation when any checker is absent; an unknown-format regression test holds the rule. |
+| FND-114 | The verifier independently reconciles retained numeric/availability status names, the declared command census, and manifest outcome names before re-deriving values. Exact Kani 0.67.0 identity is required. The remaining absence of an externally signed runner attestation is stated as a limitation rather than inferred from self-authored transcripts. |
+
+The branch continues to avoid hosted workflow edits and dispatches. Human release authority remains
+outside this evidence remediation.
