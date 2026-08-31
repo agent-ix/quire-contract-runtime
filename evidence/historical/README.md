@@ -10,3 +10,10 @@ Rust 1.75 and then allowed `rust-toolchain.toml` to override it; reproducing the
 `E0658` errors in `src/accounting.rs`. The retained `kani_0_67_0` result is historical evidence only
 for its own revision. The later runtime head and its manual-CI stack require a fresh, deliberately
 dispatched run before review or merge.
+
+`runtime-v01-aca8fe85025b-20260831T014740Z/` is an intentionally retained failed collection. Its
+custom PGM validator exited 2 because the pinned RFC 3339 format validator was unavailable, but the
+then-current producer omitted post-build validators from its outcome set and therefore emitted an
+incorrect all-executed-pass summary. It is quarantined here as contradictory historical evidence.
+The defect was corrected before the succeeding current-candidate record, which derives all validator
+outcomes from retained numeric exit statuses.
