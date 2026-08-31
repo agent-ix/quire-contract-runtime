@@ -13,25 +13,29 @@ relationships:
 ## Description
 
 Verify the default linked boundary remains dependency-free and unsafe-free, the Rust 1.75
-`thumbv7em-none-eabi` footprint consumer remains within 4 KiB of linked `.text` plus `.rodata`, and
-publication and dual-license controls remain explicit. Verify the evidence toolchain binds the
-vendored PGM-01 schema to the recorded revision/digest and preserves semantic envelope identities.
+`thumbv7em-none-eabi` footprint consumer remains between the 500-byte population floor and 4 KiB
+ceiling for linked `.text` plus `.rodata`, retains no runtime/harness panic-path reference, and publication and dual-license
+controls remain explicit. Verify the evidence toolchain binds the vendored PGM-01 schema to the
+recorded revision/digest and preserves semantic envelope identities.
 
 ## Test Procedure
 
 Run `make ci`. Inspect the `tc_007_release_controls_are_mandatory` result, default dependency tree,
 unsafe audit, `cargo deny` result, and the enforced release-size output retained by MP-001.
 The source-policy test parses the footprint harness and requires actual calls to every constructor,
-both accounting mutations, and every operator family; it also parses the accounting module and
-constrains its complete public surface and inherent implementations.
+both accounting mutations, and every operator family. A footprint-crate unit test executes that
+population at two fixed inputs and compares exact results. The source-policy test also recursively
+parses every shipped runtime source file and constrains accounting inherent and trait implementations,
+private aliases, cross-file functions, and macros that could add a reset seam.
 Python unit tests assemble a fixture evidence bundle, verify its digests, roles, extension block,
 and schema pin, exercise accepted/rejected local validation, and reject a mismatched PGM schema pin.
 
 ## Expected Results
 
-The source policy test passes, the default normal dependency count and unsafe-block count are zero,
-the license and publication gates pass, and `scripts/check_linked_footprint.sh` exits successfully
-only when the fixed-target runtime/harness sections are no larger than 4,096 bytes. The rlib byte
+The source policy and footprint semantic tests pass, the default normal dependency count and
+unsafe-block count are zero, the license and publication gates pass, and
+`scripts/check_linked_footprint.sh` exits successfully only when the fixed-target runtime/harness
+sections are at least 500 and no larger than 4,096 bytes and no runtime/harness panic-path reference is linked. The rlib byte
 count is retained separately as an unenforced compiler-sensitive observation.
 The evidence builder fails before emitting an envelope if the vendored PGM schema differs from the
 pinned digest, and the planning copies of the revision and digest agree with the executable pin.

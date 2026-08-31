@@ -20,11 +20,14 @@ silently exhaustively match public data enums that may gain future states.
 ## Test Procedure
 
 Run the `tc_008_evidence_model_is_non_exhaustive_and_opaque` source-policy test and all five
-compile-fail doctests attached to the public non-exhaustive enums. Inspect the generated public API
-documentation with warnings denied.
+compile-fail doctests attached to the public non-exhaustive enums. The source-policy test recursively
+parses every shipped runtime source file and fails on extra accounting inherent blocks (including
+private-alias and cross-file blocks), extra trait implementations, extra public functions mentioning
+the accounting types, or unexpected macros. Inspect the generated public API documentation with
+warnings denied.
 
 ## Expected Results
 
-All report and counter fields remain private, read-only accessors expose complete counts, and every
-downstream exhaustive match is rejected by the compiler because each governed enum is
-`#[non_exhaustive]`.
+All report and counter fields remain private, read-only accessors expose complete counts, no
+crate-provided public API outside the reviewed adapter can reset those types, and every downstream
+exhaustive match is rejected by the compiler because each governed enum is `#[non_exhaustive]`.

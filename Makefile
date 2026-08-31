@@ -58,8 +58,8 @@ test-features:
 
 .PHONY: doc
 doc:
-	$(CARGO) doc -p quire-contract-runtime --all-features --no-deps
-	$(CARGO) doc -p quire-contract-runtime-footprint --no-deps --target $(FOOTPRINT_TARGET)
+	RUSTDOCFLAGS=-Dwarnings $(CARGO) doc -p quire-contract-runtime --all-features --no-deps
+	RUSTDOCFLAGS=-Dwarnings $(CARGO) doc -p quire-contract-runtime-footprint --no-deps --target $(FOOTPRINT_TARGET)
 
 .PHONY: build
 build:
@@ -112,4 +112,4 @@ evidence-tool:
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check spec lint test-features msrv size deny audit-unsafe audit-panic evidence-tool
+ci: fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic evidence-tool

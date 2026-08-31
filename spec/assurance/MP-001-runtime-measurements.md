@@ -34,9 +34,12 @@ Boolean truth-table rows; checked integer boundaries; verdict mappings; and acco
 The v0.1 linked-footprint population is versioned with this plan. Its static-library consumer calls
 every public runtime constructor, `CampaignReport::record_verdict`,
 `CampaignReport::record_discard`, and every Boolean, option, index, and checked-integer operator
-family. TC-007 parses the harness and requires those call expressions, so changing the population
-requires an explicit measurement-plan and test update. The harness is a workspace member and uses
-the root release profile (`lto = "thin"`, one codegen unit, and aborting panics), not a private profile.
+family. TC-007 parses the harness and requires those call expressions, executes the population at two
+fixed inputs with exact expected results, and requires the linked artifact to stay above the fixed
+500-byte population floor with no panic-path references from its runtime/harness objects. Changing or making the population unreachable
+therefore requires an explicit measurement-plan and test update. The harness is a workspace member
+and uses the root release profile (`lto = "thin"`, one codegen unit, and aborting panics), not a
+private profile.
 
 ## Collection Procedure
 
@@ -51,6 +54,7 @@ failures and skips rather than deleting them.
 
 A green run supports only the bounded source candidate. A skipped Kani run, absent governance gate,
 or open human review remains an explicit limitation. The representative consumer's runtime/harness
-`.text` plus `.rodata` is compared with the fixed 4 KiB ceiling. The rlib byte count is retained only
+`.text` plus `.rodata` is compared with the fixed 500-byte population floor and 4 KiB ceiling, and
+its runtime/harness objects are rejected if they retain a panic-path reference. The rlib byte count is retained only
 as an observation because it varies with compiler metadata and build paths; neither value is treated
 as whole-application RAM/ROM utilization.

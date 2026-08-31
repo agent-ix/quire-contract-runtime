@@ -1,4 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::path::Path;
 
 use syn::visit::{self, Visit};
 use syn::{Expr, ExprCall, ExprMethodCall, ImplItem, Item, Type, Visibility};
@@ -7,6 +9,7 @@ const CARGO_MANIFEST: &str = include_str!("../Cargo.toml");
 const CRATE_ROOT: &str = include_str!("../src/lib.rs");
 const FOOTPRINT_MANIFEST: &str = include_str!("../measurement/footprint/Cargo.toml");
 const FOOTPRINT_HARNESS: &str = include_str!("../measurement/footprint/src/lib.rs");
+const FOOTPRINT_AUDIT: &str = include_str!("../scripts/check_linked_footprint.sh");
 const MAKEFILE: &str = include_str!("../Makefile");
 
 /// Trace: TC-005, FR-003-AC-2, NFR-001-AC-1, StR-001-VC-2
@@ -26,6 +29,9 @@ fn tc_007_release_controls_are_mandatory() {
     assert!(CARGO_MANIFEST.contains("panic = \"abort\""));
     assert!(!FOOTPRINT_MANIFEST.contains("[profile.release]"));
     assert!(MAKEFILE.contains("python3 -m unittest discover -s tests -p 'test_*.py'"));
+    assert!(FOOTPRINT_AUDIT.contains("readonly minimum_bytes=500"));
+    assert!(FOOTPRINT_AUDIT.contains("section_bytes < minimum_bytes"));
+    assert!(FOOTPRINT_AUDIT.contains("rust_begin_unwind"));
     let footprint_call_set = footprint_calls(FOOTPRINT_HARNESS);
     assert!(!footprint_calls(
         "// operators::checked_add(1, 2);\n\
@@ -105,7 +111,7 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
         );
     }
 
-    let surface = accounting_surface(accounting);
+    let surface = crate_accounting_surface(&runtime_source_files());
     assert_eq!(
         surface.public_items,
         [
@@ -116,6 +122,18 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     );
     assert_eq!(surface.inherent_blocks.get("CampaignCounts"), Some(&1));
     assert_eq!(surface.inherent_blocks.get("CampaignReport"), Some(&1));
+    assert_eq!(
+        surface.trait_impls.get("CampaignCounts"),
+        Some(&vec!["Display".to_owned()])
+    );
+    assert_eq!(
+        surface.trait_impls.get("CampaignReport"),
+        Some(&vec!["Display".to_owned()])
+    );
+    assert_eq!(
+        surface.public_accounting_functions,
+        ["src/proptest_adapter.rs::adapt_recording"]
+    );
     assert_eq!(
         surface.public_methods.get("CampaignCounts"),
         Some(
@@ -146,12 +164,27 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
         )
     );
 
-    let mutation_probe = accounting_surface(
+    assert_eq!(
+        surface.macros,
+        [
+            "src/identity.rs::define:borrowed_id",
+            "src/identity.rs::invoke:borrowed_id",
+            "src/identity.rs::invoke:borrowed_id",
+            "src/identity.rs::invoke:borrowed_id",
+            "src/identity.rs::invoke:borrowed_id",
+            "src/operators.rs::define:checked_integer",
+            "src/operators.rs::invoke:checked_integer",
+        ]
+    );
+
+    let mutation_probe = crate_accounting_surface(&[(
+        "src/accounting.rs".to_owned(),
         "pub struct CampaignReport;\n\
          pub fn restate_census(_: &mut CampaignReport) {}\n\
          impl CampaignReport { pub fn first(&mut self) {} }\n\
-         impl CampaignReport { pub const fn second(&mut self) {} }",
-    );
+         impl CampaignReport { pub const fn second(&mut self) {} }"
+            .to_owned(),
+    )]);
     assert!(mutation_probe
         .public_items
         .contains(&"fn restate_census".to_owned()));
@@ -164,16 +197,47 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
         Some(&vec!["first".to_owned(), "second".to_owned()])
     );
 
-    let macro_probe = accounting_surface(
+    let bypass_probe = crate_accounting_surface(&[
+        (
+            "src/accounting.rs".to_owned(),
+            "pub struct CampaignReport<'a>(&'a ());\n\
+             type Census<'a> = CampaignReport<'a>;\n\
+             impl<'a> CampaignReport<'a> { pub fn first(&mut self) {} }\n\
+             impl<'a> Census<'a> { pub fn alias_set(&mut self) {} }\n\
+             impl crate::verdict::Restate for CampaignReport<'_> { fn restate(&mut self) {} }"
+                .to_owned(),
+        ),
+        (
+            "src/accounting_extra.rs".to_owned(),
+            "impl CampaignReport<'_> { pub fn extra_set(&mut self) {} }".to_owned(),
+        ),
+        (
+            "src/lib.rs".to_owned(),
+            "pub fn restate_census(_: &mut CampaignReport<'_>) {}".to_owned(),
+        ),
+        (
+            "src/verdict.rs".to_owned(),
+            "pub trait Restate { fn restate(&mut self); }".to_owned(),
+        ),
+    ]);
+    assert_eq!(bypass_probe.inherent_blocks.get("CampaignReport"), Some(&3));
+    assert_eq!(
+        bypass_probe.trait_impls.get("CampaignReport"),
+        Some(&vec!["Restate".to_owned()])
+    );
+    assert_eq!(
+        bypass_probe.public_accounting_functions,
+        ["src/lib.rs::restate_census"]
+    );
+
+    let macro_probe = crate_accounting_surface(&[(
+        "src/accounting.rs".to_owned(),
         "macro_rules! census_setter { () => { pub fn set_counts(&mut self) {} } }\n\
          pub struct CampaignReport;\n\
-         impl CampaignReport { census_setter!(); }",
-    );
-    assert!(macro_probe.has_macros);
-    assert!(
-        !surface.has_macros,
-        "accounting surface must not use macros"
-    );
+         impl CampaignReport { census_setter!(); }"
+            .to_owned(),
+    )]);
+    assert!(!macro_probe.macros.is_empty());
 }
 
 fn assert_non_exhaustive(source: &str, declaration: &str, enum_name: &str) -> usize {
@@ -195,82 +259,233 @@ struct AccountingSurface {
     public_items: Vec<String>,
     inherent_blocks: BTreeMap<String, usize>,
     public_methods: BTreeMap<String, Vec<String>>,
-    has_macros: bool,
+    trait_impls: BTreeMap<String, Vec<String>>,
+    public_accounting_functions: Vec<String>,
+    macros: Vec<String>,
 }
 
-fn accounting_surface(source: &str) -> AccountingSurface {
-    let file = syn::parse_file(source).expect("accounting source parses");
+fn runtime_source_files() -> Vec<(String, String)> {
+    fn visit(directory: &Path, files: &mut Vec<(String, String)>) {
+        let mut entries = fs::read_dir(directory)
+            .expect("runtime source directory is readable")
+            .map(|entry| entry.expect("runtime source entry is readable"))
+            .collect::<Vec<_>>();
+        entries.sort_by_key(|entry| entry.path());
+        for entry in entries {
+            let path = entry.path();
+            if path.is_dir() {
+                visit(&path, files);
+            } else if path.extension().and_then(|value| value.to_str()) == Some("rs")
+                && path.file_name().and_then(|value| value.to_str()) != Some("accounting_tests.rs")
+            {
+                let relative = path
+                    .strip_prefix(env!("CARGO_MANIFEST_DIR"))
+                    .expect("runtime source is beneath the manifest")
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                files.push((
+                    relative,
+                    fs::read_to_string(path).expect("runtime source is readable"),
+                ));
+            }
+        }
+    }
+
+    let mut files = Vec::new();
+    visit(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+        &mut files,
+    );
+    files
+}
+
+fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
     let mut public_items = Vec::new();
     let mut inherent_blocks = BTreeMap::new();
     let mut public_methods: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    let mut has_macros = false;
+    let mut trait_impls: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut public_accounting_functions = Vec::new();
+    let mut macros = Vec::new();
+    let mut aliases = BTreeMap::new();
 
-    for item in file.items {
-        match item {
-            Item::Struct(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("struct {}", item.ident));
-            }
-            Item::Fn(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("fn {}", item.sig.ident));
-            }
-            Item::Static(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("static {}", item.ident));
-            }
-            Item::Const(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("const {}", item.ident));
-            }
-            Item::Mod(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("mod {}", item.ident));
-            }
-            Item::Enum(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("enum {}", item.ident));
-            }
-            Item::Type(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("type {}", item.ident));
-            }
-            Item::Trait(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("trait {}", item.ident));
-            }
-            Item::Union(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push(format!("union {}", item.ident));
-            }
-            Item::Use(item) if matches!(item.vis, Visibility::Public(_)) => {
-                public_items.push("use".to_owned());
-            }
-            Item::Macro(_) => has_macros = true,
-            Item::Impl(item) if item.trait_.is_none() => {
-                let Type::Path(self_type) = &*item.self_ty else {
-                    continue;
-                };
-                let Some(segment) = self_type.path.segments.last() else {
-                    continue;
-                };
-                let name = segment.ident.to_string();
-                *inherent_blocks.entry(name.clone()).or_insert(0) += 1;
-                for implementation_item in item.items {
-                    match implementation_item {
-                        ImplItem::Fn(method) => {
-                            if matches!(method.vis, Visibility::Public(_)) {
-                                public_methods
-                                    .entry(name.clone())
-                                    .or_default()
-                                    .push(method.sig.ident.to_string());
-                            }
-                        }
-                        ImplItem::Macro(_) => has_macros = true,
-                        _ => {}
-                    }
+    let parsed = sources
+        .iter()
+        .map(|(path, source)| {
+            (
+                path,
+                syn::parse_file(source)
+                    .unwrap_or_else(|error| panic!("runtime source {path} parses: {error}")),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    for (_, file) in &parsed {
+        for item in &file.items {
+            if let Item::Type(alias) = item {
+                if let Some(target) = type_name(&alias.ty) {
+                    aliases.insert(alias.ident.to_string(), target);
                 }
             }
-            _ => {}
         }
+    }
+
+    for (path, file) in parsed {
+        for item in file.items {
+            match item {
+                Item::Struct(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("struct {}", item.ident));
+                    }
+                }
+                Item::Fn(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("fn {}", item.sig.ident));
+                    }
+                    let mut names = TypeNameCollector::default();
+                    names.visit_signature(&item.sig);
+                    if names.names.contains("CampaignCounts")
+                        || names.names.contains("CampaignReport")
+                    {
+                        public_accounting_functions.push(format!("{path}::{}", item.sig.ident));
+                    }
+                }
+                Item::Static(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("static {}", item.ident));
+                    }
+                }
+                Item::Const(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("const {}", item.ident));
+                    }
+                }
+                Item::Mod(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("mod {}", item.ident));
+                    }
+                }
+                Item::Enum(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("enum {}", item.ident));
+                    }
+                }
+                Item::Type(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("type {}", item.ident));
+                    }
+                }
+                Item::Trait(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("trait {}", item.ident));
+                    }
+                }
+                Item::Union(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push(format!("union {}", item.ident));
+                    }
+                }
+                Item::Use(item) if matches!(item.vis, Visibility::Public(_)) => {
+                    if path.ends_with("accounting.rs") {
+                        public_items.push("use".to_owned());
+                    }
+                }
+                Item::Macro(item) => macros.push(macro_label(path, &item)),
+                Item::Impl(item) => {
+                    let Some(mut name) = type_name(&item.self_ty) else {
+                        continue;
+                    };
+                    let mut seen = BTreeSet::new();
+                    while let Some(target) = aliases.get(&name) {
+                        if !seen.insert(name.clone()) {
+                            break;
+                        }
+                        name.clone_from(target);
+                    }
+                    if name != "CampaignCounts" && name != "CampaignReport" {
+                        continue;
+                    }
+                    if let Some((_, trait_path, _)) = &item.trait_ {
+                        if let Some(trait_name) = trait_path.segments.last() {
+                            trait_impls
+                                .entry(name)
+                                .or_default()
+                                .push(trait_name.ident.to_string());
+                        }
+                        continue;
+                    }
+                    *inherent_blocks.entry(name.clone()).or_insert(0) += 1;
+                    for implementation_item in item.items {
+                        match implementation_item {
+                            ImplItem::Fn(method) => {
+                                if matches!(method.vis, Visibility::Public(_)) {
+                                    public_methods
+                                        .entry(name.clone())
+                                        .or_default()
+                                        .push(method.sig.ident.to_string());
+                                }
+                            }
+                            ImplItem::Macro(item) => {
+                                macros.push(format!(
+                                    "{path}::impl:{}",
+                                    item.mac.path.segments.last().expect("macro path").ident
+                                ));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    public_accounting_functions.sort();
+    macros.sort();
+    for values in trait_impls.values_mut() {
+        values.sort();
     }
 
     AccountingSurface {
         public_items,
         inherent_blocks,
         public_methods,
-        has_macros,
+        trait_impls,
+        public_accounting_functions,
+        macros,
+    }
+}
+
+fn type_name(value: &Type) -> Option<String> {
+    let Type::Path(path) = value else {
+        return None;
+    };
+    path.path
+        .segments
+        .last()
+        .map(|segment| segment.ident.to_string())
+}
+
+fn macro_label(path: &str, item: &syn::ItemMacro) -> String {
+    match &item.ident {
+        Some(name) => format!("{path}::define:{name}"),
+        None => format!(
+            "{path}::invoke:{}",
+            item.mac.path.segments.last().expect("macro path").ident
+        ),
+    }
+}
+
+#[derive(Default)]
+struct TypeNameCollector {
+    names: BTreeSet<String>,
+}
+
+impl<'ast> Visit<'ast> for TypeNameCollector {
+    fn visit_type_path(&mut self, path: &'ast syn::TypePath) {
+        for segment in &path.path.segments {
+            self.names.insert(segment.ident.to_string());
+        }
+        visit::visit_type_path(self, path);
     }
 }
 

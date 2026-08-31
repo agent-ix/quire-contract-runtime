@@ -28,7 +28,7 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 |--------|--------|-----------|--------|
 | Default dependencies | 0 | 0 | compile-time-check |
 | Unsafe blocks | 0 | 0 | inspection |
-| Linked `.text` + `.rodata` | recorded baseline | 4 KiB | performance-benchmarking |
+| Linked `.text` + `.rodata` | 500 B population floor | 4 KiB ceiling | performance-benchmarking |
 | Release rlib bytes | recorded observation | not enforced | performance-benchmarking |
 
 ## Acceptance Criteria
@@ -37,13 +37,13 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 |----|----------|--------------|
 | NFR-001-AC-1 | The default feature profile compiles without `std` and resolves no runtime dependencies. | compile-time-check (TC-005) |
 | NFR-001-AC-2 | Library source contains no `unsafe` block. | Inspection (TC-007) |
-| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` no greater than 4 KiB. | Inspection (TC-007) |
+| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Inspection (TC-007) |
 
 ## Verification
 
-CI checks every declared target and feature at the MSRV, builds the fixed bare-metal footprint
-consumer, runs the unsafe audit, and retains the linked-section, observational rlib, and dependency
-outputs identified by MP-001.
+The local composite gate checks every declared target and feature at the MSRV, builds and tests the
+fixed bare-metal footprint consumer, runs the unsafe and panic audits, and retains the linked-section,
+observational rlib, and dependency outputs identified by MP-001.
 
 ## Dependencies
 
