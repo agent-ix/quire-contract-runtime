@@ -216,7 +216,7 @@ def build(evidence_dir: Path) -> None:
 
     limitations = [
         "PGM-01 candidate is under review and must be reconciled again after merge",
-        "rebased candidate has no deliberately dispatched remote CI run",
+        "current main-based candidate has no deliberately dispatched remote CI run",
         "CODEOWNER approval and the human source-release decision are pending",
     ]
     if kani_status != "passed":
