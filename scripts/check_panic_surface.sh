@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-runtime_pattern='panic!|unreachable!|todo!|unimplemented!|assert!|assert_eq!|assert_ne!|[.]unwrap\(|[.]expect\(|[.]split_at(_mut)?\(|[.]chunks(_mut|_exact|_exact_mut)?\(|[.]windows\(|[.]copy_within\(|[.](copy|clone)_from_slice\(|[.]swap_with_slice\(|[.]rotate_(left|right)\('
+runtime_pattern='panic!|unreachable!|todo!|unimplemented!|assert!|assert_eq!|assert_ne!|[.]unwrap\(|[.]expect\(|[.]split_at(_mut)?\(|[.]r?chunks(_mut|_exact|_exact_mut)?\(|[.]windows\(|[.]copy_within\(|[.]swap\(|[.]step_by\(|[.](copy|clone)_from_slice\(|[.]swap_with_slice\(|[.]rotate_(left|right)\('
 verification_pattern='panic!|unreachable!|todo!|unimplemented!|[.]unwrap\(|[.]expect\('
 if ! command -v grep >/dev/null 2>&1; then
   echo "grep is required for the panic-surface audit" >&2

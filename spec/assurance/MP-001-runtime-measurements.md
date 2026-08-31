@@ -46,7 +46,10 @@ private profile.
 Run `scripts/collect_evidence.sh`. It records source and tool identities, feature-matrix tests, Clippy,
 license and unsafe checks, Kani availability/result, dependency metadata, the Rust 1.75
 `thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
-`evidence/`. The builder derives and verifies the digest of the vendored PGM-01 envelope schema;
+`evidence/`. Every invoked gate retains stdout, stderr, and its numeric exit status; the builder
+derives manifest outcomes from those status records, represents missing records as inconclusive, and
+never manufactures a pass from a command name or transcript text. The builder derives and verifies
+the digest of the vendored PGM-01 envelope schema and the identity of its vendored raw merge commit;
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
 

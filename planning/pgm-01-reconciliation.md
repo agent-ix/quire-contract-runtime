@@ -26,10 +26,11 @@ is not converted into a runtime release claim.
 The merged revision's release-only verifier also matches its unique retained record across 66/66 complete
 HEAD/worktree inputs and 5/5 committed outputs, including the published PGM evidence-manifest schema.
 
-The exact merged schema is vendored at
-`schemas/pgm01-derivation-evidence-envelope-v1.schema.json`. The evidence builder derives its digest,
-fails on disagreement with the executable pin, and TC-007 asserts that the executable revision and
-digest agree with this reconciliation and `planning/gap-analysis.md`.
+The exact merged schema and raw signed Git commit object are vendored at
+`schemas/pgm01-derivation-evidence-envelope-v1.schema.json` and
+`schemas/pgm01-merged-commit.txt`. The evidence builder derives the schema SHA-256 and canonical Git
+commit SHA-1, fails on disagreement with either executable pin, and TC-007 asserts that the executable
+revision and digest agree with this reconciliation and `planning/gap-analysis.md`.
 
 | Policy requirement | Runtime disposition | Evidence or remaining gate |
 |---|---|---|

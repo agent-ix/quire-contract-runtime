@@ -11,7 +11,7 @@ review_set: subset
 
 ## Summary
 
-The runtime requirements and implementation have no unresolved semantic gap after two executed
+The runtime requirements and implementation have no unresolved semantic gap after seven executed
 source-review rounds. The candidate remains gated by current protected checks and review, and the
 human source-release decision.
 
@@ -39,7 +39,7 @@ human source-release decision.
 | FND-010 | Classified reserved `alloc`/`std` rows explicitly as resolver/build compatibility checks. |
 | FND-011 | Added a crate-wide `missing_docs` denial. |
 | GAP-001 | Authored TC-007 and TC-008 with exact procedures and evidence locations. |
-| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 70/129 production symbols are owned, while zero test symbols carry an unbound trace ID. The 59 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
+| GAP-002 | Added requirement implementation bindings and now reports Quire's measures separately: 70/132 production symbols are owned, while zero test symbols carry an unbound trace ID. The 62 deliberately unowned symbols are generated enum variants, macro-expanded trait methods, private helpers, test support, and measurement plumbing. |
 | GAP-003 | Upstream schema/selector contradiction is being corrected by `agent-ix/spec-artifacts-process#77`; this repository retains the structurally valid column until that draft lands. |
 | GAP-004 | Added exact stakeholder and inspection bindings; coverage is now 28/28 with 15/15 Rust candidates tagged and bound. |
 | GAP-005 | Ran the complete local gate on the current source; immutable records intentionally describe their clean parent source revision, and final merge evidence remains a release task. |
@@ -53,7 +53,7 @@ human source-release decision.
 | NEW-001 | Replaced the unsatisfiable rlib ceiling with a representative `no_std` static-library consumer built by Rust 1.75 for `thumbv7em-none-eabi`. The fixed, non-overridable gate measures only runtime/harness `.text` plus `.rodata`: 907 bytes against 4,096. |
 | NEW-002 | Removed the Makefile-text assertion. TC-007's procedure consumes the executed `make ci` output instead of claiming target behavior from a target-name string. |
 | NEW-003 | Annotated the mutable historical README: the retained `msrv_1_75=SUCCESS` is invalidated by the toolchain-precedence defect, while the Kani result applies only to its historical revision. |
-| NEW-004 | Replaced the overstated traceability row with the engine's current 70/129 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
+| NEW-004 | Replaced the overstated traceability row with the engine's current 70/132 production-symbol measure and an explicit classification of deliberately unowned symbol classes. |
 | NEW-005 | Changed `adapt_recording` to return `TestCaseResult`; identity mismatch is now a proptest failure containing expected and observed identities, with a direct regression test. |
 | NEW-006 | Denied Clippy indexing and arithmetic-side-effect lints crate-wide, made indexing use `slice::get`, and extended the fail-closed text audit to verification source while permitting Kani proof assertions. |
 | NEW-007 | Anchored all five enum declarations exactly and asserted distinct `VerdictKind`/`Verdict` offsets. |
@@ -105,7 +105,7 @@ become stale on its own next commit.
 | #3 safe option/index/arithmetic/division helpers | checked sealed trait; boundary/property TC-003 tests | pass |
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
-| Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/129 production symbols owned; 59 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
+| Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/132 production symbols owned; 62 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
@@ -168,3 +168,23 @@ PGM-01 and refreshed evidence. They are dispositioned as follows:
 The style note is also closed by replacing the target-specific `as usize` conversion with explicit
 `usize::try_from` handling. Kani remains truthfully `skipped-unavailable` and is not converted into a
 pass.
+
+## Sixth and seventh re-review disposition
+
+The sixth review was executed against the pointer-only predecessor, so its source findings were
+superseded by the fifth-review fixes. The seventh review executed the current substantive source and
+confirmed that all six previously demonstrated accounting bypasses and both footprint-reachability
+probes now fail. Its remaining findings are dispositioned as follows:
+
+| Review finding | Disposition |
+|---|---|
+| HIGH-1 / FND-101 / FND-103 / FND-104 | The TC-008 census now resolves aliases in function signatures, recognizes reference and compound trait-implementation self types, follows `#[path]` modules outside `src/`, rejects inline modules, and baselines one crate-wide public-item scope. Direct regression probes cover the aliased-function and reference-trait seams. |
+| HIGH-2 / NEW-030 / FND-102 | Every collected command now retains a numeric exit status. The builder derives passed/failed/inconclusive outcomes from those records, makes failed results inconclusive at envelope level, and has a negative regression test proving a failed command cannot produce an all-passed summary. NFR-002-AC-4 and MP-001 explicitly own outcome truthfulness. |
+| Panic denylist residual | The fail-closed source pattern now covers `rchunks`, `swap`, and `step_by` in addition to the linked-artifact panic relocation audit. |
+| PGM-01 revision pin | The signed raw merge commit is vendored and its canonical Git object SHA-1 must equal the executable revision pin; replacing the planning/executable copies with zeros now fails closed. |
+| NEW-031 | Every new envelope discloses that merged PGM-01 used a bounded admin exception without protected checks and that the exception excludes runtime release qualification. |
+| FND-105 | The installed TestMatrix schema requires `Coverage Status` while its coverage selector expects `Status`, so one document cannot satisfy both. The schema-valid header is retained pending upstream `agent-ix/spec-artifacts-process#77`; the unavailable status-classification arm is disclosed, while independent backing reports 28/28 with zero unbacked rows or status lies. |
+| FND-106 | The footprint regression test documents the contribution arithmetic that derives its exact results 6 and 14. |
+
+FND-015 remains externally owned: this branch does not edit or dispatch the manual-only hosted
+workflow. Kani remains truthfully `skipped-unavailable` and is not converted into a pass.

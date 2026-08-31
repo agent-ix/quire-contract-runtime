@@ -1,0 +1,25 @@
+tree 59ed569cc92848d4a5fa96c88916a49abf8a2fbb
+parent 66cb81c0ae0d4f108d2869f521c4f647020bc2bc
+author Peter Krenesky <kreneskyp@gmail.com> 1788135949 -0700
+committer GitHub <noreply@github.com> 1788135949 -0700
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ wsFcBAABCAAQBQJqlMoNCRC1aQ7uu5UhlAAAMRsQAAXu83OQbf7r4XwfwLI72GLC
+ tGhiD5RT4HfwXWSuiSSmP2bF/vKwgkMaGcJj2kFgGWHkAG2O3HkJI10KkIhNusFT
+ yKmvFEiABHoN3IiGNBkpgjDGhl00eQ0hvEoXnZ/6Fb6aG0opnOIPsMDUmtCde3Fb
+ C5iFrwQZPVlGMA8h7eTqxQtj7qDHr9Wo5X74X24IzzxxUnYmbEh3wN3rnd9xvTuA
+ ATF3LRcyepIl+XsVgBPb/cqcbtmlnM1L5oIuChUR65w1uGCC0sBlPbZh9H10yZaT
+ d0qwAJiRYFLtWhcJqyFO8TTF3txpX5VBeCZx515tdVvLRfymufbwzNnOJ7Y2tD+S
+ qxLTc8gntzee693PBATJhkWvkBdY6fdgvO1C9wTu0e9QKu3XvQamwqzTNKU4Pz/8
+ bVlxO/VuxHM3u8JAJ1XcmG/wK4CgARGhej64ByWi5MQbHK92nygO99KuNeNtptP+
+ L1rKRXrYNSe9fEMMk8hV8mdQ+1WbWVybBpTWcbA2INvBtOWRD5Wmagza3v/WQwo4
+ vBxNhrOoXUll3gmWPzVumNXuAYduDhYSC1bb6b2mcrR7iDxgx2uJsI/WvHTzs4uF
+ MuWwkXk8e+Ikrx6Lc8+pFY2nN6WqsSfGcaa1bVIKvZa5T5opvd1fk+Yc3gYUlRYZ
+ Y6nEIyeZNuBoNw4ONlGB
+ =YJit
+ -----END PGP SIGNATURE-----
+ 
+
+Define PGM-01 cross-repository governance (#12)
+
+Reviewed through three ultrareview and four focused passes; all actionable findings remediated. Gap analysis: 4/4 tasks and 28/28 rows. Local release-check and current-main squash simulation passed. CI remains manual-dispatch only and was not dispatched.

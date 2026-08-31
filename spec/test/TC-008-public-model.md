@@ -21,10 +21,11 @@ silently exhaustively match public data enums that may gain future states.
 
 Run the `tc_008_evidence_model_is_non_exhaustive_and_opaque` source-policy test and all five
 compile-fail doctests attached to the public non-exhaustive enums. The source-policy test recursively
-parses every shipped runtime source file and fails on extra accounting inherent blocks (including
-private-alias and cross-file blocks), extra trait implementations, extra public functions mentioning
-the accounting types, or unexpected macros. Inspect the generated public API documentation with
-warnings denied.
+parses every shipped runtime source file, including modules attached by `#[path]`, and fails on any
+crate-level public-surface drift, extra accounting inherent blocks (including private-alias and
+cross-file blocks), extra trait implementations (including reference self types), extra public
+functions mentioning direct or aliased accounting types, or unexpected macros. Inspect the generated
+public API documentation with warnings denied.
 
 ## Expected Results
 
