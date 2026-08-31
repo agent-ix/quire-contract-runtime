@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -70,6 +71,15 @@ def rendered_anchors() -> str:
         if path.is_dir() and path.name.startswith("runtime-v01-"):
             target = path / "sha256sums.txt"
             if not (path / "evidence-envelope.json").is_file() or not target.is_file():
+                tracked = subprocess.run(
+                    ["git", "ls-files", "--", str(path.relative_to(ROOT))],
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                if tracked.returncode == 0 and not tracked.stdout.strip():
+                    continue
                 raise ValueError(f"incomplete authoritative evidence directory: {path}")
             entries.append((target, sha256_file(target)))
         elif path.is_dir():
