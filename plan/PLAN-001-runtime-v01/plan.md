@@ -21,7 +21,7 @@ implementation boundary and belongs to the named human owner.
 
 `Task-001 -> Task-002 -> Task-003 -> Task-004 -> Task-005 -> Task-006`
 
-PGM-01 review and manual-CI PR #6 are external inputs to Task-006, not substitutes for human
+PGM-01 review and the merged manual-CI PR #6 base are external inputs to Task-006, not substitutes for human
 authority.
 
 ## Task File Mapping

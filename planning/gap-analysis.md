@@ -20,7 +20,7 @@ protected checks and review, and the human source-release decision.
 | ID | Severity | Summary | Refs |
 |---|---|---|---|
 | FND-012 | high | PGM-01 review and the final merged identity remain open. | PGM-01, REV-002 |
-| FND-013 | medium | The rebased manual-CI head has no deliberately dispatched protected run. | MP-001, PR #5, PR #6 |
+| FND-013 | medium | The main-based candidate has no deliberately dispatched protected run after manual-CI PR #6 merged. | MP-001, PR #5, PR #6 |
 | FND-014 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
 
 ## Source-review disposition
@@ -109,7 +109,7 @@ following evidence-only commit.
 | Acceptance-criterion traceability | 28/28 rows backed; 14/14 Rust test symbols bound; 66/109 production symbols owned; 43 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
 | #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
-| Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; rebased candidate run | pending deliberate dispatch |
+| Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
 
 ## Gap disposition
 
@@ -126,8 +126,8 @@ The following are release/workflow gates, not silently accepted gaps:
    after the policy merges.
 2. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
    0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
-   rebased candidate requires a fresh manual CI dispatch.
-3. Manual-CI PR #6 must merge, protected checks must pass on the rebased candidate, and protected
+   main-based candidate requires a fresh manual CI dispatch.
+3. Manual-CI PR #6 is merged. Protected checks must pass on the main-based candidate, and protected
    code-owner review must complete on runtime PR #5.
 4. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
