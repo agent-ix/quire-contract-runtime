@@ -11,16 +11,16 @@ review_set: subset
 
 ## Summary
 
-The runtime requirements and implementation have no unresolved semantic gap after nine executed
-source-review rounds. The candidate remains gated by current protected checks and review, and the
-human source-release decision.
+The runtime requirements and implementation have no unresolved semantic gap after ten executed
+source-review rounds. PR #5 is merged at the exact reviewed tree, and every local merged-main gate,
+including pinned Kani 0.67.0, passes. Hosted checks and the human source-release decision remain open.
 
 ## Findings
 
 | ID | Severity | Summary | Refs |
 |---|---|---|---|
-| FND-013 | medium | The main-based candidate has no deliberately dispatched protected run after manual-CI PR #6 merged. | MP-001, PR #5, PR #6 |
-| FND-014 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
+| FND-013 | medium | Merged `main` has no deliberately dispatched hosted run after manual-CI PR #6 merged; hosted CI is explicitly deferred while ticket work continues locally. | MP-001, PR #5, PR #6 |
+| FND-014 | medium | PR #5 was operator-authorized for admin merge after Round 10 cleared every finding; GitHub records no approval, and the human source-release decision remains pending. | AA-001, REV-003 |
 | FND-015 | medium | The manual-only hosted workflow does not yet execute the local rustdoc and evidence-tool gates; its externally owned reconciliation remains pending. | MP-001, PR #5, PR #6 |
 
 ## Source-review disposition
@@ -106,7 +106,7 @@ become stale on its own next commit.
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
 | Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/137 production symbols owned; 67 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
-| #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
+| #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 local result on merged `main` | pass; 5/5 harnesses, 0 failures |
 | Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
 
@@ -125,17 +125,17 @@ digest `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`.
 
 The following are release/workflow gates, not silently accepted gaps:
 
-1. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
-   0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
-   main-based candidate requires a fresh manual CI dispatch.
-2. Manual-CI PR #6 is merged. Protected checks must pass on the main-based candidate, and protected
-   code-owner review must complete on runtime PR #5. The externally owned manual-only workflow must
-   also reconcile the local rustdoc and evidence-tool lanes without restoring automatic triggers.
+1. Pinned Kani 0.67.0 executed all five proofs successfully on merged `main`; the exact transcript,
+   zero exit status, and `passed` outcome are retained in the post-merge evidence record. A hosted
+   run is deferred rather than represented as complete.
+2. Manual-CI PR #6 is merged. The externally owned manual-only workflow must eventually run on
+   merged `main` and reconcile the local rustdoc and evidence-tool lanes without restoring automatic
+   triggers. Round 10 cleared every source finding before the operator-authorized admin merge.
 3. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
 
-Implementation gap-analysis result: **pass, with current protected checks, code-owner review, and
-the human release decision still open**.
+Implementation gap-analysis result: **pass, with hosted checks and the human release decision still
+open**.
 
 ## Fourth re-review disposition
 
@@ -220,3 +220,12 @@ gates under fresh mutations. Its new findings are dispositioned as follows:
 
 Kani remains truthfully `skipped-unavailable`; with FND-301 reconciled, the current source requires a
 deliberate protected run. Task-006 remains an explicitly human-authored release decision.
+
+## Post-merge local evidence disposition
+
+PR #5 was admin-merged at `e360dad8a3e0e54f9b8457ff7f3748be0f2acdb3`, whose Git tree is identical
+to the Round-10-reviewed head. The immutable record
+`evidence/runtime-v01-e360dad8a3e0-20260831T160256Z` binds that exact clean merged revision and
+retains 25/25 passing local outcomes: the full local gate, pinned Kani 0.67.0 with 5/5 harnesses and
+zero failures, and both merged-PGM validators. All 91 retained checksums verify. This closes the
+current-source Kani evidence gap without making a hosted-CI or human-release claim.

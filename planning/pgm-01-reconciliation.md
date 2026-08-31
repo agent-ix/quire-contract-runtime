@@ -41,10 +41,10 @@ revision and digest agree with this reconciliation and `planning/gap-analysis.md
 | PGM-01-R05 clean-room grammar | not applicable: this repository contains no grammar/parser implementation or imported grammar fixtures | repository and provenance inspection |
 | PGM-01-R06 human authority | agent-assisted method and `@kreneskyp` reviewer identity recorded; automation leaves review and release pending | envelope provenance, CODEOWNERS, protected branch |
 | PGM-01-R07 classification | component classified as `linked-runtime`; consuming projects must verify their deployed target | envelope extension and assurance profile |
-| PGM-01-R08 common envelope | JSON envelope uses every required core field and preserves pending local Kani state | exact merged-revision validator output retained with refreshed evidence |
+| PGM-01-R08 common envelope | JSON envelope uses every required core field and preserves the executed local Kani result | exact merged-main validator and Kani output retained with refreshed evidence |
 | PGM-01-R09 retention/release | timestamped manifest records outcomes, artifacts, limitations, and checksums; release decision remains open | evidence bundle and `planning/release-decision.md` |
 | PGM-01-R10 qualification boundary | source release provides support only and confers no project validation, accreditation, or certification | master requirements, assurance artifacts, README |
 
 No runtime semantic API change is required by the merged PGM-01 policy. The pre-PGM ad hoc text envelope
-is replaced by the canonical JSON record. A fresh deliberate remote CI dispatch, CODEOWNER approval,
-and the human source-release decision remain open.
+is replaced by the canonical JSON record. Merged-main local Kani and both policy validators pass; a
+hosted run and the human source-release decision remain open.
