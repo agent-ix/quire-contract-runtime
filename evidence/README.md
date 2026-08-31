@@ -17,10 +17,13 @@ paths, revisions, and digests are retained.
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
 schema formats, artifact links, source identity, and re-derived outcomes. The current authoritative
-record is `runtime-v01-f3f1c28d1703-20260831T174552Z`.
+record is `runtime-v01-cc48ce2ff505-20260831T190534Z`.
 
 Candidate output supports the human release decision described by `spec/assurance/MP-001`; it is not
 itself a release approval.
 
 Failed or superseded records live beneath `evidence/historical/` with an explicit disposition. They
 remain immutable diagnostic records and must not be read as current-candidate assurance evidence.
+The prior `runtime-v01-f3f1c28d1703-20260831T174552Z` record is retained under
+`historical/retired-pre-head-binding/`: its outcomes remain intact, but it predates exact HEAD
+binding and the repository-owned coverage-status classifier introduced by the current record.
