@@ -17,7 +17,7 @@ paths, revisions, and digests are retained.
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
 schema formats, artifact links, source identity, and re-derived outcomes. The current authoritative
-record is `runtime-v01-0f00c43eada0-20260831T230836Z`.
+record is `runtime-v01-c9ec99b6418a-20260831T231052Z`.
 
 Collection verifies a new record directly but does not rewrite `evidence/ANCHORS`. Retiring the old
 record, updating the authoritative record named above, regenerating anchors, and running the full
