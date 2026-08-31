@@ -1,0 +1,338 @@
+{
+  "artifacts": [
+    {
+      "path": "cargo-version.txt",
+      "sha256": "fcfafeedf9e1047337cbc09d4b2279bbf73c68b0230dadfa2551a3122a92fe7c",
+      "size": 336
+    },
+    {
+      "path": "clippy.stderr",
+      "sha256": "da1d9e17c3ba18ca42aa9978f273fa7a985350c9ba5e4203379c3921831705a6",
+      "size": 1047
+    },
+    {
+      "path": "clippy.stdout",
+      "sha256": "eea0c8b2191f4fdab5629b788492437109cfe9434871a35f90b56102a3f4d467",
+      "size": 192
+    },
+    {
+      "path": "default-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "default-dependencies.stdout",
+      "sha256": "152a1a12bb3fba2a97ef8ec6b0e4929fd6f0e153ea3d3de1a59f6dd5f531f6a6",
+      "size": 71
+    },
+    {
+      "path": "deny.stderr",
+      "sha256": "7e28b1654e4414b18b2b72a4396bbd0ff44a10c249c5422a8b41a4c78977f43b",
+      "size": 1364
+    },
+    {
+      "path": "deny.stdout",
+      "sha256": "71dadc8c8978da797b94dc581b666330c737551839c8fc820d7647130930c4b7",
+      "size": 12
+    },
+    {
+      "path": "fmt.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "fmt.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "jsonschema-version.txt",
+      "sha256": "33bdaf9e2d6bcbde2e4e613e865e403f8fe21fc621078d34c30b0bdc7f68d903",
+      "size": 6
+    },
+    {
+      "path": "kani-status.txt",
+      "sha256": "5ce6ae3e95179f7a71f850fa79dad9115cf4c98edbaf4a8ebc58abcddc8c39ff",
+      "size": 20
+    },
+    {
+      "path": "layout.stderr",
+      "sha256": "911326cf1da2c6d7548be59a0b1c6d7494dd4f4c414ac0e71d1f9ec188d2cbaa",
+      "size": 847
+    },
+    {
+      "path": "layout.stdout",
+      "sha256": "792ccd060ef8e3cf3139d6df8c14c6533b9809062b1c28005ee18c84a1db52dc",
+      "size": 118
+    },
+    {
+      "path": "linked-footprint.stderr",
+      "sha256": "dd24cf2f3f0f27d19b17a4a93e0fdf96729faf1fffea9538f6d54f0fe7da201b",
+      "size": 52
+    },
+    {
+      "path": "linked-footprint.stdout",
+      "sha256": "89c050fda455ac6c4c8d96d68989551648aee1d905e708c41922f81220c0764c",
+      "size": 482
+    },
+    {
+      "path": "metadata.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "metadata.stdout",
+      "sha256": "f0a755beda4e1036651be8f812acb597509d52a6435d9a8ebd4dfd13d5f28cc9",
+      "size": 121013
+    },
+    {
+      "path": "msrv-rustc-version.txt",
+      "sha256": "7eab200f5307bd6b0fd9d257e06480351b842c8cbddf2e597103021073b4e6ee",
+      "size": 196
+    },
+    {
+      "path": "msrv.stderr",
+      "sha256": "706428185820f9f1cce4b0744b77c6ac273f13358713a8361f540218bc39514b",
+      "size": 775
+    },
+    {
+      "path": "msrv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "panic-audit.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "panic-audit.stdout",
+      "sha256": "db63285c4097e72b51dac5b0b1cd887e5e61169a32ec0cd6c4d5ba89078de4a0",
+      "size": 52
+    },
+    {
+      "path": "python-version.txt",
+      "sha256": "f6b75e07f1488db28a89724a522725e3e01af3dc78f6fd365f17eb4059e41056",
+      "size": 15
+    },
+    {
+      "path": "quire-provenance.json",
+      "sha256": "6df2f8c787012733dbcaab24f8810dd127a508513ba521a852592539c938ec91",
+      "size": 664
+    },
+    {
+      "path": "quire-validate.stderr",
+      "sha256": "b490d70ffe44774238fa50820f6579c975ca17aecd4f1b03f8b24ad119f724eb",
+      "size": 689
+    },
+    {
+      "path": "quire-validate.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "release-build.stderr",
+      "sha256": "74f63ab1a0de05a01856391628135ef286e045eeed2bdc9b8f046aeee7b272cf",
+      "size": 146
+    },
+    {
+      "path": "release-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "rlib-size-observation.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "rlib-size-observation.stdout",
+      "sha256": "3cce2c5d3e65698dd90e2a1c06525d945db9c0ad899de69f90cde2abbf39d11f",
+      "size": 144
+    },
+    {
+      "path": "rustc-version.txt",
+      "sha256": "a834181975ab3494d51a1a01e4a9d4321fecd674a52e3db3cf93b3b84b6fc2c1",
+      "size": 196
+    },
+    {
+      "path": "rustdoc.stderr",
+      "sha256": "881a778a0adf247b32882b470ad9d25d533c82f31dcf1bdb990666626f7e75e3",
+      "size": 702
+    },
+    {
+      "path": "rustdoc.stdout",
+      "sha256": "aef2b656e872fc4d1d6ae1b3e6adffd2eb0faa27e9c14dd46209d4bd12e14651",
+      "size": 194
+    },
+    {
+      "path": "size-version.txt",
+      "sha256": "d3d27923df552f4580f4b13a788ecbdbbbb0ea1983f756a202351ceb8126958f",
+      "size": 285
+    },
+    {
+      "path": "source-revision.txt",
+      "sha256": "1c4258a22f5366a96e72134e239f4dd2062b7e17dbb2eb5e5b24546f3c73f82a",
+      "size": 41
+    },
+    {
+      "path": "source-state.txt",
+      "sha256": "2e22da2ab13713309ac75219e525b8e06ed02f3f1963b8feef203fa25827f93d",
+      "size": 6
+    },
+    {
+      "path": "test-all.stderr",
+      "sha256": "b7b89abef281f60dc16631e5b923531327bf0cb1eacf86548b9c2c44c8e9f88b",
+      "size": 760
+    },
+    {
+      "path": "test-all.stdout",
+      "sha256": "0fbd91182843d180771c3b22cb900eaa5adf10eeac8d0d01b4456e1ce87db4c3",
+      "size": 1918
+    },
+    {
+      "path": "test-alloc.stderr",
+      "sha256": "24dc79310fdd564d75712363fd1fc36d8bbaf62da8c074e3df89c7532b3bfeec",
+      "size": 760
+    },
+    {
+      "path": "test-alloc.stdout",
+      "sha256": "d60f827d49b920261570bc714582a0fc572cdc6944b38dd90e18750682499980",
+      "size": 1771
+    },
+    {
+      "path": "test-core.stderr",
+      "sha256": "d19bbf93ffd0f47e1eb0ac47ae8bd4fb510025bea41222ebd86469513632eed4",
+      "size": 1361
+    },
+    {
+      "path": "test-core.stdout",
+      "sha256": "7e913555179259ff68caa4e8533adfe90a830deccaf4357d536fb07fad7bba1a",
+      "size": 1771
+    },
+    {
+      "path": "test-footprint.stderr",
+      "sha256": "9a31bdaaf1639c387ec1f0eb957d1ec6225cd00491ad0825cf94871285b77221",
+      "size": 318
+    },
+    {
+      "path": "test-footprint.stdout",
+      "sha256": "06168bac0ebb4cabdd37bfa36325b9a7f7ee814e05355e278965a46601f9745f",
+      "size": 198
+    },
+    {
+      "path": "test-std.stderr",
+      "sha256": "99ee3ac4de8f40600857329870b4d61ea9529af398304ee2f69a9e533af8711c",
+      "size": 760
+    },
+    {
+      "path": "test-std.stdout",
+      "sha256": "66f1a6eaa9530a5e85c65591f3e095a7662753315ae1418ee1e1c565a6ae74ee",
+      "size": 1771
+    },
+    {
+      "path": "unsafe-audit.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "unsafe-audit.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "collectedAt": "2026-08-31T00:54:43Z",
+  "limitations": [
+    "current main-based candidate has no deliberately dispatched remote CI run",
+    "CODEOWNER approval and the human source-release decision are pending",
+    "local Kani status is skipped-unavailable"
+  ],
+  "outcomes": [
+    {
+      "name": "quire-validate",
+      "status": "passed"
+    },
+    {
+      "name": "fmt",
+      "status": "passed"
+    },
+    {
+      "name": "clippy",
+      "status": "passed"
+    },
+    {
+      "name": "test-core",
+      "status": "passed"
+    },
+    {
+      "name": "test-alloc",
+      "status": "passed"
+    },
+    {
+      "name": "test-std",
+      "status": "passed"
+    },
+    {
+      "name": "test-all",
+      "status": "passed"
+    },
+    {
+      "name": "test-footprint",
+      "status": "passed"
+    },
+    {
+      "name": "msrv",
+      "status": "passed"
+    },
+    {
+      "name": "deny",
+      "status": "passed"
+    },
+    {
+      "name": "unsafe-audit",
+      "status": "passed"
+    },
+    {
+      "name": "panic-audit",
+      "status": "passed"
+    },
+    {
+      "name": "metadata",
+      "status": "passed"
+    },
+    {
+      "name": "default-dependencies",
+      "status": "passed"
+    },
+    {
+      "name": "release-build",
+      "status": "passed"
+    },
+    {
+      "name": "layout",
+      "status": "passed"
+    },
+    {
+      "name": "rustdoc",
+      "status": "passed"
+    },
+    {
+      "name": "linked-footprint",
+      "status": "passed"
+    },
+    {
+      "name": "rlib-size-observation",
+      "status": "passed"
+    },
+    {
+      "name": "pgm01-pinned-schema",
+      "status": "passed"
+    },
+    {
+      "name": "kani",
+      "status": "skipped-unavailable"
+    }
+  ],
+  "schemaVersion": "quire.runtime-evidence-manifest/v1",
+  "sourceRevision": "4fc3cfeff00ca3696aa993884924489891100ef8"
+}
