@@ -55,8 +55,8 @@ exact complete-summary count is present, and no failure marker occurs. Its exact
 The collector's local self-test exercises nonzero propagation and checksum fixed-point detection;
 the builder never manufactures a pass from a command name or transcript text. The builder derives and verifies
 the digest of the vendored PGM-01 envelope schema, the byte-identical vendored validator, and the
-identity of its vendored raw merge commit; verification never depends on the collector's temporary
-external-checkout path;
+identity of its vendored raw merge commit and validator Git blob; verification never depends on or
+records the collector's temporary external-checkout path;
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
 
@@ -71,7 +71,8 @@ complete backing, and the absence of ignored trace-bearing tests while the insta
 configures the incompatible `Status` header. `scripts/update_evidence_anchors.py` deterministically
 regenerates the complete anchor census for diff review after collection.
 
-`scripts/check_failure_propagation.py` rejects ambient or in-file Make failure suppression, probes
+`scripts/check_failure_propagation.py` rejects ambient or in-file Make failure suppression,
+including `SHELL`, `.SHELLFLAGS`, `.ONESHELL`, definitions, and target-scoped assignments; it probes
 every mandatory recipe position, and verifies the exact local `cargo`, `python3`, `quire`, and Make
 executables before composite local checks. `scripts/run_kani_gate.py` preserves Kani's numeric result
 and rejects success unless every harness meets its proof-obligation floor; it uses the unavailable
@@ -87,8 +88,9 @@ A present but different local toolchain is verification-unavailable, not evidenc
 binding enumerates ignored and non-ignored untracked paths without consulting `.gitignore`, allowing
 only retained `evidence/` and generated `target/` content. Make and the collector route Python
 bytecode caches beneath `target/` so running the verifier cannot create a new source input.
-Historical disposition sidecars and the
-legacy in-envelope form are parsed and checked against closed shapes by the verifier.
+The historical disposition census covers every retained record exactly once and binds each
+classification to the record's own envelope status. Per-record sidecars and the legacy in-envelope
+form are also parsed and checked against closed shapes by the verifier.
 
 The following design extensions remain explicitly deferred beyond this source candidate: adding a
 second independent Kani-to-coverage semantic oracle (FND-409), embedding self-referential record

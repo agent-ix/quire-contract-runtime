@@ -295,3 +295,26 @@ remediation is:
 Kani 0.67.0 locally verifies all seven proofs with positive per-harness obligation counts. The
 authoritative evidence refresh remains pending until that source-bound transcript is collected. No
 hosted CI was dispatched and no workflow file was changed.
+
+## Post-merge evidence review Round 6 disposition
+
+Round 6 confirmed that all three Round 5 merge blockers were closed and identified one new Make
+control blocker plus ten hardening findings. This remediation clears the complete set:
+
+| Review finding | Disposition |
+|---|---|
+| FND-423 | The static guard rejects `SHELL`, `.SHELLFLAGS`, `.ONESHELL`, definitions, target-scoped controls, and every GNU Make assignment flavor. Literal mutation fixtures exercise each form through the parser and parse-time `ci` boundary. |
+| FND-424 | The evidence-test policy and manifest floor equal the complete 56-test suite, and the suite independently asserts exact equality so future drift fails immediately. |
+| FND-425 | Failure-direction tests directly execute the historical-disposition reader, both independent transcript parsers, rustup resolution, and tool-identity verifier. |
+| FND-426 | Matrix criteria must be nonempty, belong to the row's requirement, and match exact acceptance-criterion definition cells. Missing definitions, mere prose mentions, substring identities, and empty criteria are rejected by staged fixtures. |
+| FND-427 | `evidence/historical/DISPOSITIONS` has set equality with all retained envelope directories and records each envelope status; existing sidecars must agree with its classification. |
+| FND-428 | A missing rustup executable raises `VerificationUnavailable`, with a direct negative test. |
+| FND-429 | Producer invocation is derived solely from the staged record basename and independently checked against `evidence/{record.name}`. Ambient path injection is tested and ignored. |
+| FND-430 | Temporary PGM checkout paths are no longer written to the record or input schema; only source-independent digests, revision, and the repository-relative vendored validator path remain. |
+| FND-431 | The upstream validator Git blob is committed, checked against the exact merged checkout during collection, and re-derived from vendored bytes during verification. |
+| FND-432 | The dead generic evidence-tool corroboration regex is removed; the quantitative parser and exact policy floor are the sole acceptance path. |
+| FND-433 | Tests hollow the shell-gate prober, execute the linked-footprint boundary at 4096/4097 bytes, and prove `target/` remains the only ignored untracked source-binding exception exercised by the fixture. |
+
+The deferred second Kani oracle, AA-001 self-reference, and exhaustive mutation expansion remain
+declared design extensions rather than claims. Hosted CI remained manual-only and was not
+dispatched or edited.

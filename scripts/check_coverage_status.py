@@ -18,6 +18,7 @@ ROOT = Path(os.environ.get("QUIRE_RUNTIME_REPO_ROOT", Path(__file__).resolve().p
 MATRIX = ROOT / "spec" / "test-matrix.md"
 TRACE_ID = re.compile(r"\b(?:TC-\d{3}|(?:N?FR|StR)-\d{3}(?:-(?:AC|VC)-\d+)?)\b")
 TEST_CITATION = re.compile(r"\b(?:TC|SUITE)-\d{3}\b")
+AC_DEFINITION = re.compile(r"(?m)^\|\s*((?:N?FR|StR)-\d{3}-AC-\d+)\s*\|")
 FUNCTION = re.compile(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([a-zA-Z0-9_]+)\s*\(")
 ATTRIBUTE = re.compile(r"#\s*\[(.*?)\]", re.DOTALL)
 EXPECTED_FUNCTIONAL_ROWS = 8
@@ -161,8 +162,15 @@ def functional_rows() -> list[dict[str, str]]:
             for identifier in TRACE_ID.findall(row["criteria"])
             if "-AC-" in identifier
         }
-        if not requirement_files or any(
-            identifier not in requirement_text for identifier in criteria
+        defined_criteria = set(AC_DEFINITION.findall(requirement_text))
+        if (
+            not requirement_files
+            or not criteria
+            or any(
+                not identifier.startswith(f"{row['requirement']}-AC-")
+                for identifier in criteria
+            )
+            or not criteria.issubset(defined_criteria)
         ):
             raise ValueError(
                 f"functional row {row['requirement']} does not resolve against spec/"

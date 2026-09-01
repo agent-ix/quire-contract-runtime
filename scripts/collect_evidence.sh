@@ -84,7 +84,6 @@ if [[ -e "$evidence_dir" ]]; then
   echo "refusing to overwrite staged evidence: $evidence_dir" >&2
   exit 2
 fi
-export QUIRE_EVIDENCE_RECORD_PATH="$final_evidence_dir"
 trusted_home="$(/usr/bin/python3 -c 'import os,pwd; print(pwd.getpwuid(os.getuid()).pw_dir)')"
 export HOME="$trusted_home"
 export CARGO_HOME="$trusted_home/.cargo"
@@ -107,6 +106,11 @@ if [[ -n "$(git -C "$pgm01_repo" status --porcelain --untracked-files=all)" ]]; 
 fi
 if [[ "$(sha256sum "$pgm01_validator_path" | cut -d' ' -f1)" != "$(sha256sum schemas/pgm01-validate-governance.py | cut -d' ' -f1)" ]]; then
   echo "PGM-01 validator differs from the vendored verification copy" >&2
+  exit 2
+fi
+IFS= read -r expected_pgm01_validator_blob <schemas/pgm01-validator-blob.txt
+if [[ "$(git -C "$pgm01_repo" rev-parse HEAD:scripts/validate_governance.py)" != "$expected_pgm01_validator_blob" ]]; then
+  echo "PGM-01 validator blob differs from the committed upstream anchor" >&2
   exit 2
 fi
 if ! python3 -c 'from scripts.validate_json_schema import checked_format_checker; checked_format_checker()' >/dev/null 2>&1; then
@@ -148,9 +152,7 @@ cargo --version --verbose >"$evidence_dir/cargo-version.txt"
 python3 --version >"$evidence_dir/python-version.txt"
 python3 -c 'import jsonschema; print(jsonschema.__version__)' >"$evidence_dir/jsonschema-version.txt"
 python3 -m pip freeze --all >"$evidence_dir/python-packages.txt"
-echo "$pgm01_schema_path" >"$evidence_dir/pgm01-schema-path.txt"
 sha256sum "$pgm01_schema_path" | cut -d' ' -f1 >"$evidence_dir/pgm01-schema-sha256.txt"
-echo "$pgm01_validator_path" >"$evidence_dir/pgm01-validator-path.txt"
 sha256sum "$pgm01_validator_path" | cut -d' ' -f1 >"$evidence_dir/pgm01-validator-sha256.txt"
 git -C "$pgm01_repo" rev-parse HEAD >"$evidence_dir/pgm01-revision.txt"
 quire provenance --pretty >"$evidence_dir/quire-provenance.json"

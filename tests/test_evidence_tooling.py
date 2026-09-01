@@ -81,8 +81,9 @@ class EvidenceBuilderTests(unittest.TestCase):
 
     # Trace: TC-007, NFR-002-AC-4
     def test_behavioral_control_floors_share_one_policy_source(self) -> None:
-        self.assertEqual(builder.MINIMUM_EVIDENCE_TESTS, 44)
-        self.assertEqual(evidence_test_runner.MINIMUM_EVIDENCE_TESTS, 44)
+        suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern="*.py")
+        self.assertEqual(builder.MINIMUM_EVIDENCE_TESTS, suite.countTestCases())
+        self.assertEqual(evidence_test_runner.MINIMUM_EVIDENCE_TESTS, suite.countTestCases())
         self.assertEqual(builder.MINIMUM_KANI_MUTATIONS, 3)
         self.assertEqual(kani_mutations.MINIMUM_KANI_MUTATIONS, 3)
 
@@ -98,6 +99,10 @@ class EvidenceBuilderTests(unittest.TestCase):
         self.assertEqual(
             builder.sha256_file(ROOT / "schemas/pgm01-validate-governance.py"),
             "1c2881d5f8800dab031f6afa26d5ad11f88a5ab42a942bc9fe0c2853b58df2f1",
+        )
+        self.assertEqual(
+            builder.verified_pgm01_validator_blob(),
+            "de474794fbcde1b7b11c1aa1a90e08efb4bc502b",
         )
         for relative_path in (
             "planning/pgm-01-reconciliation.md",
@@ -123,7 +128,11 @@ class EvidenceBuilderTests(unittest.TestCase):
             evidence_dir.mkdir()
             self.write_fixture_inputs(evidence_dir)
 
-            builder.build(evidence_dir)
+            with mock.patch.dict(
+                os.environ,
+                {"QUIRE_EVIDENCE_RECORD_PATH": "/tmp/untrusted-record-path"},
+            ):
+                builder.build(evidence_dir)
 
             collection_input = self.read_json(evidence_dir / "collection-input.json")
             manifest = self.read_json(evidence_dir / "evidence-manifest.json")
@@ -138,6 +147,9 @@ class EvidenceBuilderTests(unittest.TestCase):
                 collection_input["pgm01"]["envelopeSchemaDigest"]["value"],
                 builder.PGM01_ENVELOPE_SCHEMA_DIGEST,
             )
+            self.assertNotIn("schemaPath", collection_input["pgm01"])
+            self.assertFalse((evidence_dir / "pgm01-schema-path.txt").exists())
+            self.assertFalse((evidence_dir / "pgm01-validator-path.txt").exists())
             self.assertEqual(manifest["sourceRevision"], "a" * 40)
             self.assertIn(
                 {"name": "kani", "status": "skipped-unavailable"},
@@ -145,6 +157,10 @@ class EvidenceBuilderTests(unittest.TestCase):
             )
             self.assertEqual(envelope["inputs"][0]["role"], "evidence-collection-input")
             self.assertEqual(envelope["outputs"][0]["role"], "runtime-evidence-manifest")
+            self.assertEqual(
+                envelope["producer"]["invocation"],
+                ["scripts/collect_evidence.sh", "evidence/runtime-v01-fixture"],
+            )
             self.assertEqual(
                 envelope["inputs"][0]["contentDigest"]["value"],
                 builder.sha256_file(evidence_dir / "collection-input.json"),
@@ -348,11 +364,11 @@ class EvidenceBuilderTests(unittest.TestCase):
             )
             self.assertEqual(
                 builder.control_check_counts(evidence_dir),
-                {"evidenceToolTests": 44, "kaniMutations": 3},
+                {"evidenceToolTests": builder.MINIMUM_EVIDENCE_TESTS, "kaniMutations": 3},
             )
             self.assertEqual(
                 verifier.independent_control_check_counts(evidence_dir),
-                {"evidenceToolTests": 44, "kaniMutations": 3},
+                {"evidenceToolTests": builder.MINIMUM_EVIDENCE_TESTS, "kaniMutations": 3},
             )
             (evidence_dir / "kani.stdout").write_text(
                 "verified 3 Kani semantic mutation controls\n"
@@ -363,6 +379,94 @@ class EvidenceBuilderTests(unittest.TestCase):
                 verifier.independent_control_check_counts(evidence_dir)["kaniMutations"],
                 0,
             )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_independent_transcript_parsers_reject_hollow_claims(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            record = Path(directory)
+            for lane, floor in builder.TEST_PASS_FLOORS.items():
+                (record / f"{lane}.stdout").write_text(
+                    f"test result: ok. {floor} passed\n", encoding="utf-8"
+                )
+            self.assertEqual(
+                verifier.independent_test_pass_counts(record), builder.TEST_PASS_FLOORS
+            )
+        transcript = "\n".join(
+            f"Checking harness kani_proofs::{name}...\n"
+            f" ** 0 of {builder.EXPECTED_KANI_CHECK_FLOORS[name]} failed\n"
+            "VERIFICATION:- SUCCESSFUL"
+            for name in builder.EXPECTED_KANI_HARNESSES
+        )
+        self.assertEqual(
+            verifier.independent_kani_proof_checks(transcript),
+            builder.EXPECTED_KANI_CHECK_FLOORS,
+        )
+        self.assertEqual(
+            verifier.independent_kani_proof_checks(
+                transcript.replace("VERIFICATION:- SUCCESSFUL", "", 1)
+            ),
+            {},
+        )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_historical_disposition_census_is_exact_and_status_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            evidence_root = Path(directory) / "evidence"
+            historical = evidence_root / "historical"
+            statuses = {"retired/record-a": "pending", "failed/record-b": "inconclusive"}
+            for relative, status in statuses.items():
+                record = historical / relative
+                record.mkdir(parents=True)
+                (record / "evidence-envelope.json").write_text(
+                    json.dumps({"result": {"status": status}}), encoding="utf-8"
+                )
+            census = historical / "DISPOSITIONS"
+            census.write_text(
+                "superseded-authority pending retired/record-a\n"
+                "failed-collection inconclusive failed/record-b\n",
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.object(verifier, "EVIDENCE_ROOT", evidence_root),
+                mock.patch.object(verifier, "HISTORICAL_DISPOSITIONS", census),
+            ):
+                verifier.verify_historical_dispositions()
+                census.write_text(
+                    "superseded-authority conclusive retired/record-a\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                    verifier.EvidenceError, "disposition census mismatch|status mismatch"
+                ):
+                    verifier.verify_historical_dispositions()
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_tool_identity_helpers_use_unavailable_channel(self) -> None:
+        with mock.patch.object(
+            verifier.subprocess, "run", side_effect=FileNotFoundError("rustup")
+        ):
+            with self.assertRaisesRegex(verifier.VerificationUnavailable, "rustup"):
+                verifier.resolved_rustup_tool(Path("/missing"), "stable", "cargo")
+        tool_names = {
+            "cargo", "cargo-kani", "make", "msrv-rustc",
+            "python", "quire", "rustc", "size",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            collection_input = {
+                "toolDigests": {
+                    name: {"path": "/missing", "digest": {"value": "0" * 64}}
+                    for name in tool_names
+                }
+            }
+            with (
+                mock.patch.object(verifier.pwd, "getpwuid", return_value=mock.Mock(pw_dir=directory)),
+                mock.patch.object(verifier, "resolved_rustup_tool", return_value=home / "missing"),
+            ):
+                with self.assertRaisesRegex(
+                    verifier.VerificationUnavailable, "required tool is unavailable"
+                ):
+                    verifier.verify_tool_identities(home / "record", collection_input)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_parameter_census_includes_all_build_policy_inputs(self) -> None:
@@ -380,7 +484,7 @@ class EvidenceBuilderTests(unittest.TestCase):
     def test_every_declared_command_has_contradiction_markers(self) -> None:
         declared = {name for name, _ in builder.COMMAND_TRANSCRIPTS}
         self.assertEqual(declared, set(builder.PASS_CONTRADICTION_MARKERS))
-        special = {"fmt", "metadata", "kani"}
+        special = {"fmt", "metadata", "kani", "evidence-tool"}
         self.assertEqual(declared - special, set(builder.PASS_CORROBORATION_PATTERNS))
 
     # Trace: TC-007, NFR-002-AC-4
@@ -485,8 +589,84 @@ class EvidenceBuilderTests(unittest.TestCase):
             )
 
     # Trace: TC-007, NFR-002-AC-4
+    def test_make_parse_guard_rejects_shell_control_assignments(self) -> None:
+        original = (ROOT / "Makefile").read_text(encoding="utf-8")
+        mutations = (
+            "SHELL = /usr/bin/true",
+            "SHELL := /usr/bin/true",
+            "SHELL ::= /usr/bin/true",
+            "SHELL :::= /usr/bin/true",
+            "SHELL += /usr/bin/true",
+            "SHELL ?= /usr/bin/true",
+            "SHELL != /usr/bin/true",
+            ".SHELLFLAGS = -c true;",
+            ".ONESHELL:",
+            "test-features: SHELL := /usr/bin/true",
+            "define SHELL\n/usr/bin/true\nendef",
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                with tempfile.TemporaryDirectory() as directory:
+                    makefile = Path(directory) / "Makefile"
+                    makefile.write_text(f"{original}\n{mutation}\n", encoding="utf-8")
+                    errors = failure_propagation.inspect(makefile)
+                    self.assertTrue(
+                        any("make control" in error or "recipe-control" in error for error in errors),
+                        errors,
+                    )
+                    completed = subprocess.run(
+                        ["/usr/bin/make", "-n", "-f", str(makefile), "ci"],
+                        cwd=ROOT,
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                    )
+                    self.assertNotEqual(completed.returncode, 0)
+
+    # Trace: TC-007, NFR-002-AC-4
     def test_shell_gate_failure_direction_probes_are_live(self) -> None:
         self.assertEqual(failure_propagation.inspect_shell_gate_failures(), [])
+        accepted = subprocess.CompletedProcess(["gate"], 0)
+        with mock.patch.object(
+            failure_propagation.subprocess, "run", return_value=accepted
+        ):
+            errors = failure_propagation.inspect_shell_gate_failures()
+        self.assertEqual(len(errors), 2)
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_linked_footprint_gate_enforces_exact_byte_ceiling(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "libquire_contract_runtime_footprint.a"
+            artifact.write_bytes(b"fixture")
+            tools = root / "bin"
+            tools.mkdir()
+            size = tools / "size"
+            objdump = tools / "objdump"
+            objdump.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            objdump.chmod(0o755)
+            environment = os.environ.copy()
+            environment["PATH"] = f"{tools}:/usr/bin:/bin"
+            for measured, expected in ((4096, 0), (4097, 1)):
+                size.write_text(
+                    "#!/usr/bin/env bash\n"
+                    f"printf 'quire_contract_runtime.o   (ex {artifact}):\\n'\n"
+                    f"printf '.text {measured} 0\\n'\n",
+                    encoding="utf-8",
+                )
+                size.chmod(0o755)
+                completed = subprocess.run(
+                    [
+                        "/usr/bin/bash",
+                        str(ROOT / "scripts" / "check_linked_footprint.sh"),
+                        str(artifact),
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                )
+                self.assertEqual(completed.returncode, expected, completed.stderr)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_kani_census_and_local_coverage_classifier_are_executable(self) -> None:
@@ -800,6 +980,64 @@ class EvidenceBuilderTests(unittest.TestCase):
                     coverage.functional_rows()
 
     # Trace: TC-007, NFR-002-AC-4
+    def test_matrix_criteria_resolve_to_exact_acceptance_definitions(self) -> None:
+        original_matrix = (ROOT / "spec" / "test-matrix.md").read_text(encoding="utf-8")
+        original_requirement = (
+            ROOT / "spec" / "functional" / "FR-004-campaign-accounting.md"
+        ).read_text(encoding="utf-8")
+        mutations = (
+            original_requirement.replace(
+                "| FR-004-AC-3 | No public report constructor can omit a metric. | Inspection |",
+                "| FR-004-AC-30 | No public report constructor can omit a metric. | Inspection |",
+            ),
+            original_requirement.replace(
+                "| FR-004-AC-3 | No public report constructor can omit a metric. | Inspection |",
+                "A related note mentions FR-004-AC-3 without defining it.\n",
+            ),
+        )
+        for requirement_text in mutations:
+            with self.subTest(requirement_text=requirement_text[-80:]):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    matrix = root / "spec" / "test-matrix.md"
+                    functional = root / "spec" / "functional"
+                    functional.mkdir(parents=True)
+                    matrix.write_text(original_matrix, encoding="utf-8")
+                    for source in (ROOT / "spec" / "functional").glob("*.md"):
+                        shutil.copy2(source, functional / source.name)
+                    (functional / "FR-004-campaign-accounting.md").write_text(
+                        requirement_text, encoding="utf-8"
+                    )
+                    with (
+                        mock.patch.object(coverage, "ROOT", root),
+                        mock.patch.object(coverage, "MATRIX", matrix),
+                    ):
+                        with self.assertRaisesRegex(
+                            ValueError, "does not resolve against spec/"
+                        ):
+                            coverage.functional_rows()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            matrix = root / "spec" / "test-matrix.md"
+            functional = root / "spec" / "functional"
+            functional.mkdir(parents=True)
+            matrix.write_text(
+                original_matrix.replace(
+                    "| FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |",
+                    "| FR-004 |  | TC-008 | ✅ Complete |",
+                ),
+                encoding="utf-8",
+            )
+            for source in (ROOT / "spec" / "functional").glob("*.md"):
+                shutil.copy2(source, functional / source.name)
+            with (
+                mock.patch.object(coverage, "ROOT", root),
+                mock.patch.object(coverage, "MATRIX", matrix),
+            ):
+                with self.assertRaisesRegex(ValueError, "does not resolve against spec/"):
+                    coverage.functional_rows()
+
+    # Trace: TC-007, NFR-002-AC-4
     def test_coverage_process_finds_cfg_attr_ignore_anywhere_in_repository(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -957,9 +1195,7 @@ class EvidenceBuilderTests(unittest.TestCase):
             "rustc-version.txt": "rustc 1.94.1\nhost: x86_64-unknown-linux-gnu\n",
             "msrv-rustc-version.txt": "rustc 1.75.0\nhost: x86_64-unknown-linux-gnu\n",
             "size-version.txt": "GNU size 2.38\n",
-            "pgm01-schema-path.txt": "/tmp/quire-contract-ir/schemas/derivation-evidence-envelope-v1.schema.json\n",
             "pgm01-schema-sha256.txt": builder.PGM01_ENVELOPE_SCHEMA_DIGEST + "\n",
-            "pgm01-validator-path.txt": "/tmp/quire-contract-ir/scripts/validate_governance.py\n",
             "pgm01-validator-sha256.txt": "b" * 64 + "\n",
             "pgm01-revision.txt": builder.PGM01_CANDIDATE_REVISION + "\n",
         }
@@ -980,7 +1216,7 @@ class EvidenceBuilderTests(unittest.TestCase):
         successful_stdout = {
             "ci-guard": "all 15 mandatory local-check targets propagate failures\n",
             "kani-census": "verified 7 declared and trace-bound Kani harnesses\n",
-            "evidence-tool": "verified 44 evidence-tool behavioral tests\n",
+            "evidence-tool": f"verified {builder.MINIMUM_EVIDENCE_TESTS} evidence-tool behavioral tests\n",
             "quire-validate": "QUIRE_VALIDATION_PASSED\n",
             "clippy": "Finished `dev` profile\n",
             "test-core": "test result: ok. 17 passed\n",
@@ -1098,12 +1334,28 @@ class EvidenceVerifierTests(unittest.TestCase):
     # Trace: TC-007, NFR-002-AC-4
     def test_record_identity_and_conclusive_verdict_are_mandatory(self) -> None:
         record = Path("runtime-v01-aaaaaaaaaaaa-20260831T000000Z")
-        envelope = {"recordId": record.name, "result": {"status": "conclusive"}}
+        envelope = {
+            "recordId": record.name,
+            "producer": {
+                "invocation": ["scripts/collect_evidence.sh", f"evidence/{record.name}"]
+            },
+            "result": {"status": "conclusive"},
+        }
         verifier.verify_record_identity(record, envelope)
         verifier.verify_conclusive_result(record, envelope)
         with self.assertRaisesRegex(verifier.EvidenceError, "record identity mismatch"):
             verifier.verify_record_identity(
                 record, {"recordId": "runtime-v01-clone-20260831T000000Z"}
+            )
+        with self.assertRaisesRegex(verifier.EvidenceError, "invocation mismatch"):
+            verifier.verify_record_identity(
+                record,
+                {
+                    "recordId": record.name,
+                    "producer": {
+                        "invocation": ["scripts/collect_evidence.sh", "/tmp/forged"]
+                    },
+                },
             )
         with self.assertRaisesRegex(verifier.EvidenceError, "not conclusive"):
             verifier.verify_conclusive_result(
@@ -1205,6 +1457,8 @@ class EvidenceVerifierTests(unittest.TestCase):
             with mock.patch.object(verifier, "ROOT", root):
                 with self.assertRaisesRegex(verifier.EvidenceError, "config.toml"):
                     verifier.verify_source_binding(revision)
+                shutil.rmtree(hidden)
+                verifier.verify_source_binding(revision)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_unavailable_and_failed_channels_survive_in_status_json(self) -> None:

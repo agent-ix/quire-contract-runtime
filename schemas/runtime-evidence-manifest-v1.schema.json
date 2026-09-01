@@ -28,7 +28,7 @@
       "additionalProperties": false,
       "required": ["evidenceToolTests", "kaniMutations"],
       "properties": {
-        "evidenceToolTests": {"type": "integer", "minimum": 44},
+        "evidenceToolTests": {"type": "integer", "minimum": 56},
         "kaniMutations": {"type": "integer", "minimum": 3}
       }
     },

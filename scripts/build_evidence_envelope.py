@@ -35,6 +35,7 @@ PGM01_ENVELOPE_SCHEMA = (
     ROOT / "schemas" / "pgm01-derivation-evidence-envelope-v1.schema.json"
 )
 PGM01_COMMIT_OBJECT = ROOT / "schemas" / "pgm01-merged-commit.txt"
+PGM01_VALIDATOR_BLOB = ROOT / "schemas" / "pgm01-validator-blob.txt"
 INPUT_SCHEMA = ROOT / "schemas" / "runtime-evidence-input-v1.schema.json"
 MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
 COLLECTOR = ROOT / "scripts" / "collect_evidence.sh"
@@ -123,7 +124,6 @@ PASS_CONTRADICTION_MARKERS = {
 PASS_CORROBORATION_PATTERNS = {
     "ci-guard": r"all 15 mandatory local-check targets propagate failures",
     "kani-census": r"verified 7 declared and trace-bound Kani harnesses",
-    "evidence-tool": r"verified [1-9][0-9]* evidence-tool behavioral tests",
     "quire-validate": r"(?m)^QUIRE_VALIDATION_PASSED$",
     "clippy": r"Finished `(?:dev|release)` profile",
     "test-core": r"test result: ok\. \d+ passed",
@@ -209,6 +209,13 @@ def sha256_file(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
 
+def git_blob_id(path: Path) -> str:
+    content = path.read_bytes()
+    return hashlib.sha1(
+        f"blob {len(content)}\0".encode() + content, usedforsecurity=False
+    ).hexdigest()
+
+
 def digest(value: str) -> dict[str, str]:
     return {"algorithm": "sha256", "value": value}
 
@@ -239,6 +246,16 @@ def verified_pgm01_revision() -> str:
         raise ValueError(
             "vendored PGM-01 commit identity mismatch: "
             f"expected {PGM01_CANDIDATE_REVISION}, got {actual}"
+        )
+    return actual
+
+
+def verified_pgm01_validator_blob() -> str:
+    expected = PGM01_VALIDATOR_BLOB.read_text(encoding="utf-8").strip()
+    actual = git_blob_id(ROOT / "schemas" / "pgm01-validate-governance.py")
+    if not re.fullmatch(r"[0-9a-f]{40}", expected) or actual != expected:
+        raise ValueError(
+            f"vendored PGM-01 validator blob mismatch: expected {expected}, got {actual}"
         )
     return actual
 
@@ -472,6 +489,7 @@ def hash_parameter_files() -> str:
         MANIFEST_SCHEMA,
         PGM01_ENVELOPE_SCHEMA,
         PGM01_COMMIT_OBJECT,
+        PGM01_VALIDATOR_BLOB,
         ROOT / "schemas" / "pgm01-validate-governance.py",
     )
     state = hashlib.sha256()
@@ -487,6 +505,7 @@ def hash_parameter_files() -> str:
 def build(evidence_dir: Path) -> None:
     pgm01_schema_digest = verified_pgm01_schema_digest()
     verified_pgm01_revision()
+    verified_pgm01_validator_blob()
     evidence_dir = evidence_dir.resolve()
     recorded_pgm01_revision = (evidence_dir / "pgm01-revision.txt").read_text(
         encoding="utf-8"
@@ -504,11 +523,7 @@ def build(evidence_dir: Path) -> None:
             f"external PGM-01 schema mismatch: expected {pgm01_schema_digest}, "
             f"got {recorded_pgm01_schema_digest}"
         )
-    invocation_directory = os.environ.get("QUIRE_EVIDENCE_RECORD_PATH") or (
-        str(evidence_dir.relative_to(ROOT))
-        if evidence_dir.is_relative_to(ROOT)
-        else str(evidence_dir)
-    )
+    invocation_directory = f"evidence/{evidence_dir.name}"
     revision = (evidence_dir / "source-revision.txt").read_text(encoding="utf-8").strip()
     source_state = (evidence_dir / "source-state.txt").read_text(encoding="utf-8").strip()
     metadata = json.loads((evidence_dir / "metadata.stdout").read_text(encoding="utf-8"))
@@ -585,9 +600,6 @@ def build(evidence_dir: Path) -> None:
             "candidateRevision": PGM01_CANDIDATE_REVISION,
             "envelopeSchema": "quire.derivation-evidence/v1",
             "envelopeSchemaDigest": digest(pgm01_schema_digest),
-            "schemaPath": (evidence_dir / "pgm01-schema-path.txt")
-            .read_text(encoding="utf-8")
-            .strip(),
             "schemaDigest": digest(recorded_pgm01_schema_digest),
             "validatorPath": "schemas/pgm01-validate-governance.py",
             "validatorDigest": digest(

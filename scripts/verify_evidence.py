@@ -38,8 +38,11 @@ ROOT = SCRIPTS.parent
 EVIDENCE_ROOT = ROOT / "evidence"
 ANCHORS = EVIDENCE_ROOT / "ANCHORS"
 HISTORY_ANCHORS = EVIDENCE_ROOT / "HISTORY"
+HISTORICAL_DISPOSITIONS = EVIDENCE_ROOT / "historical" / "DISPOSITIONS"
 ENVELOPE_SCHEMA = ROOT / "schemas" / "pgm01-derivation-evidence-envelope-v1.schema.json"
 MANIFEST_SCHEMA = ROOT / "schemas" / "runtime-evidence-manifest-v1.schema.json"
+PGM01_COMMIT_OBJECT = ROOT / "schemas" / "pgm01-merged-commit.txt"
+PGM01_VALIDATOR_BLOB = ROOT / "schemas" / "pgm01-validator-blob.txt"
 VERIFICATION_STATUS = ROOT / "target" / "evidence-verification-status.json"
 CHECKSUM_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
 REVISION = re.compile(r"^[0-9a-f]{40}$")
@@ -103,6 +106,7 @@ PARAMETER_PATHS = (
     "schemas/runtime-evidence-manifest-v1.schema.json",
     "schemas/pgm01-derivation-evidence-envelope-v1.schema.json",
     "schemas/pgm01-merged-commit.txt",
+    "schemas/pgm01-validator-blob.txt",
     "schemas/pgm01-validate-governance.py",
 )
 
@@ -139,11 +143,38 @@ def tree_digest(root: Path) -> str:
 
 
 def verify_historical_dispositions() -> None:
-    """Require every retained disposition to carry an enforced closed shape."""
-    sidecars = sorted((EVIDENCE_ROOT / "historical").rglob("historicalDisposition.json"))
-    if len(sidecars) < 4:
-        raise EvidenceError("historical disposition census regressed")
+    """Require a status-bound disposition for every retained historical record."""
+    records = {
+        path.parent.relative_to(EVIDENCE_ROOT / "historical").as_posix(): path.parent
+        for path in (EVIDENCE_ROOT / "historical").rglob("evidence-envelope.json")
+    }
+    dispositions: dict[str, tuple[str, str]] = {}
+    for number, line in enumerate(
+        HISTORICAL_DISPOSITIONS.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split(" ", 2)
+        if len(fields) != 3 or fields[2] in dispositions:
+            raise EvidenceError(f"invalid historical disposition census line {number}")
+        classification, envelope_status, relative = fields
+        dispositions[relative] = (classification, envelope_status)
+    if set(dispositions) != set(records):
+        raise EvidenceError(
+            "historical disposition census mismatch: "
+            f"missing={sorted(set(records) - set(dispositions))}, "
+            f"extra={sorted(set(dispositions) - set(records))}"
+        )
     allowed = {"failed-collection", "superseded-authority"}
+    for relative, record in records.items():
+        classification, envelope_status = dispositions[relative]
+        observed_status = load_json(record / "evidence-envelope.json").get(
+            "result", {}
+        ).get("status")
+        if classification not in allowed or envelope_status != observed_status:
+            raise EvidenceError(f"historical disposition/status mismatch: {relative}")
+
+    sidecars = sorted((EVIDENCE_ROOT / "historical").rglob("historicalDisposition.json"))
     for path in sidecars:
         value = load_json(path)
         if (
@@ -156,6 +187,9 @@ def verify_historical_dispositions() -> None:
             or not value["reviewFinding"]
         ):
             raise EvidenceError(f"invalid historical disposition: {path.relative_to(ROOT)}")
+        relative = path.parent.relative_to(EVIDENCE_ROOT / "historical").as_posix()
+        if dispositions.get(relative, (None, None))[0] != value["classification"]:
+            raise EvidenceError(f"historical sidecar disagrees with census: {relative}")
     for path in sorted((EVIDENCE_ROOT / "historical").rglob("evidence-envelope.json")):
         envelope = load_json(path)
         disposition = (
@@ -275,6 +309,9 @@ def verify_envelope_links(record: Path, envelope: dict[str, Any]) -> None:
 def verify_record_identity(record: Path, envelope: dict[str, Any]) -> None:
     if envelope.get("recordId") != record.name or AUTHORITATIVE_RECORD.fullmatch(record.name) is None:
         raise EvidenceError(f"record identity mismatch in {record.name}")
+    expected_invocation = ["scripts/collect_evidence.sh", f"evidence/{record.name}"]
+    if envelope.get("producer", {}).get("invocation") != expected_invocation:
+        raise EvidenceError(f"collector invocation mismatch in {record.name}")
 
 
 def verify_conclusive_result(record: Path, envelope: dict[str, Any]) -> None:
@@ -358,18 +395,21 @@ def verify_source_binding(revision: str) -> None:
 
 
 def resolved_rustup_tool(home: Path, toolchain: str, binary: str) -> Path:
-    completed = subprocess.run(
-        [
-            str(home / ".cargo/bin/rustup"),
-            "which",
-            "--toolchain",
-            toolchain,
-            binary,
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            [
+                str(home / ".cargo/bin/rustup"),
+                "which",
+                "--toolchain",
+                toolchain,
+                binary,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as error:
+        raise VerificationUnavailable("rustup is unavailable") from error
     path = Path(completed.stdout.strip())
     if completed.returncode != 0 or not path.is_file():
         raise VerificationUnavailable(
@@ -459,10 +499,20 @@ def verify_tool_identities(record: Path, collection_input: dict[str, Any]) -> No
     validator = ROOT / "schemas" / "pgm01-validate-governance.py"
     if sha256_file(validator) != collection_input["pgm01"]["validatorDigest"]["value"]:
         raise EvidenceError(f"PGM-01 validator digest mismatch in {record.name}")
-    if collection_input["pgm01"]["validatorRevision"] != (
-        "7dac9d8c19952412b56a0347387666e2ca81e01d"
-    ):
+    commit_content = PGM01_COMMIT_OBJECT.read_bytes().removesuffix(b"\n")
+    commit_id = hashlib.sha1(
+        f"commit {len(commit_content)}\0".encode() + commit_content,
+        usedforsecurity=False,
+    ).hexdigest()
+    validator_content = validator.read_bytes()
+    validator_blob = hashlib.sha1(
+        f"blob {len(validator_content)}\0".encode() + validator_content,
+        usedforsecurity=False,
+    ).hexdigest()
+    if collection_input["pgm01"]["validatorRevision"] != commit_id:
         raise EvidenceError(f"PGM-01 validator revision mismatch in {record.name}")
+    if validator_blob != PGM01_VALIDATOR_BLOB.read_text(encoding="utf-8").strip():
+        raise EvidenceError(f"PGM-01 validator blob mismatch in {record.name}")
 
 
 def verify_outcome_census(record: Path, manifest: dict[str, Any]) -> None:

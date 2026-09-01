@@ -12,7 +12,8 @@ manifest schemas. The collector requires the exact packages in `requirements-evi
 Draft 7 format validation, and records the Python, package, Rust, and Kani identities. Set
 `PGM01_SCHEMA` to the reviewed IR repository's envelope schema and `PGM01_VALIDATOR` to its
 `scripts/validate_governance.py`; both files must come from the exact merged PGM-01 revision and their
-paths, revisions, and digests are retained.
+revision, digests, and validator Git-blob identity are retained. External checkout paths are
+collection-time inputs and are deliberately absent from the sealed record.
 
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
@@ -33,6 +34,9 @@ itself a release approval.
 
 Failed or superseded records live beneath `evidence/historical/` with an explicit disposition. They
 remain immutable diagnostic records and must not be read as current-candidate assurance evidence.
+`historical/DISPOSITIONS` is an exact census: every retained record has one classification and an
+envelope-status value that the verifier compares with that record's own verdict. Per-record
+sidecars remain additional explanation where present.
 The prior `runtime-v01-f3f1c28d1703-20260831T174552Z` record is retained under
 `historical/retired-pre-head-binding/`: its outcomes remain intact, but it predates exact HEAD
 binding and the repository-owned coverage-status classifier introduced by the current record.
