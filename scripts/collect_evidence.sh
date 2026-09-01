@@ -64,14 +64,14 @@ if [[ "${1:-}" == "--self-test" ]]; then
 fi
 
 if [[ $# -gt 0 ]]; then
-  evidence_dir="$1"
+  final_evidence_dir="$1"
 else
   evidence_revision="$(git rev-parse --short=12 HEAD)"
   evidence_timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  evidence_dir="evidence/runtime-v01-${evidence_revision}-${evidence_timestamp}"
+  final_evidence_dir="evidence/runtime-v01-${evidence_revision}-${evidence_timestamp}"
 fi
-if [[ -e "$evidence_dir" ]]; then
-  echo "refusing to overwrite retained evidence: $evidence_dir" >&2
+if [[ -e "$final_evidence_dir" ]]; then
+  echo "refusing to overwrite retained evidence: $final_evidence_dir" >&2
   exit 2
 fi
 if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
@@ -79,6 +79,12 @@ if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
   exit 2
 fi
 source_state=clean
+evidence_dir="target/evidence-staging/$(basename "$final_evidence_dir")"
+if [[ -e "$evidence_dir" ]]; then
+  echo "refusing to overwrite staged evidence: $evidence_dir" >&2
+  exit 2
+fi
+export QUIRE_EVIDENCE_RECORD_PATH="$final_evidence_dir"
 trusted_home="$(/usr/bin/python3 -c 'import os,pwd; print(pwd.getpwuid(os.getuid()).pw_dir)')"
 export HOME="$trusted_home"
 export CARGO_HOME="$trusted_home/.cargo"
@@ -106,7 +112,7 @@ if ! python3 -c 'from scripts.validate_json_schema import checked_format_checker
   echo "the exact requirements-evidence.txt schema packages are required" >&2
   exit 2
 fi
-mkdir -p "$evidence_dir"
+mkdir -p "$(dirname "$evidence_dir")" "$evidence_dir"
 collection_failed=0
 
 record_tool_identity() {
@@ -232,6 +238,10 @@ fi
 if [[ "$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["result"]["status"])' "$evidence_dir/evidence-envelope.json")" != conclusive ]]; then
   collection_failed=1
 fi
+
+mkdir -p "$(dirname "$final_evidence_dir")"
+mv "$evidence_dir" "$final_evidence_dir"
+evidence_dir="$final_evidence_dir"
 
 if (( collection_failed != 0 )); then
   echo "one or more retained evidence commands failed" >&2

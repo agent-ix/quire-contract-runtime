@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import os
 import platform
 import re
 import sys
@@ -503,7 +504,7 @@ def build(evidence_dir: Path) -> None:
             f"external PGM-01 schema mismatch: expected {pgm01_schema_digest}, "
             f"got {recorded_pgm01_schema_digest}"
         )
-    invocation_directory = (
+    invocation_directory = os.environ.get("QUIRE_EVIDENCE_RECORD_PATH") or (
         str(evidence_dir.relative_to(ROOT))
         if evidence_dir.is_relative_to(ROOT)
         else str(evidence_dir)

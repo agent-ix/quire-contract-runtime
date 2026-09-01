@@ -24,6 +24,9 @@ record, updating the authoritative record named above, regenerating anchors, and
 verifier are explicit review-boundary steps. The anchor updater rejects silent top-level removals,
 and both updater and verifier enforce a digest for every retained historical record through
 `evidence/HISTORY`, in addition to the minimum retained-history census.
+Collection is staged beneath `target/evidence-staging/` and published into `evidence/` only after
+the flat record is sealed, so the evidence-tool census cannot mistake an in-progress record for a
+new authority.
 
 Candidate output supports the human release decision described by `spec/assurance/MP-001`; it is not
 itself a release approval.
@@ -51,3 +54,7 @@ and mutation campaign, per-lane Rust test counts, and per-record history anchors
 `historical/failed-round4-collection/` retains two fail-closed Round 4 collection attempts: one
 observed its own transient staging directory, and one exposed an over-broad transcript
 contradiction marker. Their dispositions and original command results are preserved.
+
+`historical/retired-round5-staging-fix/` retains the first Round 5 attempt. It correctly failed when
+the strengthened anchor updater observed the collector's incomplete top-level record; that failure
+led to the out-of-census staging boundary described above.
