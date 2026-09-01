@@ -74,3 +74,7 @@ beneath `target/`, keeping the ignored-file source-input check strict and self-c
 `historical/retired-round5-review-closure/` retains the preceding authoritative record. It predates
 the portable validator, actual compiler-toolchain digests, retained behavioral-control floors,
 ignored-input enforcement, collector command binding, and enforced historical dispositions.
+
+`historical/retired-round6-pycache-fix/` retains the first Round 6 collection attempt. Every command
+was conclusive, but final source verification correctly rejected Python bytecode generated before
+collection; those caches were moved outside the repository before the clean recollection.

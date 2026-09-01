@@ -1,0 +1,13 @@
+..ASSURANCE_ANCHOR_FAILED: the immediately preceding evidence verification did not pass
+.........COVERAGE_STATUS=unavailable; quire is required for this gate
+......EVIDENCE_TEST_CENSUS_FAILED: cannot discover suite: Start directory is not importable: '/tmp/tmpzaktc_cp/tests'
+.......KANI_MUTATION_FAILED: configured 0 mutations, minimum 3
+..KANI_STATUS=unavailable; trusted cargo and cargo-kani are required for this gate
+..KANI_FAILED: successful process did not meet the harness and proof-obligation floors
+........................runtime evidence verification unavailable: missing dependency
+runtime evidence verification failed: tampered record
+....
+----------------------------------------------------------------------
+Ran 56 tests in 2.356s
+
+OK

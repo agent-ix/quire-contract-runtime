@@ -1,0 +1,100 @@
+{
+  "backend": {
+    "kind": "none",
+    "reason": "deterministic evidence packaging; invoked tools are identified in the input and manifest"
+  },
+  "environment": {
+    "dependenciesDigest": {
+      "algorithm": "sha256",
+      "value": "541abe5aa11e65b260d191ec24d9b2592099f5071c865e8a7bccfeb9e5557873"
+    },
+    "operatingSystem": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "targetTriple": "x86_64-unknown-linux-gnu",
+    "toolchain": "rustc 1.94.1 (e408947bf 2026-03-25)"
+  },
+  "extensions": {
+    "dev.agent-ix.runtime": {
+      "componentClass": "linked-runtime",
+      "envelopeSchemaDigest": "0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256",
+      "pgm01CandidateRevision": "7dac9d8c19952412b56a0347387666e2ca81e01d",
+      "reviewState": "pending",
+      "sourceState": "clean"
+    }
+  },
+  "inputs": [
+    {
+      "contentDigest": {
+        "algorithm": "sha256",
+        "value": "9b3ae48f63ba4b7e6ed57fb02fac47ca5d77334a7fa3e06fc32951a93f43d817"
+      },
+      "mediaType": "application/json",
+      "role": "evidence-collection-input",
+      "schema": {
+        "digest": {
+          "algorithm": "sha256",
+          "value": "b72353945f808ea97b8b85ce300675190f6b4435e67d06b7bbca064804140e29"
+        },
+        "id": "quire.runtime-evidence-input",
+        "version": "v1"
+      },
+      "uri": "collection-input.json"
+    }
+  ],
+  "outputs": [
+    {
+      "contentDigest": {
+        "algorithm": "sha256",
+        "value": "e96dcdeaea474038c28829edba082c28447688759b972ccfe0de8277daf57915"
+      },
+      "mediaType": "application/json",
+      "role": "runtime-evidence-manifest",
+      "schema": {
+        "digest": {
+          "algorithm": "sha256",
+          "value": "0f8c78c4fc62dcfd74243f3ce1b901d1731ce4aa563a5112f2404a363d1b7bdd"
+        },
+        "id": "quire.runtime-evidence-manifest",
+        "version": "v1"
+      },
+      "uri": "evidence-manifest.json"
+    }
+  ],
+  "parametersDigest": {
+    "algorithm": "sha256",
+    "value": "a72ffc6c73049a61a218363390d7c40c61b0a3fe59399e6098e3d68574315b59"
+  },
+  "producer": {
+    "executableDigest": {
+      "algorithm": "sha256",
+      "value": "74f645fcf34c5f1020e54559373d2b613a219a6831765a4c9f984009d5dc54bb"
+    },
+    "invocation": [
+      "scripts/collect_evidence.sh",
+      "evidence/runtime-v01-8ed3aa4ba80f-20260901T022646Z"
+    ],
+    "name": "quire-contract-runtime-evidence-collector",
+    "sourceRevision": "8ed3aa4ba80f360eeb36c45f230daffb3a81f171",
+    "version": "0.1.0"
+  },
+  "provenance": {
+    "candidateRevision": "8ed3aa4ba80f360eeb36c45f230daffb3a81f171",
+    "contributionMethod": "agent-assisted",
+    "repository": "https://github.com/agent-ix/quire-contract-runtime",
+    "reviewers": [
+      "@kreneskyp"
+    ],
+    "sourceRevision": "8ed3aa4ba80f360eeb36c45f230daffb3a81f171"
+  },
+  "recordId": "runtime-v01-8ed3aa4ba80f-20260901T022646Z",
+  "recordedAt": "2026-09-01T02:27:14Z",
+  "result": {
+    "requirementRefs": [
+      "PGM-01-R08",
+      "PGM-01-R09",
+      "MP-001"
+    ],
+    "status": "conclusive",
+    "summary": "all retained local runtime checks, including Kani, passed"
+  },
+  "schemaVersion": "quire.derivation-evidence/v1"
+}
