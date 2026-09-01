@@ -42,6 +42,7 @@ SHELL_CONTROL = re.compile(r"&&|\|\||[;|&]")
 MAKEFLAGS_ASSIGNMENT = re.compile(
     r"^\s*(?:(?:export|override)\s+)*MAKEFLAGS\s*(?::|\+|\?)?=\s*(.*)$"
 )
+INCLUDE_DIRECTIVE = re.compile(r"^\s*(?:-?include|sinclude)(?:\s|$)")
 
 
 def trusted_home() -> Path:
@@ -130,6 +131,8 @@ def inspect(makefile: Path) -> list[str]:
     if dependencies.get("kani") != ["kani-census", "kani-mutations"]:
         errors.append("kani must depend exactly on kani-census and kani-mutations")
     for number, line in enumerate(text.splitlines(), start=1):
+        if INCLUDE_DIRECTIVE.match(line):
+            errors.append(f"Makefile:{number} includes unreviewed Make control text")
         if re.match(r"^\s*\.(?:IGNORE|SILENT)\s*(?::|$)", line):
             errors.append(f"Makefile:{number} declares a global recipe-control directive")
         assignment = MAKEFLAGS_ASSIGNMENT.match(line)
@@ -224,6 +227,34 @@ def inspect_toolchain() -> list[str]:
     return errors
 
 
+def inspect_shell_gate_failures() -> list[str]:
+    """Require shell gates to reject known-absent artifact inputs."""
+    probes = {
+        "linked-footprint": [
+            "/usr/bin/bash",
+            "scripts/check_linked_footprint.sh",
+            "/definitely/absent/runtime-footprint.a",
+        ],
+        "rlib-size-observation": [
+            "/usr/bin/bash",
+            "scripts/measure_rlib_size.sh",
+            "/definitely/absent/runtime-rlibs",
+        ],
+    }
+    errors = []
+    for name, command in probes.items():
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if completed.returncode == 0:
+            errors.append(f"{name} shell gate accepted its missing-artifact probe")
+    return errors
+
+
 # Implements: NFR-002
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -241,6 +272,7 @@ def main() -> int:
         errors.extend(inspect_toolchain())
     if not args.inspect_only and not args.static_only and not errors:
         errors.extend(probe_command_positions(args.makefile))
+        errors.extend(inspect_shell_gate_failures())
     for error in errors:
         print(error, file=sys.stderr)
     if errors:

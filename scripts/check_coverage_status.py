@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import pwd
 from pathlib import Path
 
 from check_kani_harnesses import EXPECTED_KANI_HARNESSES, PROOF_FUNCTION
@@ -32,7 +33,8 @@ EXPECTED_FUNCTIONAL_TUPLES = {
     ("FR-004", "FR-004-AC-3", "TC-008"),
 }
 DISABLED_TRACE = re.compile(
-    r"#\s*!?\s*\[\s*cfg(?:_attr)?\s*\([^\]]*\bany\s*\(\s*\)", re.DOTALL
+    r"#\s*!?\s*\[\s*cfg(?:_attr)?\s*\([^\]]*(?:\bany\s*\(\s*\)|\bnot\s*\(\s*all\s*\(\s*\)\s*\))",
+    re.DOTALL,
 )
 
 
@@ -119,13 +121,16 @@ def functional_rows() -> list[dict[str, str]]:
         raise ValueError(
             f"functional coverage row census is {len(rows)}, expected {EXPECTED_FUNCTIONAL_ROWS}"
         )
-    registry_rows = {
-        columns[0]: columns[-1]
+    registry_entries = [
+        (columns[0], columns[-1])
         for line in lines
         if line.startswith("|") and not line.startswith("|---")
         for columns in [[column.strip() for column in line.strip("|").split("|")]]
         if columns and re.fullmatch(r"(?:TC|SUITE)-\d{3}", columns[0])
-    }
+    ]
+    registry_rows = dict(registry_entries)
+    if len(registry_entries) != len(registry_rows):
+        raise ValueError("test registry contains duplicate identifiers")
     if set(registry_rows) != EXPECTED_TEST_IDS or any(
         status != "✅ Complete" for status in registry_rows.values()
     ):
@@ -144,6 +149,23 @@ def functional_rows() -> list[dict[str, str]]:
         if unknown:
             raise ValueError(
                 f"functional row {row['requirement']} cites unknown tests {sorted(unknown)}"
+            )
+        requirement_files = sorted(
+            (ROOT / "spec" / "functional").glob(f"{row['requirement']}-*.md")
+        )
+        requirement_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in requirement_files
+        )
+        criteria = {
+            identifier
+            for identifier in TRACE_ID.findall(row["criteria"])
+            if "-AC-" in identifier
+        }
+        if not requirement_files or any(
+            identifier not in requirement_text for identifier in criteria
+        ):
+            raise ValueError(
+                f"functional row {row['requirement']} does not resolve against spec/"
             )
     observed_tuples = {
         (row["requirement"], row["criteria"], row["tests"]) for row in rows
@@ -216,7 +238,17 @@ def main() -> int:
 
     try:
         completed = subprocess.run(
-            ["quire", "coverage", "--scope", ".", "--json", "--strict"],
+            [
+                str(
+                    Path(pwd.getpwuid(os.getuid()).pw_dir)
+                    / ".npm-global/bin/quire"
+                ),
+                "coverage",
+                "--scope",
+                ".",
+                "--json",
+                "--strict",
+            ],
             cwd=ROOT,
             check=False,
             capture_output=True,

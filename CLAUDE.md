@@ -20,11 +20,13 @@ make deny           # cargo deny check licenses
 make audit-unsafe   # check that every unsafe block has a // SAFETY: comment
 make audit-panic    # reject intentional panic paths
 make coverage       # repository-owned traceability integrity gate
-make kani           # mandatory seven-harness Kani proof gate
+make kani           # mandatory seven-harness proof and mutation gate
+make kani-mutations # require representative injected defects to fail proofs
 make evidence-tool  # local evidence-control regression tests
 make verify-evidence # verify the authoritative retained record
 make assurance-anchor # bind AA-001 claims to the authoritative evidence
 make ci-guard       # prove recipe failure propagation and tool identities
+make update-evidence-anchors # regenerate ANCHORS/HISTORY at the review boundary
 make ci             # all mandatory local gates above; never dispatches hosted CI
 ```
 

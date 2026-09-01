@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -23,6 +24,7 @@ ANCHOR_UPDATER_PATH = ROOT / "scripts" / "update_evidence_anchors.py"
 COVERAGE_PATH = ROOT / "scripts" / "check_coverage_status.py"
 KANI_CENSUS_PATH = ROOT / "scripts" / "check_kani_harnesses.py"
 KANI_MUTATIONS_PATH = ROOT / "scripts" / "check_kani_mutations.py"
+EVIDENCE_POLICY_PATH = ROOT / "scripts" / "evidence_policy.py"
 FAILURE_PROPAGATION_PATH = ROOT / "scripts" / "check_failure_propagation.py"
 KANI_RUNNER_PATH = ROOT / "scripts" / "run_kani_gate.py"
 EVIDENCE_TEST_RUNNER_PATH = ROOT / "scripts" / "run_evidence_tests.py"
@@ -44,6 +46,7 @@ anchor_updater = load_module("runtime_anchor_updater", ANCHOR_UPDATER_PATH)
 coverage = load_module("runtime_coverage_status", COVERAGE_PATH)
 assurance = load_module("runtime_assurance_anchor", ASSURANCE_CHECKER_PATH)
 failure_propagation = load_module("runtime_failure_propagation", FAILURE_PROPAGATION_PATH)
+kani_mutations = load_module("runtime_kani_mutations", KANI_MUTATIONS_PATH)
 kani_runner = load_module("runtime_kani_runner", KANI_RUNNER_PATH)
 evidence_test_runner = load_module("runtime_evidence_test_runner", EVIDENCE_TEST_RUNNER_PATH)
 
@@ -67,6 +70,7 @@ class EvidenceBuilderTests(unittest.TestCase):
             COVERAGE_PATH,
             KANI_CENSUS_PATH,
             KANI_MUTATIONS_PATH,
+            EVIDENCE_POLICY_PATH,
             FAILURE_PROPAGATION_PATH,
             KANI_RUNNER_PATH,
             EVIDENCE_TEST_RUNNER_PATH,
@@ -76,6 +80,13 @@ class EvidenceBuilderTests(unittest.TestCase):
             self.assertIn(f"`scripts/{path.name}`", plan, path.name)
 
     # Trace: TC-007, NFR-002-AC-4
+    def test_behavioral_control_floors_share_one_policy_source(self) -> None:
+        self.assertEqual(builder.MINIMUM_EVIDENCE_TESTS, 44)
+        self.assertEqual(evidence_test_runner.MINIMUM_EVIDENCE_TESTS, 44)
+        self.assertEqual(builder.MINIMUM_KANI_MUTATIONS, 3)
+        self.assertEqual(kani_mutations.MINIMUM_KANI_MUTATIONS, 3)
+
+    # Trace: TC-007, NFR-002-AC-4
     def test_pgm01_pin_matches_vendored_schema_and_planning(self) -> None:
         self.assertEqual(
             builder.verified_pgm01_schema_digest(),
@@ -83,6 +94,10 @@ class EvidenceBuilderTests(unittest.TestCase):
         )
         self.assertEqual(
             builder.verified_pgm01_revision(), builder.PGM01_CANDIDATE_REVISION
+        )
+        self.assertEqual(
+            builder.sha256_file(ROOT / "schemas/pgm01-validate-governance.py"),
+            "1c2881d5f8800dab031f6afa26d5ad11f88a5ab42a942bc9fe0c2853b58df2f1",
         )
         for relative_path in (
             "planning/pgm-01-reconciliation.md",
@@ -229,7 +244,7 @@ class EvidenceBuilderTests(unittest.TestCase):
             self.write_fixture_inputs(evidence_dir)
             (evidence_dir / "kani-status.txt").write_text("passed\n", encoding="utf-8")
             (evidence_dir / "kani-version.txt").write_text(
-                builder.EXPECTED_KANI_VERSION + "\n", encoding="utf-8"
+                builder.EXPECTED_CARGO_KANI_VERSION + "\n", encoding="utf-8"
             )
             transcript = "Kani Rust Verifier 0.67.0 (cargo plugin)\n" + "\n".join(
                 f"Checking harness kani_proofs::{name}...\n"
@@ -241,6 +256,7 @@ class EvidenceBuilderTests(unittest.TestCase):
                 f"\nComplete - {len(builder.EXPECTED_KANI_HARNESSES)} successfully verified "
                 f"harnesses, 0 failures, {len(builder.EXPECTED_KANI_HARNESSES)} total.\n"
             )
+            transcript += "verified 3 Kani semantic mutation controls\n"
             (evidence_dir / "kani.stdout").write_text(transcript, encoding="utf-8")
             outcomes = {item["name"]: item["status"] for item in builder.command_outcomes(evidence_dir)}
             self.assertEqual(outcomes["kani"], "passed")
@@ -260,8 +276,38 @@ class EvidenceBuilderTests(unittest.TestCase):
                 "VERIFICATION:- FAILED\nComplete - 0 successfully verified harnesses, 6 failures, 6 total.\n",
                 encoding="utf-8",
             )
-            outcomes = {item["name"]: item["status"] for item in builder.command_outcomes(evidence_dir)}
+            outcomes = {
+                item["name"]: item["status"]
+                for item in builder.command_outcomes(evidence_dir)
+            }
             self.assertEqual(outcomes["kani"], "failed")
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_kani_mutation_gate_rejects_hollow_census_and_accepted_defect(self) -> None:
+        with mock.patch.object(kani_mutations, "MUTATIONS", ()):
+            self.assertEqual(kani_mutations.main(), 1)
+        relative, old, new, harness = kani_mutations.MUTATIONS[0]
+
+        def fake_copy(destination: Path) -> None:
+            source = destination / relative
+            source.parent.mkdir(parents=True)
+            source.write_text(old, encoding="utf-8")
+
+        accepted = subprocess.CompletedProcess(["cargo", "kani"], 0, "", "")
+        with (
+            mock.patch.object(kani_mutations, "copy_candidate", fake_copy),
+            mock.patch.object(kani_mutations.Path, "is_file", return_value=True),
+            mock.patch.object(kani_mutations.subprocess, "run", return_value=accepted),
+        ):
+            self.assertIn(
+                "accepted the injected defect",
+                kani_mutations.run_mutation(relative, old, new, harness),
+            )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_kani_runner_uses_unavailable_channel_when_tool_is_absent(self) -> None:
+        with mock.patch.object(kani_runner.Path, "is_file", return_value=False):
+            self.assertEqual(kani_runner.main(), 2)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_collector_and_declared_command_sets_agree(self) -> None:
@@ -275,6 +321,48 @@ class EvidenceBuilderTests(unittest.TestCase):
         )
         declared = {transcript for _, transcript in builder.COMMAND_TRANSCRIPTS}
         self.assertEqual(collected, declared)
+        self.assertEqual(
+            builder.collected_commands(),
+            [builder.COLLECTED_COMMANDS[name] for _, name in builder.COMMAND_TRANSCRIPTS],
+        )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_control_counts_are_derived_from_retained_transcripts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            evidence_dir = Path(directory)
+            self.write_fixture_inputs(evidence_dir)
+            (evidence_dir / "kani.stdout").write_text(
+                "verified 3 Kani semantic mutation controls\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                builder.control_check_counts(evidence_dir),
+                {"evidenceToolTests": 44, "kaniMutations": 3},
+            )
+            self.assertEqual(
+                verifier.independent_control_check_counts(evidence_dir),
+                {"evidenceToolTests": 44, "kaniMutations": 3},
+            )
+            (evidence_dir / "kani.stdout").write_text(
+                "verified 3 Kani semantic mutation controls\n"
+                "verified 999 Kani semantic mutation controls\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                verifier.independent_control_check_counts(evidence_dir)["kaniMutations"],
+                0,
+            )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_parameter_census_includes_all_build_policy_inputs(self) -> None:
+        for relative in (
+            "clippy.toml",
+            "deny.toml",
+            "rustfmt.toml",
+            "measurement/footprint/src/population_tests.rs",
+            "examples/layout.rs",
+            "schemas/pgm01-validate-governance.py",
+        ):
+            self.assertIn(relative, verifier.PARAMETER_PATHS)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_every_declared_command_has_contradiction_markers(self) -> None:
@@ -344,10 +432,12 @@ class EvidenceBuilderTests(unittest.TestCase):
 
     # Trace: TC-007, NFR-002-AC-4
     def test_live_kani_gate_rejects_zero_exit_without_proof_floors(self) -> None:
-        hollow = subprocess.CompletedProcess(["cargo", "kani"], 0, "success\n", "")
+        hollow = mock.Mock()
+        hollow.stdout = iter(["success\n"])
+        hollow.wait.return_value = 0
         with (
             mock.patch.object(Path, "is_file", return_value=True),
-            mock.patch.object(kani_runner.subprocess, "run", return_value=hollow),
+            mock.patch.object(kani_runner.subprocess, "Popen", return_value=hollow),
         ):
             self.assertEqual(kani_runner.main(), 1)
 
@@ -372,6 +462,19 @@ class EvidenceBuilderTests(unittest.TestCase):
                 )
                 errors = failure_propagation.inspect(makefile)
             self.assertTrue(any(expected in error for error in errors), errors)
+        with tempfile.TemporaryDirectory() as directory:
+            makefile = Path(directory) / "Makefile"
+            makefile.write_text(original + "\ninclude local.mk\n", encoding="utf-8")
+            self.assertTrue(
+                any(
+                    "includes unreviewed" in error
+                    for error in failure_propagation.inspect(makefile)
+                )
+            )
+
+    # Trace: TC-007, NFR-002-AC-4
+    def test_shell_gate_failure_direction_probes_are_live(self) -> None:
+        self.assertEqual(failure_propagation.inspect_shell_gate_failures(), [])
 
     # Trace: TC-007, NFR-002-AC-4
     def test_kani_census_and_local_coverage_classifier_are_executable(self) -> None:
@@ -608,16 +711,20 @@ class EvidenceBuilderTests(unittest.TestCase):
             matrix = root / "spec" / "test-matrix.md"
             matrix.parent.mkdir(parents=True)
             shutil.copy2(ROOT / "spec" / "test-matrix.md", matrix)
+            shutil.copytree(ROOT / "verification", root / "verification")
+            shutil.copytree(ROOT / "spec" / "functional", root / "spec" / "functional")
+            with (
+                mock.patch.object(coverage, "ROOT", root),
+                mock.patch.object(coverage, "MATRIX", matrix),
+                mock.patch.object(
+                    coverage.subprocess, "run", side_effect=FileNotFoundError
+                ),
+            ):
+                coverage_unavailable_code = coverage.main()
             environment = os.environ.copy()
-            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
-            environment["PATH"] = directory
-            coverage_unavailable = subprocess.run(
-                [sys.executable, str(COVERAGE_PATH)],
-                env=environment,
-                check=False,
-                capture_output=True,
-                text=True,
-            )
+            kani_root = root / "kani-unavailable"
+            kani_root.mkdir()
+            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(kani_root)
             kani_unavailable = subprocess.run(
                 [sys.executable, str(KANI_CENSUS_PATH)],
                 env=environment,
@@ -625,8 +732,7 @@ class EvidenceBuilderTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-        self.assertEqual(coverage_unavailable.returncode, 2)
-        self.assertIn("COVERAGE_STATUS=unavailable", coverage_unavailable.stderr)
+        self.assertEqual(coverage_unavailable_code, 2)
         self.assertEqual(kani_unavailable.returncode, 2)
         self.assertIn("KANI_CENSUS_STATUS=unavailable", kani_unavailable.stderr)
 
@@ -710,7 +816,11 @@ class EvidenceBuilderTests(unittest.TestCase):
 
     # Trace: TC-007, NFR-002-AC-4
     def test_coverage_rejects_cfg_any_and_nested_target_hiding(self) -> None:
-        for relative in ("harness/disabled.rs", "harness/target/disabled.rs"):
+        for relative, attribute in (
+            ("harness/disabled.rs", "#[cfg(any())]"),
+            ("harness/target/disabled.rs", "#[cfg(any())]"),
+            ("harness/not_all.rs", "#[cfg(not(all()))]"),
+        ):
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 matrix = root / "spec" / "test-matrix.md"
@@ -720,7 +830,7 @@ class EvidenceBuilderTests(unittest.TestCase):
                 hidden = root / relative
                 hidden.parent.mkdir(parents=True, exist_ok=True)
                 hidden.write_text(
-                    "// Trace: TC-002\n#[cfg(any())]\n#[test]\nfn tc_002_hidden() {}\n",
+                    f"// Trace: TC-002\n{attribute}\n#[test]\nfn tc_002_hidden() {{}}\n",
                     encoding="utf-8",
                 )
                 environment = os.environ.copy()
@@ -733,7 +843,7 @@ class EvidenceBuilderTests(unittest.TestCase):
                     text=True,
                 )
             self.assertEqual(rejected.returncode, 1)
-            self.assertIn("cfg(any())", rejected.stderr)
+            self.assertIn("disabled cfg", rejected.stderr)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_shell_audits_reject_injected_unsafe_and_panic_surfaces(self) -> None:
@@ -798,26 +908,25 @@ class EvidenceBuilderTests(unittest.TestCase):
             matrix.parent.mkdir(parents=True)
             shutil.copy2(ROOT / "spec" / "test-matrix.md", matrix)
             shutil.copytree(ROOT / "verification", root / "verification")
-            executable = root / "quire"
-            executable.write_text(
-                "#!/bin/sh\n"
-                "echo '{\"unbacked_rows\":[],\"status_lies\":[],"
-                "\"diagnostics\":[],\"totals\":{\"backed\":28,\"total\":28}}'\n",
-                encoding="utf-8",
+            shutil.copytree(ROOT / "spec" / "functional", root / "spec" / "functional")
+            accepted_report = subprocess.CompletedProcess(
+                ["quire"],
+                0,
+                '{"unbacked_rows":[],"status_lies":[],"diagnostics":[],"totals":{"backed":28,"total":28}}',
+                "",
             )
-            executable.chmod(0o755)
-            environment = os.environ.copy()
-            environment["QUIRE_RUNTIME_REPO_ROOT"] = str(root)
-            environment["PATH"] = directory
-            accepted = subprocess.run(
-                [sys.executable, str(COVERAGE_PATH)],
-                env=environment,
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        self.assertEqual(accepted.returncode, 0, accepted.stderr)
-        self.assertIn("COVERAGE_STATUS_NOTICE", accepted.stderr)
+            stderr = io.StringIO()
+            with (
+                mock.patch.object(coverage, "ROOT", root),
+                mock.patch.object(coverage, "MATRIX", matrix),
+                mock.patch.object(
+                    coverage.subprocess, "run", return_value=accepted_report
+                ),
+                mock.patch.object(coverage.sys, "stderr", stderr),
+            ):
+                accepted = coverage.main()
+        self.assertEqual(accepted, 0)
+        self.assertIn("COVERAGE_STATUS_NOTICE", stderr.getvalue())
 
     @staticmethod
     def read_json(path: Path):
@@ -842,7 +951,16 @@ class EvidenceBuilderTests(unittest.TestCase):
             "pgm01-validator-sha256.txt": "b" * 64 + "\n",
             "pgm01-revision.txt": builder.PGM01_CANDIDATE_REVISION + "\n",
         }
-        for name in ("cargo", "cargo-kani", "make", "python", "quire", "rustc", "size"):
+        for name in (
+            "cargo",
+            "cargo-kani",
+            "make",
+            "msrv-rustc",
+            "python",
+            "quire",
+            "rustc",
+            "size",
+        ):
             values[f"{name}-path.txt"] = f"/trusted/{name}\n"
             values[f"{name}-sha256.txt"] = "c" * 64 + "\n"
         for name, value in values.items():

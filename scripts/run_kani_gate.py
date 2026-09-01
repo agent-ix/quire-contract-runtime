@@ -23,11 +23,12 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    completed = subprocess.run(
+    process = subprocess.Popen(
         [str(cargo), "kani"],
-        check=False,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
+        bufsize=1,
         env={
             **os.environ,
             "HOME": str(trusted_home),
@@ -36,11 +37,16 @@ def main() -> int:
             "CARGO_TARGET_DIR": str(Path(__file__).resolve().parent.parent / "target"),
         },
     )
-    sys.stdout.write(completed.stdout)
-    sys.stderr.write(completed.stderr)
-    if completed.returncode != 0:
-        return completed.returncode
-    if not validate_kani_success(completed.stdout + "\n" + completed.stderr):
+    output = []
+    assert process.stdout is not None
+    for line in process.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        output.append(line)
+    returncode = process.wait()
+    if returncode != 0:
+        return returncode
+    if not validate_kani_success("".join(output)):
         print(
             "KANI_FAILED: successful process did not meet the harness and proof-obligation floors",
             file=sys.stderr,

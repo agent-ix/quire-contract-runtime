@@ -7,9 +7,9 @@ import sys
 import unittest
 from pathlib import Path
 
+from evidence_policy import MINIMUM_EVIDENCE_TESTS
 
 ROOT = Path(__file__).resolve().parent.parent
-MINIMUM_EVIDENCE_TESTS = 44
 
 
 # Implements: NFR-002

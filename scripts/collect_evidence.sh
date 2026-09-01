@@ -98,6 +98,10 @@ if [[ -n "$(git -C "$pgm01_repo" status --porcelain --untracked-files=all)" ]]; 
   echo "PGM-01 checkout must be clean" >&2
   exit 2
 fi
+if [[ "$(sha256sum "$pgm01_validator_path" | cut -d' ' -f1)" != "$(sha256sum schemas/pgm01-validate-governance.py | cut -d' ' -f1)" ]]; then
+  echo "PGM-01 validator differs from the vendored verification copy" >&2
+  exit 2
+fi
 if ! python3 -c 'from scripts.validate_json_schema import checked_format_checker; checked_format_checker()' >/dev/null 2>&1; then
   echo "the exact requirements-evidence.txt schema packages are required" >&2
   exit 2
@@ -116,12 +120,16 @@ record_tool_identity() {
   sha256sum "$path" | cut -d' ' -f1 >"$evidence_dir/$name-sha256.txt"
 }
 
-record_tool_identity cargo "$trusted_home/.cargo/bin/cargo"
+stable_cargo="$(rustup which --toolchain stable cargo)"
+stable_rustc="$(rustup which --toolchain stable rustc)"
+msrv_rustc="$(rustup which --toolchain 1.75.0 rustc)"
+record_tool_identity cargo "$stable_cargo"
 record_tool_identity cargo-kani "$trusted_home/.cargo/bin/cargo-kani"
 record_tool_identity make /usr/bin/make
 record_tool_identity python /usr/bin/python3
 record_tool_identity quire "$trusted_home/.npm-global/bin/quire"
-record_tool_identity rustc "$trusted_home/.cargo/bin/rustc"
+record_tool_identity rustc "$stable_rustc"
+record_tool_identity msrv-rustc "$msrv_rustc"
 record_tool_identity size /usr/bin/size
 
 git rev-parse HEAD >"$evidence_dir/source-revision.txt"

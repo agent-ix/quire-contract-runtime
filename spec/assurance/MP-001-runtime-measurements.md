@@ -54,7 +54,9 @@ declared harness is named successful, each harness discharges a positive recorde
 exact complete-summary count is present, and no failure marker occurs. Its exact version is retained.
 The collector's local self-test exercises nonzero propagation and checksum fixed-point detection;
 the builder never manufactures a pass from a command name or transcript text. The builder derives and verifies
-the digest of the vendored PGM-01 envelope schema and the identity of its vendored raw merge commit;
+the digest of the vendored PGM-01 envelope schema, the byte-identical vendored validator, and the
+identity of its vendored raw merge commit; verification never depends on the collector's temporary
+external-checkout path;
 TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
 failures and skips rather than deleting them.
 
@@ -62,6 +64,8 @@ failures and skips rather than deleting them.
 executable census before every Kani run. `scripts/check_kani_mutations.py` injects representative
 Boolean, arithmetic, and accounting defects and requires the owning proofs to reject them. Absence
 of `cargo-kani` is a failed local gate, not a skip.
+The shared quantitative floors for the evidence-tool suite and mutation campaign live in
+`scripts/evidence_policy.py`; both counts are retained in the manifest and independently re-derived.
 `scripts/check_coverage_status.py` independently enforces the schema-valid `Coverage Status` column,
 complete backing, and the absence of ignored trace-bearing tests while the installed module still
 configures the incompatible `Status` header. `scripts/update_evidence_anchors.py` deterministically
@@ -75,6 +79,19 @@ exit channel when the mandatory tool is absent. `scripts/run_evidence_tests.py` 
 behavioral-test census before running the evidence-tool suite.
 `scripts/check_assurance_anchor.py` executes AA-001's declared authoritative-record, outcome-count,
 and conclusive-result binding after evidence verification.
+
+The collector's declared command list is generated in transcript order and bound to every
+`run_and_retain` call site. Stable Cargo/rustc and MSRV rustc digests name the rustup-resolved
+toolchain binaries rather than the rustup shims; the verifier re-executes their version identities.
+A present but different local toolchain is verification-unavailable, not evidence tampering. Source
+binding enumerates ignored and non-ignored untracked paths without consulting `.gitignore`, allowing
+only retained `evidence/` and generated `target/` content. Historical disposition sidecars and the
+legacy in-envelope form are parsed and checked against closed shapes by the verifier.
+
+The following design extensions remain explicitly deferred beyond this source candidate: adding a
+second independent Kani-to-coverage semantic oracle (FND-409), embedding self-referential record
+names and digests in AA-001 (FND-412), and expanding the representative mutation set into exhaustive
+operator/verdict mutation coverage (FND-414). The current controls do not claim those classes closed.
 
 `scripts/verify_evidence.py` independently verifies the committed `evidence/ANCHORS` record-set
 boundary, every flat-record checksum and artifact/link digest, the recursively anchored historical

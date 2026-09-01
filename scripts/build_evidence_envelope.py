@@ -22,6 +22,7 @@ from check_kani_harnesses import (
     proof_check_counts as kani_proof_checks,
     validate_kani_success,
 )
+from evidence_policy import MINIMUM_EVIDENCE_TESTS, MINIMUM_KANI_MUTATIONS
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +49,7 @@ KANI_RUNNER = ROOT / "scripts" / "run_kani_gate.py"
 EVIDENCE_TEST_RUNNER = ROOT / "scripts" / "run_evidence_tests.py"
 ASSURANCE_CHECKER = ROOT / "scripts" / "check_assurance_anchor.py"
 EVIDENCE_REQUIREMENTS = ROOT / "requirements-evidence.txt"
-EXPECTED_KANI_VERSION = "cargo-kani 0.67.0"
+EXPECTED_CARGO_KANI_VERSION = "cargo-kani 0.67.0"
 COMMAND_TRANSCRIPTS = (
     ("ci-guard", "ci-guard"),
     ("kani-census", "kani-census"),
@@ -154,6 +155,49 @@ TEST_PASS_FLOORS = {
     "test-footprint": 1,
 }
 TEST_RESULT = re.compile(r"test result: ok\. ([0-9]+) passed")
+COLLECTED_COMMANDS = {
+    "ci-guard": "python3 scripts/check_failure_propagation.py",
+    "kani-census": "python3 scripts/check_kani_harnesses.py",
+    "evidence-tool": "python3 scripts/run_evidence_tests.py",
+    "quire-validate": "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED",
+    "fmt": "cargo fmt --all -- --check",
+    "clippy": "make lint",
+    "test-core": "cargo test --no-default-features",
+    "test-alloc": "cargo test --features alloc",
+    "test-std": "cargo test --features std",
+    "test-all": "cargo test --all-features",
+    "test-footprint": "cargo test -p quire-contract-runtime-footprint",
+    "msrv": "cargo +1.75.0 check --all-targets --all-features",
+    "deny": "cargo deny check licenses",
+    "unsafe-audit": "bash scripts/check_unsafe_comments.sh",
+    "panic-audit": "bash scripts/check_panic_surface.sh",
+    "metadata": "cargo metadata --format-version 1 --no-default-features",
+    "default-dependencies": "cargo tree --edges normal --no-default-features",
+    "release-build": "cargo build --release --lib --no-default-features",
+    "layout": "cargo run --release --example layout --no-default-features",
+    "rustdoc": "RUSTDOCFLAGS=-Dwarnings make doc",
+    "linked-footprint": "make size",
+    "rlib-size-observation": "bash scripts/measure_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
+    "coverage": "python3 scripts/check_coverage_status.py",
+    "kani": "make kani",
+    "pgm01-pinned-schema": "python3 scripts/validate_json_schema.py schemas/pgm01-derivation-evidence-envelope-v1.schema.json evidence-envelope.json",
+    "input-schema": "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
+    "manifest-schema": "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
+    "pgm01-schema": "python3 scripts/validate_json_schema.py <PGM01_SCHEMA> evidence-envelope.json",
+    "pgm01-envelope": "python3 <PGM01_VALIDATOR> --fixture evidence-envelope.json",
+}
+
+
+def collected_commands() -> list[str]:
+    """Bind the declared command list to the collector's transcript call sites."""
+    names = [transcript for _, transcript in COMMAND_TRANSCRIPTS]
+    if set(names) != set(COLLECTED_COMMANDS):
+        raise ValueError("collector command census differs from transcript census")
+    collector = COLLECTOR.read_text(encoding="utf-8")
+    missing = [name for name in names if f"run_and_retain {name}" not in collector]
+    if missing:
+        raise ValueError(f"collector transcript call sites are missing: {missing}")
+    return [COLLECTED_COMMANDS[name] for name in names]
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -213,7 +257,21 @@ def transcript_corroborates(name: str, stdout: str, stderr: str) -> bool:
             if isinstance(item, dict)
         )
     if name == "kani":
-        return validate_kani_success(stdout + "\n" + stderr)
+        mutation = re.search(
+            r"verified ([0-9]+) Kani semantic mutation controls",
+            stdout + "\n" + stderr,
+        )
+        return (
+            validate_kani_success(stdout + "\n" + stderr)
+            and mutation is not None
+            and int(mutation.group(1)) >= MINIMUM_KANI_MUTATIONS
+        )
+    if name == "evidence-tool":
+        match = re.search(
+            r"verified ([0-9]+) evidence-tool behavioral tests",
+            stdout + "\n" + stderr,
+        )
+        return match is not None and int(match.group(1)) >= MINIMUM_EVIDENCE_TESTS
     if name in TEST_PASS_FLOORS:
         count = sum(
             int(value)
@@ -281,7 +339,7 @@ def command_outcomes(evidence_dir: Path) -> list[dict[str, str]]:
                     elif name == "kani" and (
                         not transcript_corroborates(name, stdout, stderr)
                         or (evidence_dir / "kani-version.txt").read_text(encoding="utf-8").strip()
-                        != EXPECTED_KANI_VERSION
+                        != EXPECTED_CARGO_KANI_VERSION
                     ):
                         status = "failed"
                     elif not transcript_corroborates(name, stdout, stderr):
@@ -306,6 +364,29 @@ def test_pass_counts(evidence_dir: Path) -> dict[str, int]:
         )
         for name, transcript in COMMAND_TRANSCRIPTS
         if name in TEST_PASS_FLOORS
+    }
+
+
+def control_check_counts(evidence_dir: Path) -> dict[str, int]:
+    """Derive behavioral control counts from retained command transcripts."""
+    evidence_text = (evidence_dir / "evidence-tool.stdout").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    kani_stdout = evidence_dir / "kani.stdout"
+    kani_text = (
+        kani_stdout.read_text(encoding="utf-8", errors="replace")
+        if kani_stdout.exists()
+        else ""
+    )
+    evidence_match = re.search(
+        r"verified ([0-9]+) evidence-tool behavioral tests", evidence_text
+    )
+    mutation_match = re.search(
+        r"verified ([0-9]+) Kani semantic mutation controls", kani_text
+    )
+    return {
+        "evidenceToolTests": int(evidence_match.group(1)) if evidence_match else 0,
+        "kaniMutations": int(mutation_match.group(1)) if mutation_match else 0,
     }
 
 
@@ -341,9 +422,14 @@ def hash_parameter_files() -> str:
         ROOT / "Cargo.lock",
         ROOT / ".gitignore",
         ROOT / "Makefile",
+        ROOT / "clippy.toml",
+        ROOT / "deny.toml",
+        ROOT / "rustfmt.toml",
         ROOT / "rust-toolchain.toml",
         ROOT / "measurement" / "footprint" / "Cargo.toml",
         ROOT / "measurement" / "footprint" / "src" / "lib.rs",
+        ROOT / "measurement" / "footprint" / "src" / "population_tests.rs",
+        ROOT / "examples" / "layout.rs",
         ROOT / "scripts" / "check_linked_footprint.sh",
         ROOT / "scripts" / "check_unsafe_comments.sh",
         ROOT / "scripts" / "unsafe_comment_baseline.txt",
@@ -360,6 +446,7 @@ def hash_parameter_files() -> str:
         FAILURE_PROPAGATION,
         KANI_RUNNER,
         EVIDENCE_TEST_RUNNER,
+        ROOT / "scripts" / "evidence_policy.py",
         ASSURANCE_CHECKER,
         ROOT / "tests" / "test_evidence_tooling.py",
         ROOT / "tests" / "integration.rs",
@@ -384,6 +471,7 @@ def hash_parameter_files() -> str:
         MANIFEST_SCHEMA,
         PGM01_ENVELOPE_SCHEMA,
         PGM01_COMMIT_OBJECT,
+        ROOT / "schemas" / "pgm01-validate-governance.py",
     )
     state = hashlib.sha256()
     for path in paths:
@@ -442,38 +530,7 @@ def build(evidence_dir: Path) -> None:
         "schemaVersion": "quire.runtime-evidence-input/v1",
         "sourceRevision": revision,
         "sourceState": source_state,
-        "commands": [
-            "python3 scripts/check_failure_propagation.py",
-            "python3 scripts/check_kani_harnesses.py",
-            "python3 scripts/run_evidence_tests.py",
-            "bash -c \"quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED\"",
-            "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
-            "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
-            "python3 scripts/validate_json_schema.py schemas/pgm01-derivation-evidence-envelope-v1.schema.json evidence-envelope.json",
-            "python3 scripts/validate_json_schema.py $PGM01_SCHEMA evidence-envelope.json (when available)",
-            "cargo fmt --all -- --check",
-            "make lint",
-            "cargo test --no-default-features",
-            "cargo test --features alloc",
-            "cargo test --features std",
-            "cargo test --all-features",
-            "cargo test -p quire-contract-runtime-footprint",
-            "cargo +1.75.0 check --all-targets --all-features",
-            "cargo deny check licenses",
-            "bash scripts/check_unsafe_comments.sh",
-            "bash scripts/check_panic_surface.sh",
-            "cargo metadata --format-version 1 --no-default-features",
-            "cargo tree --edges normal --no-default-features",
-            "cargo build --release --lib --no-default-features",
-            "make size",
-            "bash scripts/measure_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
-            "cargo run --release --example layout --no-default-features",
-            "RUSTDOCFLAGS=-Dwarnings make doc",
-            "make kani (requires cargo-kani and exact harness census)",
-            "python3 scripts/check_coverage_status.py",
-            "python3 scripts/update_evidence_anchors.py",
-            "python3 scripts/verify_evidence.py",
-        ],
+        "commands": collected_commands(),
         "tools": {
             "cargo": (evidence_dir / "cargo-version.txt")
             .read_text(encoding="utf-8")
@@ -515,6 +572,7 @@ def build(evidence_dir: Path) -> None:
                 "cargo",
                 "cargo-kani",
                 "make",
+                "msrv-rustc",
                 "python",
                 "quire",
                 "rustc",
@@ -530,9 +588,7 @@ def build(evidence_dir: Path) -> None:
             .read_text(encoding="utf-8")
             .strip(),
             "schemaDigest": digest(recorded_pgm01_schema_digest),
-            "validatorPath": (evidence_dir / "pgm01-validator-path.txt")
-            .read_text(encoding="utf-8")
-            .strip(),
+            "validatorPath": "schemas/pgm01-validate-governance.py",
             "validatorDigest": digest(
                 (evidence_dir / "pgm01-validator-sha256.txt")
                 .read_text(encoding="utf-8")
@@ -595,6 +651,7 @@ def build(evidence_dir: Path) -> None:
         "sourceRevision": revision,
         "collectedAt": recorded_at,
         "outcomes": outcomes,
+        "controlChecks": control_check_counts(evidence_dir),
         "testPassCounts": [
             {"lane": name, "testsPassed": count}
             for name, count in sorted(test_pass_counts(evidence_dir).items())

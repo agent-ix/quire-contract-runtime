@@ -11,6 +11,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from evidence_policy import MINIMUM_KANI_MUTATIONS
 
 ROOT = Path(__file__).resolve().parent.parent
 MUTATIONS = (
@@ -81,6 +82,13 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> str | None:
 
 # Implements: NFR-002
 def main() -> int:
+    if len(MUTATIONS) < MINIMUM_KANI_MUTATIONS:
+        print(
+            f"KANI_MUTATION_FAILED: configured {len(MUTATIONS)} mutations, "
+            f"minimum {MINIMUM_KANI_MUTATIONS}",
+            file=sys.stderr,
+        )
+        return 1
     try:
         errors = [
             error

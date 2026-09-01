@@ -25,10 +25,10 @@ from build_evidence_envelope import (
     EXPECTED_KANI_HARNESSES,
     TEST_PASS_FLOORS,
     command_outcomes,
-    kani_proof_checks,
+    collected_commands,
     summarize_outcomes,
-    test_pass_counts,
 )
+from evidence_policy import MINIMUM_EVIDENCE_TESTS, MINIMUM_KANI_MUTATIONS
 from validate_json_schema import checked_format_checker
 
 
@@ -52,9 +52,14 @@ PARAMETER_PATHS = (
     "Cargo.lock",
     ".gitignore",
     "Makefile",
+    "clippy.toml",
+    "deny.toml",
+    "rustfmt.toml",
     "rust-toolchain.toml",
     "measurement/footprint/Cargo.toml",
     "measurement/footprint/src/lib.rs",
+    "measurement/footprint/src/population_tests.rs",
+    "examples/layout.rs",
     "scripts/check_linked_footprint.sh",
     "scripts/check_unsafe_comments.sh",
     "scripts/unsafe_comment_baseline.txt",
@@ -71,6 +76,7 @@ PARAMETER_PATHS = (
     "scripts/check_failure_propagation.py",
     "scripts/run_kani_gate.py",
     "scripts/run_evidence_tests.py",
+    "scripts/evidence_policy.py",
     "scripts/check_assurance_anchor.py",
     "tests/test_evidence_tooling.py",
     "tests/integration.rs",
@@ -95,6 +101,7 @@ PARAMETER_PATHS = (
     "schemas/runtime-evidence-manifest-v1.schema.json",
     "schemas/pgm01-derivation-evidence-envelope-v1.schema.json",
     "schemas/pgm01-merged-commit.txt",
+    "schemas/pgm01-validate-governance.py",
 )
 
 
@@ -127,6 +134,41 @@ def tree_digest(root: Path) -> str:
             state.update(bytes.fromhex(sha256_file(path)))
         state.update(b"\0")
     return state.hexdigest()
+
+
+def verify_historical_dispositions() -> None:
+    """Require every retained disposition to carry an enforced closed shape."""
+    sidecars = sorted((EVIDENCE_ROOT / "historical").rglob("historicalDisposition.json"))
+    if len(sidecars) < 4:
+        raise EvidenceError("historical disposition census regressed")
+    allowed = {"failed-collection", "superseded-authority"}
+    for path in sidecars:
+        value = load_json(path)
+        if (
+            set(value) != {"classification", "reason", "reviewFinding", "superseded"}
+            or value.get("classification") not in allowed
+            or value.get("superseded") is not True
+            or not isinstance(value.get("reason"), str)
+            or not value["reason"]
+            or not isinstance(value.get("reviewFinding"), str)
+            or not value["reviewFinding"]
+        ):
+            raise EvidenceError(f"invalid historical disposition: {path.relative_to(ROOT)}")
+    for path in sorted((EVIDENCE_ROOT / "historical").rglob("evidence-envelope.json")):
+        envelope = load_json(path)
+        disposition = (
+            envelope.get("extensions", {})
+            .get("dev.agent-ix.runtime", {})
+            .get("historicalDisposition")
+        )
+        if disposition is not None and disposition != {
+            "authoritative": False,
+            "reason": "superseded historical runtime evidence record",
+            "status": "retracted",
+        }:
+            raise EvidenceError(
+                f"invalid in-envelope historical disposition: {path.relative_to(ROOT)}"
+            )
 
 
 def safe_root_path(value: str) -> Path:
@@ -296,7 +338,6 @@ def verify_source_binding(revision: str) -> None:
             "core.excludesFile=/dev/null",
             "ls-files",
             "--others",
-            "--exclude-from=.gitignore",
             "-z",
         ]
     )
@@ -305,7 +346,8 @@ def verify_source_binding(revision: str) -> None:
     outside_evidence = sorted(
         value.decode("utf-8")
         for value in untracked.stdout.split(b"\0")
-        if value and not value.decode("utf-8").startswith("evidence/")
+        if value
+        and not value.decode("utf-8").startswith(("evidence/", "target/"))
     )
     if outside_evidence:
         raise EvidenceError(
@@ -313,15 +355,37 @@ def verify_source_binding(revision: str) -> None:
         )
 
 
+def resolved_rustup_tool(home: Path, toolchain: str, binary: str) -> Path:
+    completed = subprocess.run(
+        [
+            str(home / ".cargo/bin/rustup"),
+            "which",
+            "--toolchain",
+            toolchain,
+            binary,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    path = Path(completed.stdout.strip())
+    if completed.returncode != 0 or not path.is_file():
+        raise VerificationUnavailable(
+            f"rustup cannot resolve {binary} for toolchain {toolchain}"
+        )
+    return path
+
+
 def verify_tool_identities(record: Path, collection_input: dict[str, Any]) -> None:
     home = Path(pwd.getpwuid(os.getuid()).pw_dir)
     expected_paths = {
-        "cargo": home / ".cargo" / "bin" / "cargo",
+        "cargo": resolved_rustup_tool(home, "stable", "cargo"),
         "cargo-kani": home / ".cargo" / "bin" / "cargo-kani",
         "make": Path("/usr/bin/make"),
+        "msrv-rustc": resolved_rustup_tool(home, "1.75.0", "rustc"),
         "python": Path("/usr/bin/python3"),
         "quire": home / ".npm-global" / "bin" / "quire",
-        "rustc": home / ".cargo" / "bin" / "rustc",
+        "rustc": resolved_rustup_tool(home, "stable", "rustc"),
         "size": Path("/usr/bin/size"),
     }
     declared = collection_input.get("toolDigests", {})
@@ -334,13 +398,17 @@ def verify_tool_identities(record: Path, collection_input: dict[str, Any]) -> No
         if identity.get("path") != str(path) or identity.get("digest", {}).get(
             "value"
         ) != sha256_file(path):
-            raise EvidenceError(f"tool identity mismatch for {name} in {record.name}")
+            raise VerificationUnavailable(
+                f"local tool identity differs from retained {name} in {record.name}"
+            )
         recorded_path = (record / f"{name}-path.txt").read_text(encoding="utf-8").strip()
         recorded_digest = (
             record / f"{name}-sha256.txt"
         ).read_text(encoding="utf-8").strip()
         if recorded_path != str(path) or recorded_digest != sha256_file(path):
-            raise EvidenceError(f"retained tool identity mismatch for {name} in {record.name}")
+            raise EvidenceError(
+                f"retained tool identity disagrees with its declaration for {name} in {record.name}"
+            )
     environment = dict(os.environ)
     environment.update(
         HOME=str(home), CARGO_HOME=str(home / ".cargo"), RUSTUP_HOME=str(home / ".rustup")
@@ -358,30 +426,39 @@ def verify_tool_identities(record: Path, collection_input: dict[str, Any]) -> No
         or not cargo_lines
         or cargo_lines[0] != collection_input["tools"]["cargo"]
     ):
-        raise EvidenceError(f"Cargo version identity mismatch in {record.name}")
+        raise VerificationUnavailable(f"Cargo version differs from {record.name}")
 
-    validator = Path(collection_input["pgm01"]["validatorPath"])
-    if not validator.is_file():
-        raise VerificationUnavailable("the recorded PGM-01 validator is unavailable")
+    for name, path, arguments, tool_key in (
+        ("rustc", expected_paths["rustc"], ["--version", "--verbose"], "rustc"),
+        (
+            "msrv-rustc",
+            expected_paths["msrv-rustc"],
+            ["--version", "--verbose"],
+            "rust-msrv",
+        ),
+    ):
+        completed = subprocess.run(
+            [str(path), *arguments],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+        lines = completed.stdout.splitlines()
+        if (
+            completed.returncode != 0
+            or not lines
+            or lines[0] != collection_input["tools"][tool_key]
+        ):
+            raise VerificationUnavailable(
+                f"{name} version differs from {record.name}"
+            )
+
+    validator = ROOT / "schemas" / "pgm01-validate-governance.py"
     if sha256_file(validator) != collection_input["pgm01"]["validatorDigest"]["value"]:
         raise EvidenceError(f"PGM-01 validator digest mismatch in {record.name}")
-    validator_repo = subprocess.run(
-        ["git", "-C", str(validator.parent), "rev-parse", "--show-toplevel"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if validator_repo.returncode != 0:
-        raise VerificationUnavailable("cannot resolve the recorded PGM-01 validator checkout")
-    validator_revision = subprocess.run(
-        ["git", "-C", validator_repo.stdout.strip(), "rev-parse", "HEAD"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if (
-        validator_revision.returncode != 0
-        or validator_revision.stdout.strip() != collection_input["pgm01"]["validatorRevision"]
+    if collection_input["pgm01"]["validatorRevision"] != (
+        "7dac9d8c19952412b56a0347387666e2ca81e01d"
     ):
         raise EvidenceError(f"PGM-01 validator revision mismatch in {record.name}")
 
@@ -407,6 +484,61 @@ def verify_outcome_census(record: Path, manifest: dict[str, Any]) -> None:
             f"retained={sorted(retained)}, declared={sorted(declared)}, "
             f"manifest={sorted(str(item) for item in recorded)}"
         )
+
+
+def independent_test_pass_counts(record: Path) -> dict[str, int]:
+    result = re.compile(r"test result: ok\. ([0-9]+) passed")
+    return {
+        lane: sum(
+            int(value)
+            for value in result.findall(
+                (record / f"{lane}.stdout").read_text(
+                    encoding="utf-8", errors="replace"
+                )
+            )
+        )
+        for lane in TEST_PASS_FLOORS
+    }
+
+
+def independent_kani_proof_checks(combined: str) -> dict[str, int]:
+    start_pattern = re.compile(
+        r"(?m)^Checking harness kani_proofs::([a-z0-9_]+)\.\.\.$"
+    )
+    summary_pattern = re.compile(r"(?m)^ \*\* 0 of ([1-9][0-9]*) failed$")
+    starts = list(start_pattern.finditer(combined))
+    checks = {}
+    for index, start in enumerate(starts):
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(combined)
+        block = combined[start.end() : end]
+        summary = summary_pattern.search(block)
+        if summary is None or "VERIFICATION:- SUCCESSFUL" not in block:
+            return {}
+        if start.group(1) in checks:
+            return {}
+        checks[start.group(1)] = int(summary.group(1))
+    return checks
+
+
+def independent_control_check_counts(record: Path) -> dict[str, int]:
+    """Re-derive control counts without calling the evidence builder's parser."""
+    patterns = {
+        "evidenceToolTests": (
+            "evidence-tool.stdout",
+            re.compile(r"(?m)^verified ([0-9]+) evidence-tool behavioral tests$"),
+        ),
+        "kaniMutations": (
+            "kani.stdout",
+            re.compile(r"(?m)^verified ([0-9]+) Kani semantic mutation controls$"),
+        ),
+    }
+    counts = {}
+    for name, (transcript, pattern) in patterns.items():
+        matches = pattern.findall(
+            (record / transcript).read_text(encoding="utf-8", errors="replace")
+        )
+        counts[name] = int(matches[0]) if len(matches) == 1 else 0
+    return counts
 
 
 def verify_anchors() -> list[Path]:
@@ -501,6 +633,7 @@ def verify_anchors() -> list[Path]:
     declared = re.search(r"current authoritative\s+record is `([^`]+)`", readme)
     if declared is None or declared.group(1) != records[0].name:
         raise EvidenceError("evidence README authoritative record does not match ANCHORS")
+    verify_historical_dispositions()
     return records
 
 
@@ -533,6 +666,8 @@ def verify_record(record: Path) -> tuple[int, int]:
         raise EvidenceError(f"source revision mismatch in {record.name}: {sorted(identities)}")
     verify_source_binding(revision)
     verify_tool_identities(record, collection_input)
+    if collection_input.get("commands") != collected_commands():
+        raise EvidenceError(f"collection command declaration mismatch in {record.name}")
     if envelope["parametersDigest"]["value"] != source_parameter_digest(revision):
         raise EvidenceError(f"parameters digest mismatch in {record.name}")
     if envelope["producer"]["executableDigest"]["value"] != hashlib.sha256(
@@ -549,7 +684,7 @@ def verify_record(record: Path) -> tuple[int, int]:
         raise EvidenceError(
             f"outcome value mismatch in {record.name}: derived={derived}, declared={manifest['outcomes']}"
         )
-    observed_test_counts = test_pass_counts(record)
+    observed_test_counts = independent_test_pass_counts(record)
     declared_test_counts = {
         item["lane"]: item["testsPassed"] for item in manifest["testPassCounts"]
     }
@@ -562,6 +697,13 @@ def verify_record(record: Path) -> tuple[int, int]:
         )
     ):
         raise EvidenceError(f"test pass-count census mismatch in {record.name}")
+    observed_control_checks = independent_control_check_counts(record)
+    if (
+        manifest["controlChecks"] != observed_control_checks
+        or observed_control_checks["evidenceToolTests"] < MINIMUM_EVIDENCE_TESTS
+        or observed_control_checks["kaniMutations"] < MINIMUM_KANI_MUTATIONS
+    ):
+        raise EvidenceError(f"behavioral control-count mismatch in {record.name}")
     status, summary, limitations = summarize_outcomes(derived)
     if envelope["result"]["status"] != status or envelope["result"]["summary"] != summary:
         raise EvidenceError(f"derived result mismatch in {record.name}")
@@ -571,7 +713,7 @@ def verify_record(record: Path) -> tuple[int, int]:
     combined_kani = (record / "kani.stdout").read_text(encoding="utf-8") + "\n" + (
         record / "kani.stderr"
     ).read_text(encoding="utf-8")
-    checks = kani_proof_checks(combined_kani)
+    checks = independent_kani_proof_checks(combined_kani)
     declared_checks = {
         item["harness"]: item["checks"] for item in manifest["kaniProofChecks"]
     }

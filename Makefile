@@ -48,7 +48,8 @@ help:
 	@echo "  make verify-evidence  - Verify the anchored retained evidence set"
 	@echo "  make assurance-anchor - Bind AA-001 to the authoritative evidence verdict"
 	@echo "  make coverage         - Run strict repository-owned traceability classification"
-	@echo "  make kani             - Run the complete declared Kani harness set (required)"
+	@echo "  make kani             - Run proofs plus the semantic mutation campaign (required)"
+	@echo "  make kani-mutations   - Require representative defects to fail their owning proofs"
 	@echo "  make ci-guard         - prove required command failures and tool identities"
 	@echo "  make update-evidence-anchors - Regenerate evidence/ANCHORS for review"
 	@echo "  make ci               - All local CI gates"
@@ -130,7 +131,7 @@ audit-panic:
 
 .PHONY: evidence-tool
 evidence-tool:
-	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_assurance_anchor.py scripts/check_coverage_status.py scripts/check_failure_propagation.py scripts/check_kani_harnesses.py scripts/check_kani_mutations.py scripts/run_evidence_tests.py scripts/run_kani_gate.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
+	$(PYTHON) -m py_compile scripts/build_evidence_envelope.py scripts/check_assurance_anchor.py scripts/check_coverage_status.py scripts/check_failure_propagation.py scripts/check_kani_harnesses.py scripts/check_kani_mutations.py scripts/evidence_policy.py scripts/run_evidence_tests.py scripts/run_kani_gate.py scripts/update_evidence_anchors.py scripts/validate_json_schema.py scripts/verify_evidence.py
 	$(PYTHON) scripts/run_evidence_tests.py
 
 .PHONY: verify-evidence
