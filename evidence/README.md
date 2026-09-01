@@ -18,7 +18,7 @@ collection-time inputs and are deliberately absent from the sealed record.
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
 schema formats, artifact links, source identity, and re-derived outcomes. The current authoritative
-record is `runtime-v01-70cc6a0f9260-20260901T004020Z`.
+record is `runtime-v01-2e23bc7295f5-20260901T022845Z`.
 
 Collection verifies a new record directly but does not rewrite `evidence/ANCHORS`. Retiring the old
 record, updating the authoritative record named above, regenerating anchors, and running the full
@@ -78,3 +78,7 @@ ignored-input enforcement, collector command binding, and enforced historical di
 `historical/retired-round6-pycache-fix/` retains the first Round 6 collection attempt. Every command
 was conclusive, but final source verification correctly rejected Python bytecode generated before
 collection; those caches were moved outside the repository before the clean recollection.
+
+`historical/retired-round6-review-closure/` retains the preceding authoritative record. It predates
+the Round 6 Make-control guard, exact test floor and historical census, independently pinned
+verifier branches, exact matrix definitions, portable invocation binding, and validator blob anchor.
