@@ -17,7 +17,7 @@ paths, revisions, and digests are retained.
 `evidence/ANCHORS` is the complete committed census of authoritative records and supporting evidence
 content. Run `make verify-evidence` to check the root anchors, record checksums, manifest artifacts,
 schema formats, artifact links, source identity, and re-derived outcomes. The current authoritative
-record is `runtime-v01-c9ec99b6418a-20260831T231052Z`.
+record is `runtime-v01-70cc6a0f9260-20260901T004020Z`.
 
 Collection verifies a new record directly but does not rewrite `evidence/ANCHORS`. Retiring the old
 record, updating the authoritative record named above, regenerating anchors, and running the full
@@ -66,3 +66,7 @@ closed schema and covered by generated-instance validation.
 `historical/retired-round5-pycache-fix/` retains the subsequent conclusive command collection. Its
 final verifier correctly rejected ignored Python bytecode caches; Python cache output is now routed
 beneath `target/`, keeping the ignored-file source-input check strict and self-consistent.
+
+`historical/retired-round5-review-closure/` retains the preceding authoritative record. It predates
+the portable validator, actual compiler-toolchain digests, retained behavioral-control floors,
+ignored-input enforcement, collector command binding, and enforced historical dispositions.
