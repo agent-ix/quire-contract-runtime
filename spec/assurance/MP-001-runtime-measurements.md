@@ -85,7 +85,9 @@ The collector's declared command list is generated in transcript order and bound
 toolchain binaries rather than the rustup shims; the verifier re-executes their version identities.
 A present but different local toolchain is verification-unavailable, not evidence tampering. Source
 binding enumerates ignored and non-ignored untracked paths without consulting `.gitignore`, allowing
-only retained `evidence/` and generated `target/` content. Historical disposition sidecars and the
+only retained `evidence/` and generated `target/` content. Make and the collector route Python
+bytecode caches beneath `target/` so running the verifier cannot create a new source input.
+Historical disposition sidecars and the
 legacy in-envelope form are parsed and checked against closed shapes by the verifier.
 
 The following design extensions remain explicitly deferred beyond this source candidate: adding a

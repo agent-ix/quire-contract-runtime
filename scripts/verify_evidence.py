@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+sys.dont_write_bytecode = True
+
 from jsonschema import Draft7Validator
 
 SCRIPTS = Path(__file__).resolve().parent

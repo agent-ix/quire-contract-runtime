@@ -62,3 +62,7 @@ led to the out-of-census staging boundary described above.
 `historical/retired-round5-schema-fix/` retains the next Round 5 attempt. Its input-schema validator
 correctly rejected the newly added MSRV compiler identity until that eighth tool was admitted by the
 closed schema and covered by generated-instance validation.
+
+`historical/retired-round5-pycache-fix/` retains the subsequent conclusive command collection. Its
+final verifier correctly rejected ignored Python bytecode caches; Python cache output is now routed
+beneath `target/`, keeping the ignored-file source-input check strict and self-consistent.

@@ -20,6 +20,7 @@ override export HOME := $(TRUSTED_HOME)
 override export CARGO_HOME := $(TRUSTED_HOME)/.cargo
 override export RUSTUP_HOME := $(TRUSTED_HOME)/.rustup
 override export CARGO_TARGET_DIR := $(CURDIR)/target
+override export PYTHONPYCACHEPREFIX := $(CARGO_TARGET_DIR)/pycache
 override CARGO := $(TRUSTED_HOME)/.cargo/bin/cargo
 override MSRV := 1.75.0
 override PYTHON := /usr/bin/python3
