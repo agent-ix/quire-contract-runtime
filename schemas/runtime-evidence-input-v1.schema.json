@@ -29,11 +29,12 @@
     "toolDigests": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["cargo", "cargo-kani", "make", "python", "quire", "rustc", "size"],
+      "required": ["cargo", "cargo-kani", "make", "msrv-rustc", "python", "quire", "rustc", "size"],
       "properties": {
         "cargo": {"$ref": "#/definitions/toolIdentity"},
         "cargo-kani": {"$ref": "#/definitions/toolIdentity"},
         "make": {"$ref": "#/definitions/toolIdentity"},
+        "msrv-rustc": {"$ref": "#/definitions/toolIdentity"},
         "python": {"$ref": "#/definitions/toolIdentity"},
         "quire": {"$ref": "#/definitions/toolIdentity"},
         "rustc": {"$ref": "#/definitions/toolIdentity"},

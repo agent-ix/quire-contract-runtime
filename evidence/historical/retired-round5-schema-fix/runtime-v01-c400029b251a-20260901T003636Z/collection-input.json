@@ -1,0 +1,124 @@
+{
+  "commands": [
+    "python3 scripts/check_failure_propagation.py",
+    "python3 scripts/check_kani_harnesses.py",
+    "python3 scripts/run_evidence_tests.py",
+    "quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' && echo QUIRE_VALIDATION_PASSED",
+    "cargo fmt --all -- --check",
+    "make lint",
+    "cargo test --no-default-features",
+    "cargo test --features alloc",
+    "cargo test --features std",
+    "cargo test --all-features",
+    "cargo test -p quire-contract-runtime-footprint",
+    "cargo +1.75.0 check --all-targets --all-features",
+    "cargo deny check licenses",
+    "bash scripts/check_unsafe_comments.sh",
+    "bash scripts/check_panic_surface.sh",
+    "cargo metadata --format-version 1 --no-default-features",
+    "cargo tree --edges normal --no-default-features",
+    "cargo build --release --lib --no-default-features",
+    "cargo run --release --example layout --no-default-features",
+    "RUSTDOCFLAGS=-Dwarnings make doc",
+    "make size",
+    "bash scripts/measure_rlib_size.sh $CARGO_TARGET_DIR/release/deps",
+    "python3 scripts/check_coverage_status.py",
+    "make kani",
+    "python3 scripts/validate_json_schema.py schemas/pgm01-derivation-evidence-envelope-v1.schema.json evidence-envelope.json",
+    "python3 scripts/validate_json_schema.py schemas/runtime-evidence-input-v1.schema.json collection-input.json",
+    "python3 scripts/validate_json_schema.py schemas/runtime-evidence-manifest-v1.schema.json evidence-manifest.json",
+    "python3 scripts/validate_json_schema.py <PGM01_SCHEMA> evidence-envelope.json",
+    "python3 <PGM01_VALIDATOR> --fixture evidence-envelope.json"
+  ],
+  "pgm01": {
+    "candidateRevision": "7dac9d8c19952412b56a0347387666e2ca81e01d",
+    "envelopeSchema": "quire.derivation-evidence/v1",
+    "envelopeSchemaDigest": {
+      "algorithm": "sha256",
+      "value": "0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256"
+    },
+    "policy": "ix://agent-ix/quire-contract-ir/PGM-01",
+    "schemaDigest": {
+      "algorithm": "sha256",
+      "value": "0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256"
+    },
+    "schemaPath": "/tmp/agent-b-ir-pgm01-7dac/schemas/derivation-evidence-envelope-v1.schema.json",
+    "validatorDigest": {
+      "algorithm": "sha256",
+      "value": "1c2881d5f8800dab031f6afa26d5ad11f88a5ab42a942bc9fe0c2853b58df2f1"
+    },
+    "validatorPath": "schemas/pgm01-validate-governance.py",
+    "validatorRevision": "7dac9d8c19952412b56a0347387666e2ca81e01d"
+  },
+  "schemaVersion": "quire.runtime-evidence-input/v1",
+  "sourceRevision": "c400029b251ae46e5253645070fe1ca2c8329328",
+  "sourceState": "clean",
+  "toolDigests": {
+    "cargo": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "b7561ebe947acf816451536f19871ea4810f6be3f82fd252feab6ca7be8396f5"
+      },
+      "path": "/home/peter/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo"
+    },
+    "cargo-kani": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "7f143a251d11c7e6e232bbf2cbccf56f9ce66a5f0107eeb3008698e6715f55d9"
+      },
+      "path": "/home/peter/.cargo/bin/cargo-kani"
+    },
+    "make": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "92f646030615cd98490a68a94c0aefd87b552be3158b941c02e43b0bfdb576db"
+      },
+      "path": "/usr/bin/make"
+    },
+    "msrv-rustc": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "7cd1c64771117a00efd8eb5113e2aed512545441c23436f6923e5deb8c97016c"
+      },
+      "path": "/home/peter/.rustup/toolchains/1.75.0-x86_64-unknown-linux-gnu/bin/rustc"
+    },
+    "python": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86"
+      },
+      "path": "/usr/bin/python3"
+    },
+    "quire": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "96ce25fe91ab75ee96505b343b251a3e1db16de430a524aabef1f5590dbc02b3"
+      },
+      "path": "/home/peter/.npm-global/bin/quire"
+    },
+    "rustc": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "ef6d716e5d1c6c93def277c0afa037c21e7a74f7de3aed4ee0700646c3301b1d"
+      },
+      "path": "/home/peter/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc"
+    },
+    "size": {
+      "digest": {
+        "algorithm": "sha256",
+        "value": "b0d4682dee1d4b2344708a2033dd83e2a167c2182251c58c1478c73457102316"
+      },
+      "path": "/usr/bin/size"
+    }
+  },
+  "tools": {
+    "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+    "jsonschema": "3.2.0",
+    "kani": "cargo-kani 0.67.0",
+    "python": "Python 3.10.12",
+    "quire": "0.31.0",
+    "rust-msrv": "rustc 1.75.0 (82e1608df 2023-12-21)",
+    "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+    "size": "GNU size (GNU Binutils for Ubuntu) 2.38"
+  }
+}

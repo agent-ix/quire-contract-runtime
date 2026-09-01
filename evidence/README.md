@@ -58,3 +58,7 @@ contradiction marker. Their dispositions and original command results are preser
 `historical/retired-round5-staging-fix/` retains the first Round 5 attempt. It correctly failed when
 the strengthened anchor updater observed the collector's incomplete top-level record; that failure
 led to the out-of-census staging boundary described above.
+
+`historical/retired-round5-schema-fix/` retains the next Round 5 attempt. Its input-schema validator
+correctly rejected the newly added MSRV compiler identity until that eighth tool was admitted by the
+closed schema and covered by generated-instance validation.

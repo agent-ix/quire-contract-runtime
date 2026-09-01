@@ -164,6 +164,18 @@ class EvidenceBuilderTests(unittest.TestCase):
                 builder.PGM01_ENVELOPE_SCHEMA_DIGEST,
             )
             self.assertEqual(envelope["parametersDigest"]["value"], builder.hash_parameter_files())
+            validated = subprocess.run(
+                [
+                    sys.executable,
+                    str(VALIDATOR_PATH),
+                    str(ROOT / "schemas" / "runtime-evidence-input-v1.schema.json"),
+                    str(evidence_dir / "collection-input.json"),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(validated.returncode, 0, validated.stdout + validated.stderr)
 
     # Trace: TC-007, NFR-002-AC-4
     def test_build_records_failed_and_missing_commands_without_a_pass_claim(self) -> None:
