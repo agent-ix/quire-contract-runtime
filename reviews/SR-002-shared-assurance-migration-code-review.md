@@ -23,11 +23,11 @@ harness, the full-width `usize` index harness, and the per-harness discharged-
 obligation floors — and it migrates this repository's QA machinery onto the
 released Engineering Assurance, Quire, and Quoin contracts. It supersedes PR #7.
 
-The domain half is inherited rather than authored here. `git diff 0bb51fb -- src/
-verification/ measurement/` shows one deletion and no additions: nothing in the
-crate, the harnesses, or the footprint population changed. The review of that
-half is therefore a review of PR #7's six rounds, and the question asked is not
-"is it correct" but "did the migration quietly undo anything those rounds fixed".
+The domain half is inherited rather than authored here. `git diff 0bb51fb HEAD --
+src/ verification/ measurement/` is **empty**: not one byte of the crate, the
+seven harnesses, or the footprint population changed. The review of that half is
+therefore a review of PR #7's six rounds, and the question asked is not "is it
+correct" but "did the migration quietly undo anything those rounds fixed".
 
 The migration half replaces 4,387 lines of local evidence machinery with gates
 that delegate: component versions to `engineering_assurance.compatibility`,
