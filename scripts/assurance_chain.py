@@ -551,7 +551,28 @@ def derive_result(proof_id: str, path: Path) -> str:
     An attestation that says `passed` because its input was unreadable is the
     single worst failure this file could have.
     """
-    raw = path.read_text(encoding="utf-8")
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise ChainError(
+            f"{path.name} could not be read: {error}. A producer result that cannot be "
+            "read is not a failing result and is certainly not a passing one; it is an "
+            "input this driver could not use, which is its own exit code."
+        ) from error
+    try:
+        return _derive(proof_id, raw, path)
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        # An unreadable or wrongly shaped producer document must reach the
+        # environment-error channel, not fall out as a traceback. A stack trace is
+        # not one of the twelve states, and exiting 1 would put "I could not read
+        # the input" in the same channel as "a scenario did not match".
+        raise ChainError(
+            f"{path.name} is not a readable {proof_id} result: "
+            f"{type(error).__name__}: {error}"
+        ) from error
+
+
+def _derive(proof_id: str, raw: str, path: Path) -> str:
     if proof_id in ENTRY_DOCUMENTS:
         document = json.loads(raw)
         require_measurements(document, path.name)

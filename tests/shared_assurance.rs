@@ -381,9 +381,13 @@ fn tc_010_the_producers_report_failure_when_the_prover_does() {
 /// is forbidden is asking a tool to build, compile, test, link, or prove
 /// anything. Every such invocation is logged and the log must be empty.
 fn producer_shims(directory: &Path, names: &[&str]) -> PathBuf {
+    // The directory is emptied, not just topped up. A shim left behind by an
+    // earlier run silently changes what the next run measures, and it does so in
+    // the direction that hides failures: an extra stubbed tool makes the chain
+    // fail for a reason the test then misattributes. This was not hypothetical.
+    let _ = fs::remove_dir_all(directory);
     fs::create_dir_all(directory).unwrap();
     let log = directory.join("invocations.log");
-    let _ = fs::remove_file(&log);
     for name in names {
         let path = directory.join(name);
         fs::write(
@@ -392,6 +396,7 @@ fn producer_shims(directory: &Path, names: &[&str]) -> PathBuf {
                 "#!/bin/sh\n\
                  case \"$1\" in\n\
                  --version|-V) echo \"{name} 9.9.9 (shim)\"; exit 0 ;;\n\
+                 provenance) echo '{{\"cli\":{{\"version\":\"9.9.9\"}},\"engine\":{{\"version\":\"9.9.9\"}}}}'; exit 0 ;;\n\
                  esac\n\
                  echo \"$0 $@\" >> {}\n\
                  exit 97\n",
@@ -465,6 +470,35 @@ fn tc_010_the_chain_never_executes_a_producer_and_the_probe_can_prove_it() {
         !control.status.success(),
         "the chain succeeded with quoin stubbed out, so it is not actually using it"
     );
+
+    // Run C: what is Quire asked to do?
+    //
+    // Quire is not in run A's list, and that exclusion is reasoned rather than
+    // assumed — it was measured. Shimming `quire` alongside the producers made
+    // run A fail, and the log said why: `quoin evidence audit` shells out to
+    // `quire coverage --scope <its own scratch repo> --json`. That is Quoin
+    // reading static facts, which is exactly what the architecture says Quoin
+    // does with Quire's export; it is not Quoin executing a producer.
+    //
+    // So the claim here is narrower and checkable: every request made of Quire is
+    // a static read. This run's chain is expected to fail — the shim cannot serve
+    // a real export — and that is fine, because what is being read is the log,
+    // not the exit code.
+    let quire_shims = root().join("target/quire-shims");
+    let quire_log = producer_shims(&quire_shims, &["quire"]);
+    let _ = run_chain_with_path(&quire_shims);
+    let quire_logged = fs::read_to_string(&quire_log).unwrap_or_default();
+    assert!(
+        !quire_logged.trim().is_empty(),
+        "stubbing quire produced no invocation, so this run observed nothing"
+    );
+    for line in quire_logged.lines().filter(|line| !line.trim().is_empty()) {
+        let subcommand = line.split_whitespace().nth(1).unwrap_or("");
+        assert!(
+            matches!(subcommand, "provenance" | "coverage"),
+            "Quire was asked to do something other than a static read: {line}"
+        );
+    }
 }
 
 /// Trace: TC-011, FR-005-AC-3
