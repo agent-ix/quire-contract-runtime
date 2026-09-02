@@ -5,8 +5,9 @@
 # which is what the deleted PGM-01 envelope checks were written against.
 # engineering-assurance declares jsonschema>=4.23,<5. Both pins are correct for
 # their own job and neither may be bent to fit the other, so they get one
-# environment each. The Draft 7 lane now has no executable consumer in this
-# repository: the validator it served is frozen under schemas/ and is never run.
+# environment each. The Draft 7 lane has no consumer in this repository at all
+# any more: the validator it served was deleted with the retained records under
+# agent-ix/quire-contract-runtime#11.
 #
 #   make assurance-env  -> .venv-assurance, this file
 #

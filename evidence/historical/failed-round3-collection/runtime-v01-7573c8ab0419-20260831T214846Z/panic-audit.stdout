@@ -1,3 +1,0 @@
-verification/kani.rs:72:    let failed_detail = failed.detail().expect("failed verdict retains detail");
-verification/kani.rs:76:        failed_detail.message.expect("message retained"),
-verification/kani.rs:89:            .expect("rejected verdict retains detail")

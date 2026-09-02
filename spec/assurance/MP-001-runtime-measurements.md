@@ -96,13 +96,8 @@ proof names and their TC-001/TC-002/TC-003 ownership an executable census, so a 
 trace binding out of the harness source, so the published result document carries a binding that
 cannot silently disagree with a second copy.
 
-Two further inputs are not this repository's producers. `quire coverage --scope . --json` is the
+One further input is not this repository's producer. `quire coverage --scope . --json` is the
 static specification, obligation, and coverage export; Quire executes nothing.
-`scripts/legacy_evidence_view.py` reads every retained evidence byte through
-`engineering_assurance.verification_semantics.map_pgm01_bytes` from the pinned release and reports
-what came back; it implements no mapping, digests the whole tree before and after so that read-only
-is measured rather than asserted, and asks Git whether any retained byte differs from what was
-committed.
 
 `scripts/assurance_chain.py` then drives the official chain over those already-written bytes: it
 seals the change-assurance record, seals one proof attestation per obligation, hands the producer's
@@ -112,10 +107,14 @@ one with cargo, cargo-kani, rustup and rustc replaced by logging stubs, requirin
 empty, and a control that stubs `quoin` and requires the chain to fail, because an empty log and an
 unconsulted `PATH` are otherwise the same observation.
 
-Retention, integrity checking, audit, attestation, and receipts are Quoin's. Compatibility with the
-retained record family is Engineering Assurance's. This plan no longer describes a local collector, a
-local envelope builder, a local verifier, a local anchor census, or a Make recipe that polices its
-own execution controls, because none of those exist here any more.
+Retention, integrity checking, audit, attestation, and receipts are Quoin's. This plan no longer
+describes a local collector, a local envelope builder, a local verifier, a local anchor census, or a
+Make recipe that polices its own execution controls, because none of those exist here any more.
+
+It also no longer describes a retained-evidence compatibility view. The records that view read were
+deleted under `agent-ix/quire-contract-runtime#11`, by the repository owner's decision to release the
+evidence-preservation constraint for the pre-stable phase
+(`agent-ix/engineering-assurance#7`). Nothing was rewritten to keep the view working.
 
 The following design extensions remain explicitly deferred beyond this source candidate: adding a
 second independent Kani-to-coverage semantic oracle (FND-409), and expanding the representative
@@ -143,9 +142,9 @@ independent i16 widening oracles. Division/remainder uses symbolic invalid input
 definedness quantifies over full `usize`, and campaign accounting drives the public record/discard
 paths from symbolic near-overflow states to cover all five increments and the saturating total. The Kani
 toolchain may differ from both the shipped stable compiler and the Rust 1.75 compatibility compiler;
-that exact tool identity is retained rather than treated as compiler equivalence. Retained local
-transcripts are source-bound and Git-tamper-evident, but they are not externally signed runner
-attestations.
+that exact tool identity is retained rather than treated as compiler equivalence. The bytes each
+producer writes are retained by Quoin under `target/`, bound by digest into a sealed attestation;
+they are not externally signed runner attestations.
 
 An empty `cargo fmt --check` transcript is its documented success form; its numeric zero status is
 still bound to the source and tool digests. Historical local oracle records are corroborating audit

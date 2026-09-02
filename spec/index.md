@@ -46,7 +46,9 @@ return a tri-state verdict, and optionally adapt that verdict to a property-test
 ### Intended Users
 
 Generated customer code relies on the default core. Test harness authors may enable optional
-adapters. Reviewers and release owners rely on retained traceability and measurement evidence.
+adapters. Reviewers and release owners rely on the Quire static export, the sealed Quoin change-assurance
+record, its proof attestations and its verification receipt. This repository retains no evidence of
+its own.
 
 ## Requirements Architecture
 

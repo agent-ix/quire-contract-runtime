@@ -1,2 +1,0 @@
-RUSTDOCFLAGS=-Dwarnings /home/peter/.cargo/bin/cargo doc -p quire-contract-runtime --all-features --no-deps
-RUSTDOCFLAGS=-Dwarnings /home/peter/.cargo/bin/cargo doc -p quire-contract-runtime-footprint --no-deps --target thumbv7em-none-eabi

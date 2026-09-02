@@ -14,7 +14,7 @@ version_pins:
   rust-msrv: "1.75"
   governance: agent-ix/quire-contract-ir#3
 controls:
-  surfaces: [Cargo features, CI, requirement-tagged tests, retained evidence]
+  surfaces: [Cargo features, CI, requirement-tagged tests, sealed proof attestations]
   fallback: disable optional adapters and use the dependency-free core
   abstention: retain rejected discarded and inconclusive states
   escalation: human release owner reviews unresolved gaps
@@ -44,8 +44,9 @@ remain distinct. The core performs no I/O and has no intentional panic path.
 
 ## Controls
 
-Feature-matrix CI, requirement-tagged tests, cargo-deny, unsafe audit, API documentation, and retained
-measurement envelopes constrain changes. Human review is mandatory for release.
+Feature-matrix CI, requirement-tagged tests, cargo-deny, unsafe audit, API documentation, and the
+governed footprint measurement sealed into a Quoin proof attestation constrain changes. Human review
+is mandatory for release. This repository retains no measurement envelope of its own.
 
 ## Replacement
 

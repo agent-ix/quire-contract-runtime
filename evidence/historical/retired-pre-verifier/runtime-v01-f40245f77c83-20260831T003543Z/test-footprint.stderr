@@ -1,3 +1,0 @@
-   Compiling quire-contract-runtime-footprint v0.0.0 (/home/peter/dev/quire-contract-runtime/measurement/footprint)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.19s
-     Running unittests src/lib.rs (target/evidence-pgm-merged-f40245f/debug/deps/quire_contract_runtime_footprint-053d001caacf9f35)

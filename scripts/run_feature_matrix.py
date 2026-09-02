@@ -64,9 +64,11 @@ DOMAIN_TARGETS = [
     "release_contract",
 ]
 
-# Every feature set, named. The names are the symbols the rows are keyed on, and
-# the first four are the names the retired collector used, so a reader comparing
-# the old retained records with this document is comparing like with like.
+# Every feature set, named. The names are the symbols the rows are keyed on. The
+# first four kept the names the retired collector used so that its records read
+# like this document; those records were deleted under
+# agent-ix/quire-contract-runtime#11 and the names are kept only because renaming
+# a row's symbol renames what a trace binds to.
 #
 # Doc tests get their own row per feature set because `cargo test --doc` cannot be
 # combined with an explicit target selection, and because the crate's

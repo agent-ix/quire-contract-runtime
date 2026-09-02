@@ -3,10 +3,10 @@
 Two files and no evidence.
 
 `change-assurance.json` is what this repository *states* about the change under
-[issue #8](https://github.com/agent-ix/quire-contract-runtime/issues/8): the
+[issue #11](https://github.com/agent-ix/quire-contract-runtime/issues/11): the
 requirements it claims to meet, the things it promises not to break, the proofs
 it offers, and the questions it cannot answer. `pins.json` is the Engineering
-Assurance release it adopts and the digests of the artifacts it actually reads
+Assurance release it adopts and the digest of the one artifact it actually reads
 from that release.
 
 ## Why there is no evidence in here
@@ -33,9 +33,8 @@ make assurance-inputs
 ```
 
 It runs the Kani proof suite, the Kani semantic-mutation campaign, the feature
-matrix, the linked-footprint measurement, the MSRV build, `quire coverage`, and
-the retained-evidence compatibility view, and writes their structured output to
-`target/assurance/`.
+matrix, the linked-footprint measurement, the MSRV build and `quire coverage`,
+and writes their structured output to `target/assurance/`.
 
 Everything downstream consumes those files. `scripts/assurance_chain.py` refuses
 to run a producer; if an input is missing it says so and names the target that
@@ -72,24 +71,40 @@ decision is an attributed human act; only the repository owner can create one,
 and an agent that synthesized one would be forging the single field in the whole
 chain that exists to say a person looked.
 
-## The compatibility answer, stated plainly
+## The retained records, and where they went
 
-This repository never retained a `quire.pgm01-evidence` record. Its 42 retained
-envelopes are `quire.derivation-evidence/v1` — a different schema family, which
-the PGM-01 programme governed but did not define. The pinned mapping
-`engineering_assurance.verification_semantics.map_pgm01_bytes` therefore answers
-`incompatible` for every one of them, with the reason "unknown PGM-01 schema
-version".
+This repository held 42 `quire.derivation-evidence/v1` envelopes under
+`evidence/` — 3,412 files, 10.2 MB. It never retained a `quire.pgm01-evidence`
+record, so the pinned mapping answered `incompatible` for every one of them with
+the reason "unknown PGM-01 schema version". That refusal was correct and was
+reported as it stood, never converted into a pass.
 
-That is the mapping declining to interpret a shape it has never seen, which is
-exactly what it should do and is one of the twelve states this migration is
-required to keep distinguishable. It is not a pass, it is not a failure of these
-records, and it is not a licence to write a local mapper that would return a
-friendlier answer. The gap is filed upstream as
-`agent-ix/engineering-assurance#21`, which records 142 such envelopes across six
-of the eight campaign repositories.
+They are gone. The repository owner decided on 2026-09-02 to release the
+evidence-preservation constraint for the pre-stable phase; the epic's completion
+criterion and its mandatory control were amended before the deletion, which is
+recorded in `agent-ix/engineering-assurance#7` and executed under
+`agent-ix/quire-contract-runtime#11`. Nothing was rewritten, backdated or
+re-sealed. `agent-ix/engineering-assurance#21` closes as moot rather than as
+fixed. The constraint re-applies unchanged at the move toward stable releases.
 
-The mapping is shown to accept as well as refuse: the pinned release's own
-`fixtures/verification-semantics/pgm01-v1.json` and `pgm01-v2.json` are read as
-positive controls in the same run. A refusal that has never been seen to accept
-is indistinguishable from a step that never worked.
+Two of the twelve states this migration keeps distinguishable — `unsupported` and
+`malformed` — were demonstrated only by that compatibility census. Measured on
+the pre-deletion tree, the chain alone reached ten of twelve. Both were
+re-established on surfaces that read no retained byte.
+
+`unsupported` is the chain's: Quoin names a declared verification method its
+catalog does not have. `malformed` is not, and the first attempt to make it so
+was wrong. A chain-side probe for `malformed` has to write the row itself, so
+what it asserts is that the adapter's lookup table maps `malformed` to something
+other than `pass` — which stays true while `scripts/check_kani_mutations.py`, the
+only producer here that can emit the state, is hollowed out to report `pass`
+instead. An independent adversarial review demonstrated exactly that. The
+demonstration now lives where the state is produced: the mutation campaign is
+driven into its malformed branch and its answer is read back, so a campaign that
+answers `pass` when it no longer describes this source fails the test.
+
+The census was not quietly reduced to ten, and it is not inflated back to twelve
+by a label either. What it does not claim: `unsupported` is a finding Quoin
+reports over the specification rather than a state travelling the intake path,
+and `malformed` reaches the receipt as `failed`, because Quoin's attestation
+vocabulary is passed, failed, unavailable and not_computed.

@@ -1,9 +1,0 @@
-{
-  "errors": [
-    {
-      "message": "Additional properties are not allowed ('msrv-rustc' was unexpected)",
-      "path": "$.toolDigests"
-    }
-  ],
-  "valid": false
-}
