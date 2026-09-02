@@ -1,0 +1,6 @@
+{
+  "classification": "failed-collection",
+  "reason": "All commands exited zero, but the evidence-tool outcome matcher treated intentional negative-control diagnostics as a failing test-suite summary.",
+  "reviewFinding": "Round 4 positive transcript corroboration",
+  "superseded": true
+}

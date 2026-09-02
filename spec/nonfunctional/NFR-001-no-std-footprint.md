@@ -29,7 +29,6 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 | Default dependencies | 0 | 0 | compile-time-check |
 | Unsafe blocks | 0 | 0 | inspection |
 | Linked `.text` + `.rodata` | 500 B population floor | 4 KiB ceiling | performance-benchmarking |
-| Release rlib bytes | recorded observation | not enforced | performance-benchmarking |
 
 ## Acceptance Criteria
 
@@ -42,8 +41,12 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 ## Verification
 
 The local composite gate checks every declared target and feature at the MSRV, builds and tests the
-fixed bare-metal footprint consumer, runs the unsafe and panic audits, and retains the linked-section,
-observational rlib, and dependency outputs identified by MP-001.
+fixed bare-metal footprint consumer, runs the unsafe and panic audits, and publishes the
+linked-section and panic-relocation measurements identified by MP-001 as a structured result.
+
+The observational release-rlib byte count is retired. It gated nothing, it varied with compiler
+metadata and build paths, and the collector that recorded it no longer exists; MP-001's Interpretation
+records the retirement and its reason. The governed measurement is unchanged.
 
 ## Dependencies
 

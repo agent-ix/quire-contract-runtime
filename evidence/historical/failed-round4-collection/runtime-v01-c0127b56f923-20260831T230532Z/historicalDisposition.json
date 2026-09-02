@@ -1,0 +1,6 @@
+{
+  "classification": "failed-collection",
+  "reason": "The evidence-tool test observed the collector's still-in-progress untracked authoritative directory and failed closed before final packaging.",
+  "reviewFinding": "Round 4 evidence boundary strengthening",
+  "superseded": true
+}

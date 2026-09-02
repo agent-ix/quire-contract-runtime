@@ -1,0 +1,20 @@
+..ASSURANCE_ANCHOR_FAILED: the immediately preceding evidence verification did not pass
+............EVIDENCE_TEST_CENSUS_FAILED: cannot discover suite: Start directory is not importable: '/tmp/tmpu00t8cwt/tests'
+......KANI_FAILED: successful process did not meet the harness and proof-obligation floors
+............E......runtime evidence verification unavailable: missing dependency
+runtime evidence verification failed: tampered record
+....
+======================================================================
+ERROR: test_anchor_file_is_generated_from_the_complete_evidence_census (test_evidence_tooling.EvidenceVerifierTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/peter/dev/quire-contract-runtime/tests/test_evidence_tooling.py", line 1071, in test_anchor_file_is_generated_from_the_complete_evidence_census
+    anchor_updater.rendered_anchors(),
+  File "/home/peter/dev/quire-contract-runtime/scripts/update_evidence_anchors.py", line 73, in rendered_anchors
+    raise ValueError(f"incomplete authoritative evidence directory: {path}")
+ValueError: incomplete authoritative evidence directory: /home/peter/dev/quire-contract-runtime/evidence/runtime-v01-c0127b56f923-20260831T230532Z
+
+----------------------------------------------------------------------
+Ran 43 tests in 1.965s
+
+FAILED (errors=1)

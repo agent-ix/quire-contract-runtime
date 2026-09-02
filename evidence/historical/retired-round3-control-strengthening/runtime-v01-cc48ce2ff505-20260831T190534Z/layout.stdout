@@ -1,0 +1,7 @@
+CampaignCounts=32
+ContractIdentity=32
+FailureDetail=40
+Observation=64
+VerdictContext=64
+Verdict=112
+CampaignReport=64

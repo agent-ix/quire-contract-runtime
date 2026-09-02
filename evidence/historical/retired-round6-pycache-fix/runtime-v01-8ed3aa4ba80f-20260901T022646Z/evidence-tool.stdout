@@ -1,0 +1,4 @@
+AA-001 binds runtime-v01-aaaaaaaaaaaa-20260831T000000Z: 26 outcomes, result conclusive
+{"classification": "repository-owned Coverage Status compatibility check", "functionalRows": 8, "statusLies": 0, "totals": {"backed": 28, "total": 28}}
+success
+verified 56 evidence-tool behavioral tests

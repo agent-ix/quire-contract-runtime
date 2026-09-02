@@ -9,18 +9,27 @@ review_set: subset
 
 # Runtime v0.1 gap analysis
 
+> **Round-scoped history, superseded on 2026-09-01.** This document analysed the
+> v0.1 candidate while the repository still ran its own evidence collector,
+> envelope builder, verifier and anchor census. `agent-ix/quire-contract-runtime#8`
+> removed all of that. Wherever the text below names `scripts/collect_evidence.sh`,
+> `scripts/verify_evidence.py`, `evidence/ANCHORS`, `make evidence-tool` or
+> `make verify-evidence`, it is describing machinery that no longer exists; the
+> current analysis is `reviews/SR-003`. Nothing here is rewritten, because a
+> review record that is edited to agree with a later state stops being a record.
+
 ## Summary
 
-The runtime requirements and implementation have no unresolved semantic gap after nine executed
-source-review rounds. The candidate remains gated by current protected checks and review, and the
-human source-release decision.
+The runtime requirements and implementation have no unresolved semantic gap after ten executed
+source-review rounds. PR #5 is merged at the exact reviewed tree, and every local merged-main gate,
+including pinned Kani 0.67.0, passes. Hosted checks and the human source-release decision remain open.
 
 ## Findings
 
 | ID | Severity | Summary | Refs |
 |---|---|---|---|
-| FND-013 | medium | The main-based candidate has no deliberately dispatched protected run after manual-CI PR #6 merged. | MP-001, PR #5, PR #6 |
-| FND-014 | medium | CODEOWNER approval and the human source-release decision remain pending. | AA-001, REV-003 |
+| FND-013 | medium | Merged `main` has no deliberately dispatched hosted run after manual-CI PR #6 merged; hosted CI is explicitly deferred while ticket work continues locally. | MP-001, PR #5, PR #6 |
+| FND-014 | medium | PR #5 was operator-authorized for admin merge after Round 10 cleared every finding; GitHub records no approval, and the human source-release decision remains pending. | AA-001, REV-003 |
 | FND-015 | medium | The manual-only hosted workflow does not yet execute the local rustdoc and evidence-tool gates; its externally owned reconciliation remains pending. | MP-001, PR #5, PR #6 |
 
 ## Source-review disposition
@@ -106,8 +115,8 @@ become stale on its own next commit.
 | #3 optional proptest mapping | pinned proptest feature; TC-004 maps and records pass/fail/reject distinctly | pass |
 | #3 complete per-requirement accounting | opaque `CampaignReport`; typed mismatch; TC-006 mixed and saturation tests | pass |
 | Acceptance-criterion traceability | 28/28 rows backed; 15/15 Rust test symbols bound; 70/137 production symbols owned; 67 deliberately unowned generated/private/test-support/measurement symbols; zero unbound test trace IDs | pass with explicit implementation-ownership boundary |
-| #3 Kani harness coverage | five checked-in proofs; pinned Kani 0.67.0 CI result | pass |
-| Epic local gates and measurements | local `make ci`; local input/manifest schema gates; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pass |
+| #3 Kani harness coverage | seven checked-in, trace-censed proofs; pinned Kani 0.67.0 local result | pass; refreshed record pending |
+| Epic local gates and measurements | individual local source/tooling gates pass; exact PGM-01 schema and custom-validator gates; revision-bound MP-001 record | pending refreshed evidence |
 | Protected remote gates | successful checks for pre-reconciliation revision retained under `evidence/historical/`; main-based candidate run | pending deliberate dispatch |
 
 ## Gap disposition
@@ -125,17 +134,17 @@ digest `0946e235e9e4b0fa79e9b9ec27ae157b303c17de0a9408d3cc04968fb7152256`.
 
 The following are release/workflow gates, not silently accepted gaps:
 
-1. Local Kani was unavailable and remains truthfully recorded as `skipped-unavailable`. Pinned Kani
-   0.67.0 executed all five proofs successfully for a historical pre-reconciliation revision; the
-   main-based candidate requires a fresh manual CI dispatch.
-2. Manual-CI PR #6 is merged. Protected checks must pass on the main-based candidate, and protected
-   code-owner review must complete on runtime PR #5. The externally owned manual-only workflow must
-   also reconcile the local rustdoc and evidence-tool lanes without restoring automatic triggers.
+1. Pinned Kani 0.67.0 executes all seven current proofs successfully; its exact transcript,
+   zero exit status, and `passed` outcome must be retained in the refreshed post-merge evidence record. A hosted
+   run is deferred rather than represented as complete.
+2. Manual-CI PR #6 is merged. The externally owned manual-only workflow must eventually run on
+   merged `main` and reconcile the local rustdoc and evidence-tool lanes without restoring automatic
+   triggers. Round 10 cleared every source finding before the operator-authorized admin merge.
 3. The human release owner must record the v0.1 decision in `planning/release-decision.md` after merge
    evidence is collected. No agent or automated gate may substitute for that decision.
 
-Implementation gap-analysis result: **pass, with current protected checks, code-owner review, and
-the human release decision still open**.
+Implementation gap-analysis result: **source remediation and local Kani pass, with refreshed evidence,
+hosted checks, and the human release decision still open**.
 
 ## Fourth re-review disposition
 
@@ -204,8 +213,8 @@ the panic-audit residual, and the ungated PGM pin. Its new findings are disposit
 | FND-206 | The census exclusion now matches only the exact `src/accounting_tests.rs` relative path for both directory-discovered and path-attached sources. |
 
 FND-015 remains externally owned and this branch neither edits nor dispatches the manual-only hosted
-workflow. Local Kani remains unavailable, so the five checked-in harnesses remain truthfully
-`skipped-unavailable` for the current source candidate.
+workflow. This statement is historical: Kani was unavailable during that round; post-merge evidence
+later executed the checked-in harnesses.
 
 ## Ninth re-review disposition
 
@@ -218,5 +227,103 @@ gates under fresh mutations. Its new findings are dispositioned as follows:
 | FND-302 | The TC-008 use-tree self-probe now includes `pub use accounting::*;` and requires the exact `src/lib.rs::use accounting::*` census label, making the `UseTree::Glob` arm load-bearing. |
 | FND-303 | NFR-002-AC-4 now explicitly owns collector transcript/status capture, command and fixed-point failure behavior, and the builder's transcript consistency. The collector carries an implementation marker enforced by the ownership test, and TC-007 describes the collector self-test, named exclusions, and contradiction checks. |
 
-Kani remains truthfully `skipped-unavailable`; with FND-301 reconciled, the current source requires a
-deliberate protected run. Task-006 remains an explicitly human-authored release decision.
+This statement is also round-scoped history: Kani was then `skipped-unavailable`. Task-006 remains an
+explicitly human-authored release decision.
+
+## Post-merge local evidence disposition
+
+PR #5 was admin-merged at `e360dad8a3e0e54f9b8457ff7f3748be0f2acdb3`, whose Git tree is identical
+to the Round-10-reviewed head. The immutable record
+`evidence/runtime-v01-e360dad8a3e0-20260831T160256Z` binds that exact clean merged revision and
+retains 25/25 passing local outcomes: the full local gate, pinned Kani 0.67.0 with 5/5 historical harnesses and
+zero failures, and both merged-PGM validators. All 91 retained checksums verify. This closes the
+current-source Kani evidence gap without making a hosted-CI or human-release claim.
+
+## Post-merge evidence review disposition
+
+The post-merge evidence review demonstrated that the result was accurate but its recorder could not
+distinguish it from a forgery. This branch now derives Kani from numeric status, exact successful
+harness names/count, version, and transcript markers; treats every skipped outcome as pending with a
+named limitation; censes unknown status files; verifies anchored records independently; binds the
+external merged-PGM schema; adds strict coverage and local Kani targets; and runs all Python test
+filenames. Proof scope is narrowed and stated: i8 addition uses independent widening arithmetic,
+invalid division is symbolic, index proof covers full `usize`, and accounting saturation has its own
+harness. The authoritative `runtime-v01-f3f1c28d1703-20260831T174552Z` record binds the clean
+remediation source, retains 26/26 passing outcomes including 6/6 Kani harnesses, and verifies 101
+checksums plus 81 manifest artifacts. Hosted workflow changes remain outside this branch by operator
+direction.
+
+## Post-merge evidence review Round 2 disposition
+
+Round 2 reconfirmed every first-round remediation and identified two new fail-open local gates plus
+twelve hardening findings. They are dispositioned as follows:
+
+| Review finding | Disposition |
+|---|---|
+| FND-101 | `make kani` now fails nonzero when `cargo-kani` is absent. Its prerequisite first checks the exact declared harness census, so a green `make ci` means Kani was available and executed. |
+| FND-102 | `scripts/check_coverage_status.py` owns the installed module's `Status` versus schema-valid `Coverage Status` compatibility seam. It consumes strict JSON, requires every functional row and report row to be fully backed/complete, and rejects ignored trace-bearing tests. The retained transcript reports this local classification instead of recording the upstream skipped classifier as passed. |
+| FND-103 / FND-112 | `scripts/check_kani_harnesses.py` requires the exact seven-function census and a TC-001/TC-002/TC-003 marker on every proof before Kani runs. Deletion, rename, untraced proof, and unexpected proof all fail the local gate. |
+| FND-104 | `scripts/update_evidence_anchors.py` deterministically regenerates the complete anchor census; the human operation is review of its diff, not digest transcription. A regression test requires the committed file to equal generated output. |
+| FND-105 | Verifier tests now execute checksum and symlink rejection, anchor generation, outcome census, revision binding, and distinct unavailable/failed channels instead of checking only for an ownership marker. |
+| FND-106 | The verifier requires the recorded revision to be an existing commit whose complete non-`evidence/` tree equals current `HEAD`, and requires the non-evidence worktree to equal `HEAD`. Evidence-only seal commits remain possible without allowing stale source/spec claims. |
+| FND-107 | Missing schema packages are mapped to `VerificationUnavailable`. The verifier writes `target/evidence-verification-status.json`, preserving passed/failed/unavailable and the original exit code even though GNU Make collapses recipe failures to exit 2. |
+| FND-108 | The weak Makefile substring assertions were removed. Tests interrogate Make's actual `ci` dependency graph and execute `make kani` under a PATH with Python but no `cargo-kani`, proving the gate is wired and fails closed. |
+| FND-109 | The accounting proof now drives the public `CampaignReport::record_verdict` and `record_discard` paths from symbolic near-overflow counts and independently asserts all five saturating increments plus the saturating total. |
+| FND-110 | Every checksummed record member is rejected if it is a symlink, matching the recursive tree-anchor rule. |
+| FND-111 | Current proof-count statements now say six; older 5/5 statements are explicitly historical records. |
+| FND-113 | The validator recursively inventories every `format` used by the supplied schema and refuses validation when any checker is absent; an unknown-format regression test holds the rule. |
+| FND-114 | The verifier independently reconciles retained numeric/availability status names, the declared command census, and manifest outcome names before re-deriving values. Exact Kani 0.67.0 identity is required. The remaining absence of an externally signed runner attestation is stated as a limitation rather than inferred from self-authored transcripts. |
+
+The branch continues to avoid hosted workflow edits and dispatches. Human release authority remains
+outside this evidence remediation.
+
+## Post-merge evidence review Round 3 disposition
+
+Round 3 confirmed the prior high-severity fixes and identified four positive-evidence failures,
+eleven control-integrity gaps, and seven lower-severity scope/documentation gaps. The source
+remediation is:
+
+| Review finding | Disposition |
+|---|---|
+| FND-201 | Kani acceptance parses every harness block, requires a positive check count at or above its checked-in floor, and records the per-harness values in the schema-validated manifest. The exact census now includes a seventh public-model provenance proof. |
+| FND-202 | The verifier rejects every authoritative record whose internally consistent result is not `conclusive`; an explicit failure-direction test covers an `inconclusive` result. |
+| FND-203 | Every zero-exit gate now needs command-specific positive corroboration (or the defined empty-success contract for rustfmt). Empty test/output transcripts become `inconclusive`, and NFR-002-AC-4 requires positive work evidence. |
+| FND-204 | Process-level mutation tests delete a Kani harness, delete a matrix row, and remove an anchored evidence entry; each real script must return nonzero. Make-control and PATH-shadow mutations likewise execute the real guard. |
+| FND-205 / FND-206 | Repository-owned Python caches are ignored explicitly. Untracked enumeration disables the global excludes file and applies only the committed root `.gitignore`, so self-hiding nested ignore files and `.git/info/exclude` cannot conceal build inputs. |
+| FND-207 | Anchor generation is no longer part of collection, refuses silent top-level removals, and enforces two named history directories plus a 29-record floor in both updater and verifier. |
+| FND-208 | Exactly one authoritative record is allowed; its directory, envelope `recordId`, README declaration, and strict timestamped name must agree. An incomplete `runtime-v01-*` directory is an error, never a generic tree anchor. |
+| FND-209 / FND-210 | The verifier independently re-derives parameters, collector executable, and dependency-lock digests from the recorded Git revision and rejects an `ANCHORS` symlink. |
+| FND-211 | The ignored-test detector walks every repository Rust source, binds ignore/cfg-attr attributes to the following function, and recognizes trace-bearing function names without a fixed line window. |
+| FND-212 / FND-213 | A parse-time Make guard rejects ambient flags and unsafe directives. The executable guard enforces exact ordered prerequisites, forbids failure suppression/control operators, substitutes `false` at every recipe position, and verifies exact Cargo/Python/Quire/Make paths and version shapes. |
+| FND-214 / FND-215 | Repairing the upstream status classifier now emits a notice rather than failing. The matrix gate fixes the eight-row census, requires a nonempty test citation per row, and resolves every cited TC/SUITE identity against the registry. |
+| FND-216 / FND-217 | The AA-001 gate consumes the verifier's machine-readable passed/failed/unavailable status. Coverage and Kani-census missing-input/tool paths return the unavailable exit channel. |
+| FND-218 / FND-219 | Both proof-only accounting constructors carry ownership markers, and `CLAUDE.md` lists the complete local gate surface. |
+| FND-220 / FND-221 | The stable-Clippy `cfg(kani)` boundary is documented and controlled by formatting, census, obligation floors, and Kani. Checked i8 sub/mul/div/rem now use independent widened oracles, while the seventh proof covers identity, observation, and verdict modules. |
+| FND-222 | AA-001 declares its authoritative-record count, outcome count, required verdict, and anchor; `check_assurance_anchor.py` executes that binding after evidence verification. |
+
+Kani 0.67.0 locally verifies all seven proofs with positive per-harness obligation counts. The
+authoritative evidence refresh remains pending until that source-bound transcript is collected. No
+hosted CI was dispatched and no workflow file was changed.
+
+## Post-merge evidence review Round 6 disposition
+
+Round 6 confirmed that all three Round 5 merge blockers were closed and identified one new Make
+control blocker plus ten hardening findings. This remediation clears the complete set:
+
+| Review finding | Disposition |
+|---|---|
+| FND-423 | The static guard rejects `SHELL`, `.SHELLFLAGS`, `.ONESHELL`, definitions, target-scoped controls, and every GNU Make assignment flavor. Literal mutation fixtures exercise each form through the parser and parse-time `ci` boundary. |
+| FND-424 | The evidence-test policy and manifest floor equal the complete 56-test suite, and the suite independently asserts exact equality so future drift fails immediately. |
+| FND-425 | Failure-direction tests directly execute the historical-disposition reader, both independent transcript parsers, rustup resolution, and tool-identity verifier. |
+| FND-426 | Matrix criteria must be nonempty, belong to the row's requirement, and match exact acceptance-criterion definition cells. Missing definitions, mere prose mentions, substring identities, and empty criteria are rejected by staged fixtures. |
+| FND-427 | `evidence/historical/DISPOSITIONS` has set equality with all retained envelope directories and records each envelope status; existing sidecars must agree with its classification. |
+| FND-428 | A missing rustup executable raises `VerificationUnavailable`, with a direct negative test. |
+| FND-429 | Producer invocation is derived solely from the staged record basename and independently checked against `evidence/{record.name}`. Ambient path injection is tested and ignored. |
+| FND-430 | Temporary PGM checkout paths are no longer written to the record or input schema; only source-independent digests, revision, and the repository-relative vendored validator path remain. |
+| FND-431 | The upstream validator Git blob is committed, checked against the exact merged checkout during collection, and re-derived from vendored bytes during verification. |
+| FND-432 | The dead generic evidence-tool corroboration regex is removed; the quantitative parser and exact policy floor are the sole acceptance path. |
+| FND-433 | Tests hollow the shell-gate prober, execute the linked-footprint boundary at 4096/4097 bytes, and prove `target/` remains the only ignored untracked source-binding exception exercised by the fixture. |
+
+The deferred second Kani oracle, AA-001 self-reference, and exhaustive mutation expansion remain
+declared design extensions rather than claims. Hosted CI remained manual-only and was not
+dispatched or edited.

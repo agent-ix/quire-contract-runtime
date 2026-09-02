@@ -47,8 +47,8 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 - Public data enums are non-exhaustive for forward-compatible retention of future states.
 - Exact type and release artifact sizes are target-dependent and retained per candidate. The v0.1
   gate fixes Rust 1.75 and `thumbv7em-none-eabi`, then limits the representative static-library
-  fixed-population consumer's linked `.text` plus `.rodata` to 4 KiB. Compiler-sensitive rlib bytes
-  are observational; MP-001 defines the exercised API set and shared release profile.
+  fixed-population consumer's linked `.text` plus `.rodata` to 4 KiB with no panic relocation.
+  MP-001 defines the exercised API set and shared release profile.
 - The crate and generated customer-linked surface are `MIT OR Apache-2.0` and `publish = false` until
   the human v0.1 source-release decision.
 - Release evidence can support a consuming project's validation or accreditation decision; it does
@@ -57,13 +57,20 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 ## Verification
 
 ```bash
-make ci
-bash scripts/collect_evidence.sh
+make ci          # every mandatory local gate; hosted CI stays manual-only
+make assurance   # pins, retained-evidence compatibility, and the Quoin chain
 ```
 
-The checked-in Kani harnesses are a required CI job using pinned Kani 0.67.0. A local evidence run
-records an unavailable Kani installation as skipped, never as passed. Requirements and assurance
-artifacts live under `spec/`, with planning and review records under `planning/`.
+The seven checked-in Kani harnesses run under pinned Kani 0.67.0 and each must discharge a declared
+positive obligation floor. An absent `cargo-kani` is reported as `unavailable` and fails the gate; it
+is never recorded as a skip and never as a pass.
+
+This repository retains no evidence framework of its own. Verification results are handed to the
+released Engineering Assurance, Quire and Quoin contracts, pinned in `assurance/pins.json`. The
+records under `evidence/` are immutable history, read only through the shared compatibility mapping.
+Requirements, test cases, the matrix, the suite registry and assurance artifacts live under `spec/`;
+plans under `plan/`; historical planning and review records under `planning/`; and code reviews and
+gap analyses under `reviews/`.
 
 Agent-assisted contributions remain subject to the same traceability, review, evidence, and human
 release gates as every other contribution.

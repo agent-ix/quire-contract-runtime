@@ -23,5 +23,6 @@ Scope: issues #2, #1, #3, the specification under `spec/`, and PGM-01 at
 
 The source review at `6a720fbf` identified real MSRV, panic-audit, accounting-integrity, and
 traceability gaps. Their dispositions are recorded in `planning/gap-analysis.md` and are now enforced
-by the expanded local gate. PGM-01 completion, protected manual checks, CODEOWNER review, and the v0.1
-human release decision remain program/release gates rather than automated success.
+by the expanded local gate. Round 10 cleared every source finding, PR #5 is merged, and merged-main
+local Kani passes. Hosted manual checks and the v0.1 human release decision remain program/release
+gates rather than automated success.

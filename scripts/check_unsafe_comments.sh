@@ -12,6 +12,7 @@ if [[ "${1:-}" == "--update-baseline" ]]; then
 fi
 
 if [[ ! -d src ]]; then
+  echo "unsafe audit passed"
   exit 0
 fi
 
@@ -21,6 +22,7 @@ while IFS= read -r line; do
 done < <(grep -rEn 'unsafe[[:space:]]*\{' src 2>/dev/null || true)
 
 if [[ ${#unsafe_lines[@]} -eq 0 ]]; then
+  echo "unsafe audit passed"
   exit 0
 fi
 
@@ -49,6 +51,7 @@ if [[ "$update_baseline" == true ]]; then
 fi
 
 if [[ ${#missing_lines[@]} -eq 0 ]]; then
+  echo "unsafe audit passed"
   exit 0
 fi
 
@@ -65,4 +68,7 @@ for entry in "${missing_lines[@]}"; do
   fi
 done
 
+if [[ "$missing" == 0 ]]; then
+  echo "unsafe audit passed"
+fi
 exit "$missing"

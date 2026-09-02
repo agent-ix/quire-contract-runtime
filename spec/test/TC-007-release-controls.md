@@ -28,21 +28,19 @@ both accounting mutations, and every operator family. A footprint-crate unit tes
 population at two fixed inputs and compares exact results. The source-policy test also recursively
 parses every shipped runtime source file and constrains accounting inherent and trait implementations,
 private aliases, cross-file functions, and macros that could add a reset seam.
-Python unit tests assemble a fixture evidence bundle, verify its digests, roles, extension block,
-and schema pin, exercise accepted/rejected local validation, reject a mismatched PGM schema pin,
-reject zero-status records contradicted by retained failure transcripts, and pin the validator
-transcript exclusion names. The collector self-test executes the production status recorder and
-status-word/fixed-point helpers, requiring nonzero commands to mark collection failure and changed
-envelopes to fail their checksum comparison.
+`scripts/measure_footprint.py` links the fixed-population consumer on the declared MSRV compiler for
+the declared target and publishes the measurement as a structured document, so the numbers a reader
+sees are the numbers a gate read. `tests/shared_assurance.rs` pins the four frozen artifacts under
+`schemas/` by SHA-256 and asserts that no code, configuration, or workflow file in the repository
+references any of them.
 
 ## Expected Results
 
 The source policy and footprint semantic tests pass, the default normal dependency count and
 unsafe-block count are zero, the license and publication gates pass, and
 `scripts/check_linked_footprint.sh` exits successfully only when the fixed-target runtime/harness
-sections are at least 500 and no larger than 4,096 bytes and no runtime/harness panic-path reference is linked. The rlib byte
-count is retained separately as an unenforced compiler-sensitive observation.
-The evidence builder fails before emitting an envelope if the vendored PGM schema differs from the
-pinned digest, and the planning copies of the revision and digest agree with the executable pin. The
-collector self-test fails if command-status propagation, status-word derivation, or envelope
-fixed-point detection is weakened.
+sections are at least 500 and no larger than 4,096 bytes and no runtime/harness panic-path reference
+is linked.
+
+The four frozen artifacts under `schemas/` are byte-identical to the digests retained records name
+them by, and altering one byte of any of them fails the census.

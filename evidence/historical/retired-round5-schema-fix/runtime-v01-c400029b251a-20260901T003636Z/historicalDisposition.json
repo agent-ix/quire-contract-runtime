@@ -1,0 +1,6 @@
+{
+  "classification": "failed-collection",
+  "reason": "The collection failed closed because the input schema did not yet admit the newly retained MSRV rustc executable identity; the schema and generated-instance test now enforce the complete eight-tool census.",
+  "reviewFinding": "FND-404 MSRV compiler identity schema closure",
+  "superseded": true
+}

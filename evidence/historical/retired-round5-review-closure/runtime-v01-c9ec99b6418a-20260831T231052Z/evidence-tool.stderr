@@ -1,0 +1,10 @@
+..ASSURANCE_ANCHOR_FAILED: the immediately preceding evidence verification did not pass
+.............EVIDENCE_TEST_CENSUS_FAILED: cannot discover suite: Start directory is not importable: '/tmp/tmplhlwdol2/tests'
+......KANI_FAILED: successful process did not meet the harness and proof-obligation floors
+...................runtime evidence verification unavailable: missing dependency
+runtime evidence verification failed: tampered record
+....
+----------------------------------------------------------------------
+Ran 44 tests in 2.370s
+
+OK

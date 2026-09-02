@@ -25,6 +25,22 @@ impl CampaignCounts {
         }
     }
 
+    #[cfg(kani)]
+    // Implements: FR-004
+    pub(crate) const fn from_proof_counts(
+        accepted: u64,
+        rejected: u64,
+        failed: u64,
+        discarded: u64,
+    ) -> Self {
+        Self {
+            accepted,
+            rejected,
+            failed,
+            discarded,
+        }
+    }
+
     fn record_kind(&mut self, kind: VerdictKind) {
         match kind {
             VerdictKind::Passed => self.accepted = self.accepted.saturating_add(1),
@@ -143,6 +159,21 @@ impl<'a> CampaignReport<'a> {
         Self {
             identity,
             counts: CampaignCounts::new(),
+        }
+    }
+
+    #[cfg(kani)]
+    // Implements: FR-004
+    pub(crate) const fn from_proof_counts(
+        identity: ContractIdentity<'a>,
+        accepted: u64,
+        rejected: u64,
+        failed: u64,
+        discarded: u64,
+    ) -> Self {
+        Self {
+            identity,
+            counts: CampaignCounts::from_proof_counts(accepted, rejected, failed, discarded),
         }
     }
 
