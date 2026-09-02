@@ -1,6 +1,0 @@
-{
-  "classification": "superseded-authority",
-  "reason": "This record predates the Round 4 live test census, trusted tool digests, Kani floors and mutation campaign, per-lane test counts, and per-record historical anchors.",
-  "reviewFinding": "Round 4 control strengthening",
-  "superseded": true
-}

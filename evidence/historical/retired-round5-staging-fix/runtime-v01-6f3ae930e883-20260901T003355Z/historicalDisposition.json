@@ -1,6 +1,0 @@
-{
-  "classification": "failed-collection",
-  "reason": "The evidence-tool suite correctly rejected the collector's incomplete in-progress directory after FND-415 was closed; the collector now stages outside the authoritative evidence census.",
-  "reviewFinding": "FND-415 collection staging failure direction",
-  "superseded": true
-}

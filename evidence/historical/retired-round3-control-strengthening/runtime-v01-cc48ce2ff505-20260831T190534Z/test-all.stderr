@@ -1,7 +1,0 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
-     Running unittests src/lib.rs (/tmp/agent-b-runtime-round2/debug/deps/quire_contract_runtime-8d2e16b20b62c800)
-     Running tests/integration.rs (/tmp/agent-b-runtime-round2/debug/deps/integration-76cad6dae7cfb080)
-     Running tests/operators.rs (/tmp/agent-b-runtime-round2/debug/deps/operators-4ad1c74115807da2)
-     Running tests/proptest_adapter.rs (/tmp/agent-b-runtime-round2/debug/deps/proptest_adapter-06e5492f45bf66bd)
-     Running tests/release_contract.rs (/tmp/agent-b-runtime-round2/debug/deps/release_contract-3a1214ee6aeb59f8)
-   Doc-tests quire_contract_runtime

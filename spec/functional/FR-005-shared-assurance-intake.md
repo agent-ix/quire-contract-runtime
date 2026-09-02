@@ -22,13 +22,12 @@ contracts rather than to a repository-local evidence framework.
 - Structured results produced by this repository's own tools: the feature-matrix runner, the Kani
   proof gate, the Kani semantic-mutation campaign, and the governed footprint measurement.
 - The Quire static export of specification, obligation, and coverage facts.
-- The immutable evidence bytes retained under `evidence/`.
 
 ## Outputs
 
 - A Quoin change-assurance record sealed from `assurance/change-assurance.json`.
 - One Quoin proof attestation per declared proof obligation, over bytes a producer already wrote.
-- A Quoin verification receipt, and the read-only compatibility view of retained evidence.
+- A Quoin verification receipt.
 
 ## Behavior
 
@@ -52,12 +51,6 @@ contracts rather than to a repository-local evidence framework.
   not-computed, malformed, partial, stale, suspect, vacuous, and tampered distinguishable from one
   another.
 - quire-contract-runtime shall report no non-success outcome as a success.
-- `scripts/legacy_evidence_view.py` shall read every retained evidence byte through the pinned
-  Engineering Assurance mapping.
-- `scripts/legacy_evidence_view.py` shall leave every retained evidence byte unmodified.
-- While the pinned mapping refuses a retained schema family, quire-contract-runtime shall report
-  that refusal.
-- quire-contract-runtime shall implement no compatibility mapping of its own.
 - quire-contract-runtime shall retain no generic runner, evidence envelope, manifest, tool-identity
   framework, retention store, audit store, anchor file, recipe-failure policer, or aggregate
   verdict.
@@ -70,7 +63,6 @@ contracts rather than to a repository-local evidence framework.
 | FR-005-AC-1 | Every pinned component is classified by the packaged compatibility matrix, no consumed artifact digest differs from its pin, and no internal mirror registry is named anywhere in the repository. | Test (TC-009) |
 | FR-005-AC-2 | The feature-matrix, Kani proof, Kani mutation, and footprint results are structured, are produced by this repository's tools, and reach Quoin through the declared adapter without Quoin or Quire executing a producer. | Test (TC-010) |
 | FR-005-AC-3 | Static specification, obligation, and coverage facts for a candidate revision come from the Quire export named by the sealed record's impact snapshot. | Test (TC-011) |
-| FR-005-AC-4 | Every retained evidence byte is unchanged by a compatibility run, every retained envelope is read through the pinned mapping, and the mapping's answer is reported without being converted into a pass or a failure. | Test (TC-012) |
 | FR-005-AC-5 | Each of the twelve verification outcomes is demonstrated by a case that produced it, each negative case is paired with a positive control that was observed to be accepted, and an absent Kani toolchain is reported as unavailable rather than as a pass. | Test (TC-013) |
 | FR-005-AC-6 | No script, Make target, or test in the repository implements a generic evidence envelope, manifest, retention store, tool-identity lock, anchor file, or aggregate verdict, and the frozen evidence schemas are referenced by nothing. | Test (TC-014) |
 

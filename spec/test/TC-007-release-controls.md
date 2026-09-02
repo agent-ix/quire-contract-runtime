@@ -15,9 +15,7 @@ relationships:
 Verify the default linked boundary remains dependency-free and unsafe-free, the Rust 1.75
 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte population floor and 4 KiB
 ceiling for linked `.text` plus `.rodata`, retains no runtime/harness panic-path reference, and publication and dual-license
-controls remain explicit. Verify the evidence toolchain binds the vendored PGM-01 schema to the
-recorded revision/digest, preserves semantic envelope identities, and fails closed when collection,
-outcome, transcript, or checksum-fixed-point records disagree.
+controls remain explicit.
 
 ## Test Procedure
 
@@ -30,9 +28,7 @@ parses every shipped runtime source file and constrains accounting inherent and 
 private aliases, cross-file functions, and macros that could add a reset seam.
 `scripts/measure_footprint.py` links the fixed-population consumer on the declared MSRV compiler for
 the declared target and publishes the measurement as a structured document, so the numbers a reader
-sees are the numbers a gate read. `tests/shared_assurance.rs` pins the four frozen artifacts under
-`schemas/` by SHA-256 and asserts that no code, configuration, or workflow file in the repository
-references any of them.
+sees are the numbers a gate read.
 
 ## Expected Results
 
@@ -42,5 +38,3 @@ unsafe-block count are zero, the license and publication gates pass, and
 sections are at least 500 and no larger than 4,096 bytes and no runtime/harness panic-path reference
 is linked.
 
-The four frozen artifacts under `schemas/` are byte-identical to the digests retained records name
-them by, and altering one byte of any of them fails the census.

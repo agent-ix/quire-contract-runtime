@@ -78,8 +78,6 @@ jobs:
           quoin module ensure-defaults
       - name: Classify the shared pins through the packaged matrix
         run: make pins
-      - name: Read retained evidence through the shared mapping
-        run: make compat-view
 
   licenses:
     name: License Check

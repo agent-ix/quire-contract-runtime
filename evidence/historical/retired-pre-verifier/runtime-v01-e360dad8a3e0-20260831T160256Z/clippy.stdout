@@ -1,2 +1,0 @@
-cargo clippy -p quire-contract-runtime --all-targets --all-features -- -D warnings
-cargo clippy -p quire-contract-runtime-footprint --lib --release --target thumbv7em-none-eabi -- -D warnings

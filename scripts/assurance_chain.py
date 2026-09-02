@@ -59,7 +59,6 @@ INPUTS = {
     "PROOF-kani-mutations": ("kani-mutations.json", "application/json"),
     "PROOF-footprint": ("footprint.json", "application/json"),
     "PROOF-quire-static-export": ("quire-static-export.json", "application/json"),
-    "PROOF-legacy-compatibility": ("legacy-compatibility.json", "application/json"),
     "PROOF-msrv": ("msrv.jsonl", "application/x-ndjson"),
 }
 
@@ -577,9 +576,6 @@ def _derive(proof_id: str, raw: str, path: Path) -> str:
         document = json.loads(raw)
         require_measurements(document, path.name)
         return _rows_result(document["entries"], path.name)
-    if proof_id == "PROOF-legacy-compatibility":
-        census = json.loads(raw)
-        return "passed" if census["matched"] else "failed"
     if proof_id == "PROOF-quire-static-export":
         export = json.loads(raw)
         # Quire's export is a static fact set, not a run, so it has no outcome
@@ -1111,7 +1107,72 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
         }
     )
 
-    # Probe 5: a foreign protocol is refused by the adapter, not guessed at.
+    # Probe 5: a criterion whose declared verification method is in no catalog is
+    # reported as unsupported rather than passed over. This is the demonstration
+    # of `unsupported` that the retained-evidence compatibility view used to own:
+    # there, a record declared a schema version the mapping's catalog did not
+    # have and the mapping refused it by name. Here, a criterion declares a
+    # method Quoin's catalog does not have and Quoin refuses it by name. Both are
+    # a tool saying "I do not know what this is" in its own structured
+    # vocabulary, which is a different answer from a failure and must not be
+    # allowed to read as silence.
+    #
+    # The edit is made to the copied spec tree, never to this repository's own.
+    unsupported_before = audit_kinds()
+    criterion = probe_root / "spec" / "functional" / "FR-002-safe-operators.md"
+    criterion_text = criterion.read_text(encoding="utf-8")
+    marker = UNSUPPORTED_PROBE_MARKER
+    if marker not in criterion_text:
+        raise ChainError(
+            "the probe's verification-method marker is no longer present in FR-002. "
+            "The unsupported-method probe replaces a real declared method with one "
+            "no catalog names; a marker that no longer exists would turn the probe "
+            "into a no-op, so this is an error rather than a skip."
+        )
+    criterion.write_text(
+        criterion_text.replace(marker, "| Haruspicy (TC-002) |", 1), encoding="utf-8"
+    )
+    kinds = audit_kinds()
+    results.append(
+        {
+            "probe": "audit-reports-an-unsupported-method",
+            "state": "unsupported",
+            "matched": kinds.get("unknown-method", 0) > unsupported_before.get("unknown-method", 0),
+            "detail": {"before": unsupported_before, "after": kinds},
+        }
+    )
+    criterion.write_text(criterion_text, encoding="utf-8")
+
+    # Probe 6: a `malformed` producer row travels the chain as a non-success.
+    # `scripts/check_kani_mutations.py` really emits this outcome — it is what a
+    # mutation whose anchor text is no longer present exactly once reports — so
+    # the row is a state a producer here can actually write, not a label invented
+    # for the census. The stream is derived from the real one by one named edit
+    # and transcribed by the adapter, exactly as the `unavailable` probe above
+    # does, so an adapter that read `malformed` as a pass would be caught here.
+    #
+    # What this does not claim: Quoin's attestation vocabulary is passed, failed,
+    # unavailable and not_computed, so a malformed row reaches the receipt as
+    # `result_failed`. The state kept distinguishable here is the producer's, at
+    # the boundary this repository owns.
+    malformed_document = json.loads(stream)
+    for row in malformed_document["entries"]:
+        row["outcome"] = "malformed"
+    malformed = adapt_kani_proofs(json.dumps(malformed_document))
+    carried = all(entry["outcome"] != "pass" for entry in malformed["entries"])
+    results.append(
+        {
+            "probe": "adapter-carries-a-malformed-row-as-non-success",
+            "state": "malformed",
+            "matched": carried and bool(malformed["entries"]),
+            "detail": {
+                "outcomes": sorted({entry["outcome"] for entry in malformed["entries"]}),
+                "entries": len(malformed["entries"]),
+            },
+        }
+    )
+
+    # Probe 7: a foreign protocol is refused by the adapter, not guessed at.
     foreign_document = json.loads(stream)
     foreign_document["protocol"] = "some.other.protocol/v1"
     refused = False
@@ -1125,15 +1186,15 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
             # A refusal by the adapter is not one of the twelve states travelling
             # the chain; it is the adapter declining to produce one. Labelling it
             # `unsupported` would let the census count a refusal as a
-            # demonstration. `unsupported` is demonstrated by the compatibility
-            # view, against a record that really carries an unknown schema.
+            # demonstration. `unsupported` is demonstrated four probes above, by
+            # Quoin naming a declared method its catalog does not have.
             "state": None,
             "matched": refused,
             "detail": {"protocol": "some.other.protocol/v1"},
         }
     )
 
-    # Probe 6: an empty stream is refused rather than transcribed into a clean run.
+    # Probe 8: an empty stream is refused rather than transcribed into a clean run.
     empty_document = json.loads(stream)
     empty_document["entries"] = []
     empty_refused = False
@@ -1152,7 +1213,7 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
         }
     )
 
-    # Probe 7: an outcome the adapter does not name is refused rather than
+    # Probe 9: an outcome the adapter does not name is refused rather than
     # defaulted. A silently defaulted unknown state is how twelve states become
     # two, and this repository's whole migration is about not doing that.
     unknown_document = json.loads(stream)
@@ -1165,8 +1226,9 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
     results.append(
         {
             "probe": "refuses-an-unnamed-outcome",
-            # Same reason. `malformed` is demonstrated by the compatibility view,
-            # against a record whose legacy field really has the wrong type.
+            # Same reason. `malformed` is demonstrated three probes above, by a
+            # producer row carrying the outcome the mutation campaign emits when
+            # a mutation anchor is no longer present exactly once.
             "state": None,
             "matched": unknown_refused,
             "detail": {"outcome": "probably-fine"},
@@ -1180,6 +1242,11 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
 # so that a specification edit which invalidates the probe fails loudly here
 # rather than silently turning the probe into a no-op.
 SUSPECT_PROBE_MARKER = "Boundary tests and Kani harnesses cover every definedness helper family."
+
+# The exact verification-method cell the unsupported-method probe replaces. Kept
+# as a constant for the same reason: a specification edit that invalidates the
+# probe must fail loudly rather than quietly stop probing.
+UNSUPPORTED_PROBE_MARKER = "| Test (TC-002) |"
 
 
 def main(argv: list[str]) -> int:

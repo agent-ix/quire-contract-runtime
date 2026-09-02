@@ -1,6 +1,0 @@
-{
-  "classification": "failed-collection",
-  "reason": "All retained commands were conclusive, but final source verification correctly rejected ignored Python bytecode caches; Make and the collector now route bytecode beneath the explicitly non-source target tree.",
-  "reviewFinding": "FND-407 ignored untracked input self-contamination",
-  "superseded": true
-}

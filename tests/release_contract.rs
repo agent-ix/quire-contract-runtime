@@ -19,7 +19,13 @@ fn tc_005_optional_surface_is_explicitly_feature_gated() {
     assert!(CARGO_MANIFEST.contains("proptest = [\"std\", \"dep:proptest\"]"));
 }
 
-/// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, NFR-002-AC-4, StR-001-VC-2
+// NFR-002-AC-4 is not traced here any more. It described the deleted evidence
+// collector and the builder that validated against the vendored PGM-01 schema;
+// the collector went with the migration and the schema went with the retained
+// records under agent-ix/quire-contract-runtime#11. Nothing in this test ever
+// asserted the criterion's substance, so the criterion was deleted rather than
+// left bound to a test that does not check it.
+/// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, StR-001-VC-2
 #[test]
 fn tc_007_release_controls_are_mandatory() {
     assert!(CARGO_MANIFEST.contains("license = \"MIT OR Apache-2.0\""));

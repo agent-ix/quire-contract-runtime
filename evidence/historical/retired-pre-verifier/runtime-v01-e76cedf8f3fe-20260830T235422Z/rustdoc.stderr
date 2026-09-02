@@ -1,7 +1,0 @@
- Documenting quire-contract-runtime v0.1.0 (/home/peter/dev/quire-contract-runtime)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.45s
-   Generated /home/peter/dev/quire-contract-runtime/target/evidence-e76cedf/doc/quire_contract_runtime/index.html
-    Checking quire-contract-runtime v0.1.0 (/home/peter/dev/quire-contract-runtime)
- Documenting quire-contract-runtime-footprint v0.0.0 (/home/peter/dev/quire-contract-runtime/measurement/footprint)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.28s
-   Generated /home/peter/dev/quire-contract-runtime/target/evidence-e76cedf/thumbv7em-none-eabi/doc/quire_contract_runtime_footprint/index.html

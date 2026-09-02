@@ -43,7 +43,7 @@ relationships:
 ## Claim
 
 The bounded claim concerns only an identified source revision and feature matrix. It remains open
-until the named human owner reviews the retained evidence and records a decision.
+until the named human owner reviews the attested results and records a decision.
 
 ## Reasoning
 
@@ -64,12 +64,11 @@ evidence_binding:
   declaration: assurance/change-assurance.json
   pins: assurance/pins.json
   record: quoin change-assurance seal-record
-  proof_obligations: 7
+  proof_obligations: 6
   attestation_result_source: the bytes each producer wrote, read as a structured field
   receipt: quoin change-assurance receipt
   expected_receipt_outcome: incomplete
   expected_receipt_reason: decision_missing
-  retained_evidence: read-only through engineering_assurance.verification_semantics.map_pgm01_bytes
 ```
 
 `incomplete` is the correct outcome and not a defect. The receipt is incomplete precisely because no

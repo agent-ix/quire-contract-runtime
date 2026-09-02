@@ -1,6 +1,0 @@
-{
-  "classification": "superseded-authority",
-  "reason": "This conclusive record predates the Round 5 portable PGM validator, actual toolchain identities, retained behavioral-control floors, ignored-input checks, command binding, and historical-disposition validation.",
-  "reviewFinding": "FND-401 through FND-422 Round 5 closure",
-  "superseded": true
-}

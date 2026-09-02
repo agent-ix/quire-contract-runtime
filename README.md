@@ -58,17 +58,19 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 
 ```bash
 make ci          # every mandatory local gate; hosted CI stays manual-only
-make assurance   # pins, retained-evidence compatibility, and the Quoin chain
+make assurance   # shared pins and the Quoin chain
 ```
 
 The seven checked-in Kani harnesses run under pinned Kani 0.67.0 and each must discharge a declared
 positive obligation floor. An absent `cargo-kani` is reported as `unavailable` and fails the gate; it
 is never recorded as a skip and never as a pass.
 
-This repository retains no evidence framework of its own. Verification results are handed to the
-released Engineering Assurance, Quire and Quoin contracts, pinned in `assurance/pins.json`. The
-records under `evidence/` are immutable history, read only through the shared compatibility mapping.
-Requirements, test cases, the matrix, the suite registry and assurance artifacts live under `spec/`;
+This repository retains no evidence framework of its own and no evidence. Verification results are
+handed to the released Engineering Assurance, Quire and Quoin contracts, pinned in
+`assurance/pins.json`, and Quoin retains the producer bytes. The records that used to sit under
+`evidence/` were deleted under `agent-ix/quire-contract-runtime#11`; the preservation constraint that
+held them was released for the pre-stable phase by the repository owner and re-applies at the move
+toward stable releases. Requirements, test cases, the matrix, the suite registry and assurance artifacts live under `spec/`;
 plans under `plan/`; historical planning and review records under `planning/`; and code reviews and
 gap analyses under `reviews/`.
 

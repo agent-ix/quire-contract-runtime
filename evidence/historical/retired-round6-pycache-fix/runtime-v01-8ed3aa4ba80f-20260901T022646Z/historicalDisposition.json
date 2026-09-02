@@ -1,6 +1,0 @@
-{
-  "classification": "failed-collection",
-  "reason": "All retained commands were conclusive, but final source verification correctly rejected Python bytecode caches created before collection; the generated caches were moved out of the source tree before recollection.",
-  "reviewFinding": "FND-427 exact historical disposition census",
-  "superseded": true
-}

@@ -25,9 +25,8 @@ make kani-mutations   # injected defects must fail their owning proofs
 make assurance-env    # create the pinned shared-assurance interpreter
 make assurance-inputs # the ONLY target that runs a producer
 make pins             # classify the toolchain through the shared matrix
-make compat-view      # read retained evidence through the shared mapping
 make assurance-chain  # seal, retain, and verify through Quoin
-make assurance        # pins + compat-view + assurance-chain
+make assurance        # pins + assurance-chain
 make ci               # all mandatory local gates; never dispatches hosted CI
 ```
 
@@ -48,12 +47,14 @@ transcript and publishes `runtime.kani-proof/v1`. It is the only place a
 transcript is parsed. An absent `cargo-kani` produces `unavailable` rows and a
 non-zero gate — never a skip and never a pass.
 
-The 42 retained envelopes under `evidence/` are immutable. They are read only
-through `engineering_assurance.verification_semantics.map_pgm01_bytes`, which
-refuses them as an unknown schema family; that refusal is the reported result and
-is filed upstream as `agent-ix/engineering-assurance#21`. Four artifacts under
-`schemas/` are frozen because retained records name them by digest; see
-`schemas/README.md`.
+This repository retains no evidence of its own and no frozen schema family. The
+42 `quire.derivation-evidence/v1` envelopes under `evidence/`, the reader that
+read them, their fixtures and the four schemas they named by digest were deleted
+under `agent-ix/quire-contract-runtime#11`, by the repository owner's decision on
+2026-09-02 to release the evidence-preservation constraint for the pre-stable
+phase (`agent-ix/engineering-assurance#7`). Nothing was rewritten to look as
+though it still verifies. The constraint re-applies unchanged at the move toward
+stable releases.
 
 ## Safety scaffolding
 
@@ -78,7 +79,5 @@ tests/                 # integration, operator, proptest, release and assurance 
 spec/                  # requirements, test cases, matrix, suite registry, assurance
 plan/                  # PLAN-001 runtime v0.1, PLAN-002 shared assurance migration
 assurance/             # the change declaration and the shared release pins
-schemas/               # frozen historical artifacts; nothing validates against them
-evidence/              # immutable retained records; read-only, never written
 scripts/               # domain producers and the shared-assurance gates
 ```

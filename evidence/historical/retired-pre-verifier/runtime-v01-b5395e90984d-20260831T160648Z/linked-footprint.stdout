@@ -1,3 +1,0 @@
-CARGO_TARGET_DIR=target/footprint-msrv cargo +1.75.0 build --locked --release --manifest-path measurement/footprint/Cargo.toml --target thumbv7em-none-eabi
-bash scripts/check_linked_footprint.sh target/footprint-msrv/thumbv7em-none-eabi/release/libquire_contract_runtime_footprint.a
-artifact=target/footprint-msrv/thumbv7em-none-eabi/release/libquire_contract_runtime_footprint.a target=thumbv7em-none-eabi sections=.text+.rodata bytes=907 minimum=500 limit=4096 panic_references=0

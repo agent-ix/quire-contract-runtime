@@ -57,7 +57,6 @@ KANI_RESULT := $(ASSURANCE_DIR)/kani-proofs.json
 KANI_MUTATION_RESULT := $(ASSURANCE_DIR)/kani-mutations.json
 FOOTPRINT_RESULT := $(ASSURANCE_DIR)/footprint.json
 QUIRE_EXPORT := $(ASSURANCE_DIR)/quire-static-export.json
-COMPAT_RESULT := $(ASSURANCE_DIR)/legacy-compatibility.json
 MSRV_RESULT := $(ASSURANCE_DIR)/msrv.jsonl
 REVISION ?= $(shell git rev-parse HEAD)
 
@@ -84,9 +83,8 @@ help:
 	@echo "  make assurance-env    - create the pinned shared-assurance interpreter"
 	@echo "  make assurance-inputs - run the producers and write their structured results"
 	@echo "  make pins             - classify the toolchain through the shared matrix"
-	@echo "  make compat-view      - read retained evidence through the shared mapping"
 	@echo "  make assurance-chain  - seal, retain, and verify through Quoin"
-	@echo "  make assurance        - pins + compat-view + assurance-chain"
+	@echo "  make assurance        - pins + assurance-chain"
 	@echo "  make ci               - All CI gates locally (hosted CI is manual-only)"
 
 # =============================================================================
@@ -215,7 +213,6 @@ assurance-inputs: assurance-env
 	$(PYTHON) scripts/check_kani_mutations.py --json > $(KANI_MUTATION_RESULT)
 	$(PYTHON) scripts/measure_footprint.py --json > $(FOOTPRINT_RESULT)
 	$(QUIRE) coverage --scope . --json > $(QUIRE_EXPORT)
-	$(ASSURANCE_PYTHON) scripts/legacy_evidence_view.py --json > $(COMPAT_RESULT)
 	rustup run $(MSRV) $(CARGO) check --locked --all-targets --all-features \
 		--message-format=json > $(MSRV_RESULT)
 
@@ -223,17 +220,12 @@ assurance-inputs: assurance-env
 pins: assurance-env
 	$(ASSURANCE_PYTHON) scripts/check_shared_pins.py
 
-.PHONY: compat-view
-compat-view: assurance-env
-	$(ASSURANCE_PYTHON) scripts/legacy_evidence_view.py
-	$(ASSURANCE_PYTHON) scripts/legacy_evidence_view.py --mutation-probes
-
 .PHONY: assurance-chain
 assurance-chain: assurance-inputs
 	$(PYTHON) scripts/assurance_chain.py --candidate-revision $(REVISION)
 
 .PHONY: assurance
-assurance: pins compat-view assurance-chain
+assurance: pins assurance-chain
 
 # An operator target, not a CI gate. It writes into this repository's own Quoin
 # evidence store, which is a reviewed change to spec/evidence/ rather than
