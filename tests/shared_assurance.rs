@@ -217,7 +217,6 @@ fn tc_010_the_chain_reaches_quoin_without_quoin_or_quire_executing_a_producer() 
         // compatibility census. Named here so that deleting either one is a
         // failure rather than a silently smaller census.
         "audit-reports-an-unsupported-method",
-        "adapter-carries-a-malformed-row-as-non-success",
     ] {
         assert!(
             probes.iter().any(|probe| probe["probe"] == required),
@@ -632,25 +631,62 @@ fn tc_013_all_twelve_verification_outcomes_are_demonstrated_and_paired_with_cont
         ("tampered", "chain"),
     ];
 
-    // Every one of the twelve now comes from the chain itself. Until
-    // agent-ix/quire-contract-runtime#11 this census was a union of the chain's
-    // states with the retained-evidence compatibility census's case kinds, and
-    // `unsupported` and `malformed` were reachable only through that census —
-    // measured on the pre-deletion tree, the chain alone reached ten of twelve.
-    // Deleting the retained records without replacing those two demonstrations
-    // would have quietly taken FR-005-AC-5 from twelve to ten, so both were
-    // re-established on surfaces that never read a retained byte: Quoin naming a
-    // declared verification method its catalog does not have, and a producer row
-    // carrying the outcome the mutation campaign emits for a mutation anchor
-    // that is no longer present exactly once.
+    // Where the twelve come from, and why it is two sources rather than one.
+    //
+    // Until agent-ix/quire-contract-runtime#11 this census unioned the chain's
+    // states with the retained-evidence compatibility census's case kinds.
+    // Measured per outcome on the pre-deletion tree, the chain alone reached ten:
+    // `unsupported` and `malformed` came only from that census. Deleting the
+    // retained records without replacing both would have taken FR-005-AC-5 from
+    // twelve to ten while this test stayed green.
+    //
+    // `unsupported` is now the chain's, demonstrated by Quoin naming a declared
+    // verification method its catalog does not have.
+    //
+    // `malformed` is NOT the chain's, and a probe there claiming it would be a
+    // tautology: the chain would have to write the row itself, and asserting that
+    // a hand-written `malformed` row survives the adapter is asserting a lookup
+    // in `KANI_OUTCOMES`. It would stay green while the only producer that can
+    // emit the state was hollowed out to report `pass`. So it is demonstrated
+    // where it is produced. `scripts/check_kani_mutations.py` emits `malformed`
+    // when a mutation's anchor text is no longer present in the source exactly
+    // once — "the campaign no longer describes this repository" — and the probe
+    // below drives it into exactly that condition, in a scratch copy, and reads
+    // back what the producer said. A producer that answered `pass` there fails
+    // this test.
     let report = chain_report();
 
-    let demonstrated: BTreeSet<String> = report["states_demonstrated"]
+    let mut demonstrated: BTreeSet<String> = report["states_demonstrated"]
         .as_array()
         .unwrap()
         .iter()
         .map(|value| value.as_str().unwrap().to_owned())
         .collect();
+
+    // The anchors are doubled rather than deleted, so `text.count(old) != 1` and
+    // the producer takes its malformed branch before any prover runs. The
+    // repository's own tree is never touched: `copy_candidate` already works on a
+    // scratch copy, and the seam replaced here only edits that copy.
+    let observed = producer_probe(
+        "import json,sys,pathlib; sys.path.insert(0,'scripts')\n\
+         import check_kani_mutations as m\n\
+         original = m.copy_candidate\n\
+         def doubled(destination):\n\
+        \x20    original(destination)\n\
+        \x20    for relative, old, _new, _harness, _trace in m.MUTATIONS:\n\
+        \x20        path = pathlib.Path(destination) / relative\n\
+        \x20        path.write_text(path.read_text(encoding='utf-8') + old, encoding='utf-8')\n\
+         m.copy_candidate = doubled\n\
+         print(json.dumps(sorted({e['outcome'] for e in m.collect()['entries']})))",
+    );
+    assert_eq!(
+        observed, "[\"malformed\"]",
+        "the mutation campaign did not report a missing anchor as malformed; got \
+         {observed}. A campaign that answers `pass` when it no longer describes \
+         this source is a campaign that has stopped checking anything."
+    );
+    let observed_outcomes: Vec<String> = serde_json::from_str(&observed).unwrap();
+    demonstrated.extend(observed_outcomes);
 
     let missing: Vec<&str> = REQUIRED
         .iter()
@@ -776,6 +812,12 @@ fn tc_014_no_local_evidence_framework_remains() {
             "runtime-evidence-input-v1.schema.json",
             "runtime-evidence-manifest-v1.schema.json",
             "pgm01-validate-governance.py",
+            "pgm01-merged-commit.txt",
+            "pgm01-validator-blob.txt",
+            "pgm01-compatibility-view-v1.schema.json",
+            "map_pgm01_bytes",
+            "verification_semantics",
+            "SUITE-007",
         ] {
             assert!(
                 !source.contains(gone),
@@ -784,8 +826,12 @@ fn tc_014_no_local_evidence_framework_remains() {
             );
         }
     }
+    // Re-derived rather than inherited: the walk sees 37 non-markdown files at
+    // this revision, against 55 before the deletion. The floor is raised with it,
+    // because a threshold left at a number chosen for a larger tree stops being a
+    // vacuity guard and becomes a number that happens to be true.
     assert!(
-        inspected > 30,
+        inspected >= 35,
         "the executable and configuration census is unexpectedly small ({inspected}) \
          to make this claim"
     );

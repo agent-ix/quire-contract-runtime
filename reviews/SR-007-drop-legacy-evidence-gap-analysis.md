@@ -106,9 +106,26 @@ compatibility census separately and intersecting their contributions:
 | vacuous | yes | — | yes |
 | tampered | yes | yes | yes |
 
-Chain alone: **10/12 before, 12/12 after.** Because `TC-013` took a *union*, the
+Chain alone: **10/12 before, 11/12 after.** Because `TC-013` took a *union*, the
 deletion would have left it green at ten. That is the gap this analysis exists to
 catch, and it is closed rather than accepted.
+
+The twelfth is `malformed`, and it is deliberately not the chain's. A chain-side
+probe for it must write the row itself, so what it asserts is that the adapter's
+own lookup table maps `malformed` to something other than `pass` — which holds
+while `scripts/check_kani_mutations.py`, the only producer here that can emit the
+state, reports `pass` instead. An independent adversarial review demonstrated
+exactly that against the first attempt. `TC-013` now drives the mutation campaign
+into its malformed branch and reads back what it said, so the demonstration fails
+when the producer stops producing the state.
+
+**What "twelve demonstrated" does and does not mean.** It means each state was
+produced and observed by the component that owns it. It does **not** mean twelve
+distinct values reach the verification receipt: `unsupported` is a Quoin finding
+over the specification and appears in neither `KANI_OUTCOMES` nor `ROW_RESULTS`,
+and `malformed` reaches the receipt as `failed` because Quoin's attestation
+vocabulary is passed, failed, unavailable and not_computed. Both facts predate
+this change and are recorded rather than claimed away.
 
 ## Gate results at `cde591e`
 
@@ -131,6 +148,9 @@ catch, and it is closed rather than accepted.
 | FND-701 | high | `TC-013`'s twelve-outcome assertion took a union of the chain's `states_demonstrated` and the compatibility census's case kinds; `unsupported` and `malformed` were supplied only by the census, so its deletion would have left the test passing at ten of twelve | `tests/shared_assurance.rs`, `spec/test/TC-013-verification-outcomes.md` | correct-requirement-no-evidence |
 | FND-702 | medium | `NFR-002-AC-4` was bound to `tc_007` by a trace tag alone; that test asserted nothing about the collector or the vendored schema the criterion described, and the criterion's only substantive check was the frozen-schema digest census being deleted | `spec/nonfunctional/NFR-002-panic-compatibility-license.md` | wrong-requirement |
 | FND-703 | low | `SUITE-007` was an unbacked suite-registry row before and after; deleting it changes the denominator but no backing | `spec/evidence/suites.md` | correct-requirement-no-evidence |
+| FND-704 | high | **Independent adversarial review.** The first replacement demonstration of `malformed` asserted a dict lookup rather than a produced state, and stayed green while the producer that owns the state was hollowed out to report `pass`. Closing FND-701 with an unfalsifiable check reads 12/12 exactly as a real one does | `scripts/assurance_chain.py`, `tests/shared_assurance.rs` | correct-requirement-no-evidence |
+| FND-705 | medium | **Independent adversarial review.** `FR-005-AC-6`'s frozen-schema clause asserted over a population this change deleted; coverage still counted the criterion as backed | `spec/functional/FR-005-shared-assurance-intake.md` | wrong-requirement |
+| FND-706 | medium | **Independent adversarial review.** Two dangling trace ids (`NFR-002-AC-4`, `PGM-01`) entered the static export through a comment in `tc_007`'s annotation block; `quire coverage --strict` exits 0 without reporting `unmatched_tags` | `tests/release_contract.rs` | correct-requirement-no-evidence |
 
 ## Dispositions
 
@@ -139,6 +159,9 @@ catch, and it is closed rather than accepted.
 | FND-701 | **FIXED** — both demonstrations re-established on surfaces that read no retained byte, and `TC-013` now reads the chain alone, which reaches 12/12. |
 | FND-702 | **FIXED** — the criterion is deleted together with its trace tag and its `TC-007` paragraphs. |
 | FND-703 | **ACCEPTED** — recorded so the 48 → 44 denominator change is not mistaken for lost backing. |
+| FND-704 | **FIXED** — probe deleted, demonstration moved to the producer, and the reviewer's exact defect now turns `tc_013` red. |
+| FND-705 | **FIXED** — the clause now names the population `tc_014` walks. |
+| FND-706 | **FIXED** — comment removed from the annotation block; `unmatched_tags` empty again. |
 
 ## Residual and deferred
 

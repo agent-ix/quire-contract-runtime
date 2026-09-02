@@ -1143,36 +1143,7 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
     )
     criterion.write_text(criterion_text, encoding="utf-8")
 
-    # Probe 6: a `malformed` producer row travels the chain as a non-success.
-    # `scripts/check_kani_mutations.py` really emits this outcome — it is what a
-    # mutation whose anchor text is no longer present exactly once reports — so
-    # the row is a state a producer here can actually write, not a label invented
-    # for the census. The stream is derived from the real one by one named edit
-    # and transcribed by the adapter, exactly as the `unavailable` probe above
-    # does, so an adapter that read `malformed` as a pass would be caught here.
-    #
-    # What this does not claim: Quoin's attestation vocabulary is passed, failed,
-    # unavailable and not_computed, so a malformed row reaches the receipt as
-    # `result_failed`. The state kept distinguishable here is the producer's, at
-    # the boundary this repository owns.
-    malformed_document = json.loads(stream)
-    for row in malformed_document["entries"]:
-        row["outcome"] = "malformed"
-    malformed = adapt_kani_proofs(json.dumps(malformed_document))
-    carried = all(entry["outcome"] != "pass" for entry in malformed["entries"])
-    results.append(
-        {
-            "probe": "adapter-carries-a-malformed-row-as-non-success",
-            "state": "malformed",
-            "matched": carried and bool(malformed["entries"]),
-            "detail": {
-                "outcomes": sorted({entry["outcome"] for entry in malformed["entries"]}),
-                "entries": len(malformed["entries"]),
-            },
-        }
-    )
-
-    # Probe 7: a foreign protocol is refused by the adapter, not guessed at.
+    # Probe 6: a foreign protocol is refused by the adapter, not guessed at.
     foreign_document = json.loads(stream)
     foreign_document["protocol"] = "some.other.protocol/v1"
     refused = False
@@ -1186,15 +1157,16 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
             # A refusal by the adapter is not one of the twelve states travelling
             # the chain; it is the adapter declining to produce one. Labelling it
             # `unsupported` would let the census count a refusal as a
-            # demonstration. `unsupported` is demonstrated four probes above, by
-            # Quoin naming a declared method its catalog does not have.
+            # demonstration. `unsupported` is demonstrated by the
+            # `audit-reports-an-unsupported-method` probe above, where Quoin
+            # names a declared verification method its catalog does not have.
             "state": None,
             "matched": refused,
             "detail": {"protocol": "some.other.protocol/v1"},
         }
     )
 
-    # Probe 8: an empty stream is refused rather than transcribed into a clean run.
+    # Probe 7: an empty stream is refused rather than transcribed into a clean run.
     empty_document = json.loads(stream)
     empty_document["entries"] = []
     empty_refused = False
@@ -1213,7 +1185,7 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
         }
     )
 
-    # Probe 9: an outcome the adapter does not name is refused rather than
+    # Probe 8: an outcome the adapter does not name is refused rather than
     # defaulted. A silently defaulted unknown state is how twelve states become
     # two, and this repository's whole migration is about not doing that.
     unknown_document = json.loads(stream)
@@ -1226,9 +1198,14 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
     results.append(
         {
             "probe": "refuses-an-unnamed-outcome",
-            # Same reason. `malformed` is demonstrated three probes above, by a
-            # producer row carrying the outcome the mutation campaign emits when
-            # a mutation anchor is no longer present exactly once.
+            # Same reason. `malformed` is not demonstrated in this file at all,
+            # and a probe here that rewrote a row's outcome to `malformed` would
+            # be asserting a lookup in KANI_OUTCOMES rather than observing a
+            # state. It is demonstrated where it is produced: by
+            # `scripts/check_kani_mutations.py`, which really emits it when a
+            # mutation anchor is no longer present in the source exactly once,
+            # and which `tests/shared_assurance.rs` drives into that branch and
+            # reads the outcome back.
             "state": None,
             "matched": unknown_refused,
             "detail": {"outcome": "probably-fine"},

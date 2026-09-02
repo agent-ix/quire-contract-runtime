@@ -227,9 +227,9 @@ assurance-chain: assurance-inputs
 .PHONY: assurance
 assurance: pins assurance-chain
 
-# An operator target, not a CI gate. It writes into this repository's own Quoin
-# evidence store, which is a reviewed change to spec/evidence/ rather than
-# something a gate should do on every run.
+# An operator target, not a CI gate. It writes a transcribed run into the Quoin
+# evidence store this repository's Quoin module is configured with, which is a
+# reviewed act rather than something a gate should do on every run.
 .PHONY: assurance-record
 assurance-record: assurance-inputs
 	$(PYTHON) scripts/assurance_chain.py --adapt $(KANI_RESULT) \

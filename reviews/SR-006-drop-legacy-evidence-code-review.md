@@ -57,6 +57,12 @@ pinned population to be non-empty and every falsified digest to be reported.
 | FND-605 | medium | Five documents beyond the named acceptance criterion argued from retained evidence, including `AA-001`'s `evidence_binding` block, which gated the top claim on `retained_evidence:` | `spec/index.md`, `spec/assurance/CAC-001-runtime-contract.md`, `spec/assurance/MP-001-runtime-measurements.md`, `spec/assurance/AA-001-runtime-argument.md`, `spec/nonfunctional/NFR-002-panic-compatibility-license.md` | wrong-requirement |
 | FND-606 | low | `requirements-assurance.txt` said the Draft 7 validator it superseded is frozen under `schemas/`; the validator was deleted | `requirements-assurance.txt` | wrong-requirement |
 | FND-607 | low | `plan/PLAN-002`'s completion rule required every byte under `evidence/` to be unchanged, and Task-001 instructed FREEZE — not deleted for the four `schemas/` artifacts | `plan/PLAN-002-shared-assurance-migration/` | correct-requirement-no-evidence |
+| FND-608 | high | **Independent adversarial review.** The first `malformed` replacement probe was a tautology. It rewrote rows in `runtime.kani-proof/v1` — a protocol whose producer cannot emit `malformed` — and its predicate reduced to `KANI_OUTCOMES["malformed"] != "pass"`, a dict lookup 980 lines away. The reviewer hollowed `check_kani_mutations.py:111` from `return "malformed"` to `return "pass"`, so the campaign reported a proof held when it no longer described the source, and the census still showed 12/12 with `make ci` green | `scripts/assurance_chain.py`, `tests/shared_assurance.rs` | correct-requirement-no-evidence |
+| FND-609 | medium | **Independent adversarial review.** `FR-005-AC-6`'s second clause still asserted that "the frozen evidence schemas are referenced by nothing". There are no frozen evidence schemas; the clause had an empty population and could not fail | `spec/functional/FR-005-shared-assurance-intake.md` | wrong-requirement |
+| FND-610 | medium | **Independent adversarial review.** The explanatory comment added above `tc_007` put the literals `NFR-002-AC-4` and `PGM-01` in the symbol's attached annotation block, so Quire read them as trace bindings and the static export gained two `unmatched_tags` naming a criterion this change deleted. `quire coverage --strict` exits 0 without printing them, so `make ci` was blind to it | `tests/release_contract.rs` | wrong-requirement |
+| FND-611 | low | **Independent adversarial review.** Three stale claims survived in live files: `run_feature_matrix.py`'s naming rationale appealed to "the old retained records", `assurance/README.md` still said "digests" plural, and the `assurance-record` comment described writing into `spec/evidence/` | `scripts/run_feature_matrix.py`, `assurance/README.md`, `Makefile` | wrong-requirement |
+| FND-612 | low | **Independent adversarial review.** `tc_014`'s `inspected > 30` floor was inherited, not re-derived: the census fell from 55 non-markdown files to 37, cutting headroom from 25 to 7, and the deleted-name list omitted three of the seven `schemas/` files and the mapping symbols | `tests/shared_assurance.rs` | correct-requirement-no-evidence |
+| FND-613 | low | **Independent adversarial review.** "Twelve of twelve across the intake path" is a thinner claim than it sounds: `unsupported` is in neither `KANI_OUTCOMES` nor `ROW_RESULTS` and is a Quoin finding over the specification, and `malformed` reaches the receipt as `failed` because Quoin's attestation vocabulary has four results | `spec/test/TC-013-verification-outcomes.md`, `assurance/README.md` | correct-requirement-no-evidence |
 
 ## Dispositions
 
@@ -69,6 +75,33 @@ pinned population to be non-empty and every falsified digest to be reported.
 | FND-605 | **FIXED** — every one removed or restated to what is actually true, never restated more weakly about the deleted records. `AA-001` no longer names retained evidence in its binding and its `proof_obligations` count is 6. |
 | FND-606 | **FIXED** — corrected; the validator was deleted. |
 | FND-607 | **ACCEPTED** — the plan records are left as written and a dated `log.md` entry states that they describe what was true when written, and that the constraint they served was released by the owner the following day. Rewriting a completed plan to match a later decision is backdating. |
+| FND-608 | **FIXED** — the probe is deleted, not repaired. `malformed` is now demonstrated where it is produced: `tc_013` drives `check_kani_mutations.py` into its malformed branch in a scratch copy, with every mutation anchor doubled so no anchor occurs exactly once and no prover runs, and asserts the producer answers `malformed`. Re-running the reviewer's exact defect now fails `tc_013`: `got ["pass"]`, `right: ["malformed"]`. The chain contributes eleven states and this observation the twelfth. |
+| FND-609 | **FIXED** — the clause now names the population `tc_014` actually walks: the deleted retained-evidence tree, its reader, its fixtures, and the schema family it named by digest. |
+| FND-610 | **FIXED** — the comment is removed from the annotation block; the rationale lives in this review and in `TC-007`. `unmatched_tags` is empty again. |
+| FND-611 | **FIXED** — all three corrected. |
+| FND-612 | **FIXED** — floor re-derived and raised to `>= 35` against a measured 37, with the derivation recorded beside it; the deleted-name list gained `pgm01-merged-commit.txt`, `pgm01-validator-blob.txt`, `pgm01-compatibility-view-v1.schema.json`, `map_pgm01_bytes`, `verification_semantics` and `SUITE-007`. |
+| FND-613 | **ACCEPTED** — stated rather than claimed away, in a new Limitations section in `TC-013` and in `assurance/README.md`. Both facts predate this change: `ROW_RESULTS` mapped `malformed` to `failed` on `main`, and no `unsupported` ever travelled this chain. "Twelve demonstrated" means each state was produced and observed by the component that owns it, not that twelve distinct values reach the receipt. |
+
+## The independent adversarial review
+
+An independent reviewer was run against this change with one instruction: find
+false greens. It ran a baseline first, probed in a scratch copy, and returned six
+findings — **one high** — none of which this review had found. It also verified
+the coverage arithmetic independently against an extracted `b3c0552`, confirmed no
+`make ci` prerequisite became unreachable, confirmed the `TC-009` pin change is a
+strengthening, and found no surviving unsatisfiable release gate in `spec/`.
+
+The high finding is the uncomfortable one, and it is the same class of mistake
+this change was written to catch. FND-601 correctly identified that `malformed`
+had lost its only demonstration; the replacement written for it **was itself a
+false green**. It asserted a lookup in a dict literal, not a state, and it stayed
+green while the one producer that can emit `malformed` was hollowed out to report
+`pass`. Finding the gap and then filling it with something unfalsifiable is worse
+than leaving the gap visible, because the census reads 12/12 either way.
+
+The fix does not repair the probe. It deletes it and moves the demonstration to
+the producer that owns the state, where the reviewer's exact injected defect now
+turns the test red.
 
 ## Assurance Context
 
@@ -106,13 +139,30 @@ producer bytes under `target/`, bound by digest into each sealed attestation.
 |---|---|---|
 | `legacy_evidence_view.py --mutation-probes` | 5 | 0 (deleted) |
 | `check_kani_mutations.py` semantic defects | 3 | 3 |
-| `assurance_chain.py` adapter/audit probes | 7 | 9 |
-| **Total** | **15** | **12** |
+| `assurance_chain.py` adapter/audit probes | 7 | 8 |
+| **Total, in the gates that publish a count** | **15** | **11** |
+| plus: producer-degradation probe inside `tc_013` | 0 | 1 |
 
-The fall is −5 +2, and it is correct rather than a regression: the five that went
-degraded checks inside the deleted compatibility census and had nothing left to
-guard. The two added are the replacement demonstrations of `unsupported` and
-`malformed`, and both were observed red before being relied on.
+The fall is correct rather than a regression. The five that went degraded checks
+*inside* the deleted compatibility census and have nothing left to guard. One
+adapter probe was added — `audit-reports-an-unsupported-method` — and one
+producer-degradation probe was added inside `tc_013`, which doubles every mutation
+anchor in a scratch copy and requires `check_kani_mutations.py` to answer
+`malformed`.
+
+Every added probe was observed red before being relied on:
+
+| Probe | Degradation applied | Observed |
+|---|---|---|
+| `audit-reports-an-unsupported-method` | skip the criterion edit, so no unknown method exists | `MISMATCH`, chain exit 1 |
+| `tc_013` malformed observation | `check_kani_mutations.py:111` `return "malformed"` → `return "pass"` | `got ["pass"]`, `right: ["malformed"]`, test FAILED |
+| `compatibility.py` digest pin | append one byte to the installed module | `consumed artifact digest mismatch`, `make pins` exit 1 |
+
+The first version of the `malformed` probe was **not** observed red in the right
+place — it was degraded at the adapter rather than at the producer — and that is
+how it survived as a tautology until the independent review. The lesson is
+recorded rather than smoothed over: a probe must be degraded at the component that
+owns the state, not at the one that transcribes it.
 
 ## What was deliberately not done
 

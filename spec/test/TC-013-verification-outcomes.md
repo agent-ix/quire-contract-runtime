@@ -17,15 +17,29 @@ that has never been seen to accept is indistinguishable from a step that never w
 
 ## Test Procedure
 
-Read the chain report's `states_demonstrated` and require all twelve. Require every declared negative
-scenario to be named by some control's `pairs_with`, and require the chain to refuse a control naming
-a scenario that does not exist.
+Read the chain report's `states_demonstrated`. Then drive `scripts/check_kani_mutations.py` into its
+malformed branch in a scratch copy — every mutation anchor doubled, so no anchor occurs exactly once
+and no prover runs — and read back the outcomes it reports. Union the two and require all twelve.
+Require every declared negative scenario to be named by some control's `pairs_with`, and require the
+chain to refuse a control naming a scenario that does not exist.
 
 ## Expected Results
 
-Twelve of twelve demonstrated, by the chain alone. Every negative paired. `unavailable` in particular
-is demonstrated by the Kani producer's own vocabulary, so an absent model checker is a reported state
-and not a skip. `unsupported` is demonstrated by Quoin naming a declared verification method its
-catalog does not have, and `malformed` by a producer row carrying the outcome the mutation campaign
-emits when a mutation anchor is no longer present exactly once. Both previously came from the deleted
-retained-evidence compatibility census and were re-established on surfaces that do not depend on it.
+Twelve of twelve demonstrated. Every negative paired. `unavailable` in particular is demonstrated by
+the Kani producer's own vocabulary, so an absent model checker is a reported state and not a skip.
+
+Eleven come from the chain. `unsupported` is demonstrated by Quoin naming a declared verification
+method its catalog does not have. The twelfth, `malformed`, is demonstrated by the mutation campaign
+actually emitting it, because a chain-side probe for it could only rewrite a row's outcome itself and
+assert that the adapter's own lookup table carried it — a tautology that would stay green while the
+producer that owns the state was hollowed out to report `pass`. Both states previously came from the
+deleted retained-evidence compatibility census.
+
+## Limitations
+
+`unsupported` appears in neither the adapter's nor the chain's outcome vocabulary; it is a finding
+Quoin reports over the specification, not a state travelling the intake path. `malformed` is a
+producer state, and the chain maps it to `failed` because Quoin's attestation vocabulary is passed,
+failed, unavailable and not_computed. Both facts predate this test's current form and are stated
+rather than claimed away: "twelve demonstrated" means each state was produced and observed by the
+component that owns it, not that twelve distinct values reach the verification receipt.

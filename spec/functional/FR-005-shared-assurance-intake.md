@@ -64,7 +64,7 @@ contracts rather than to a repository-local evidence framework.
 | FR-005-AC-2 | The feature-matrix, Kani proof, Kani mutation, and footprint results are structured, are produced by this repository's tools, and reach Quoin through the declared adapter without Quoin or Quire executing a producer. | Test (TC-010) |
 | FR-005-AC-3 | Static specification, obligation, and coverage facts for a candidate revision come from the Quire export named by the sealed record's impact snapshot. | Test (TC-011) |
 | FR-005-AC-5 | Each of the twelve verification outcomes is demonstrated by a case that produced it, each negative case is paired with a positive control that was observed to be accepted, and an absent Kani toolchain is reported as unavailable rather than as a pass. | Test (TC-013) |
-| FR-005-AC-6 | No script, Make target, or test in the repository implements a generic evidence envelope, manifest, retention store, tool-identity lock, anchor file, or aggregate verdict, and the frozen evidence schemas are referenced by nothing. | Test (TC-014) |
+| FR-005-AC-6 | No script, Make target, or test in the repository implements a generic evidence envelope, manifest, retention store, tool-identity lock, anchor file, or aggregate verdict, and no code, configuration, or workflow file names the deleted retained-evidence tree, its reader, its fixtures, or the schema family it named by digest. | Test (TC-014) |
 
 ## Dependencies
 

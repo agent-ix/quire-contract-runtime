@@ -6,7 +6,7 @@ Two files and no evidence.
 [issue #11](https://github.com/agent-ix/quire-contract-runtime/issues/11): the
 requirements it claims to meet, the things it promises not to break, the proofs
 it offers, and the questions it cannot answer. `pins.json` is the Engineering
-Assurance release it adopts and the digests of the artifacts it actually reads
+Assurance release it adopts and the digest of the one artifact it actually reads
 from that release.
 
 ## Why there is no evidence in here
@@ -90,7 +90,21 @@ fixed. The constraint re-applies unchanged at the move toward stable releases.
 Two of the twelve states this migration keeps distinguishable — `unsupported` and
 `malformed` — were demonstrated only by that compatibility census. Measured on
 the pre-deletion tree, the chain alone reached ten of twelve. Both were
-re-established on surfaces that read no retained byte: Quoin naming a declared
-verification method its catalog does not have, and a producer row carrying the
-outcome the mutation campaign emits when a mutation anchor is no longer present
-exactly once. The census was not quietly reduced to ten.
+re-established on surfaces that read no retained byte.
+
+`unsupported` is the chain's: Quoin names a declared verification method its
+catalog does not have. `malformed` is not, and the first attempt to make it so
+was wrong. A chain-side probe for `malformed` has to write the row itself, so
+what it asserts is that the adapter's lookup table maps `malformed` to something
+other than `pass` — which stays true while `scripts/check_kani_mutations.py`, the
+only producer here that can emit the state, is hollowed out to report `pass`
+instead. An independent adversarial review demonstrated exactly that. The
+demonstration now lives where the state is produced: the mutation campaign is
+driven into its malformed branch and its answer is read back, so a campaign that
+answers `pass` when it no longer describes this source fails the test.
+
+The census was not quietly reduced to ten, and it is not inflated back to twelve
+by a label either. What it does not claim: `unsupported` is a finding Quoin
+reports over the specification rather than a state travelling the intake path,
+and `malformed` reaches the receipt as `failed`, because Quoin's attestation
+vocabulary is passed, failed, unavailable and not_computed.
