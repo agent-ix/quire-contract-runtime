@@ -164,7 +164,10 @@ fn tc_010_the_chain_reaches_quoin_without_quoin_or_quire_executing_a_producer() 
             .unwrap_or_else(|| panic!("{group}"));
         assert!(!items.is_empty(), "{group} is empty");
         for item in items {
-            assert_eq!(item["matched"], true, "{group} entry did not match: {item:#}");
+            assert_eq!(
+                item["matched"], true,
+                "{group} entry did not match: {item:#}"
+            );
         }
     }
 

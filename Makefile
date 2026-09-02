@@ -118,7 +118,8 @@ size:
 
 .PHONY: spec
 spec:
-	$(QUIRE) validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' --summary
+	$(QUIRE) validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' \
+		'reviews/**/*.md' --summary
 	$(QUIRE) coverage --scope . --strict
 
 .PHONY: clean
