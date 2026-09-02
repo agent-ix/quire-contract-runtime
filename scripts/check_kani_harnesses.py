@@ -39,6 +39,17 @@ PROOF_FUNCTION = re.compile(
 )
 
 
+def declared_harness_traces() -> dict[str, list[str]]:
+    """Read each declared harness's trace binding out of its own source marker.
+
+    The binding is read from `verification/kani.rs` rather than restated here, so
+    a harness whose trace comment is edited changes the published result document
+    instead of silently disagreeing with a second copy of the same fact.
+    """
+    source = KANI_SOURCE.read_text(encoding="utf-8")
+    return {name: [trace_id] for trace_id, name in PROOF_FUNCTION.findall(source)}
+
+
 def proof_check_counts(combined: str) -> dict[str, int]:
     """Return each successfully discharged harness's positive obligation count."""
     starts = list(KANI_HARNESS_START.finditer(combined))

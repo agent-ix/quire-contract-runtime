@@ -18,6 +18,12 @@ type: TestMatrix
 | FR-003 | FR-003-AC-2 | TC-005 | ✅ Complete |
 | FR-004 | FR-004-AC-1, FR-004-AC-2 | TC-006 | ✅ Complete |
 | FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |
+| FR-005 | FR-005-AC-1 | TC-009 | ✅ Complete |
+| FR-005 | FR-005-AC-2 | TC-010 | ✅ Complete |
+| FR-005 | FR-005-AC-3 | TC-011 | ✅ Complete |
+| FR-005 | FR-005-AC-4 | TC-012 | ✅ Complete |
+| FR-005 | FR-005-AC-5 | TC-013 | ✅ Complete |
+| FR-005 | FR-005-AC-6 | TC-014 | ✅ Complete |
 
 ## Test Case Summary
 
@@ -31,6 +37,12 @@ type: TestMatrix
 | TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2 | ✅ Complete |
 | TC-007 | Audit runtime footprint and packaging policy | Inspection | P0 | NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, NFR-002-AC-4 | ✅ Complete |
 | TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-004-AC-3, NFR-002-AC-3 | ✅ Complete |
+| TC-009 | Classify every shared pin through the packaged compatibility matrix | Integration | P0 | FR-005-AC-1 | ✅ Complete |
+| TC-010 | Reach Quoin through the declared adapter with no producer executed | Integration | P0 | FR-005-AC-2 | ✅ Complete |
+| TC-011 | Bind the sealed record's impact snapshot to the Quire static export | Integration | P0 | FR-005-AC-3 | ✅ Complete |
+| TC-012 | Read every retained evidence byte through the pinned mapping without moving one | Integration | P0 | FR-005-AC-4 | ✅ Complete |
+| TC-013 | Demonstrate all twelve outcomes and pair every negative with a positive control | Integration | P0 | FR-005-AC-5, NFR-002-AC-3 | ✅ Complete |
+| TC-014 | Prove no generic evidence machinery remains and the frozen schemas bind nothing | Integration | P0 | FR-005-AC-6 | ✅ Complete |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
@@ -49,8 +61,12 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 - TC-004: `tests/proptest_adapter.rs`.
 - TC-005: `tests/release_contract.rs`, compile-fail crate documentation, `make test-features`, and the
   retained default dependency record.
-- TC-007: `tests/release_contract.rs`, the footprint crate's fixed-result test,
-  `tests/test_evidence_tooling.py`, plus retained dependency, enforced linked-footprint and panic-reference,
-  observational rlib-size, unsafe, license, manifest, and pinned PGM schema audit records.
+- TC-007: `tests/release_contract.rs`, the footprint crate's fixed-result test, plus the governed
+  linked-footprint and panic-relocation measurement published by
+  `scripts/measure_footprint.py`, the observational rlib-size script, and the unsafe, panic-surface,
+  and license audits.
 - TC-008: `tests/release_contract.rs` recursively scans all shipped runtime source, supplemented by
-  five compile-fail enum doctests, public API documentation, and retained schema evidence.
+  five compile-fail enum doctests and public API documentation.
+- TC-009 through TC-014: `tests/shared_assurance.rs`, which invokes the shared-assurance gates
+  rather than reimplementing them. A test that recomputes what a gate computes is a second
+  implementation that can agree with itself while both are wrong.

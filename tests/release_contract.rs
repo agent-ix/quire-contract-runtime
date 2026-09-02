@@ -29,7 +29,10 @@ fn tc_007_release_controls_are_mandatory() {
     assert!(CRATE_ROOT.contains("#![forbid(unsafe_code)]"));
     assert!(CARGO_MANIFEST.contains("panic = \"abort\""));
     assert!(!FOOTPRINT_MANIFEST.contains("[profile.release]"));
-    assert!(MAKEFILE.contains("$(PYTHON) scripts/run_evidence_tests.py"));
+    // A Makefile-text assertion used to sit here. It asserted that a literal
+    // string appeared in the Makefile, which the whole `ci:` prerequisite list
+    // could be deleted without breaking. Whether the gates are wired is proven by
+    // `tests/shared_assurance.rs`, which runs them.
     assert!(FOOTPRINT_AUDIT.contains("readonly minimum_bytes=500"));
     assert!(FOOTPRINT_AUDIT.contains("section_bytes < minimum_bytes"));
     assert!(FOOTPRINT_AUDIT.contains("rust_begin_unwind"));
