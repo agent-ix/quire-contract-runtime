@@ -10,7 +10,6 @@ const CRATE_ROOT: &str = include_str!("../src/lib.rs");
 const FOOTPRINT_MANIFEST: &str = include_str!("../measurement/footprint/Cargo.toml");
 const FOOTPRINT_HARNESS: &str = include_str!("../measurement/footprint/src/lib.rs");
 const FOOTPRINT_AUDIT: &str = include_str!("../scripts/check_linked_footprint.sh");
-const MAKEFILE: &str = include_str!("../Makefile");
 const TEST_ONLY_ACCOUNTING_SOURCE: &str = "src/accounting_tests.rs";
 
 /// Trace: TC-005, FR-003-AC-2, NFR-001-AC-1, StR-001-VC-2
@@ -29,10 +28,11 @@ fn tc_007_release_controls_are_mandatory() {
     assert!(CRATE_ROOT.contains("#![forbid(unsafe_code)]"));
     assert!(CARGO_MANIFEST.contains("panic = \"abort\""));
     assert!(!FOOTPRINT_MANIFEST.contains("[profile.release]"));
-    // A Makefile-text assertion used to sit here. It asserted that a literal
-    // string appeared in the Makefile, which the whole `ci:` prerequisite list
-    // could be deleted without breaking. Whether the gates are wired is proven by
-    // `tests/shared_assurance.rs`, which runs them.
+    // A Makefile-text assertion used to sit here, along with the `include_str!`
+    // that fed it. It asserted that a literal string appeared in the Makefile,
+    // which the whole `ci:` prerequisite list could be deleted without breaking.
+    // Whether the gates are reachable is now asked of Make itself, in
+    // `tests/shared_assurance.rs`, which runs `make -n ci` and reads the plan.
     assert!(FOOTPRINT_AUDIT.contains("readonly minimum_bytes=500"));
     assert!(FOOTPRINT_AUDIT.contains("section_bytes < minimum_bytes"));
     assert!(FOOTPRINT_AUDIT.contains("rust_begin_unwind"));
