@@ -63,6 +63,8 @@ pinned population to be non-empty and every falsified digest to be reported.
 | FND-611 | low | **Independent adversarial review.** Three stale claims survived in live files: `run_feature_matrix.py`'s naming rationale appealed to "the old retained records", `assurance/README.md` still said "digests" plural, and the `assurance-record` comment described writing into `spec/evidence/` | `scripts/run_feature_matrix.py`, `assurance/README.md`, `Makefile` | wrong-requirement |
 | FND-612 | low | **Independent adversarial review.** `tc_014`'s `inspected > 30` floor was inherited, not re-derived: the census fell from 55 non-markdown files to 37, cutting headroom from 25 to 7, and the deleted-name list omitted three of the seven `schemas/` files and the mapping symbols | `tests/shared_assurance.rs` | correct-requirement-no-evidence |
 | FND-613 | low | **Independent adversarial review.** "Twelve of twelve across the intake path" is a thinner claim than it sounds: `unsupported` is in neither `KANI_OUTCOMES` nor `ROW_RESULTS` and is a Quoin finding over the specification, and `malformed` reaches the receipt as `failed` because Quoin's attestation vocabulary has four results | `spec/test/TC-013-verification-outcomes.md`, `assurance/README.md` | correct-requirement-no-evidence |
+| FND-614 | medium | **Independent adversarial review, second round.** `collect_sources` matched by extension only, and `Makefile` has no extension — so the deleted-name census never scanned the one file a reintroduced Make target could live in. The reviewer appended the deleted `compat-view` target verbatim to a scratch Makefile and `tc_014` still passed. `FR-005-AC-6` ("no code, configuration, or workflow file") and `TC-014`'s own description (which names `Makefile`) both claimed otherwise. `.yaml` was missing too, and GitHub accepts `.github/workflows/*.yaml` | `tests/shared_assurance.rs` | correct-requirement-no-evidence |
+| FND-615 | low | **Independent adversarial review, second round.** The malformed probe drove only one side of the producer's `count(anchor) != 1` predicate. Weakening it to `> 1` left `tc_013` green while a *missing* anchor stopped reporting malformed — `text.replace` becomes a no-op, the prover runs on unmutated source, and its success reads as "Kani accepted the injected defect" | `tests/shared_assurance.rs` | correct-requirement-no-evidence |
 
 ## Dispositions
 
@@ -81,6 +83,8 @@ pinned population to be non-empty and every falsified digest to be reported.
 | FND-611 | **FIXED** — all three corrected. |
 | FND-612 | **FIXED** — floor re-derived and raised to `>= 35` against a measured 37, with the derivation recorded beside it; the deleted-name list gained `pgm01-merged-commit.txt`, `pgm01-validator-blob.txt`, `pgm01-compatibility-view-v1.schema.json`, `map_pgm01_bytes`, `verification_semantics` and `SUITE-007`. |
 | FND-613 | **ACCEPTED** — stated rather than claimed away, in a new Limitations section in `TC-013` and in `assurance/README.md`. Both facts predate this change: `ROW_RESULTS` mapped `malformed` to `failed` on `main`, and no `unsupported` ever travelled this chain. "Twelve demonstrated" means each state was produced and observed by the component that owns it, not that twelve distinct values reach the receipt. |
+| FND-614 | **FIXED** — `collect_sources` now also collects the extensionless `Makefile` and `.yaml`. Probed red with the reviewer's own defect: appending the deleted `compat-view` target to the Makefile now fails `tc_014` with `Makefile still references the deleted legacy_evidence_view`. The census floor is re-derived to 38 and the claims in `FR-005-AC-6` and `TC-014` are now true. |
+| FND-615 | **FIXED** — both sides of the predicate are driven: every anchor duplicated (count 2) and every anchor removed (count 0), each required to report `malformed`. Probed red: weakening `!= 1` to `> 1` now fails `tc_013` with the reviewer's exact observation, `the campaign reported ["fail"], not ["malformed"]`. |
 
 ## The independent adversarial review
 
@@ -102,6 +106,13 @@ than leaving the gap visible, because the census reads 12/12 either way.
 The fix does not repair the probe. It deletes it and moves the demonstration to
 the producer that owns the state, where the reviewer's exact injected defect now
 turns the test red.
+
+The second round is the reason a re-review on the exact remediation head is worth
+running rather than assumed: six fixes in one commit is precisely when a new false
+green gets introduced, and one of the two findings it returned (FND-614) was made
+*sharper* by the remediation — the fix added `compat-view` to a name census that
+could not see Makefiles, so the newly added name was unenforceable exactly where a
+reintroduction would live.
 
 ## Assurance Context
 
@@ -156,6 +167,8 @@ Every added probe was observed red before being relied on:
 |---|---|---|
 | `audit-reports-an-unsupported-method` | skip the criterion edit, so no unknown method exists | `MISMATCH`, chain exit 1 |
 | `tc_013` malformed observation | `check_kani_mutations.py:111` `return "malformed"` → `return "pass"` | `got ["pass"]`, `right: ["malformed"]`, test FAILED |
+| `tc_013` malformed observation, absent side | `count(old) != 1` → `count(old) > 1` | `the campaign reported ["fail"], not ["malformed"]`, test FAILED |
+| `tc_014` deleted-name census | append the deleted `compat-view` target to the Makefile | `Makefile still references the deleted legacy_evidence_view`, test FAILED |
 | `compatibility.py` digest pin | append one byte to the installed module | `consumed artifact digest mismatch`, `make pins` exit 1 |
 
 The first version of the `malformed` probe was **not** observed red in the right

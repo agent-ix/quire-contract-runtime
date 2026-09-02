@@ -17,11 +17,12 @@ by name too; and that no source file, Make target, or workflow step references a
 
 ## Test Procedure
 
-Assert the absence of each removed path. Walk every source file under `scripts`, `tests`, `src`,
-`verification`, `measurement`, `spec`, and `.github`, plus `Makefile`, `Cargo.toml`, and
-`requirements-assurance.txt`, and assert that none names the deleted reader, its fixture directory,
-the retained-evidence tree, or the deleted schema directory. Assert the census inspected enough
-files to be meaningful.
+Assert the absence of each removed path. Walk the repository root, excluding rather than listing the
+directories to look in, and collect every code, configuration and workflow file — by extension, plus
+the extensionless `Makefile`, which is the one file a reintroduced Make target could live in. Assert
+that none names the deleted reader, its fixture directory, the retained-evidence tree, the deleted
+schema directory, or the mapping symbols they used. Assert the census inspected enough files to be
+meaningful.
 
 ## Expected Results
 

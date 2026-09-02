@@ -18,10 +18,12 @@ that has never been seen to accept is indistinguishable from a step that never w
 ## Test Procedure
 
 Read the chain report's `states_demonstrated`. Then drive `scripts/check_kani_mutations.py` into its
-malformed branch in a scratch copy — every mutation anchor doubled, so no anchor occurs exactly once
-and no prover runs — and read back the outcomes it reports. Union the two and require all twelve.
-Require every declared negative scenario to be named by some control's `pairs_with`, and require the
-chain to refuse a control naming a scenario that does not exist.
+malformed branch in a scratch copy and read back the outcomes it reports. Its predicate is
+`count(anchor) != 1`, which has two sides, so both are driven: every anchor duplicated (count 2) and
+every anchor removed (count 0). Either way no anchor occurs exactly once and no prover runs. Union the
+observations with the chain's states and require all twelve. Require every declared negative scenario
+to be named by some control's `pairs_with`, and require the chain to refuse a control naming a
+scenario that does not exist.
 
 ## Expected Results
 
@@ -34,6 +36,14 @@ actually emitting it, because a chain-side probe for it could only rewrite a row
 assert that the adapter's own lookup table carried it — a tautology that would stay green while the
 producer that owns the state was hollowed out to report `pass`. Both states previously came from the
 deleted retained-evidence compatibility census.
+
+## Toolchain dependency
+
+The producer checks for `cargo-kani` before it reaches its own predicate, so on a machine without the
+model checker this test reports `unavailable` and fails. That is fail-closed and deliberate — `make
+ci` already requires Kani — but it means plain `cargo test` now requires it too, which it did not
+before this probe existed. An absent toolchain is named in the failure message rather than left to
+read as a mismatch.
 
 ## Limitations
 

@@ -132,6 +132,7 @@ this change and are recorded rather than claimed away.
 | Gate | Result |
 |---|---|
 | `make ci` | exit 0 |
+| `cargo test` toolchain dependency | `tc_013` now requires `cargo-kani`, because the mutation producer checks for it before reaching its own predicate. Fail-closed; `make ci` already required it, plain `cargo test` did not |
 | `quire validate` | 56/56 docs grammar-clean, 0 findings (54 at the `make ci` run, plus these two review artifacts) |
 | `quire coverage --strict` | exit 0; 37/44 backed, 0 unbacked rows, 0 status lies |
 | `cargo test --all-features` | 27 tests, 0 failed (1 unit + 3 integration + 4 operators + 3 proptest + 3 release-contract + 8 shared-assurance + 5 footprint) |
@@ -150,6 +151,8 @@ this change and are recorded rather than claimed away.
 | FND-703 | low | `SUITE-007` was an unbacked suite-registry row before and after; deleting it changes the denominator but no backing | `spec/evidence/suites.md` | correct-requirement-no-evidence |
 | FND-704 | high | **Independent adversarial review.** The first replacement demonstration of `malformed` asserted a dict lookup rather than a produced state, and stayed green while the producer that owns the state was hollowed out to report `pass`. Closing FND-701 with an unfalsifiable check reads 12/12 exactly as a real one does | `scripts/assurance_chain.py`, `tests/shared_assurance.rs` | correct-requirement-no-evidence |
 | FND-705 | medium | **Independent adversarial review.** `FR-005-AC-6`'s frozen-schema clause asserted over a population this change deleted; coverage still counted the criterion as backed | `spec/functional/FR-005-shared-assurance-intake.md` | wrong-requirement |
+| FND-707 | medium | **Independent adversarial review, second round.** The deleted-name census matched files by extension, so the extensionless `Makefile` — the one file a reintroduced Make target could live in — was never scanned, and the `compat-view` name the remediation added was unenforceable | `tests/shared_assurance.rs` | correct-requirement-no-evidence |
+| FND-708 | low | **Independent adversarial review, second round.** The malformed probe drove only the `count == 2` side of the producer's `count != 1` predicate; the `count == 0` side was unguarded | `tests/shared_assurance.rs` | correct-requirement-no-evidence |
 | FND-706 | medium | **Independent adversarial review.** Two dangling trace ids (`NFR-002-AC-4`, `PGM-01`) entered the static export through a comment in `tc_007`'s annotation block; `quire coverage --strict` exits 0 without reporting `unmatched_tags` | `tests/release_contract.rs` | correct-requirement-no-evidence |
 
 ## Dispositions
@@ -162,6 +165,8 @@ this change and are recorded rather than claimed away.
 | FND-704 | **FIXED** — probe deleted, demonstration moved to the producer, and the reviewer's exact defect now turns `tc_013` red. |
 | FND-705 | **FIXED** — the clause now names the population `tc_014` walks. |
 | FND-706 | **FIXED** — comment removed from the annotation block; `unmatched_tags` empty again. |
+| FND-707 | **FIXED** — `collect_sources` now collects the extensionless `Makefile` and `.yaml`; probed red by reintroducing the deleted `compat-view` target. |
+| FND-708 | **FIXED** — both sides of the predicate are driven; probed red by weakening `!= 1` to `> 1`. |
 
 ## Residual and deferred
 

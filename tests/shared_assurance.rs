@@ -600,11 +600,20 @@ fn collect_sources(directory: &Path, into: &mut Vec<PathBuf>) {
             collect_sources(&path, into);
             continue;
         }
+        // `Makefile` has no extension and was therefore invisible to the census
+        // it is named in. That mattered most for exactly the thing this census
+        // now looks for: `compat-view` is a *Make target name*, so the Makefile
+        // is the one file a reintroduction would live in, and it was the one file
+        // not scanned. `.yaml` is here for the same reason — GitHub accepts
+        // `.github/workflows/*.yaml` as readily as `*.yml`.
+        let name = path.file_name().and_then(|value| value.to_str());
         let extension = path.extension().and_then(|value| value.to_str());
-        if matches!(
-            extension,
-            Some("py" | "sh" | "rs" | "txt" | "toml" | "yml" | "md" | "json")
-        ) {
+        if name == Some("Makefile")
+            || matches!(
+                extension,
+                Some("py" | "sh" | "rs" | "txt" | "toml" | "yml" | "yaml" | "md" | "json")
+            )
+        {
             into.push(path);
         }
     }
@@ -663,30 +672,46 @@ fn tc_013_all_twelve_verification_outcomes_are_demonstrated_and_paired_with_cont
         .map(|value| value.as_str().unwrap().to_owned())
         .collect();
 
-    // The anchors are doubled rather than deleted, so `text.count(old) != 1` and
-    // the producer takes its malformed branch before any prover runs. The
-    // repository's own tree is never touched: `copy_candidate` already works on a
-    // scratch copy, and the seam replaced here only edits that copy.
-    let observed = producer_probe(
-        "import json,sys,pathlib; sys.path.insert(0,'scripts')\n\
-         import check_kani_mutations as m\n\
-         original = m.copy_candidate\n\
-         def doubled(destination):\n\
-        \x20    original(destination)\n\
-        \x20    for relative, old, _new, _harness, _trace in m.MUTATIONS:\n\
-        \x20        path = pathlib.Path(destination) / relative\n\
-        \x20        path.write_text(path.read_text(encoding='utf-8') + old, encoding='utf-8')\n\
-         m.copy_candidate = doubled\n\
-         print(json.dumps(sorted({e['outcome'] for e in m.collect()['entries']})))",
-    );
-    assert_eq!(
-        observed, "[\"malformed\"]",
-        "the mutation campaign did not report a missing anchor as malformed; got \
-         {observed}. A campaign that answers `pass` when it no longer describes \
-         this source is a campaign that has stopped checking anything."
-    );
-    let observed_outcomes: Vec<String> = serde_json::from_str(&observed).unwrap();
-    demonstrated.extend(observed_outcomes);
+    // The producer's predicate is `text.count(old) != 1`, and it has two sides.
+    // An anchor that has been duplicated counts 2; an anchor that has drifted away
+    // counts 0. Probing only the first leaves `!= 1` weakenable to `> 1` — after
+    // which a *missing* anchor stops reporting malformed, `text.replace` becomes a
+    // no-op, the prover runs on unmutated source, and its success reads as "Kani
+    // accepted the injected defect". Both sides are probed.
+    //
+    // The repository's own tree is never touched: `copy_candidate` already works
+    // on a scratch copy, and the seam replaced here only edits that copy.
+    let probe = |edit: &str| -> String {
+        producer_probe(&format!(
+            "import json,sys,pathlib; sys.path.insert(0,'scripts')\n\
+             import check_kani_mutations as m\n\
+             original = m.copy_candidate\n\
+             def degraded(destination):\n\
+            \x20    original(destination)\n\
+            \x20    for relative, old, _new, _harness, _trace in m.MUTATIONS:\n\
+            \x20        path = pathlib.Path(destination) / relative\n\
+            \x20        text = path.read_text(encoding='utf-8')\n\
+            \x20        path.write_text({edit}, encoding='utf-8')\n\
+             m.copy_candidate = degraded\n\
+             print(json.dumps(sorted({{e['outcome'] for e in m.collect()['entries']}})))"
+        ))
+    };
+    for (side, edit) in [
+        ("duplicated (count 2)", "text + old"),
+        ("absent (count 0)", "text.replace(old, '', 1)"),
+    ] {
+        let observed = probe(edit);
+        assert_eq!(
+            observed, "[\"malformed\"]",
+            "with every mutation anchor {side} the campaign reported {observed}, not \
+             [\"malformed\"]. A campaign that answers `pass` when it no longer describes \
+             this source has stopped checking anything; one that answers \
+             [\"unavailable\"] means cargo-kani is absent, which this test requires \
+             because the producer refuses to reach its own predicate without it."
+        );
+        let observed_outcomes: Vec<String> = serde_json::from_str(&observed).unwrap();
+        demonstrated.extend(observed_outcomes);
+    }
 
     let missing: Vec<&str> = REQUIRED
         .iter()
@@ -826,10 +851,11 @@ fn tc_014_no_local_evidence_framework_remains() {
             );
         }
     }
-    // Re-derived rather than inherited: the walk sees 37 non-markdown files at
-    // this revision, against 55 before the deletion. The floor is raised with it,
-    // because a threshold left at a number chosen for a larger tree stops being a
-    // vacuity guard and becomes a number that happens to be true.
+    // Re-derived rather than inherited: the walk sees 38 non-markdown files at
+    // this revision — 37 plus the Makefile, which it did not used to reach —
+    // against 55 before the deletion. The floor is raised with it, because a
+    // threshold left at a number chosen for a larger tree stops being a vacuity
+    // guard and becomes a number that happens to be true.
     assert!(
         inspected >= 35,
         "the executable and configuration census is unexpectedly small ({inspected}) \
@@ -837,7 +863,9 @@ fn tc_014_no_local_evidence_framework_remains() {
     );
 
     // The Makefile is orchestration, not a trust root, and carries no gate that
-    // polices its own execution. Target definitions are matched, not bare words:
+    // polices its own execution. It is also scanned by the deleted-name census
+    // above, because `collect_sources` now reaches it. Target definitions are
+    // matched, not bare words:
     // `quire coverage --scope . --strict` legitimately contains "coverage".
     let makefile = fs::read_to_string(root.join("Makefile")).unwrap();
     for gone in [
