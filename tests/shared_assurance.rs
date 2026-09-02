@@ -208,6 +208,66 @@ fn tc_010_the_chain_reaches_quoin_without_quoin_or_quire_executing_a_producer() 
     }
 }
 
+/// Trace: TC-010, FR-005-AC-2
+#[test]
+fn tc_010_every_declared_proof_command_is_the_command_make_actually_runs() {
+    // A declared command that is not the executed command is a lie inside a
+    // sealed attestation, and it is the kind of lie nothing downstream can catch:
+    // Quoin records what the caller says the command was.
+    //
+    // So it is asked of Make. `make -n assurance-inputs` prints the plan without
+    // running it; line continuations are rejoined; every proof obligation's
+    // declared argv must appear in that plan verbatim.
+    let root = root();
+    let declaration: Value = serde_json::from_str(
+        &fs::read_to_string(root.join("assurance/change-assurance.json")).unwrap(),
+    )
+    .expect("the change-assurance declaration is JSON");
+
+    // `cargo test` exports CARGO as an absolute path to the toolchain binary, and
+    // the Makefile's `CARGO ?= cargo` picks it up. That substitution is an
+    // artifact of the test runner, not of the repository, so it is removed here
+    // and the plan is read as a plain shell would see it. The declaration names
+    // tools, not paths.
+    let plan = Command::new("make")
+        .args(["-n", "assurance-inputs"])
+        .current_dir(&root)
+        .env_remove("CARGO")
+        .output()
+        .expect("make -n assurance-inputs failed to run");
+    assert!(
+        plan.status.success(),
+        "make -n assurance-inputs did not resolve: {}",
+        String::from_utf8_lossy(&plan.stderr)
+    );
+    let joined = String::from_utf8_lossy(&plan.stdout).replace("\\\n", " ");
+    let normalised: String = joined.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    let obligations = declaration["record"]["definition"]["proof_obligations"]
+        .as_array()
+        .expect("proof_obligations");
+    assert_eq!(
+        obligations.len(),
+        7,
+        "the declaration names {} proof obligations; the chain and this test expect 7",
+        obligations.len()
+    );
+    for proof in obligations {
+        let argv: Vec<String> = proof["command"]["argv"]
+            .as_array()
+            .expect("argv")
+            .iter()
+            .map(|value| value.as_str().expect("argv element").to_owned())
+            .collect();
+        let command = argv.join(" ");
+        assert!(
+            normalised.contains(&command),
+            "{} declares `{command}`, which `make assurance-inputs` does not run.\nPlan: {normalised}",
+            proof["proof_id"]
+        );
+    }
+}
+
 /// Write an executable shim for each name that records every invocation.
 ///
 /// The log is the point. A shim that is never consulted and a producer that is
