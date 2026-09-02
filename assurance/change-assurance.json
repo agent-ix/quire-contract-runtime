@@ -100,7 +100,7 @@
         },
         {
           "id": "PRESERVE-frozen-schemas",
-          "statement": "schemas/runtime-evidence-input-v1.schema.json, schemas/runtime-evidence-manifest-v1.schema.json, schemas/pgm01-derivation-evidence-envelope-v1.schema.json, and schemas/pgm01-validate-governance.py are frozen, not deleted: retained envelopes and retained per-record digest files name each of them by SHA-256. Nothing validates against them any more and no script may reference them.",
+          "statement": "Four artifacts under schemas/ are frozen, not deleted: the two runtime evidence schemas, the vendored PGM-01 envelope schema, and the vendored governance validator. Retained envelopes and retained per-record digest files name each of them by SHA-256; schemas/README.md records the digests and where each reference sits. Nothing validates against them any more and no code, configuration, or workflow file may reference them. They are described here rather than named, because the test that enforces the freeze asserts that no such file mentions their names, and a declaration that named them would be the first violation of the rule it states.",
           "source_ids": ["NFR-002"]
         },
         {

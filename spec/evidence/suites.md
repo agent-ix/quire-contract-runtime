@@ -14,7 +14,7 @@ type: SuiteRegistry
 | SUITE-002 | Kani semantic mutation campaign | `python3 scripts/check_kani_mutations.py --json` | cargo-kani 0.67.0 / CBMC | Analysis |
 | SUITE-003 | Feature-matrix build and test run | `python3 scripts/run_feature_matrix.py --json` | cargo / libtest | Integration |
 | SUITE-004 | Governed linked-footprint measurement | `python3 scripts/measure_footprint.py --json` | rustc 1.75.0, binutils `size` and `objdump` | Static |
-| SUITE-005 | Strict specification validation | `quire validate --scope . 'spec/**/*.md' --summary` | quire 0.31.0 / quire-rs 0.46.0 | Analysis |
+| SUITE-005 | Strict specification validation | `quire validate --scope . 'spec/**/*.md' 'planning/**/*.md' 'plan/**/*.md' 'reviews/**/*.md' --summary` | quire 0.31.0 / quire-rs 0.46.0 | Analysis |
 | SUITE-006 | Static specification and coverage export | `quire coverage --scope . --json` | quire 0.31.0 / quire-rs 0.46.0 | Static |
 | SUITE-007 | Retained-evidence compatibility view | `.venv-assurance/bin/python scripts/legacy_evidence_view.py --json` | engineering-assurance 0.2.0 `map_pgm01_bytes` | Static |
 | SUITE-008 | Shared assurance intake chain | `python3 scripts/assurance_chain.py --candidate-revision <sha>` | quoin 0.23.1 change-assurance and evidence surfaces | Integration |

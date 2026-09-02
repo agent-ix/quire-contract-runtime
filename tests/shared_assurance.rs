@@ -268,6 +268,107 @@ fn tc_010_every_declared_proof_command_is_the_command_make_actually_runs() {
     }
 }
 
+/// Run a Python snippet against a producer module and return its stdout.
+///
+/// The snippet imports the module and replaces exactly one named function, then
+/// asks the module what it reports. That seam is the only way the failure
+/// direction of a prover-driven producer can be exercised without a prover that
+/// genuinely fails: a campaign that always answers `pass` and a campaign that is
+/// working produce the same document, and the difference is only visible when
+/// the prover is made to disagree.
+fn producer_probe(snippet: &str) -> String {
+    let (code, stdout, stderr) = run(Path::new("python3"), &["-c", snippet]);
+    assert_eq!(code, 0, "the producer probe failed\n{stdout}\n{stderr}");
+    stdout.trim().to_owned()
+}
+
+/// Trace: TC-010, FR-005-AC-2, FR-005-AC-5
+#[test]
+fn tc_010_the_producers_report_failure_when_the_prover_does() {
+    // Every other test in this file asks a producer whether it says `pass` when
+    // the thing it measures is healthy. None of them asks whether it can say
+    // anything else. A producer hollowed out to `return "pass"` satisfies all of
+    // them, runs in milliseconds, and turns the whole chain green — which is the
+    // finding this test exists to close, and which this repository had already
+    // closed once before the machinery that closed it was deleted.
+
+    // A prover that reports a verification failure must not read as a pass.
+    let outcomes = producer_probe(
+        "import json,sys; sys.path.insert(0,'scripts')\n\
+         import run_kani_gate as g\n\
+         g.run_kani = lambda stream: (1, 'VERIFICATION:- FAILED\\n')\n\
+         print(json.dumps(sorted({e['outcome'] for e in g.collect()['entries']})))",
+    );
+    assert_eq!(
+        outcomes, "[\"fail\"]",
+        "a failing prover did not produce failing rows; got {outcomes}"
+    );
+
+    // A prover that exits zero having checked nothing is not a pass either. The
+    // harnesses were not computed and the suite census must say the run did not
+    // meet its declared shape.
+    let outcomes = producer_probe(
+        "import json,sys; sys.path.insert(0,'scripts')\n\
+         import run_kani_gate as g\n\
+         g.run_kani = lambda stream: (0, '')\n\
+         print(json.dumps(sorted({e['outcome'] for e in g.collect()['entries']})))",
+    );
+    assert_eq!(
+        outcomes, "[\"fail\", \"not-computed\"]",
+        "an empty transcript with a zero exit was not reported as uncomputed; got {outcomes}"
+    );
+
+    // A harness that verifies below its declared obligation floor is vacuous.
+    // The floor is what makes it so, and this is the assertion that makes the
+    // floor load-bearing in the direction that matters.
+    let outcomes = producer_probe(
+        "import json,sys; sys.path.insert(0,'scripts')\n\
+         import run_kani_gate as g\n\
+         g.run_kani = lambda stream: (0, '')\n\
+         g.proof_check_counts = lambda text: {n: 1 for n in g.EXPECTED_KANI_HARNESSES}\n\
+         print(json.dumps(sorted({e['outcome'] for e in g.collect()['entries']})))",
+    );
+    assert_eq!(
+        outcomes, "[\"fail\", \"vacuous\"]",
+        "a proof below its floor was not reported as vacuous; got {outcomes}"
+    );
+
+    // And the mutation campaign: a prover that accepts an injected defect is a
+    // control that did not hold, whatever its exit status says.
+    let verdict = producer_probe(
+        "import json,sys; sys.path.insert(0,'scripts')\n\
+         import check_kani_mutations as m\n\
+         class R:\n\
+         \x20   returncode = 0\n\
+         \x20   stdout = ''\n\
+         \x20   stderr = ''\n\
+         m.prove = lambda argv, cwd, env: R()\n\
+         print(json.dumps(m.run_mutation(*m.MUTATIONS[0][:4])[0]))",
+    );
+    assert_eq!(
+        verdict, "\"fail\"",
+        "the campaign reported a control as held while the prover accepted the defect"
+    );
+
+    // A non-zero exit that never reached a verification failure is a broken run,
+    // not a rejection. Counting it as one is how a campaign starts passing
+    // because the compiler fell over.
+    let verdict = producer_probe(
+        "import json,sys; sys.path.insert(0,'scripts')\n\
+         import check_kani_mutations as m\n\
+         class R:\n\
+         \x20   returncode = 1\n\
+         \x20   stdout = 'error: could not compile'\n\
+         \x20   stderr = ''\n\
+         m.prove = lambda argv, cwd, env: R()\n\
+         print(json.dumps(m.run_mutation(*m.MUTATIONS[0][:4])[0]))",
+    );
+    assert_eq!(
+        verdict, "\"fail\"",
+        "a run that never reached a proof failure was counted as a rejection"
+    );
+}
+
 /// Write an executable shim for each name that records every invocation.
 ///
 /// The log is the point. A shim that is never consulted and a producer that is
@@ -476,12 +577,24 @@ fn tc_012_retained_evidence_is_read_through_the_shared_mapping_without_moving_a_
 
 /// Collect every readable source file under `directory`, recursively.
 fn collect_sources(directory: &Path, into: &mut Vec<PathBuf>) {
+    // Excluded, and each for its own reason: `.git` is not source, `target` is
+    // build output, `evidence` is immutable retained history that legitimately
+    // names the schemas its records were sealed against, and `.venv-assurance`
+    // is the pinned upstream release rather than anything this repository wrote.
+    const EXCLUDED: [&str; 4] = [".git", "target", "evidence", ".venv-assurance"];
     let Ok(entries) = fs::read_dir(directory) else {
         return;
     };
     for entry in entries {
         let path = entry.expect("directory entry").path();
         if path.is_dir() {
+            let name = path
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("");
+            if EXCLUDED.contains(&name) {
+                continue;
+            }
             collect_sources(&path, into);
             continue;
         }
@@ -646,47 +759,59 @@ fn tc_014_no_local_evidence_framework_remains_and_the_frozen_schemas_bind_nothin
     // covers the build and workflow files too, because a reintroduced validator
     // one directory down, or a CI step, would otherwise not be caught. A census
     // this small would be vacuous, so its size is asserted as well.
+    // The census walks the repository root and excludes, rather than naming the
+    // directories it will look in. An inclusion list is a list of the places a
+    // reintroduced validator would have to avoid, and it only has to be
+    // incomplete once: a validator dropped at the root, or under `assurance/`,
+    // `schemas/`, `examples/`, `planning/` or `reviews/`, was invisible to the
+    // list this replaced.
     let mut sources = Vec::new();
-    for directory in [
-        "scripts",
-        "tests",
-        "src",
-        "verification",
-        "measurement",
-        "spec",
-        "plan",
-        ".github",
-    ] {
-        collect_sources(&root.join(directory), &mut sources);
-    }
-    for file in ["Makefile", "Cargo.toml", "requirements-assurance.txt"] {
-        let path = root.join(file);
-        if path.is_file() {
-            sources.push(path);
-        }
-    }
+    collect_sources(&root, &mut sources);
+
+    // The claim is that nothing *validates* against them, so the assertion runs
+    // over the surfaces that can: code, configuration, and workflow files.
+    // Markdown is excluded and deliberately so — `planning/pgm-01-reconciliation.md`
+    // names the PGM-01 envelope schema because that document is a record of it,
+    // and prose cannot validate anything. Widening the walk found that reference
+    // immediately, which is the point of widening it; the fix is to scope the
+    // assertion honestly rather than to narrow the walk back.
+    //
+    // This file is exempt because pinning the four artifacts by digest is the
+    // whole of this test.
     let mut inspected = 0;
     for path in &sources {
-        inspected += 1;
+        let extension = path
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or("");
+        if extension == "md" {
+            continue;
+        }
+        if path.file_name().and_then(|value| value.to_str()) == Some("shared_assurance.rs") {
+            continue;
+        }
+        // A frozen artifact naming itself is its own `$id`, not a validator.
+        if frozen.iter().any(|(schema, _)| root.join(schema) == *path) {
+            continue;
+        }
         let Ok(source) = fs::read_to_string(path) else {
             continue;
         };
+        inspected += 1;
         for (schema, _) in frozen {
-            let name = Path::new(schema).file_name().unwrap().to_str().unwrap();
-            // This file names them in order to pin them; nothing else may.
-            if path.file_name().and_then(|value| value.to_str()) == Some("shared_assurance.rs") {
-                continue;
-            }
+            let frozen_name = Path::new(schema).file_name().unwrap().to_str().unwrap();
             assert!(
-                !source.contains(name),
-                "{} references the frozen artifact {name}; nothing may validate against it",
+                !source.contains(frozen_name),
+                "{} references the frozen artifact {frozen_name}; nothing may validate \
+                 against it",
                 path.display()
             );
         }
     }
     assert!(
-        inspected > 40,
-        "the source census is unexpectedly small ({inspected}) to make this claim"
+        inspected > 30,
+        "the executable and configuration census is unexpectedly small ({inspected}) \
+         to make this claim"
     );
 
     // The Makefile is orchestration, not a trust root, and carries no gate that
@@ -710,6 +835,40 @@ fn tc_014_no_local_evidence_framework_remains_and_the_frozen_schemas_bind_nothin
         !makefile.contains("MAKEFLAGS"),
         "the Makefile still polices its own execution controls"
     );
+
+    // Make can be told to ignore failure, and a single line does it. `.IGNORE:`
+    // at the top, a `-` prefix on a recipe line, or `SHELL := /bin/true` each
+    // turn a red gate into `make` exit 0 while the gate itself still prints its
+    // failure. The 311-line recipe-failure policer that used to catch this went
+    // with the collector it was protecting, and its absence was found by probe
+    // rather than by reasoning.
+    //
+    // What replaces it is not another policer target — that would be the
+    // Makefile attesting to itself again. It is this assertion, in the test
+    // suite, that the file declares none of the directives whose only purpose is
+    // to stop a failure propagating.
+    // File-scoped directives only. `-k` and `--keep-going` are command-line
+    // flags and cannot be declared here except through MAKEFLAGS, which is
+    // already asserted absent above; matching them as substrings finds the word
+    // "kani" and would be a check that fires on its own subject matter.
+    for directive in [".IGNORE", ".SILENT", ".ONESHELL", ".SHELLFLAGS", "SHELL"] {
+        assert!(
+            !makefile.contains(directive),
+            "the Makefile declares {directive}, which can stop a failing gate from \
+             failing the build"
+        );
+    }
+    for (number, line) in makefile.lines().enumerate() {
+        let Some(recipe) = line.strip_prefix('\t') else {
+            continue;
+        };
+        let command = recipe.trim_start_matches(['@', '+']);
+        assert!(
+            !command.starts_with('-'),
+            "Makefile:{} prefixes a recipe line with `-`, which ignores its exit status: {line}",
+            number + 1
+        );
+    }
 
     // And the gates that replaced it are actually reachable from `ci:`.
     //
@@ -739,6 +898,11 @@ fn tc_014_no_local_evidence_framework_remains_and_the_frozen_schemas_bind_nothin
         "scripts/check_shared_pins.py",
         "scripts/legacy_evidence_view.py",
         "scripts/assurance_chain.py",
+        // The test runner itself. Without this line, deleting `test` from the
+        // `ci:` prerequisite list is invisible: `assurance-inputs` still supplies
+        // every script named above, so `make ci` stays green while TC-009 through
+        // TC-014 — the whole enforcement layer for FR-005 — never runs.
+        "cargo test --all-features",
     ] {
         assert!(
             planned.contains(required),

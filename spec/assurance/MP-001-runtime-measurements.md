@@ -75,6 +75,21 @@ a transcript:
   `scripts/check_linked_footprint.sh`, which owns `size` and `objdump` and emits the same document.
   Nothing re-derives its numbers; a second implementation of a measurement is a second answer.
 
+The declared obligation floors, and the counts measured at this candidate revision. They are equal
+today by construction, not by any check: raising a floor above its measured count makes the gate
+report `vacuous`, but lowering one is invisible to the gate, so the measurement is recorded here and
+a lowered floor becomes a two-file edit rather than a one-line one.
+
+| Harness | Declared floor | Measured |
+|---|---|---|
+| `tc_001_public_model_preserves_provenance` | 140 | 140 |
+| `tc_002_boolean_truth_tables` | 136 | 136 |
+| `tc_003_campaign_accounting_saturates` | 264 | 264 |
+| `tc_003_checked_i8_arithmetic_matches_primitives` | 59 | 59 |
+| `tc_003_i32_division_boundaries_are_undefined` | 43 | 43 |
+| `tc_003_option_helpers_preserve_definedness` | 52 | 52 |
+| `tc_003_slice_index_is_defined_exactly_in_bounds` | 24 | 24 |
+
 `scripts/check_kani_harnesses.py` remains the cheap static half of the proof gate: it makes the seven
 proof names and their TC-001/TC-002/TC-003 ownership an executable census, so a deleted, renamed, or
 `cfg`-ed-out harness is caught without needing the model checker at all. It also reads each harness's

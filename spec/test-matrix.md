@@ -63,8 +63,7 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   retained default dependency record.
 - TC-007: `tests/release_contract.rs`, the footprint crate's fixed-result test, plus the governed
   linked-footprint and panic-relocation measurement published by
-  `scripts/measure_footprint.py`, the observational rlib-size script, and the unsafe, panic-surface,
-  and license audits.
+  `scripts/measure_footprint.py`, and the unsafe, panic-surface, and license audits.
 - TC-008: `tests/release_contract.rs` recursively scans all shipped runtime source, supplemented by
   five compile-fail enum doctests and public API documentation.
 - TC-009 through TC-014: `tests/shared_assurance.rs`, which invokes the shared-assurance gates

@@ -488,6 +488,56 @@ def _rows_result(rows: list[dict[str, Any]], where: str) -> str:
     return _worst(results)
 
 
+# Fields a producer's document must carry for its rows to be believable, keyed by
+# the protocol the document declares. A verdict is cheap to forge; a measurement
+# is not, so the chain requires the measurement to be present and self-consistent
+# before it will read the verdict.
+#
+# This is not the chain re-running a producer or second-guessing its judgement.
+# It is the chain refusing a document that states an outcome without stating what
+# the outcome was derived from — which is exactly the shape a hand-written
+# forgery takes, because reproducing the numbers is the expensive part.
+MEASURED_PROTOCOLS = {
+    "runtime.kani-proof/v1": ("dischargedObligations", "floor"),
+}
+
+
+def require_measurements(document: dict[str, Any], where: str) -> None:
+    """Refuse a document that claims an outcome without the measurement behind it."""
+    protocol = document.get("protocol")
+    required = MEASURED_PROTOCOLS.get(protocol)
+    if required is None:
+        return
+    tool = document.get("tool") or {}
+    if not isinstance(tool.get("version"), str) or not tool["version"].strip():
+        raise ChainError(
+            f"{where} declares {protocol} but names no observed tool version. A document "
+            "that does not say which prover produced it is not evidence that one did."
+        )
+    for index, row in enumerate(document.get("entries") or []):
+        for field in required:
+            if field not in row:
+                raise ChainError(
+                    f"{where} row {index} ({row.get('symbol')}) declares outcome "
+                    f"{row.get('outcome')!r} without {field}. This protocol reports a "
+                    "measurement, and a verdict with no measurement behind it is a claim."
+                )
+        if row.get("outcome") != "pass":
+            continue
+        discharged, floor = row["dischargedObligations"], row["floor"]
+        if not isinstance(discharged, int) or not isinstance(floor, int):
+            raise ChainError(
+                f"{where} row {index} ({row.get('symbol')}) passes with a non-numeric "
+                "obligation count"
+            )
+        if discharged < floor:
+            raise ChainError(
+                f"{where} row {index} ({row.get('symbol')}) passes having discharged "
+                f"{discharged} obligations against a declared floor of {floor}. A proof "
+                "below its floor is vacuous, and vacuous is not passed."
+            )
+
+
 def derive_result(proof_id: str, path: Path) -> str:
     """Read the producer's own structured verdict out of the bytes it wrote.
 
@@ -503,7 +553,9 @@ def derive_result(proof_id: str, path: Path) -> str:
     """
     raw = path.read_text(encoding="utf-8")
     if proof_id in ENTRY_DOCUMENTS:
-        return _rows_result(json.loads(raw)["entries"], path.name)
+        document = json.loads(raw)
+        require_measurements(document, path.name)
+        return _rows_result(document["entries"], path.name)
     if proof_id == "PROOF-legacy-compatibility":
         census = json.loads(raw)
         return "passed" if census["matched"] else "failed"
@@ -1049,7 +1101,12 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
     results.append(
         {
             "probe": "refuses-a-foreign-protocol",
-            "state": "unsupported",
+            # A refusal by the adapter is not one of the twelve states travelling
+            # the chain; it is the adapter declining to produce one. Labelling it
+            # `unsupported` would let the census count a refusal as a
+            # demonstration. `unsupported` is demonstrated by the compatibility
+            # view, against a record that really carries an unknown schema.
+            "state": None,
             "matched": refused,
             "detail": {"protocol": "some.other.protocol/v1"},
         }
@@ -1064,7 +1121,14 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
     except ChainError:
         empty_refused = True
     results.append(
-        {"probe": "refuses-an-empty-stream", "state": "vacuous", "matched": empty_refused, "detail": {}}
+        {
+            "probe": "refuses-an-empty-stream",
+            # Same reason. `vacuous` is demonstrated by Quoin's own audit, three
+            # probes above, against a run it read and found empty of outcomes.
+            "state": None,
+            "matched": empty_refused,
+            "detail": {},
+        }
     )
 
     # Probe 7: an outcome the adapter does not name is refused rather than
@@ -1080,7 +1144,9 @@ def adapter_probes(workspace: Path) -> list[dict[str, Any]]:
     results.append(
         {
             "probe": "refuses-an-unnamed-outcome",
-            "state": "malformed",
+            # Same reason. `malformed` is demonstrated by the compatibility view,
+            # against a record whose legacy field really has the wrong type.
+            "state": None,
             "matched": unknown_refused,
             "detail": {"outcome": "probably-fine"},
         }

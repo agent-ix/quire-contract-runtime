@@ -247,6 +247,20 @@ def run_case(mapper: Callable[..., dict[str, Any]], case: dict[str, Any]) -> dic
     }
 
 
+def declared_schema_version(raw: bytes) -> str:
+    """What a retained record says it is, or `unknown` when it does not say.
+
+    The mapping's own answer is what decides the outcome. This is only the family
+    label the census reports, and an absent or unreadable one is a fact about the
+    record rather than a reason to stop.
+    """
+    try:
+        declared = json.loads(raw).get("schemaVersion")
+    except (json.JSONDecodeError, AttributeError):
+        return "unknown"
+    return declared if isinstance(declared, str) else "unknown"
+
+
 def retained_report(mapper: Callable[..., dict[str, Any]]) -> dict[str, Any]:
     """Read every retained envelope in this repository through the pinned mapping."""
     entries = []
@@ -258,7 +272,14 @@ def retained_report(mapper: Callable[..., dict[str, Any]]) -> dict[str, Any]:
                 "path": path.relative_to(ROOT).as_posix(),
                 "source_digest": view["source_digest"],
                 "source_identity_verified": view["source_digest"] == sha256(raw),
-                "declared_schema_version": json.loads(raw).get("schemaVersion"),
+                # A record that declares no schema version, or is not readable as
+                # JSON at all, is reported as `unknown` rather than as `null`.
+                # Both are real states of a retained byte stream and both used to
+                # crash the census on `sorted({..., None})` — an uncaught
+                # TypeError where a state was supposed to be. A malformed
+                # retained record is one of the twelve outcomes this file exists
+                # to keep distinguishable; it does not get to be a traceback.
+                "declared_schema_version": declared_schema_version(raw),
                 "outcome": view["outcome"],
                 "reasons": [item["reason"] for item in view["unmapped_fields"]],
             }

@@ -83,6 +83,21 @@ def copy_candidate(destination: Path) -> None:
     )
 
 
+def prove(argv: list[str], cwd: Path, environment: dict[str, str]) -> subprocess.CompletedProcess:
+    """Run the model checker.
+
+    This is a named seam, and the reason it exists is a finding. A campaign that
+    injects defects can itself be hollowed out to report success without running
+    anything, and nothing downstream would tell the difference: an all-`pass`
+    document is what a working campaign also produces. The seam lets a test
+    supply a prover that accepts the defect and require this module to report
+    `fail`, which is the only way the failure direction is ever exercised.
+    """
+    return subprocess.run(
+        argv, cwd=cwd, env=environment, check=False, capture_output=True, text=True
+    )
+
+
 def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, str | None]:
     """Inject one defect into a scratch copy and report what the proof did."""
     home = Path(pwd.getpwuid(os.getuid()).pw_dir)
@@ -105,13 +120,8 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, 
             RUSTUP_HOME=str(home / ".rustup"),
             CARGO_TARGET_DIR=str(candidate / "target"),
         )
-        completed = subprocess.run(
-            [str(cargo), "kani", "--harness", harness],
-            cwd=candidate,
-            env=environment,
-            check=False,
-            capture_output=True,
-            text=True,
+        completed = prove(
+            [str(cargo), "kani", "--harness", harness], candidate, environment
         )
     combined = completed.stdout + "\n" + completed.stderr
     if completed.returncode == 0:
@@ -125,6 +135,27 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, 
         # campaign starts passing because the compiler fell over.
         return "fail", f"the mutation for {harness} did not reach a proof failure"
     return "pass", None
+
+
+def observed_kani_version(home: Path) -> str | None:
+    """The prover's own version, or None. Never a placeholder.
+
+    A field named `version` carrying the word "observed" is worse than an absent
+    one: a reader cannot tell it from a measurement.
+    """
+    try:
+        result = subprocess.run(
+            [str(home / ".cargo" / "bin" / "cargo-kani"), "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "HOME": str(home), "CARGO_HOME": str(home / ".cargo")},
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
 
 
 def collect() -> dict[str, Any]:
@@ -154,7 +185,10 @@ def collect() -> dict[str, Any]:
         )
     return {
         "protocol": PROTOCOL,
-        "tool": {"identity": "cargo-kani", "version": None if not have_kani else "observed"},
+        "tool": {
+            "identity": "cargo-kani",
+            "version": observed_kani_version(home) if have_kani else None,
+        },
         "minimum": MINIMUM_KANI_MUTATIONS,
         "entries": entries,
     }
