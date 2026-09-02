@@ -905,7 +905,7 @@ fn tc_014_no_local_evidence_framework_remains_and_the_frozen_schemas_bind_nothin
             );
         }
         let assigns_shell = statement
-            .split_once(|character| character == ':' || character == '=' || character == '?')
+            .split_once([':', '=', '?'])
             .map(|(target, _)| target.trim() == "SHELL")
             .unwrap_or(false);
         assert!(
