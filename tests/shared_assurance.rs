@@ -650,4 +650,39 @@ fn tc_014_no_local_evidence_framework_remains_and_the_frozen_schemas_bind_nothin
         !makefile.contains("MAKEFLAGS"),
         "the Makefile still polices its own execution controls"
     );
+
+    // And the gates that replaced it are actually reachable from `ci:`.
+    //
+    // This asks Make what it would run, not what the file says. A text assertion
+    // that the Makefile mentions a script is satisfied by the script being
+    // mentioned in a comment, and survives the entire `ci:` prerequisite list
+    // being deleted — which is exactly how the assertion this replaced behaved.
+    // `make -n` expands the dependency graph, so removing a prerequisite removes
+    // its recipe line from this output.
+    let dry_run = Command::new("make")
+        .args(["-n", "ci"])
+        .current_dir(&root)
+        .output()
+        .expect("make -n ci failed to run");
+    assert!(
+        dry_run.status.success(),
+        "make -n ci did not resolve: {}",
+        String::from_utf8_lossy(&dry_run.stderr)
+    );
+    let planned = String::from_utf8_lossy(&dry_run.stdout);
+    for required in [
+        "scripts/run_feature_matrix.py",
+        "scripts/run_kani_gate.py",
+        "scripts/check_kani_harnesses.py",
+        "scripts/check_kani_mutations.py",
+        "scripts/measure_footprint.py",
+        "scripts/check_shared_pins.py",
+        "scripts/legacy_evidence_view.py",
+        "scripts/assurance_chain.py",
+    ] {
+        assert!(
+            planned.contains(required),
+            "`make ci` would not run {required}; it is defined but unreachable"
+        );
+    }
 }
