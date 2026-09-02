@@ -43,78 +43,84 @@ private profile.
 
 ## Collection Procedure
 
-Run `scripts/collect_evidence.sh`. It records source and tool identities, feature-matrix tests, Clippy,
-license and unsafe checks, Kani availability/result, dependency metadata, the Rust 1.75
-`thumbv7em-none-eabi` linked footprint, observational release rlib bytes, and output digests beneath
-`evidence/`. Every invoked gate retains stdout, stderr, and its numeric exit status; the builder
-`scripts/build_evidence_envelope.py` derives manifest outcomes from the complete status-file census,
-represents missing or uncorroborated records as inconclusive, and records zero-status transcript
-contradictions as durable failed outcomes. Kani passes only when its numeric status is zero, every
-declared harness is named successful, each harness discharges a positive recorded check count, the
-exact complete-summary count is present, and no failure marker occurs. Its exact version is retained.
-The collector's local self-test exercises nonzero propagation and checksum fixed-point detection;
-the builder never manufactures a pass from a command name or transcript text. The builder derives and verifies
-the digest of the vendored PGM-01 envelope schema, the byte-identical vendored validator, and the
-identity of its vendored raw merge commit and validator Git blob; verification never depends on or
-records the collector's temporary external-checkout path;
-TC-007 tests the builder and local validator semantics before evidence collection can pass. Preserve
-failures and skips rather than deleting them.
+Run `make assurance-inputs`. It is the only target that executes a producer, and each command it runs
+is the exact argv the corresponding proof obligation declares in `assurance/change-assurance.json`; a
+declared command that is not the executed command would be a lie in a sealed attestation.
 
-`scripts/check_kani_harnesses.py` makes the seven proof names and their TC-001/TC-002/TC-003 ownership an
-executable census before every Kani run. `scripts/check_kani_mutations.py` injects representative
-Boolean, arithmetic, and accounting defects and requires the owning proofs to reject them. Absence
-of `cargo-kani` is a failed local gate, not a skip.
-The shared quantitative floors for the evidence-tool suite and mutation campaign live in
-`scripts/evidence_policy.py`; both counts are retained in the manifest and independently re-derived.
-`scripts/check_coverage_status.py` independently enforces the schema-valid `Coverage Status` column,
-complete backing, and the absence of ignored trace-bearing tests while the installed module still
-configures the incompatible `Status` header. `scripts/update_evidence_anchors.py` deterministically
-regenerates the complete anchor census for diff review after collection.
+Four producers belong to this repository and each publishes a declared structured result rather than
+a transcript:
 
-`scripts/check_failure_propagation.py` rejects ambient or in-file Make failure suppression,
-including `SHELL`, `.SHELLFLAGS`, `.ONESHELL`, definitions, and target-scoped assignments; it probes
-every mandatory recipe position, and verifies the exact local `cargo`, `python3`, `quire`, and Make
-executables before composite local checks. `scripts/run_kani_gate.py` preserves Kani's numeric result
-and rejects success unless every harness meets its proof-obligation floor; it uses the unavailable
-exit channel when the mandatory tool is absent. `scripts/run_evidence_tests.py` enforces a minimum
-behavioral-test census before running the evidence-tool suite.
-`scripts/check_assurance_anchor.py` executes AA-001's declared authoritative-record, outcome-count,
-and conclusive-result binding after evidence verification.
+- `scripts/run_feature_matrix.py` publishes `runtime.feature-matrix/v1`. It runs nine rows — four
+  feature sets over the crate's own test targets, their four doc-test lanes, and the footprint
+  package — and decides each row from two structured channels: cargo's own
+  `--message-format=json` `compiler-message` level for the build phase, and libtest's process exit
+  status for the test phase. Build failure and test failure are different facts and are reported
+  separately. Per-test granularity would require libtest's unstable JSON formatter and therefore a
+  different compiler than the one the crate ships on; that limitation is stated rather than papered
+  over by parsing `test result: ok.` out of human output.
+- `scripts/run_kani_gate.py` publishes `runtime.kani-proof/v1`, one row per declared harness plus a
+  suite-census row. Kani publishes no machine-readable result, so this producer is the single place in
+  the repository where a transcript is parsed; every downstream consumer reads a field. A harness
+  passes only when it was checked, verification succeeded, and it discharged at least its declared
+  positive obligation floor. A harness that verified below its floor is `vacuous`, a declared harness
+  the transcript never mentions is `not-computed`, and an absent `cargo-kani` makes every row
+  `unavailable`. `make kani` exits non-zero on any of those, so a green local run means the proofs ran
+  here.
+- `scripts/check_kani_mutations.py` publishes `runtime.kani-mutation/v1`. It injects three
+  representative Boolean, arithmetic, and accounting defects into a scratch copy of the source — never
+  into the working tree — and requires the owning proof to reject each one. A non-zero exit that never
+  reached a verification failure is reported as a failure, not as a control that held.
+- `scripts/measure_footprint.py` publishes `runtime.footprint/v1`. It links the footprint staticlib on
+  the declared MSRV compiler for `thumbv7em-none-eabi` and then measures it through
+  `scripts/check_linked_footprint.sh`, which owns `size` and `objdump` and emits the same document.
+  Nothing re-derives its numbers; a second implementation of a measurement is a second answer.
 
-The collector's declared command list is generated in transcript order and bound to every
-`run_and_retain` call site. Stable Cargo/rustc and MSRV rustc digests name the rustup-resolved
-toolchain binaries rather than the rustup shims; the verifier re-executes their version identities.
-A present but different local toolchain is verification-unavailable, not evidence tampering. Source
-binding enumerates ignored and non-ignored untracked paths without consulting `.gitignore`, allowing
-only retained `evidence/` and generated `target/` content. Make and the collector route Python
-bytecode caches beneath `target/` so running the verifier cannot create a new source input.
-The historical disposition census covers every retained record exactly once and binds each
-classification to the record's own envelope status. Per-record sidecars and the legacy in-envelope
-form are also parsed and checked against closed shapes by the verifier.
+`scripts/check_kani_harnesses.py` remains the cheap static half of the proof gate: it makes the seven
+proof names and their TC-001/TC-002/TC-003 ownership an executable census, so a deleted, renamed, or
+`cfg`-ed-out harness is caught without needing the model checker at all. It also reads each harness's
+trace binding out of the harness source, so the published result document carries a binding that
+cannot silently disagree with a second copy.
+
+Two further inputs are not this repository's producers. `quire coverage --scope . --json` is the
+static specification, obligation, and coverage export; Quire executes nothing.
+`scripts/legacy_evidence_view.py` reads every retained evidence byte through
+`engineering_assurance.verification_semantics.map_pgm01_bytes` from the pinned release and reports
+what came back; it implements no mapping, digests the whole tree before and after so that read-only
+is measured rather than asserted, and asks Git whether any retained byte differs from what was
+committed.
+
+`scripts/assurance_chain.py` then drives the official chain over those already-written bytes: it
+seals the change-assurance record, seals one proof attestation per obligation, hands the producer's
+bytes to Quoin's intake, and asks for a verification receipt. It reads every attested result out of
+the bytes the producer wrote. It runs no producer, and that is asserted behaviourally by two runs —
+one with cargo, cargo-kani, rustup and rustc replaced by logging stubs, requiring the log to be
+empty, and a control that stubs `quoin` and requires the chain to fail, because an empty log and an
+unconsulted `PATH` are otherwise the same observation.
+
+Retention, integrity checking, audit, attestation, and receipts are Quoin's. Compatibility with the
+retained record family is Engineering Assurance's. This plan no longer describes a local collector, a
+local envelope builder, a local verifier, a local anchor census, or a Make recipe that polices its
+own execution controls, because none of those exist here any more.
 
 The following design extensions remain explicitly deferred beyond this source candidate: adding a
-second independent Kani-to-coverage semantic oracle (FND-409), embedding self-referential record
-names and digests in AA-001 (FND-412), and expanding the representative mutation set into exhaustive
-operator/verdict mutation coverage (FND-414). The current controls do not claim those classes closed.
-
-`scripts/verify_evidence.py` independently verifies the committed `evidence/ANCHORS` record-set
-boundary, every flat-record checksum and artifact/link digest, the recursively anchored historical
-tree, exact JSON Schema formats, the external merged-PGM schema digest, independent outcome-name
-census, complete re-derived outcome values, result status/summary, and limitations. It also binds
-the recorded non-evidence source tree and clean worktree to current `HEAD`. Missing anchors, an empty
-record set, or unavailable schema tooling mean verification unavailable, never success; a JSON
-status file preserves that channel across GNU Make's exit-code collapse. `scripts/validate_json_schema.py`
-fails closed unless the exact packages in `requirements-evidence.txt` provide checkers for every
-format named by the supplied schema.
+second independent Kani-to-coverage semantic oracle (FND-409), and expanding the representative
+mutation set into exhaustive operator/verdict mutation coverage (FND-414). The current controls do
+not claim those classes closed.
 
 ## Interpretation
 
 A green run supports only the bounded source candidate. A skipped Kani run, absent governance gate,
 or open human review remains an explicit limitation. The representative consumer's runtime/harness
 `.text` plus `.rodata` is compared with the fixed 500-byte population floor and 4 KiB ceiling, and
-its runtime/harness objects are rejected if they retain a panic-path reference. The rlib byte count is retained only
-as an observation because it varies with compiler metadata and build paths; neither value is treated
-as whole-application RAM/ROM utilization.
+its runtime/harness objects are rejected if they retain a panic-path reference. That value is not
+treated as whole-application RAM/ROM utilization.
+
+The observational release-rlib byte count is retired with this change. It gated nothing by design —
+it varies with compiler metadata and build paths — and the deleted collector was its only caller, so
+it was a number nobody could act on collected by a tool that no longer exists. The governed
+measurement, which is the linked `.text` plus `.rodata` figure above, is unchanged in definition,
+floor, ceiling, target, and compiler. Removing an observation is recorded here rather than left to be
+noticed in a diff.
 
 The seven Kani harnesses are bounded verification controls, not a whole-crate proof. Public-model
 provenance and Boolean assertions gate constructors and dispatch, while i8 checked arithmetic uses

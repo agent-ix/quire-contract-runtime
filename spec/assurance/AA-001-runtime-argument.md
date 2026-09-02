@@ -56,20 +56,33 @@ failure scenarios without treating any one tool output as a release decision.
 No automated sufficiency decision is recorded. The human release owner must accept or reject the
 candidate after PGM-01, code review, CI, and gap analysis are complete.
 
-The automated evidence consumer enforces this bounded input declaration before the human decision:
+The automated consumer enforces this bounded input declaration before the human decision. It no
+longer names a local anchor file, because retention is no longer this repository's job:
 
 ```yaml
 evidence_binding:
-  anchor: evidence/ANCHORS
-  history_anchor: evidence/HISTORY
-  record_selection: evidence/README.md
-  checksum_binding: sha256sums.txt
-  authoritative_records: 1
-  outcomes: 29
-  required_result: conclusive
+  declaration: assurance/change-assurance.json
+  pins: assurance/pins.json
+  record: quoin change-assurance seal-record
+  proof_obligations: 7
+  attestation_result_source: the bytes each producer wrote, read as a structured field
+  receipt: quoin change-assurance receipt
+  expected_receipt_outcome: incomplete
+  expected_receipt_reason: decision_missing
+  retained_evidence: read-only through engineering_assurance.verification_semantics.map_pgm01_bytes
 ```
+
+`incomplete` is the correct outcome and not a defect. The receipt is incomplete precisely because no
+attributed human decision event exists, which is the fact this argument's top claim is waiting on. A
+receipt that read `valid` without one would be asserting that a person looked.
 
 ## Challenges
 
-The cross-repository governance issue and human decision are deliberately open. Kani evidence may be
-unavailable in a local environment and must then be recorded as skipped, not passed.
+The cross-repository governance issue and human decision are deliberately open.
+
+Kani evidence that could not be produced is recorded as `unavailable` — one of the twelve
+distinguishable states — and the Kani gate exits non-zero. An earlier form of this argument said such
+a run "must then be recorded as skipped, not passed"; that was too weak. A gate that stands down when
+its dependency is absent returns the same exit code as one that ran, so an absent model checker now
+fails the gate and the absence is reported in the attested result rather than being absorbed into a
+green run.

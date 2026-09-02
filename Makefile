@@ -8,7 +8,7 @@
 # attests to its own correctness, or retains evidence of its own.
 #
 # This file is not a trust root and no longer tries to be one. The gates that
-# used to police Make's own execution controls — the MAKEFLAGS guard, the
+# used to police Make's own execution controls — the ambient-flag guard, the
 # recipe-failure-propagation prover, the `override` fence around HOME and CARGO —
 # went with the collector they were protecting. Quoin's retained inputs are bound
 # by digest, so a Makefile that lies about what it ran cannot make a sealed
