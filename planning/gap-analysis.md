@@ -9,6 +9,15 @@ review_set: subset
 
 # Runtime v0.1 gap analysis
 
+> **Round-scoped history, superseded on 2026-09-01.** This document analysed the
+> v0.1 candidate while the repository still ran its own evidence collector,
+> envelope builder, verifier and anchor census. `agent-ix/quire-contract-runtime#8`
+> removed all of that. Wherever the text below names `scripts/collect_evidence.sh`,
+> `scripts/verify_evidence.py`, `evidence/ANCHORS`, `make evidence-tool` or
+> `make verify-evidence`, it is describing machinery that no longer exists; the
+> current analysis is `reviews/SR-003`. Nothing here is rewritten, because a
+> review record that is edited to agree with a later state stops being a record.
+
 ## Summary
 
 The runtime requirements and implementation have no unresolved semantic gap after ten executed
