@@ -89,10 +89,12 @@ exclusion list, which found a real reference on its first run.
 | Gate | Result |
 | --- | --- |
 | `make ci` on a clean tree | exit 0 |
+| `make ci` with three real defects, unmodified Makefile | exit 2 at `fmt-check` — the control for FND-404 |
+| `make ci` with the same defects and `.IGNORE:` prepended | **exit 0** — FND-404, filed as `agent-ix/quire-contract-runtime#10` |
 | `make ci` from a fresh clone, own `CARGO_TARGET_DIR`, `.venv-assurance` built from scratch | exit 0 |
 | `quire validate` | 53/53 documents grammar-clean, 0 structural failures |
 | `quire coverage --strict` | 40/48 rows backed (83%); rust 22/22/22; the 8 unbacked rows are `spec/evidence/suites.md` |
-| Rust tests | 27 passed, 0 failed, 0 ignored |
+| Rust tests | 28 passed, 0 failed, 0 ignored |
 | Feature matrix | 9/9 rows |
 | Kani | 7/7 harnesses, 0 failures, each at its declared obligation floor, `cargo-kani 0.67.0` |
 | Kani mutations | 3/3 injected defects rejected |
@@ -114,6 +116,7 @@ Residual after this round. Nothing new was found that is not dispositioned below
 | --- | --- | --- | --- | --- |
 | FND-401 | medium | The obligation floors remain load-bearing in one direction only. Raising a floor above its measured count makes the gate report `vacuous`; lowering one is invisible. MP-001 now records the measured counts beside the declared floors, so a weakened floor is a two-file edit rather than a one-line one, but nothing compares them mechanically | `scripts/check_kani_harnesses.py`, `spec/assurance/MP-001-runtime-measurements.md` | correct-requirement-no-evidence |
 | FND-402 | low | The frozen-artifact reference census excludes Markdown. `planning/pgm-01-reconciliation.md` names the PGM-01 envelope schema because it is a record of it, and prose cannot validate anything — but the exclusion is a scoping decision, stated here rather than left implicit | `tests/shared_assurance.rs` | wrong-requirement |
+| FND-404 | medium | **A green `make ci` is not evidence about a tree whose Makefile has been edited, and the structural replacement covers only part of the class.** Measured, not asserted: with a rustfmt violation, a failing test and a renamed Kani harness all present, the control tree exits 2 at `fmt-check` and a tree with `.IGNORE:` prepended exits **0** from `make ci`. All fourteen prerequisites reported success to Make; six still printed a diagnostic (`fmt-check`, `lint`, `test-features`, `kani`, `test`, `assurance`); the other eight were not exercised by these defects, so this run says nothing about them. The chain is unaffected for anything that feeds it — attested results are derived from producer bytes, so a suppressed producer yields an absent or unreadable input and an error — but `fmt-check`, `lint`, `doc`, `deny`, `audit-unsafe`, `audit-panic` and `size` feed nothing and are simply neutered. TC-014's directive assertion protects a diff review, not an exit code, because under `.IGNORE:` that test also runs, also fails, and is also swallowed | `Makefile`, `tests/shared_assurance.rs`, `agent-ix/quire-contract-runtime#10` | correct-requirement-no-evidence |
 | FND-403 | low | The chain consumes what `make assurance-inputs` wrote and cannot verify Make ran the command it printed. TC-010 now checks the declared argv against `make -n assurance-inputs`, which closes the declaration half; the execution half is inherent | `Makefile`, `scripts/assurance_chain.py` | correct-requirement-no-evidence |
 
 ## Dispositions
@@ -148,6 +151,36 @@ Residual after this round. Nothing new was found that is not dispositioned below
 | RA-010 | low | **FIXED** | `check_kani_mutations` publishes the observed `cargo-kani --version` string, or `null`. The placeholder `"observed"` in a field named `version` is gone. |
 | RA-011 | low | **FIXED** | SUR-001's SUITE-005 restates the full argv the Makefile runs. |
 | RA-012 | low | **FIXED** | The three adapter refusals now carry `state: None`. `unsupported`, `malformed` and `vacuous` are demonstrated by cases that produced them — the compatibility view against real records, and Quoin's own audit against a run it read — not by the adapter declining to transcribe. |
+
+### Three findings that came from a sibling's review, not this one
+
+`quire-analyze` and `tl-parse` merged during this round and their reviews named
+three classes worth re-testing here rather than assuming the copied
+implementation was clean. All three were run:
+
+- **A stale `quoin@0.22.5` pin outside `.github/workflows/`.** Grepped the whole
+  tree. The only hit is `tests/fixtures/legacy-compat/derived-stale-disposition.json`,
+  which is fictional data inside a fixture derived from the pinned release's own
+  `pgm01-v2.json`. It is not a pin, and editing it would break the derivation the
+  gate re-applies. No stale pin here.
+- **Attestation gated on byte identity rather than declared state.** Probed with a
+  single row of the proof document flipped to `unavailable`, `not-computed` and
+  `vacuous` in turn, the rest passing: exit 1 each time, through
+  `attested-results-are-read-from-producer-output`. The declared state is what is
+  gated on.
+- **Unreadable producer input crashing instead of exiting 2.** Reproduced here:
+  a non-JSON producer document produced a traceback and exit 1. **Fixed** —
+  `derive_result` now raises `ChainError`, exit 2, which is the channel for an
+  input the driver could not use rather than the one for a scenario that did not
+  match.
+
+A fourth came from widening the producer-isolation test to shim `quire`, which
+made it fail: `quoin evidence audit` shells out to
+`quire coverage --scope <its own scratch repo> --json`. That is Quoin reading
+static facts, which is the architecture; the test now measures Quire's call
+surface in a third run and asserts every request is a static read. Widening it
+also exposed that `producer_shims` cleared only its log and not its directory, so
+a shim left by an earlier run silently changed what the next run measured.
 
 **One stale claim in SR-002 is corrected here.** SR-002's inherited-classes table
 said the removed Makefile-text assertion was fine because "wiring is proven by

@@ -881,15 +881,36 @@ fn tc_014_no_local_evidence_framework_remains_and_the_frozen_schemas_bind_nothin
     // Makefile attesting to itself again. It is this assertion, in the test
     // suite, that the file declares none of the directives whose only purpose is
     // to stop a failure propagating.
-    // File-scoped directives only. `-k` and `--keep-going` are command-line
-    // flags and cannot be declared here except through MAKEFLAGS, which is
-    // already asserted absent above; matching them as substrings finds the word
-    // "kani" and would be a check that fires on its own subject matter.
-    for directive in [".IGNORE", ".SILENT", ".ONESHELL", ".SHELLFLAGS", "SHELL"] {
+    // Directives are matched structurally, on the lines that could be one: not
+    // comments, not recipe bodies. The header of that file explains this very
+    // hazard and names `.IGNORE:` to do so, and a substring scan would report the
+    // rule being written down as a violation of itself — the same trap
+    // `check_shared_pins.py` avoids when it looks for the mirror registry.
+    //
+    // `-k` and `--keep-going` are command-line flags and cannot be declared here
+    // except through MAKEFLAGS, which is asserted absent above.
+    for line in makefile.lines() {
+        if line.starts_with('\t') {
+            continue;
+        }
+        let statement = line.split('#').next().unwrap_or("").trim();
+        if statement.is_empty() {
+            continue;
+        }
+        for directive in [".IGNORE", ".SILENT", ".ONESHELL", ".SHELLFLAGS"] {
+            assert!(
+                !statement.starts_with(directive),
+                "the Makefile declares {directive}, which stops a failing gate from \
+                 failing the build: {line}"
+            );
+        }
+        let assigns_shell = statement
+            .split_once(|character| character == ':' || character == '=' || character == '?')
+            .map(|(target, _)| target.trim() == "SHELL")
+            .unwrap_or(false);
         assert!(
-            !makefile.contains(directive),
-            "the Makefile declares {directive}, which can stop a failing gate from \
-             failing the build"
+            !assigns_shell,
+            "the Makefile assigns SHELL, which can make every recipe report success: {line}"
         );
     }
     for (number, line) in makefile.lines().enumerate() {

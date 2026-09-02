@@ -10,11 +10,32 @@
 # This file is not a trust root and no longer tries to be one. The gates that
 # used to police Make's own execution controls — the ambient-flag guard, the
 # recipe-failure-propagation prover, the `override` fence around HOME and CARGO —
-# went with the collector they were protecting. Quoin's retained inputs are bound
-# by digest, so a Makefile that lies about what it ran cannot make a sealed
-# attestation say otherwise. Where a producer needs a toolchain it can trust it
-# resolves one from the password database itself, which is a property of the
-# producer rather than of the build system that invoked it.
+# went with the collector they were protecting. Where a producer needs a
+# toolchain it can trust it resolves one from the password database itself, which
+# is a property of the producer rather than of the build system that invoked it.
+#
+# READ THIS BEFORE TRUSTING A GREEN `make ci`.
+#
+# `.IGNORE:` added to this file, a `-` prefix on a recipe line, or
+# `SHELL := /bin/true` makes every recipe report success without its exit status
+# being consulted. Measured on this repository, not assumed: with a rustfmt
+# violation, a failing test and a renamed Kani harness all present, the control
+# tree exits 2 at `fmt-check` and a tree with `.IGNORE:` prepended exits 0 from
+# `make ci`. Six of the fourteen prerequisites still printed a diagnostic; none
+# of them failed the build.
+#
+# What that does and does not reach. Quoin binds retained inputs by digest and
+# `scripts/assurance_chain.py` derives every attested result from the producer's
+# own bytes, so a Makefile that lies about running a producer yields an absent or
+# unreadable input and the chain errors rather than passing. The gates that feed
+# nothing into the chain — `fmt-check`, `lint`, `doc`, `deny`, `audit-unsafe`,
+# `audit-panic`, `size` — are simply neutered.
+#
+# `tests/shared_assurance.rs` asserts this file declares no such directive, which
+# protects a reviewer reading a diff. It does not make this file's exit code
+# trustworthy on a tree where it has been edited, because under `.IGNORE:` that
+# test also runs, also fails, and is also swallowed. Tracked as
+# agent-ix/quire-contract-runtime#10.
 
 CARGO ?= cargo
 PYTHON ?= python3

@@ -43,15 +43,42 @@
       ]
     },
     "source_connections": [
-      { "source_id": "FR-005", "kind": "requirement" },
-      { "source_id": "FR-002", "kind": "requirement" },
-      { "source_id": "FR-004", "kind": "requirement" },
-      { "source_id": "NFR-001", "kind": "requirement" },
-      { "source_id": "NFR-002", "kind": "requirement" },
-      { "source_id": "TM-001", "kind": "test" },
-      { "source_id": "SUR-001", "kind": "test" },
-      { "source_id": "MP-001", "kind": "architecture" },
-      { "source_id": "assurance-pins", "kind": "other" }
+      {
+        "source_id": "FR-005",
+        "kind": "requirement"
+      },
+      {
+        "source_id": "FR-002",
+        "kind": "requirement"
+      },
+      {
+        "source_id": "FR-004",
+        "kind": "requirement"
+      },
+      {
+        "source_id": "NFR-001",
+        "kind": "requirement"
+      },
+      {
+        "source_id": "NFR-002",
+        "kind": "requirement"
+      },
+      {
+        "source_id": "TM-001",
+        "kind": "test"
+      },
+      {
+        "source_id": "SUR-001",
+        "kind": "test"
+      },
+      {
+        "source_id": "MP-001",
+        "kind": "architecture"
+      },
+      {
+        "source_id": "assurance-pins",
+        "kind": "other"
+      }
     ],
     "impact_snapshot": {
       "identity": "quire-static-export",
@@ -64,79 +91,126 @@
         {
           "id": "FR-005-AC-1",
           "statement": "The adopted component versions are classified by the packaged Engineering Assurance compatibility matrix, not by a local restatement of it.",
-          "source_ids": ["FR-005", "assurance-pins"]
+          "source_ids": [
+            "FR-005",
+            "assurance-pins"
+          ]
         },
         {
           "id": "FR-005-AC-2",
           "statement": "Native feature-matrix, Kani proof, Kani mutation, and footprint results are produced by this repository's own tools in declared structured formats and transcribed by Quoin without Quoin executing the producer.",
-          "source_ids": ["FR-005", "FR-002", "FR-004", "NFR-001"]
+          "source_ids": [
+            "FR-005",
+            "FR-002",
+            "FR-004",
+            "NFR-001"
+          ]
         },
         {
           "id": "FR-005-AC-3",
           "statement": "Static specification, obligation, and coverage facts come from a Quire export, and Quire does not execute a producer.",
-          "source_ids": ["FR-005", "TM-001"]
+          "source_ids": [
+            "FR-005",
+            "TM-001"
+          ]
         },
         {
           "id": "FR-005-AC-4",
           "statement": "Retained evidence bytes are read through the Engineering Assurance compatibility mapping and are not modified, and the mapping's answer is reported without collapsing it into pass or fail.",
-          "source_ids": ["FR-005", "NFR-002"]
+          "source_ids": [
+            "FR-005",
+            "NFR-002"
+          ]
         },
         {
           "id": "FR-005-AC-5",
           "statement": "Pass, fail, unavailable, unsupported, inconclusive, not-computed, malformed, partial, stale, suspect, vacuous, and tampered remain twelve distinguishable states across the intake path, and an absent Kani toolchain is reported as unavailable rather than as a pass or an empty stream.",
-          "source_ids": ["FR-005", "NFR-002"]
+          "source_ids": [
+            "FR-005",
+            "NFR-002"
+          ]
         },
         {
           "id": "FR-005-AC-6",
           "statement": "No repository-local generic runner, evidence envelope, manifest, identity framework, retention store, audit store, anchor file, failure-propagation policer, or aggregate verdict remains in the execution path.",
-          "source_ids": ["FR-005", "NFR-002"]
+          "source_ids": [
+            "FR-005",
+            "NFR-002"
+          ]
         }
       ],
       "preservation_constraints": [
         {
           "id": "PRESERVE-legacy-bytes",
           "statement": "Every byte under evidence/ is unchanged by this migration, including ANCHORS, HISTORY, README.md, the 42 retained record directories, and the historical/ tree. The verifier is what was removed; the record is not.",
-          "source_ids": ["NFR-002", "FR-005"]
+          "source_ids": [
+            "NFR-002",
+            "FR-005"
+          ]
         },
         {
           "id": "PRESERVE-frozen-schemas",
           "statement": "Four artifacts under schemas/ are frozen, not deleted: the two runtime evidence schemas, the vendored PGM-01 envelope schema, and the vendored governance validator. Retained envelopes and retained per-record digest files name each of them by SHA-256; schemas/README.md records the digests and where each reference sits. Nothing validates against them any more and no code, configuration, or workflow file may reference them. They are described here rather than named, because the test that enforces the freeze asserts that no such file mentions their names, and a declaration that named them would be the first violation of the rule it states.",
-          "source_ids": ["NFR-002"]
+          "source_ids": [
+            "NFR-002"
+          ]
         },
         {
           "id": "PRESERVE-tri-state-runtime",
           "statement": "The no_std oracle runtime keeps its tri-state terminal verdict, its non_exhaustive public enums, its allocation-free and panic-free evaluation surface, its saturating campaign accounting, and its explicit unsupported and non-success outcomes. Downstream exhaustive matching stays rejected so a future terminal category cannot be silently converted to success.",
-          "source_ids": ["FR-002", "FR-004", "NFR-001", "NFR-002"]
+          "source_ids": [
+            "FR-002",
+            "FR-004",
+            "NFR-001",
+            "NFR-002"
+          ]
         },
         {
           "id": "PRESERVE-proof-suite",
           "statement": "All seven Kani harnesses, their per-harness discharged-obligation floors, their trace bindings, and the three semantic mutation controls survive the migration and remain mandatory local gates.",
-          "source_ids": ["NFR-002", "FR-002", "FR-004"]
+          "source_ids": [
+            "NFR-002",
+            "FR-002",
+            "FR-004"
+          ]
         },
         {
           "id": "PRESERVE-governed-measurement",
           "statement": "The linked thumbv7em-none-eabi footprint keeps its governed floor of 500 bytes and ceiling of 4096 bytes and its zero-panic-reference requirement, measured on the declared MSRV compiler as MP-001 states.",
-          "source_ids": ["MP-001", "NFR-001"]
+          "source_ids": [
+            "MP-001",
+            "NFR-001"
+          ]
         },
         {
           "id": "PRESERVE-no-quire-quoin-runtime-dependency",
           "statement": "The published crate gains no runtime dependency on Quire or Quoin, and the default feature graph keeps zero normal dependencies and compiles without std or alloc.",
-          "source_ids": ["NFR-001"]
+          "source_ids": [
+            "NFR-001"
+          ]
         },
         {
           "id": "PRESERVE-manual-ci",
           "statement": "Hosted CI remains workflow_dispatch only and is not dispatched by this change.",
-          "source_ids": ["NFR-002"]
+          "source_ids": [
+            "NFR-002"
+          ]
         }
       ],
       "proof_obligations": [
         {
           "proof_id": "PROOF-feature-matrix",
           "statement": "Every declared feature set of this crate builds and its test suite passes at this candidate revision, with the build phase and the test phase reported as separate structured facts so a compile error is never reported as a test failure.",
-          "obligation_ids": ["FR-005-AC-2"],
+          "obligation_ids": [
+            "FR-005-AC-2"
+          ],
           "evidence_kind": "Integration",
           "command": {
-            "argv": ["python3", "scripts/run_feature_matrix.py", "--json"],
+            "argv": [
+              "python3",
+              "scripts/run_feature_matrix.py",
+              "--json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "quire-contract-runtime-feature-matrix",
@@ -145,10 +219,16 @@
         {
           "proof_id": "PROOF-kani-proofs",
           "statement": "All seven declared Kani harnesses are checked at this candidate revision, each discharges at least its declared positive obligation floor, and the census of harness names is exactly the declared one.",
-          "obligation_ids": ["FR-005-AC-2"],
+          "obligation_ids": [
+            "FR-005-AC-2"
+          ],
           "evidence_kind": "Analysis",
           "command": {
-            "argv": ["python3", "scripts/run_kani_gate.py", "--json"],
+            "argv": [
+              "python3",
+              "scripts/run_kani_gate.py",
+              "--json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "cargo-kani",
@@ -157,10 +237,16 @@
         {
           "proof_id": "PROOF-kani-mutations",
           "statement": "Each of the three declared semantic defects, injected into a scratch copy of the source, is rejected by the harness that owns it, so the proofs are shown to be capable of failing.",
-          "obligation_ids": ["FR-005-AC-2"],
+          "obligation_ids": [
+            "FR-005-AC-2"
+          ],
           "evidence_kind": "Analysis",
           "command": {
-            "argv": ["python3", "scripts/check_kani_mutations.py", "--json"],
+            "argv": [
+              "python3",
+              "scripts/check_kani_mutations.py",
+              "--json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "cargo-kani",
@@ -169,10 +255,16 @@
         {
           "proof_id": "PROOF-footprint",
           "statement": "The linked thumbv7em-none-eabi release footprint of the crate's own .text and .rodata sections lies inside MP-001's governed floor and ceiling and retains no panic relocation, measured on the declared MSRV compiler.",
-          "obligation_ids": ["FR-005-AC-2"],
+          "obligation_ids": [
+            "FR-005-AC-2"
+          ],
           "evidence_kind": "Static",
           "command": {
-            "argv": ["python3", "scripts/measure_footprint.py", "--json"],
+            "argv": [
+              "python3",
+              "scripts/measure_footprint.py",
+              "--json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "quire-contract-runtime-footprint",
@@ -181,10 +273,18 @@
         {
           "proof_id": "PROOF-quire-static-export",
           "statement": "The authoritative static specification, obligation, and coverage facts for this revision are the Quire export, which executes no producer.",
-          "obligation_ids": ["FR-005-AC-3"],
+          "obligation_ids": [
+            "FR-005-AC-3"
+          ],
           "evidence_kind": "Static",
           "command": {
-            "argv": ["quire", "coverage", "--scope", ".", "--json"],
+            "argv": [
+              "quire",
+              "coverage",
+              "--scope",
+              ".",
+              "--json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "quire",
@@ -193,10 +293,16 @@
         {
           "proof_id": "PROOF-legacy-compatibility",
           "statement": "All 42 retained evidence envelopes are read through the pinned Engineering Assurance mapping, their bytes are unchanged, and the mapping's answer for each is reported as it stands.",
-          "obligation_ids": ["FR-005-AC-4"],
+          "obligation_ids": [
+            "FR-005-AC-4"
+          ],
           "evidence_kind": "Static",
           "command": {
-            "argv": [".venv-assurance/bin/python", "scripts/legacy_evidence_view.py", "--json"],
+            "argv": [
+              ".venv-assurance/bin/python",
+              "scripts/legacy_evidence_view.py",
+              "--json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "quire-contract-runtime/legacy_evidence_view",
@@ -205,10 +311,22 @@
         {
           "proof_id": "PROOF-msrv",
           "statement": "The declared MSRV compiles every target and feature of this workspace at this candidate revision, against the locked dependency graph, and reports it in cargo's own JSON message stream.",
-          "obligation_ids": ["FR-005-AC-2"],
+          "obligation_ids": [
+            "FR-005-AC-2"
+          ],
           "evidence_kind": "Static",
           "command": {
-            "argv": ["rustup", "run", "1.75.0", "cargo", "check", "--locked", "--all-targets", "--all-features", "--message-format=json"],
+            "argv": [
+              "rustup",
+              "run",
+              "1.75.0",
+              "cargo",
+              "check",
+              "--locked",
+              "--all-targets",
+              "--all-features",
+              "--message-format=json"
+            ],
             "working_directory": "."
           },
           "tool_identity": "cargo",
@@ -251,6 +369,12 @@
           "statement": "quire coverage --strict returns 0 while reporting [status-column-matches-nothing], so a Coverage Status column that contradicts its own row is not caught by the engine. The repository-local checker that used to compensate was a second traceability implementation with a hand-copied matrix and went with the rest of the generic machinery. Tracked as agent-ix/quire-contract-ir#21.",
           "disposition": "deferred",
           "owner": "agent-ix/quire-contract-ir"
+        },
+        {
+          "id": "UNKNOWN-make-is-not-a-trust-root",
+          "statement": "A green `make ci` attests to the tree as committed, not to a tree whose Makefile has been edited. Measured on this repository: with a rustfmt violation, a failing test and a renamed Kani harness present, the control exits 2 at fmt-check and a tree with `.IGNORE:` prepended exits 0, six of fourteen prerequisites still printing a diagnostic and none failing the build. The chain is unaffected for anything that feeds it, because attested results are derived from producer bytes and a suppressed producer yields an absent or unreadable input; the gates that feed nothing into the chain are neutered. The test suite asserts the committed Makefile declares no such directive, which protects a diff review and not an exit code. Filed as agent-ix/quire-contract-runtime#10.",
+          "disposition": "open",
+          "owner": "agent-ix/quire-contract-runtime"
         }
       ]
     },

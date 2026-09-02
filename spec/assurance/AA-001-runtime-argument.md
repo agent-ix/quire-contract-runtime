@@ -80,6 +80,15 @@ receipt that read `valid` without one would be asserting that a person looked.
 
 The cross-repository governance issue and human decision are deliberately open.
 
+A green `make ci` is bounded in a way worth stating in an assurance argument. It
+attests that the gates ran and passed on the tree as committed; it does not
+attest to a tree whose Makefile has been edited. Measured: `.IGNORE:` prepended
+to the Makefile takes `make ci` from exit 2 to exit 0 with three real defects
+present. The chain is unaffected for anything that feeds it — attested results
+are derived from producer bytes, so a suppressed producer errors rather than
+passes — but the gates that feed nothing into the chain are neutered. Tracked as
+agent-ix/quire-contract-runtime#10.
+
 Kani evidence that could not be produced is recorded as `unavailable` — one of the twelve
 distinguishable states — and the Kani gate exits non-zero. An earlier form of this argument said such
 a run "must then be recorded as skipped, not passed"; that was too weak. A gate that stands down when
