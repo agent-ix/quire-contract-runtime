@@ -44,8 +44,8 @@ contracts rather than to a repository-local evidence framework.
 - The native adapter shall refuse an outcome its declared vocabulary does not name.
 - No gate shall recover a verdict from a process's output stream while that process emits a
   structured result.
-- The Kani producer shall own the Kani transcript, shall publish `runtime.kani-proof/v1`, and shall
-  be the only reader of that transcript.
+- The Kani producer shall publish `runtime.kani-proof/v1` from the Kani transcript.
+- No component other than the Kani producer shall read the Kani transcript.
 - While `cargo-kani` is absent, the Kani producer shall report every declared harness as unavailable.
 - While `cargo-kani` is absent, the Kani gate shall exit non-zero.
 - quire-contract-runtime shall keep pass, fail, unavailable, unsupported, inconclusive,
