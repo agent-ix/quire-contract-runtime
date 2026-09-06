@@ -18,7 +18,7 @@ type: TestMatrix
 | FR-003 | FR-003-AC-2 | TC-005 | ✅ Complete |
 | FR-004 | FR-004-AC-1, FR-004-AC-2 | TC-006 | ✅ Complete |
 | FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |
-| FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | 🚧 In Progress |
+| FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
 | FR-005 | FR-005-AC-1 | TC-009 | ✅ Complete |
 | FR-005 | FR-005-AC-2 | TC-010 | ✅ Complete |
 | FR-005 | FR-005-AC-3 | TC-011 | ✅ Complete |
@@ -42,7 +42,7 @@ type: TestMatrix
 | TC-011 | Bind the sealed record's impact snapshot to the Quire static export | Integration | P0 | FR-005-AC-3 | ✅ Complete |
 | TC-013 | Demonstrate all twelve outcomes and pair every negative with a positive control | Integration | P0 | FR-005-AC-5, NFR-002-AC-3 | ✅ Complete |
 | TC-014 | Prove no generic evidence machinery remains | Integration | P0 | FR-005-AC-6 | ✅ Complete |
-| TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | 🚧 In Progress |
+| TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
@@ -51,8 +51,9 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 ## Evidence Locations
 
 - TC-015: `tests/snapshot.rs`, private near-limit accounting tests, compile-fail API docs,
-  and an isolated native memory-ceiling control. New snapshot claims remain planned until
-  qualification and independent review; existing Kani evidence does not cover the parser.
+  and an isolated native memory-ceiling control. REV-009 records independent acceptance of
+  the bounded transport; existing Kani evidence does not cover the parser, and exact shared
+  stack/full release qualification remains separate.
 
 - TC-001 and TC-006: `tests/integration.rs`.
 - TC-001 through TC-003: `tests/integration.rs`, `tests/operators.rs`, and seven Kani harnesses. The

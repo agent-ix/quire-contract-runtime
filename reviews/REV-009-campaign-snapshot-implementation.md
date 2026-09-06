@@ -3,7 +3,7 @@ id: REV-009
 title: "Bounded campaign snapshot implementation handoff"
 type: SpecReview
 analysis: spec-correctness
-scope: "FR-004 immutable snapshot and optional JSON transport; independent review pending"
+scope: "FR-004 immutable snapshot and optional JSON transport; bounded independent review complete"
 review_set: subset
 ---
 
@@ -100,9 +100,25 @@ file is modified, and no universal platform/OOM recovery guarantee follows from 
 
 ## Remaining gates
 
-Independent immutable-source review, exact shared-stack integration and full release gates
-remain open. Kani is installed but no new parser proof is claimed or borrowed from old proof
+Exact shared-stack integration and full release gates remain open. Kani is installed but
+no new parser proof is claimed or borrowed from old proof
 transcripts. Runtime JSON does not transport generated terminal outcomes: their bounded
 policy shape, full package/run/candidate identity joins, execution authentication and codegen
-dependency promotion remain separately owned followup work. TC-015 remains in progress until
-independent acceptance; transport completion alone is not codegen issue #5 completion.
+dependency promotion remain separately owned followup work. Transport completion alone is
+not codegen issue #5 completion.
+
+## Independent immutable-source review checkpoint
+
+The coordinator independently reviewed implementation
+`2c9385ad46894f5f7bac4f4280b562be836d5651`: complete codec, accounting, schema,
+requirements, test and gate changes. The reviewer separately executed all eight native
+snapshot controls and both library tests, including the real prlimit healthy/SIGABRT pair
+and public record_verdict near-limit control. No blocking finding remained in the bounded
+immutable structural-transport scope. TC-015 and FR-004-AC-4 through AC-7 are now marked
+implemented in that scope only; no parser proof, authentication, full release qualification,
+optional-codec footprint or human sufficiency follows from this acceptance.
+
+The exact implementation-head feature-producer rerun passed all twelve rows. Its raw
+`/tmp/runtime-snapshot-feature-matrix.json` SHA-256 is
+`c446bcdeee6a39eac61ddaa4c1dabc44d9efc4f9d485e296d12a613d276750ba`.
+This checkpoint is documentation-only and does not modify the reviewed production source.
