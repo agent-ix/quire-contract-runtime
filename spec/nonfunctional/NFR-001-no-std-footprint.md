@@ -18,6 +18,11 @@ dependencies, and its release artifact shall remain within the measured v0.1 foo
 
 The default feature set and every symbol linked by generated customer code.
 
+The optional `snapshot-json` codec uses bounded allocating storage and requires an
+allocator, but not `std`. Its separate bare-metal compile is not a default-profile
+footprint measurement. The governed fixed-population default footprint remains unchanged;
+do not present that measurement as the linked size of the allocating codec.
+
 ## Rationale
 
 Embedded and assurance-sensitive consumers need predictable resource use and a small trusted surface.

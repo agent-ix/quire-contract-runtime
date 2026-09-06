@@ -19,6 +19,11 @@ resolver/build compatibility checks; they do not claim distinct runtime behavior
 Run tests with no default features, with `alloc`, with `std`, and with all features. Run the
 feature-policy source test and the default-profile compile-fail doctest for `proptest_adapter`.
 
+Also execute isolated `--no-default-features --features snapshot-json` tests and doctests,
+then compile that exact library profile for `thumbv7em-none-eabi` on Rust 1.75.0. Check
+default dependency resolution separately. All-features includes std and does not prove
+the codec's no_std independence; neither alloc nor std alone exposes the codec API.
+
 ## Expected Results
 
 Every supported combination compiles and passes; the default-profile compile-fail case proves
