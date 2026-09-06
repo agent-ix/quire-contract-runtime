@@ -81,8 +81,18 @@ Bound input and output to 65536 bytes and each decoded UTF-8 identity to 4096
 bytes. Check input size before JSON parsing. The fixed shallow shape does not
 permit arbitrary nested metadata; retain the parser's depth limit and refuse
 unknown nested fields rather than recursively building a Value tree. Oversize
-identity and output are structured resource failures, not truncated identities.
-Encoder should preflight length bounds and avoid unbounded intermediate output.
+identity and output are structured resource-limit failures, not truncated identities.
+Encoder preflights the conservative escaped-size bound, writes into a bounded
+output sink, and never first builds an unbounded intermediate output. Fixed-shape
+deserialization admits only the two bounded identity strings and fixed numeric
+fields; implementation must audit parser scratch allocation against the capped
+input, rather than claim that a wire cap bounds every allocator internally.
+Qualification must include a native isolated memory-ceiling failure control.
+Ordinary allocating Serde/JSON operations can still abort on allocator exhaustion:
+the Result API promises structured limit/malformed-input refusal, not universal
+recoverable OOM. Preserve that residual explicitly unless every allocating path
+is independently qualified as fallible; do not turn a killed parser into a
+semantic rejection or successful snapshot. The allocation-free export is separate.
 
 Runtime identity remains exact opaque UTF-8: no trim, normalization, numeric
 revision coercion or new global nonempty rule. The runtime's current identity
@@ -125,10 +135,15 @@ terminal outcome and fixed campaign configuration in a separate producer schema.
 Nested exhaustion policy data must be bounded to the real generated variants,
 not generalized into arbitrary recursive outcome records.
 
-Codegen must compare all counters and saturating attempted total between the
-actual terminal summary and snapshot without duplicating one requirement report
-per clause. Requirement identity must join to the enclosing full package-qualified
-reference. Native build/run/profile/config/source and replay checks from REV-017
+Codegen must compare all four counters and saturating attempted total between the
+actual terminal summary and snapshot for success and every terminal-error variant,
+including any nested exhaustion-policy summary. Such nested policy is only None
+or exactly one BelowAcceptedFloor, BelowRejectedFloor or AboveDiscardCeiling;
+recursive Exhausted, Failed, inconsistent summaries or other variants refuse.
+Do not duplicate one requirement report per clause. Both requirement and revision
+must match an independently supplied enclosing full package-qualified reference;
+an imported record cannot declare its own expected identity. Native
+build/run/profile/config/source and replay checks from REV-017
 remain mandatory. Completing this transport does not complete codegen issue #5.
 
 ## Required controls and implementation gate
@@ -152,7 +167,23 @@ Bank real report export plus independently authored expected raw JSON controls:
 6. Stable and Rust 1.75 tests, feature/dependency matrix, denied-warning docs,
    panic/unsafe audits, license gate and governed default footprint remain intact.
    Extend declared feature-producer population honestly; do not relabel historical
-   Kani/footprint/feature evidence as verification of this new parser.
+   Kani/footprint/feature evidence as verification of this new parser. Include an
+   isolated snapshot-json feature row and a real no_std-target compile: existing
+   all-features includes std and cannot establish this feature's independence.
+
+Additional independently reviewed controls cover negative-zero and exponent
+integer spellings, exact decoded-byte limits with escaped Unicode, immutable
+snapshot stability after later report recording, independently mismatched
+revision, and inconsistent nested policy summaries at the later codegen boundary.
+
+## Independent design review disposition
+
+The independent reviewer checked current runtime accounting/identity and actual
+generated terminal outcomes against this proposal. No architectural blocker was
+found. The allocation-exhaustion limits, exhaustive identity/outcome join, and
+isolated no_std feature qualification above incorporate the three review items.
+This is approval of the bounded implementation direction, not implemented
+transport, parser qualification, proof, release or human evidence sufficiency.
 
 No implementation, new dependency, native parser qualification or source release
 is claimed by this proposal. Current shared-assurance pin compatibility remains
