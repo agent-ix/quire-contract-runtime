@@ -226,4 +226,121 @@ mod json {
         .is_err());
         assert!(decode(format!(" \n{EMPTY}\r\t").as_bytes()).is_ok());
     }
+
+    /// Trace: TC-015, FR-004-AC-5
+    #[test]
+    fn tc_015_structured_refusals_remain_distinct() {
+        assert_eq!(decode(b"{}").unwrap_err(), SnapshotError::Malformed);
+        assert_eq!(
+            decode(EMPTY.replace("snapshot/v1", "snapshot/v2").as_bytes()).unwrap_err(),
+            SnapshotError::UnsupportedVersion
+        );
+        assert_eq!(
+            decode(EMPTY.replace("\"failed\":0", "\"failed\":1").as_bytes()).unwrap_err(),
+            SnapshotError::InvalidCounts
+        );
+        // Accepted wire order and escape spelling need not equal deterministic encoder order.
+        let reordered = r#"{"counts":{"discarded":0,"failed":0,"rejected":0,"accepted":0},"revision":"","requirement":"","counterSemantics":"saturating-u64-v1","\u0073chemaVersion":"runtime.campaign-snapshot/v1"}"#;
+        assert_eq!(
+            encode(&decode(reordered.as_bytes()).unwrap().snapshot()).unwrap(),
+            EMPTY.as_bytes()
+        );
+    }
+
+    /// Trace: TC-015, FR-004-AC-4, FR-004-AC-5
+    #[test]
+    fn tc_015_generated_unicode_identities_roundtrip_without_normalization() {
+        use proptest::prelude::*;
+        let strategy = (
+            proptest::collection::vec(any::<char>(), 0..100),
+            proptest::collection::vec(any::<char>(), 0..100),
+            0u16..1000,
+        );
+        proptest::test_runner::TestRunner::default()
+            .run(&strategy, |(left, right, discards)| {
+                let left: String = left.into_iter().collect();
+                let right: String = right.into_iter().collect();
+                let mut report = report(&left, &right);
+                for _ in 0..discards {
+                    report.record_discard();
+                }
+                let encoded = encode(&report.snapshot()).unwrap();
+                let imported = decode(&encoded).unwrap();
+                prop_assert_eq!(imported.snapshot(), report.snapshot());
+                Ok(())
+            })
+            .unwrap();
+    }
+
+    /// Trace: TC-015, FR-004-AC-7
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn tc_015_memory_ceiling_is_process_failure_not_semantic_refusal() {
+        use std::io::Write;
+        use std::os::unix::process::ExitStatusExt;
+        const CHILD_ENV: &str = "QUIRE_SNAPSHOT_MEMORY_PROBE";
+        if let Ok(mode) = std::env::var(CHILD_ENV) {
+            let raw = EMPTY.replace(
+                "\"requirement\":\"\"",
+                &format!("\"requirement\":\"{}\"", "\\u00e9".repeat(2048)),
+            );
+            let mut stderr = std::io::stderr().lock();
+            if mode == "pressure" {
+                // Keep metadata and the valid input allocated before applying pressure.
+                // All filler reservations are fallible. The real decoder's allocating path
+                // is invoked only after the capped process cannot reserve another small block.
+                let mut held: Vec<Vec<u8>> = Vec::with_capacity(65536);
+                for size in [8192, 1024, 64] {
+                    loop {
+                        let mut block = Vec::new();
+                        if block.try_reserve_exact(size).is_err() {
+                            break;
+                        }
+                        block.resize(size, 0);
+                        assert!(held.len() < held.capacity());
+                        held.push(block);
+                    }
+                }
+                stderr
+                    .write_all(b"snapshot-probe: entering real decoder under pressure\n")
+                    .unwrap();
+                let outcome = decode(raw.as_bytes());
+                std::hint::black_box(&held);
+                // These explicit returns are NOT a successful resource-failure control.
+                std::process::exit(if outcome.is_ok() { 32 } else { 31 });
+            }
+            assert_eq!(mode, "healthy");
+            assert!(decode(raw.as_bytes()).is_ok());
+            std::process::exit(0);
+        }
+        let executable = std::env::current_exe().unwrap();
+        let run = |mode: &str| {
+            std::process::Command::new("prlimit")
+                .args(["--as=134217728", "--core=0", "--"])
+                .arg(&executable)
+                .args([
+                    "--exact",
+                    "json::tc_015_memory_ceiling_is_process_failure_not_semantic_refusal",
+                    "--nocapture",
+                ])
+                .env(CHILD_ENV, mode)
+                .output()
+                .expect("native prlimit must be available; absence is not skipped success")
+        };
+        let healthy = run("healthy");
+        assert!(healthy.status.success(), "healthy: {:?}", healthy);
+        let failure = run("pressure");
+        assert!(
+            String::from_utf8_lossy(&failure.stderr)
+                .contains("snapshot-probe: entering real decoder under pressure"),
+            "pressure must reach the real decoder: {:?}",
+            failure
+        );
+        assert_eq!(
+            failure.status.signal(),
+            Some(6),
+            "expected allocator abort, not semantic refusal: {:?}",
+            failure
+        );
+    }
 }

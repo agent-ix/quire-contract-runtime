@@ -17,6 +17,9 @@ const TEST_ONLY_ACCOUNTING_SOURCE: &str = "src/accounting_tests.rs";
 fn tc_005_optional_surface_is_explicitly_feature_gated() {
     assert!(CARGO_MANIFEST.contains("default = []"));
     assert!(CARGO_MANIFEST.contains("proptest = [\"std\", \"dep:proptest\"]"));
+    assert!(
+        CARGO_MANIFEST.contains("snapshot-json = [\"alloc\", \"dep:serde\", \"dep:serde_json\"]")
+    );
 }
 
 /// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, StR-001-VC-2
@@ -86,6 +89,11 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     let verdicts = include_str!("../src/verdict.rs");
     let observations = include_str!("../src/observation.rs");
     let accounting = include_str!("../src/accounting.rs");
+    let snapshot_json = include_str!("../src/snapshot_json.rs");
+    for forbidden in ["pub requirement:", "pub revision:"] {
+        assert!(!snapshot_json.contains(forbidden));
+    }
+    assert_non_exhaustive(snapshot_json, "pub enum SnapshotError {", "SnapshotError");
 
     assert!(accounting.contains("#[cfg(test)]\n#[path = \"accounting_tests.rs\"]\nmod tests;"));
 
@@ -113,6 +121,7 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             !accounting.contains(forbidden),
             "public mutation seam: {forbidden}"
         );
+        assert!(!snapshot_json.contains(forbidden));
     }
 
     let runtime_sources = runtime_source_files();
@@ -125,7 +134,12 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
         [
             "src/accounting.rs::struct CampaignCounts",
             "src/accounting.rs::struct CampaignReport",
+            "src/accounting.rs::struct CampaignSnapshot",
             "src/accounting.rs::struct IdentityMismatch",
+            "src/accounting.rs::use snapshot_json::DecodedCampaignSnapshot",
+            "src/accounting.rs::use snapshot_json::SnapshotError",
+            "src/accounting.rs::use snapshot_json::decode_campaign_snapshot",
+            "src/accounting.rs::use snapshot_json::encode_campaign_snapshot",
             "src/identity.rs::struct ContractIdentity",
             "src/lib.rs::const RUNTIME_CONTRACT_VERSION",
             "src/lib.rs::mod accounting",
@@ -136,7 +150,12 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             "src/lib.rs::mod verdict",
             "src/lib.rs::use accounting::CampaignCounts",
             "src/lib.rs::use accounting::CampaignReport",
+            "src/lib.rs::use accounting::CampaignSnapshot",
+            "src/lib.rs::use accounting::DecodedCampaignSnapshot",
             "src/lib.rs::use accounting::IdentityMismatch",
+            "src/lib.rs::use accounting::SnapshotError",
+            "src/lib.rs::use accounting::decode_campaign_snapshot",
+            "src/lib.rs::use accounting::encode_campaign_snapshot",
             "src/lib.rs::use identity::ClauseId",
             "src/lib.rs::use identity::ContractIdentity",
             "src/lib.rs::use identity::ExecutionPoint",
@@ -172,6 +191,10 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             "src/operators.rs::trait CheckedInteger",
             "src/proptest_adapter.rs::fn adapt",
             "src/proptest_adapter.rs::fn adapt_recording",
+            "src/snapshot_json.rs::enum SnapshotError",
+            "src/snapshot_json.rs::fn decode_campaign_snapshot",
+            "src/snapshot_json.rs::fn encode_campaign_snapshot",
+            "src/snapshot_json.rs::struct DecodedCampaignSnapshot",
             "src/verdict.rs::enum Verdict",
             "src/verdict.rs::enum VerdictKind",
             "src/verdict.rs::struct VerdictContext",
@@ -179,6 +202,25 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     );
     assert_eq!(surface.inherent_blocks.get("CampaignCounts"), Some(&1));
     assert_eq!(surface.inherent_blocks.get("CampaignReport"), Some(&1));
+    assert_eq!(surface.inherent_blocks.get("CampaignSnapshot"), Some(&1));
+    assert_eq!(
+        surface.inherent_blocks.get("DecodedCampaignSnapshot"),
+        Some(&1)
+    );
+    assert!(!surface.trait_impls.contains_key("CampaignSnapshot"));
+    assert!(!surface.trait_impls.contains_key("DecodedCampaignSnapshot"));
+    assert_eq!(
+        surface.public_methods.get("CampaignSnapshot"),
+        Some(
+            &["identity", "counts", "at_limit"]
+                .map(String::from)
+                .to_vec()
+        )
+    );
+    assert_eq!(
+        surface.public_methods.get("DecodedCampaignSnapshot"),
+        Some(&vec!["snapshot".to_owned()])
+    );
     assert_eq!(
         surface.trait_impls.get("CampaignCounts"),
         Some(&vec!["Display".to_owned()])
@@ -189,7 +231,11 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     );
     assert_eq!(
         surface.public_accounting_functions,
-        ["src/proptest_adapter.rs::adapt_recording"]
+        [
+            "src/proptest_adapter.rs::adapt_recording",
+            "src/snapshot_json.rs::decode_campaign_snapshot",
+            "src/snapshot_json.rs::encode_campaign_snapshot",
+        ]
     );
     assert_eq!(
         surface.public_methods.get("CampaignCounts"),
@@ -214,7 +260,8 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
                 "identity",
                 "counts",
                 "record_verdict",
-                "record_discard"
+                "record_discard",
+                "snapshot"
             ]
             .map(String::from)
             .to_vec()
@@ -491,7 +538,7 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
                     names.visit_signature(&item.sig);
                     if names.names.iter().any(|name| {
                         let resolved = resolve_alias(name.clone(), &aliases);
-                        resolved == "CampaignCounts" || resolved == "CampaignReport"
+                        is_accounting_type(&resolved)
                     }) {
                         public_accounting_functions.push(format!("{path}::{}", item.sig.ident));
                     }
@@ -532,8 +579,7 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
                         names.visit_type(&item.self_ty);
                         let Some(name) = names.names.iter().find_map(|name| {
                             let resolved = resolve_alias(name.clone(), &aliases);
-                            (resolved == "CampaignCounts" || resolved == "CampaignReport")
-                                .then_some(resolved)
+                            is_accounting_type(&resolved).then_some(resolved)
                         }) else {
                             continue;
                         };
@@ -549,7 +595,7 @@ fn crate_accounting_surface(sources: &[(String, String)]) -> AccountingSurface {
                         continue;
                     };
                     let name = resolve_alias(name, &aliases);
-                    if name != "CampaignCounts" && name != "CampaignReport" {
+                    if !is_accounting_type(&name) {
                         continue;
                     }
                     *inherent_blocks.entry(name.clone()).or_insert(0) += 1;
@@ -607,6 +653,13 @@ fn type_name(value: &Type) -> Option<String> {
         Type::Paren(paren) => type_name(&paren.elem),
         _ => None,
     }
+}
+
+fn is_accounting_type(name: &str) -> bool {
+    matches!(
+        name,
+        "CampaignCounts" | "CampaignReport" | "CampaignSnapshot" | "DecodedCampaignSnapshot"
+    )
 }
 
 fn resolve_alias(mut name: String, aliases: &BTreeMap<String, String>) -> String {

@@ -56,6 +56,10 @@ keys), unsupported schema/counter semantics, incorrect types, negative integers 
 negative zero, floating/exponent spelling, overflow, invalid UTF-8 and trailing values.
 No ignored arbitrary nested metadata or intermediate Value tree is permitted.
 
+The structural schema is `schemas/campaign-snapshot-v1.schema.json`. Standard JSON Schema
+validation is necessary but insufficient: cross-field failed/accepted, UTF-8 byte limits,
+duplicate raw keys and numeric token spelling require the codec rules above.
+
 Input and output are each limited to 65536 bytes; each decoded identity is limited to
 4096 UTF-8 bytes. Check input bytes before parsing; check identity length before copying
 it into owned storage. Encoder shall preflight a conservative escaped-size bound and use

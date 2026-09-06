@@ -62,6 +62,8 @@ DOMAIN_TARGETS = [
     "proptest_adapter",
     "--test",
     "release_contract",
+    "--test",
+    "snapshot",
 ]
 
 # Every feature set, named. The names are the symbols the rows are keyed on. The
@@ -82,6 +84,8 @@ FEATURE_SETS = (
     ("test-alloc-doc", ["--features", "alloc", "--doc"], ["TC-005", "TC-008"], False),
     ("test-std", ["--features", "std", *DOMAIN_TARGETS], ["TC-005", "NFR-001"], True),
     ("test-std-doc", ["--features", "std", "--doc"], ["TC-005", "TC-008"], False),
+    ("test-snapshot-json", ["--locked", "--no-default-features", "--features", "snapshot-json", *DOMAIN_TARGETS], ["TC-005", "TC-015", "FR-004"], True),
+    ("test-snapshot-json-doc", ["--locked", "--no-default-features", "--features", "snapshot-json", "--doc"], ["TC-005", "TC-008", "TC-015"], False),
     ("test-all", ["--all-features", *DOMAIN_TARGETS], ["TC-005"], True),
     ("test-all-doc", ["--all-features", "--doc"], ["TC-005", "TC-008"], False),
     ("test-footprint", ["-p", "quire-contract-runtime-footprint"], ["TC-005", "NFR-001"], True),
@@ -100,6 +104,35 @@ def environment() -> dict[str, str]:
         "CARGO_HOME": str(home / ".cargo"),
         "RUSTUP_HOME": str(home / ".rustup"),
         "CARGO_TARGET_DIR": str(ROOT / "target"),
+    }
+
+
+def snapshot_no_std_row(available: bool) -> dict[str, Any]:
+    # Actual no_std-target library build, not a host test that can obtain std
+    # through dev dependencies. No codec linked-footprint claim is made here.
+    native_flags = [
+        "+1.75.0", "build", "--locked", "--lib", "--no-default-features",
+        "--features", "snapshot-json", "--target", "thumbv7em-none-eabi",
+        "--message-format=json",
+    ]
+    if available:
+        built = run(native_flags)
+        errors = build_errors(built.stdout)
+        return {
+            "symbol": "build-snapshot-json-no-std-msrv",
+            "outcome": "pass" if built.returncode == 0 and not errors else "fail",
+            "traceIds": ["TC-005", "TC-015", "NFR-001"],
+            "phase": "build-only",
+            "exitStatus": built.returncode,
+            "argv": native_flags,
+            "detail": errors[:3] or (None if built.returncode == 0 else ["cargo reported a non-zero build status"]),
+        }
+    return {
+        "symbol": "build-snapshot-json-no-std-msrv",
+        "outcome": "unavailable",
+        "traceIds": ["TC-005", "TC-015", "NFR-001"],
+        "phase": None,
+        "detail": "the trusted cargo executable is absent",
     }
 
 
@@ -188,6 +221,7 @@ def collect() -> dict[str, Any]:
                 else tested.stdout.strip().splitlines()[-6:],
             }
         )
+    entries.append(snapshot_no_std_row(available))
     return {
         "protocol": PROTOCOL,
         "tool": {
