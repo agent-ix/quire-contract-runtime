@@ -776,9 +776,21 @@ fn tc_014_no_local_evidence_framework_remains() {
     // too. The repository owner released the preservation constraint for the
     // pre-stable phase on 2026-09-02 (agent-ix/engineering-assurance#7); nothing
     // was rewritten, backdated or re-sealed to survive the deletion.
+    //
+    // The frozen family is named file by file rather than by its directory. The
+    // constraint was always those four schemas, which were frozen because sealed
+    // records pointed at their digests; `schemas/` is just where they sat. A
+    // directory-wide ban made the absence of prototype cruft into a permanent
+    // reservation of the path, which is the kind of carried-forward rule this
+    // deletion existed to remove. The census below cannot stand in for these
+    // checks: it reads file *contents* for the deleted names, and a reinstated
+    // schema need not mention its own filename.
     for removed in [
         "evidence",
-        "schemas",
+        "schemas/pgm01-derivation-evidence-envelope-v1.schema.json",
+        "schemas/runtime-evidence-input-v1.schema.json",
+        "schemas/runtime-evidence-manifest-v1.schema.json",
+        "schemas/pgm01-compatibility-view-v1.schema.json",
         "scripts/legacy_evidence_view.py",
         "tests/fixtures/legacy-compat",
         "spec/test/TC-012-legacy-compatibility-view.md",
