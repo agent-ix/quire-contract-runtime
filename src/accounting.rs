@@ -2,6 +2,60 @@
 
 use crate::{ContractIdentity, Verdict, VerdictKind};
 
+#[cfg(feature = "snapshot-json")]
+#[path = "snapshot_json.rs"]
+mod snapshot_json;
+#[cfg(feature = "snapshot-json")]
+pub use snapshot_json::{
+    decode_campaign_snapshot, encode_campaign_snapshot, DecodedCampaignSnapshot, SnapshotError,
+};
+
+/// Immutable complete accounting capture, not authenticated execution or a resumable report.
+///
+/// Fields cannot be supplied or changed by consumers:
+/// ~~~compile_fail
+/// use quire_contract_runtime::CampaignSnapshot;
+/// fn overwrite(snapshot: &mut CampaignSnapshot<'_>) { snapshot.counts = Default::default(); }
+/// ~~~
+/// No unchecked counter constructor is exposed:
+/// ~~~compile_fail
+/// use quire_contract_runtime::CampaignSnapshot;
+/// let snapshot = CampaignSnapshot::new(1, 2, 3, 4);
+/// ~~~
+// Implements: FR-004
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct CampaignSnapshot<'a> {
+    identity: ContractIdentity<'a>,
+    counts: CampaignCounts,
+}
+
+impl<'a> CampaignSnapshot<'a> {
+    /// Returns the exact borrowed requirement and revision.
+    // Implements: FR-004
+    #[must_use]
+    pub const fn identity(&self) -> ContractIdentity<'a> {
+        self.identity
+    }
+
+    /// Returns all four captured counters, including failed as a subset of accepted.
+    // Implements: FR-004
+    #[must_use]
+    pub const fn counts(&self) -> CampaignCounts {
+        self.counts
+    }
+
+    /// Indicates possible saturation, not proven overflow or authenticated cardinality.
+    // Implements: FR-004
+    #[must_use]
+    pub const fn at_limit(&self) -> bool {
+        self.counts.accepted == u64::MAX
+            || self.counts.rejected == u64::MAX
+            || self.counts.failed == u64::MAX
+            || self.counts.discarded == u64::MAX
+            || self.counts.total() == u64::MAX
+    }
+}
+
 /// Complete campaign counters. No constructor or formatter can omit a metric.
 // Implements: FR-004
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -192,6 +246,8 @@ impl<'a> CampaignReport<'a> {
     }
 
     /// Records one verdict if its requirement and revision match this report.
+    ///
+    /// Snapshots captured before recording remain unchanged.
     // Implements: FR-004
     pub fn record_verdict<'verdict>(
         &mut self,
@@ -213,6 +269,16 @@ impl<'a> CampaignReport<'a> {
     // Implements: FR-004
     pub fn record_discard(&mut self) {
         self.counts.record_discard();
+    }
+
+    /// Captures current counts without allocation; later recording cannot alter the snapshot.
+    // Implements: FR-004
+    #[must_use]
+    pub const fn snapshot(&self) -> CampaignSnapshot<'a> {
+        CampaignSnapshot {
+            identity: self.identity,
+            counts: self.counts,
+        }
     }
 }
 

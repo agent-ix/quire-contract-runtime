@@ -5,6 +5,8 @@
 //! - **Features:** the default feature set is empty. `alloc` and `std` reserve opt-in convenience
 //!   surfaces, `std` implies `alloc`, and `proptest` adds only the optional test adapter.
 //! - **Allocation:** the core modules neither allocate nor require a global allocator.
+//!   The optional snapshot-json transport uses bounded allocating storage without requiring
+//!   std. Allocator exhaustion may abort and is not promised as a recoverable codec error.
 //! - **Panic:** public evaluation and accounting operations contain no intentional panic path. An
 //!   undefined partial operation returns `None`, and counters saturate.
 //! - **Size:** core values contain only fixed-size enums, integers, and borrowed slices/strings.
@@ -29,6 +31,20 @@ use quire_contract_runtime::proptest_adapter;
 ```
 "#
 )]
+#![cfg_attr(
+    not(feature = "snapshot-json"),
+    doc = r#"
+The allocating codec is unavailable without snapshot-json (including alloc/std alone):
+
+~~~compile_fail
+use quire_contract_runtime::decode_campaign_snapshot;
+~~~
+
+~~~compile_fail
+use quire_contract_runtime::encode_campaign_snapshot;
+~~~
+"#
+)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -51,7 +67,11 @@ pub mod verdict;
 #[path = "../verification/kani.rs"]
 mod kani_proofs;
 
-pub use accounting::{CampaignCounts, CampaignReport, IdentityMismatch};
+#[cfg(feature = "snapshot-json")]
+pub use accounting::{
+    decode_campaign_snapshot, encode_campaign_snapshot, DecodedCampaignSnapshot, SnapshotError,
+};
+pub use accounting::{CampaignCounts, CampaignReport, CampaignSnapshot, IdentityMismatch};
 pub use identity::{ClauseId, ContractIdentity, ExecutionPoint, RequirementId, RevisionId};
 pub use observation::{ClauseKind, ClauseOutcome, FailureDetail, FailureKind, Observation};
 pub use verdict::{Verdict, VerdictContext, VerdictKind};

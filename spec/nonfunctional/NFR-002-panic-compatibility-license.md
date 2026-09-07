@@ -19,6 +19,11 @@ using non-exhaustive public data enums where downstream exhaustive matching woul
 
 Public v0.1 runtime APIs and optional dependency surfaces.
 
+The optional bounded snapshot codec returns structured limit and malformed-input errors.
+Its allocating dependency paths can abort on allocator exhaustion; the Result API and
+no-intentional-panic policy are not universal OOM recovery guarantees. Native memory-limit
+qualification reports process failure separately from an actual codec error return.
+
 ## Rationale
 
 Generated code must not introduce avoidable panics or licensing surprises, while schema evolution

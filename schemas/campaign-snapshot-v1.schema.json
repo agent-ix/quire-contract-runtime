@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-ix.github.io/quire-contract-runtime/schemas/campaign-snapshot-v1.schema.json",
+  "title": "runtime.campaign-snapshot/v1",
+  "description": "Complete structurally unqualified campaign accounting. Normative codec rules additionally enforce failed <= accepted, 4096 decoded UTF-8 bytes per identity, 65536 total input/output bytes, duplicate-key refusal and unsigned integer lexical spelling. JSON Schema alone cannot establish those conditions or authenticate execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requirement", "revision", "counterSemantics", "counts"],
+  "properties": {
+    "schemaVersion": { "const": "runtime.campaign-snapshot/v1" },
+    "requirement": { "type": "string", "maxLength": 4096 },
+    "revision": { "type": "string", "maxLength": 4096 },
+    "counterSemantics": { "const": "saturating-u64-v1" },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted", "rejected", "failed", "discarded"],
+      "properties": {
+        "accepted": { "$ref": "#/$defs/count" },
+        "rejected": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" },
+        "discarded": { "$ref": "#/$defs/count" }
+      }
+    }
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 }
+  }
+}

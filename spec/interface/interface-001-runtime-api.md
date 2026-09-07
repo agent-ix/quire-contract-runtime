@@ -16,6 +16,7 @@ features:
   alloc: []
   std: [alloc]
   proptest: [std]
+  snapshot-json: [alloc]
 associated_types:
   - ContractIdentity
   - ExecutionPoint
@@ -23,6 +24,8 @@ associated_types:
   - FailureDetail
   - Verdict
   - CampaignReport
+  - CampaignSnapshot
+  - DecodedCampaignSnapshot (snapshot-json only)
 operations:
   - name: construct_verdict
     inputs: [requirement identity, revision identity, execution point, clause observations]
@@ -53,6 +56,20 @@ operations:
     inputs: [Verdict]
     output: proptest TestCaseResult
     semantics: map pass to success, failure to Fail, and rejection to Reject
+  - name: snapshot_campaign
+    inputs: [CampaignReport]
+    output: CampaignSnapshot
+    semantics: copy complete counts and borrow exact identity; no allocation, authentication or mutable import
+  - name: encode_campaign_snapshot
+    feature: snapshot-json
+    inputs: [CampaignSnapshot]
+    output: bounded Vec<u8> | SnapshotError
+    semantics: deterministic complete runtime.campaign-snapshot/v1 JSON; no partial output
+  - name: decode_campaign_snapshot
+    feature: snapshot-json
+    inputs: [bounded byte slice]
+    output: DecodedCampaignSnapshot | SnapshotError
+    semantics: closed structural validation, owned bounded identities, immutable inspection only; not execution authentication
   - name: adapt_to_proptest_and_record
     feature: proptest
     inputs: [per-requirement report, Verdict]
@@ -64,6 +81,8 @@ invariants:
   - the default surface requires no allocator, standard library, or normal dependency
   - public runtime evaluation and accounting operations have no intentional panic path
   - a CampaignReport always contains accepted, rejected, failed, and discarded counters
+  - imported snapshots cannot be converted to mutable CampaignReport values
+  - snapshot-json uses alloc without std; allocator exhaustion is not universally recoverable
 compatibility:
   enums: non-exhaustive; consumers must preserve future unknown states
   const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at Rust 1.75
