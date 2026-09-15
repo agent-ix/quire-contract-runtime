@@ -25,7 +25,7 @@ fn tc_005_optional_surface_is_explicitly_feature_gated() {
 /// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, StR-001-VC-2
 #[test]
 fn tc_007_release_controls_are_mandatory() {
-    assert!(CARGO_MANIFEST.contains("license = \"MIT OR Apache-2.0\""));
+    assert!(CARGO_MANIFEST.contains("license = \"AGPL-3.0-or-later\""));
     assert!(CARGO_MANIFEST.contains("publish = false"));
     assert!(CRATE_ROOT.contains("#![no_std]"));
     assert!(CRATE_ROOT.contains("#![forbid(unsafe_code)]"));

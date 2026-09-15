@@ -87,6 +87,6 @@ compatibility:
   enums: non-exhaustive; consumers must preserve future unknown states
   const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at Rust 1.75
   msrv: Rust 1.75
-  licensing: MIT OR Apache-2.0
+  licensing: AGPL-3.0-or-later
   publication: disabled through the v0.1 human release decision
 ```

@@ -14,8 +14,8 @@ relationships:
 
 Verify the default linked boundary remains dependency-free and unsafe-free, the Rust 1.75
 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte population floor and 4 KiB
-ceiling for linked `.text` plus `.rodata`, retains no runtime/harness panic-path reference, and publication and dual-license
-controls remain explicit.
+ceiling for linked `.text` plus `.rodata`, retains no runtime/harness panic-path reference, and publication and `AGPL-3.0-or-later`
+license controls remain explicit.
 
 ## Test Procedure
 

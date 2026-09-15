@@ -49,8 +49,8 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
   gate fixes Rust 1.75 and `thumbv7em-none-eabi`, then limits the representative static-library
   fixed-population consumer's linked `.text` plus `.rodata` to 4 KiB with no panic relocation.
   MP-001 defines the exercised API set and shared release profile.
-- The crate and generated customer-linked surface are `MIT OR Apache-2.0` and `publish = false` until
-  the human v0.1 source-release decision.
+- The crate is `AGPL-3.0-or-later` and `publish = false` until the human v0.1 source-release
+  decision.
 - Release evidence can support a consuming project's validation or accreditation decision; it does
   not confer one.
 
@@ -79,4 +79,5 @@ release gates as every other contribution.
 
 ## License
 
-Licensed under either Apache License, Version 2.0 or the MIT license at your option.
+Licensed under the GNU Affero General Public License, version 3 or (at your option) any later
+version (`AGPL-3.0-or-later`). See [LICENSE](LICENSE).
