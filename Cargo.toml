@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.75"
 description = "Small no_std runtime support for generated contract oracles and harness verdicts."
 authors = ["Peter Krenesky <kreneskyp@gmail.com>"]
-license = "MIT OR Apache-2.0"
+license = "AGPL-3.0-or-later"
 publish = false
 repository = "https://github.com/agent-ix/quire-contract-runtime"
 

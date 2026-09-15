@@ -11,6 +11,13 @@ allow = [
     "Zlib",
 ]
 confidence-threshold = 0.9
+# First-party agent-ix crates are AGPL-3.0-or-later (owner decision 2026-09-14,
+# agent-ix/quire-contract-runtime#14). Exceptions are scoped to this workspace's
+# crates so the third-party allow-list stays permissive-only.
+exceptions = [
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-footprint" },
+]
 
 [bans]
 multiple-versions = "allow"

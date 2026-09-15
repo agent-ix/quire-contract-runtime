@@ -11,7 +11,7 @@ relationships:
 ## Stakeholder Need
 
 Assurance engineers require that the runtime shall preserve every non-success state for generated
-contract harnesses through a small, inspectable, permissively licensed boundary.
+contract harnesses through a small, inspectable, `AGPL-3.0-or-later` licensed boundary.
 
 ## Rationale
 
