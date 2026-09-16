@@ -989,6 +989,68 @@ fn from_root(spec: &GraphSpec, name: &str, root: Fraction) -> Fraction {
     }
 }
 
+/// `bits(x)`, where zero has length one.
+fn bits(value: i128) -> u64 {
+    u64::from(128 - value.unsigned_abs().leading_zeros()).max(1)
+}
+
+/// A reduced fraction with a positive denominator.
+fn reduced(Fraction(n, d): Fraction) -> Fraction {
+    let (mut a, mut b) = (n.unsigned_abs(), d.unsigned_abs());
+    while b != 0 {
+        (a, b) = (b, a % b);
+    }
+    let g = i128::try_from(a).unwrap().max(1) * d.signum();
+    Fraction(n / g, d / g)
+}
+
+/// The `(scale, offset)` edges from a declared unit to its root.
+fn edges(spec: &GraphSpec, name: &str) -> Vec<(Fraction, Fraction)> {
+    let unit = spec.units.iter().find(|u| u.name == name).unwrap();
+    match unit.target {
+        None => Vec::new(),
+        Some(target) => {
+            let edge = (
+                reduced(Fraction(unit.scale.0.into(), unit.scale.1.into())),
+                reduced(Fraction(unit.offset.0.into(), unit.offset.1.into())),
+            );
+            let mut path = vec![edge];
+            path.extend(edges(spec, target));
+            path
+        }
+    }
+}
+
+/// The QSpec 7d7943a consumed counters of an unlimited exact conversion:
+/// `unit.identity-read` at `maxparts`, one `unit.edge` per edge, and per edge
+/// two `unit.rational-arithmetic` events sized by the rational row from the
+/// reduced operands only, then `unit.target-domain` and `unit.result-retain`.
+fn conversion_counters(spec: &GraphSpec, from: &str, to: &str, value: Fraction) -> Vec<u64> {
+    let [a, b] = [value.0, value.1].map(bits);
+    let mut high = a.max(b);
+    let multiply = |x: Fraction, y: Fraction| (bits(x.0) + bits(y.0)).max(bits(x.1) + bits(y.1));
+    let divide = |x: Fraction, y: Fraction| (bits(x.0) + bits(y.1)).max(bits(x.1) + bits(y.0));
+    let sum = |x: Fraction, y: Fraction| {
+        ((bits(x.0) + bits(y.1)).max(bits(y.0) + bits(x.1)) + 1).max(bits(x.1) + bits(y.1))
+    };
+    let (source, target) = (edges(spec, from), edges(spec, to));
+    let mut current = reduced(value);
+    for (scale, offset) in &source {
+        high = high.max(multiply(current, *scale));
+        current = reduced(current.mul(*scale));
+        high = high.max(sum(current, *offset));
+        current = reduced(current.add(*offset));
+    }
+    for (scale, offset) in target.iter().rev() {
+        high = high.max(sum(current, *offset));
+        current = reduced(current.add(offset.neg()));
+        high = high.max(divide(current, *scale));
+        current = reduced(current.mul(scale.inverse()));
+    }
+    let count = (source.len() + target.len()) as u64;
+    vec![high, 0, 0, 0, 0, 0, count, 1, 3 + 3 * count, 1]
+}
+
 /// Trace: TC-022, FR-007-AC-5, FR-006-AC-4
 #[test]
 fn tc_022_generated_conversions_arithmetic_and_denials_agree() {
@@ -1020,6 +1082,22 @@ fn tc_022_generated_conversions_arithmetic_and_denials_agree() {
                     }};
                     let expected = from_root(&spec, to, to_root(&spec, from, value)).rational();
                     assert_eq!(exact(&converted.0), expected, "{value:?} {from} -> {to}");
+                    // The schedule agrees with the authority; the amounts are
+                    // the runtime's alone, checked against QSpec 7d7943a.
+                    let f = fixture();
+                    let (_, _, consumed) = metered(UNLIMITED, |m| {
+                        convert_quantity(
+                            &f.q(ratio(n, d), from),
+                            &f.unit(to),
+                            &QuantityTarget::Exact,
+                            m,
+                        )
+                    });
+                    assert_eq!(
+                        consumed,
+                        conversion_counters(&spec, from, to, value),
+                        "{value:?} {from} -> {to}"
+                    );
                     assert_eq!(denied.len(), converted.1.len());
                     for (work, (point, _, outcome, results)) in (0_u64..).zip(denied) {
                         assert_eq!(outcome, Ok(Outcome::Incomplete(work_denied(work, point))));

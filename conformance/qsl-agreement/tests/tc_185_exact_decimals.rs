@@ -504,9 +504,183 @@ fn tc_019_generated_operations_and_denials_agree() {
                 all
             }};
             vectors += 6 * 3 * 6;
+            // The schedule agrees with the authority above; the amounts are the
+            // runtime's alone, checked against an independent QSpec 7d7943a
+            // oracle.
+            let (a, b) = (dec(ca, sa), dec(cb, sb));
+            let operations = [
+                DecimalOperation::Add(&a, &b),
+                DecimalOperation::Subtract(&a, &b),
+                DecimalOperation::Multiply(&a, &b),
+                DecimalOperation::Divide(&a, &b),
+                DecimalOperation::Negate(&a),
+                DecimalOperation::Round(&a),
+            ];
+            for (index, operation) in operations.into_iter().enumerate() {
+                for scale in 0..3 {
+                    for mode in RoundingMode::ALL {
+                        let target = decimal_type(-40, 40, 0, scale, mode);
+                        let (outcome, charges, consumed) = metered(UNLIMITED, |m| {
+                            evaluate_decimal(operation, &target, m)
+                        });
+                        let expected = decimal_counters(
+                            index,
+                            (ca.into(), sa.into()),
+                            (cb.into(), sb.into()),
+                            scale.into(),
+                            &outcome,
+                            charges.len(),
+                        );
+                        assert_eq!(
+                            consumed, expected,
+                            "{index} ({ca},{sa}) ({cb},{sb}) T={scale} {mode:?}: {outcome:?}"
+                        );
+                    }
+                }
+            }
         }
     }
     assert_eq!(vectors, 30 * 30 * 108);
+}
+
+/// `bits(x)`, where zero has length one.
+fn bits(value: i128) -> u64 {
+    u64::from(128 - value.unsigned_abs().leading_zeros()).max(1)
+}
+
+fn digits(value: i128) -> u64 {
+    value.unsigned_abs().to_string().len() as u64
+}
+
+/// `sbits(c,k)`: `bits(c)` when `k = 0`, else `bits(c) + bits(10^k)`.
+fn sbits(coefficient: i128, shift: u64) -> u64 {
+    if shift == 0 {
+        bits(coefficient)
+    } else {
+        bits(coefficient) + bits(10_i128.pow(u32::try_from(shift).unwrap()))
+    }
+}
+
+/// `sdigits(c,k) = digits(c) + k`.
+fn sdigits(coefficient: i128, shift: u64) -> u64 {
+    digits(coefficient) + shift
+}
+
+/// The QSpec 7d7943a consumed counters of one unlimited decimal operation
+/// (index into add, subtract, multiply, divide, negate, round) on `(c, s)`
+/// operands at target scale `T`, derived from the operands and, for
+/// `decimal.result-retain`, the retained coefficient. The work count is the
+/// schedule length, which agrees with the authority.
+fn decimal_counters(
+    operation: usize,
+    (ca, sa): (i128, u64),
+    (cb, sb): (i128, u64),
+    target: u64,
+    outcome: &Outcome<DecimalResult>,
+    work: usize,
+) -> Vec<u64> {
+    let unary = operation >= 4;
+    let (mut high_bits, mut high_digits) = if unary {
+        (bits(ca), digits(ca))
+    } else {
+        (bits(ca).max(bits(cb)), digits(ca).max(digits(cb)))
+    };
+    let mut high_scale = 0;
+    let occurrences = if unary { 1 } else { 2 };
+    let counters = |bits, digits, scale, results| {
+        vec![
+            bits,
+            digits,
+            scale,
+            0,
+            0,
+            0,
+            0,
+            occurrences,
+            work as u64,
+            results,
+        ]
+    };
+    if matches!(outcome, Outcome::Undefined(Undefined::DivisionByZero)) {
+        assert_eq!((operation, cb), (3, 0));
+        return counters(high_bits, high_digits, 0, 0);
+    }
+    // (expanded side, arithmetic (bits, digits), working scale)
+    let (expanded, arithmetic, working) = match operation {
+        0 | 1 => {
+            let scale = sa.max(sb);
+            let (ka, kb) = (scale - sa, scale - sb);
+            let expanded = if ka > 0 {
+                Some((ca, ka))
+            } else if kb > 0 {
+                Some((cb, kb))
+            } else {
+                None
+            };
+            let arithmetic = (
+                sbits(ca, ka).max(sbits(cb, kb)) + 1,
+                sdigits(ca, ka).max(sdigits(cb, kb)) + 1,
+            );
+            (expanded, arithmetic, scale)
+        }
+        2 => (
+            None,
+            (bits(ca) + bits(cb), digits(ca) + digits(cb)),
+            sa + sb,
+        ),
+        3 => {
+            // N = ca × 10^max(0, T+sb-sa), D = cb × 10^max(0, sa-sb-T).
+            let up = target + sb;
+            let (kn, kd) = (up.saturating_sub(sa), sa.saturating_sub(up));
+            let expanded = if kn > 0 {
+                Some((ca, kn))
+            } else if kd > 0 {
+                Some((cb, kd))
+            } else {
+                None
+            };
+            let arithmetic = (
+                sbits(ca, kn).max(sbits(cb, kd)),
+                sdigits(ca, kn).max(sdigits(cb, kd)),
+            );
+            (expanded, arithmetic, target)
+        }
+        _ => (None, (bits(ca), digits(ca)), sa),
+    };
+    if let Some((coefficient, shift)) = expanded {
+        high_bits = high_bits.max(sbits(coefficient, shift));
+        high_digits = high_digits.max(sdigits(coefficient, shift));
+        high_scale = shift;
+    }
+    // `decimal.rounding` repeats the arithmetic amounts.
+    high_bits = high_bits.max(arithmetic.0);
+    high_digits = high_digits.max(arithmetic.1);
+    match outcome {
+        Outcome::Refused(Refusal::InexactDecimal | Refusal::DecimalOutOfDomain) => {
+            counters(high_bits, high_digits, high_scale, 0)
+        }
+        Outcome::Completed(result) => {
+            // Retained at `T`: the placed coefficient at `min(s, T)` upscaled
+            // by `k = T - min(s, T)`.
+            let upscale = target - working.min(target);
+            let retained: i128 = result
+                .value()
+                .representation()
+                .coefficient()
+                .to_string()
+                .parse()
+                .unwrap();
+            let placed = retained / 10_i128.pow(u32::try_from(upscale).unwrap());
+            assert_eq!(placed * 10_i128.pow(u32::try_from(upscale).unwrap()), retained);
+            counters(
+                high_bits.max(sbits(placed, upscale)),
+                high_digits.max(sdigits(placed, upscale)),
+                high_scale.max(upscale),
+                1,
+            )
+        }
+        other => panic!("unexpected {other:?}"),
+    }
 }
 
 /// D20/D21: `(c1,s1) < (c2,s2)` metered by the runtime, with the authority's
