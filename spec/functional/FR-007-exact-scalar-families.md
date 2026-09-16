@@ -11,9 +11,9 @@ relationships:
 ## Description
 
 When the `exact` feature is enabled, the runtime shall evaluate the scalar operator families of
-complete V1 at agent-ix/quire-specification@5d88578 with values and outcome kinds equal to the
+complete V1 at agent-ix/quire-specification@7d7943a with values and outcome kinds equal to the
 pinned quire-spec-language authority (d9d5273) on every shared-corpus vector, and charges equal to
-the QSpec 5d88578 accounting schedule.
+the QSpec 7d7943a accounting schedule.
 
 ## Inputs
 
@@ -36,9 +36,12 @@ the QSpec 5d88578 accounting schedule.
 - Quantities convert, combine and compare through the declared unit graph; topology faults are
   typed refusals.
 - Integer arithmetic, rational arithmetic, numeric ordering and Boolean connectives charge the
-  5d88578 `integer-arithmetic.*`, `rational-arithmetic.*`, `ordering.*` and
+  7d7943a `integer-arithmetic.*`, `rational-arithmetic.*`, `ordering.*` and
   `boolean.result-retain` points; a connective evaluates its right operand only when the left
   does not decide it.
+- Every arithmetic, normalize, rounding, retain-upscale, unit-event and target-domain amount is
+  derived from operand bit lengths and scales only and is charged before any intermediate or result
+  is allocated; no charge is sized from a computed result.
 - Composite, collection, equality-plan and function-call semantics are out of scope
   (agent-ix/quire-spec-language#119), as are model domains (#120) and replay (#121).
 
@@ -46,15 +49,15 @@ the QSpec 5d88578 accounting schedule.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-007-AC-1 | Integer division and modulus agree with QSpec TC-192 in value, outcome kind and charges. | Test (TC-018) |
-| FR-007-AC-2 | Decimal arithmetic, rounding and ordering agree with QSpec TC-185, including D20–D21 ordering charges. | Test (TC-019) |
+| FR-007-AC-1 | Integer division and modulus agree with QSpec TC-192 in value, outcome kind and charges; the arithmetic amount `max(bits(a), bits(b))` is charged before the quotient exists. | Test (TC-018) |
+| FR-007-AC-2 | Decimal arithmetic, rounding and ordering agree with QSpec TC-185, including D20–D21 ordering charges and D22–D23 result-retain upscale charges; every operand-derived amount is exact at its limit and denied one under before allocation. | Test (TC-019) |
 | FR-007-AC-3 | IEEE profile operations agree with QSpec TC-193. | Test (TC-020) |
 | FR-007-AC-4 | Text and enum operations agree with QSpec TC-186. | Test (TC-021) |
 | FR-007-AC-5 | Quantity and unit-graph operations agree with QSpec TC-187. | Test (TC-022) |
 | FR-007-AC-6 | Every evaluated shared-corpus vector is executed on both the runtime and the pinned authority with equal Debug renderings; admission-only vectors and charges not yet metered by the authority are listed by name. | Test (TC-018, TC-019, TC-020, TC-021, TC-022) |
-| FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec TC-191 P11 and TC-190 Q11 atom charges, with short-circuit and denial behavior at every point. | Test (TC-023) |
+| FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec TC-191 P11 and TC-190 Q11 atom charges, with short-circuit and denial behavior at every point; operand-derived arithmetic and normalize amounts are charged before any intermediate or result is allocated. | Test (TC-023) |
 
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
-  `ix://agent-ix/quire-specification` at `5d88578`; quire-spec-language at `d9d5273`.
+  `ix://agent-ix/quire-specification` at `7d7943a`; quire-spec-language at `d9d5273`.

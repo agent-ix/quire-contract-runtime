@@ -18,7 +18,7 @@ the `exact` surface. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 1. Build one outcome of each disposition, including completed `true` and `false`; compare every
    pair for equality and check that only completed outcomes yield a value.
 2. Enumerate every `Refusal` and `Undefined` variant and check that codes are distinct.
-3. Round-trip every `ChargePoint` and `LimitKind` through its spelling; check the eleven 5d88578
+3. Round-trip every `ChargePoint` and `LimitKind` through its spelling; check the eleven 7d7943a
    families are present and `equality.plan-form` is absent.
 4. Scan every `src/exact/` file for host floats, `std`, `unsafe`, `unwrap`, `expect`, `panic!`
    and indexing; check the crate root attributes.
@@ -26,5 +26,5 @@ the `exact` surface. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 
 ## Expected Results
 
-Four distinct dispositions, closed vocabularies matching QSpec 5d88578, no forbidden source token
+Four distinct dispositions, closed vocabularies matching QSpec 7d7943a, no forbidden source token
 and no public item outside the private-module re-exports.

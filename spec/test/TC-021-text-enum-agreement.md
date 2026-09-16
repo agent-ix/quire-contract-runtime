@@ -10,7 +10,7 @@ relationships:
 
 ## Description
 
-Execute every QSpec 5d88578 TC-186 vector on the runtime and on quire-spec-language d9d5273.
+Execute every QSpec 7d7943a TC-186 vector on the runtime and on quire-spec-language d9d5273.
 Evidence: `conformance/qsl-agreement/tests/tc_186_text_enum.rs` (`make conformance`).
 
 ## Test Procedure

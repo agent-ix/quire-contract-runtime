@@ -20,8 +20,10 @@ dependency of the runtime. `make conformance` runs it.
 ## Known upstream lag
 
 d9d5273 does not meter `ordering.*`, `integer-arithmetic.*`, `rational-arithmetic.*` or
-`boolean.result-retain`. TC-185 D20 and D21 compare values against the authority and charges
-against QSpec 5d88578 only, and are listed in `CHARGES_PENDING_QSL_119`. Runtime charges are never
+`boolean.result-retain`, nor the operand-derived amounts of 7d7943a. TC-185 D09, D13 and D20–D23
+and TC-187 U10, U13, U15, U16, U19, U20, U22–U24, U26, U28 and U29 compare values and outcome kinds
+against the authority and charges against QSpec 7d7943a only, and are listed in
+`CHARGES_PENDING_QSL_119`. Runtime charges are never
 adjusted to match the authority.
 
 ## Completion Evidence

@@ -70,10 +70,10 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 ## Evidence Locations
 
 - TC-016, TC-017: `tests/exact_outcomes.rs`; TC-023: `tests/exact_arithmetic.rs`; allocation bounds for
-  TC-016 and TC-023: `tests/exact_allocation.rs`. All run with
+  TC-016, TC-018, TC-019 and TC-023: `tests/exact_allocation.rs`. All run with
   `--features exact`.
 - TC-018 through TC-022: `conformance/qsl-agreement/tests/`, run by `make conformance` against
-  quire-spec-language d9d5273, with charges checked against agent-ix/quire-specification@5d88578.
+  quire-spec-language d9d5273, with charges checked against agent-ix/quire-specification@7d7943a.
 
 - TC-015: `tests/snapshot.rs`, private near-limit accounting tests, compile-fail API docs,
   and an isolated native memory-ceiling control. REV-009 records independent acceptance of
