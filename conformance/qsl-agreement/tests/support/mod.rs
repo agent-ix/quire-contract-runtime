@@ -144,6 +144,17 @@ macro_rules! shared_helpers {
             (outcome, meter.admitted_charges().to_vec(), consumed)
         }
 
+        /// An outcome with every admitted charge and no consumed counter: the
+        /// agreement shape of a vector whose charge amounts QSpec 7d7943a
+        /// derives from operands, which the authority d9d5273 does not yet do.
+        pub fn scheduled<T>(
+            limits: ScalarLimits,
+            run: impl FnOnce(&mut Meter) -> T,
+        ) -> (T, Vec<ChargePoint>) {
+            let (outcome, charges, _) = metered(limits, run);
+            (outcome, charges)
+        }
+
         /// Deny each admitted charge occurrence of an unlimited-or-given run in
         /// turn: `(point, occurrence, outcome, result units consumed)`.
         pub fn denials<T>(

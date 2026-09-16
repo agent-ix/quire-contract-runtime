@@ -1,32 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! QSpec TC-185 exact decimal semantics: runtime versus authority.
 //!
-//! Every tabled vector D01–D21 is evaluated through both boundaries. D20 and
-//! D21 meter decimal ordering, which QSpec 5d88578 introduced after the pinned
-//! authority d9d5273: their values agree with the authority, and their charges
-//! are checked against QSpec 5d88578 only, a named upstream lag pending
-//! agent-ix/quire-spec-language#119.
+//! Every tabled vector D01–D23 is evaluated. QSpec 7d7943a derives every
+//! decimal and ordering amount from the operands, after the pinned authority
+//! d9d5273 (which sizes some charges from results and does not meter decimal
+//! ordering). Values, outcome kinds and charge schedules agree with the
+//! authority; the vectors named in [`CHARGES_PENDING_QSL_119`] have their
+//! consumed counters and tuple-dependent outcomes checked against QSpec
+//! 7d7943a only, a named upstream lag pending agent-ix/quire-spec-language#119.
 
 #[macro_use]
 mod support;
 
 use support::rt_side::*;
 
-const EVALUATED: [&str; 21] = [
-    "D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10", "D11", "D12", "D13", "D14",
-    "D15", "D16", "D17", "D18", "D19", "D20", "D21",
+const EVALUATED: [&str; 23] = [
+    "D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10", "D11", "D12", "D13",
+    "D14", "D15", "D16", "D17", "D18", "D19", "D20", "D21", "D22", "D23",
 ];
 
-/// Vectors whose value agrees with authority d9d5273 but whose charges the
-/// authority does not yet meter (known upstream lag, pending
-/// agent-ix/quire-spec-language#119). Their charges are checked against QSpec
-/// 5d88578 only; runtime charges are never bent to the authority.
-const CHARGES_PENDING_QSL_119: [&str; 2] = ["D20", "D21"];
+/// Vectors whose values, outcome kinds and charge schedules agree with
+/// authority d9d5273 but whose charge amounts the authority does not yet derive
+/// from operands (known upstream lag, pending agent-ix/quire-spec-language#119).
+/// Their consumed counters and tuple-dependent outcomes are checked against
+/// QSpec 7d7943a only; runtime charges are never bent to the authority. D23's
+/// only outcome is its QSpec incomplete record, so it has no authority run.
+const CHARGES_PENDING_QSL_119: [&str; 6] = ["D09", "D13", "D20", "D21", "D22", "D23"];
 
 /// Trace: TC-019, FR-007-AC-6
 #[test]
 fn tc_019_every_tc185_vector_is_evaluated() {
-    let expected: Vec<String> = (1..=21).map(|n| format!("D{n:02}")).collect();
+    let expected: Vec<String> = (1..=23).map(|n| format!("D{n:02}")).collect();
     assert_eq!(EVALUATED.to_vec(), expected);
     println!(
         "TC-185 agreement: {} evaluated, 0 admission-only, {} with charges pending QSL #119",
@@ -37,11 +41,16 @@ fn tc_019_every_tc185_vector_is_evaluated() {
 
 fn coefficient_scale(decimal: &Decimal) -> ((Integer, u32), (Integer, u32)) {
     let (repr, norm) = (decimal.representation(), decimal.normalized());
-    ((repr.coefficient().clone(), repr.scale()), (norm.coefficient().clone(), norm.scale()))
+    (
+        (repr.coefficient().clone(), repr.scale()),
+        (norm.coefficient().clone(), norm.scale()),
+    )
 }
 
 fn loss_fields(result: &DecimalResult) -> (Integer, Integer, Integer, u32, RoundingMode) {
-    let loss = result.loss().expect("a rounded result carries a loss record");
+    let loss = result
+        .loss()
+        .expect("a rounded result carries a loss record");
     (
         loss.exact_numerator().clone(),
         loss.exact_denominator(),
@@ -113,11 +122,27 @@ fn tc_019_d03_every_mode_rounds_both_signed_halves() {
         }};
         assert_eq!(outcomes[0], Outcome::Refused(Refusal::InexactDecimal));
         for (outcome, (mode, positive, negative)) in outcomes[1..].iter().zip(table) {
-            assert_eq!(RoundingMode::ALL.iter().position(|m| *m == mode).is_some(), true);
+            assert_eq!(
+                RoundingMode::ALL.iter().position(|m| *m == mode).is_some(),
+                true
+            );
             let expected = if coefficient > 0 { positive } else { negative };
             let result = outcome.clone().completed().unwrap();
-            assert_eq!(coefficient_scale(result.value()).0, (int(expected), 0), "{mode:?}");
-            assert_eq!(loss_fields(&result), (int(coefficient.signum() as i128 * 5), int(2), int(expected), 0, mode));
+            assert_eq!(
+                coefficient_scale(result.value()).0,
+                (int(expected), 0),
+                "{mode:?}"
+            );
+            assert_eq!(
+                loss_fields(&result),
+                (
+                    int(coefficient.signum() as i128 * 5),
+                    int(2),
+                    int(expected),
+                    0,
+                    mode
+                )
+            );
         }
     }
 }
@@ -142,7 +167,10 @@ fn tc_019_d05_d12_recurring_quotient_and_no_re_rounding() {
     assert_eq!(exact, Outcome::Refused(Refusal::InexactDecimal));
     let result = nearest.completed().unwrap();
     assert_eq!(coefficient_scale(result.value()).0, (int(33), 2));
-    assert_eq!(loss_fields(&result), (int(1), int(3), int(33), 2, RoundingMode::NearestEven));
+    assert_eq!(
+        loss_fields(&result),
+        (int(1), int(3), int(33), 2, RoundingMode::NearestEven)
+    );
     assert_eq!(narrow, Outcome::Refused(Refusal::DecimalOutOfDomain));
 }
 
@@ -166,38 +194,87 @@ fn tc_019_d06_d07_d08_zero_divisors_and_domains() {
         });
         (zero, rounded, admitted)
     }};
-    assert!(zero.iter().all(|o| *o == Outcome::Undefined(Undefined::DivisionByZero)));
+    assert!(zero
+        .iter()
+        .all(|o| *o == Outcome::Undefined(Undefined::DivisionByZero)));
     assert_eq!(rounded, Outcome::Refused(Refusal::DecimalOutOfDomain));
     assert_eq!(admitted[0], Outcome::Refused(Refusal::DecimalOutOfDomain));
     assert_eq!(admitted[3], Outcome::Refused(Refusal::DecimalOutOfDomain));
     for (outcome, c) in [(&admitted[1], -2), (&admitted[2], 2)] {
-        assert_eq!(coefficient_scale(outcome.clone().completed().unwrap().value()).1, (int(c), 0));
+        assert_eq!(
+            coefficient_scale(outcome.clone().completed().unwrap().value()).1,
+            (int(c), 0)
+        );
     }
 }
 
-const D09: [u64; 10] = [7, 3, 2, 0, 0, 0, 0, 2, 5, 1];
+const D09: [u64; 10] = [8, 3, 2, 0, 0, 0, 0, 2, 5, 1];
+
+/// D05 `1/3` into `Decimal[-1000,1000;0,2;mode]`.
+fn d05(mode: RoundingMode) -> impl Fn(&mut Meter) -> Outcome<DecimalResult> {
+    move |m| {
+        evaluate_decimal(
+            DecimalOperation::Divide(&dec(1, 0), &dec(3, 0)),
+            &decimal_type(WIDE.0, WIDE.1, 0, 2, mode),
+            m,
+        )
+    }
+}
 
 /// Trace: TC-019, FR-007-AC-2, FR-006-AC-3, FR-006-AC-4, FR-007-AC-6
 #[test]
 fn tc_019_d09_exact_tuple_and_named_denials() {
-    let (exact, short, denied) = agree! {{
+    use ChargePoint::*;
+    let (schedule, denied) = agree! {{
         let run = |m: &mut Meter| {
             evaluate_decimal(DecimalOperation::Divide(&dec(1, 0), &dec(3, 0)), &decimal_type(WIDE.0, WIDE.1, 0, 2, RoundingMode::NearestEven), m)
         };
-        let mut four = D09;
-        four[8] = 4;
-        (metered(limits(D09), run), metered(limits(four), run), denials(limits(D09), run))
+        (scheduled(UNLIMITED, run), denials(UNLIMITED, run))
     }};
-    use ChargePoint::*;
-    assert_eq!(coefficient_scale(exact.0.completed().unwrap().value()).0, (int(33), 2));
-    assert_eq!(exact.1, [DecimalOperands, DecimalScaleExpansion, DecimalArithmetic, DecimalRounding, DecimalResultRetain]);
-    assert_eq!(exact.2, [7, 3, 2, 0, 0, 0, 0, 2, 5, 1]);
-    assert_eq!(short.0, Outcome::Incomplete(work_denied(4, DecimalResultRetain)));
+    assert_eq!(
+        coefficient_scale(schedule.0.clone().completed().unwrap().value()).0,
+        (int(33), 2)
+    );
+    assert_eq!(
+        schedule.1,
+        [
+            DecimalOperands,
+            DecimalScaleExpansion,
+            DecimalArithmetic,
+            DecimalRounding,
+            DecimalResultRetain
+        ]
+    );
     assert_eq!(denied.len(), 5);
     for (work, (point, _, outcome, results)) in (0_u64..).zip(denied) {
         assert_eq!(outcome, Outcome::Incomplete(work_denied(work, point)));
         assert_eq!(results, 0);
     }
+
+    // QSpec 7d7943a only: the operand-derived tuple is exact.
+    let run = d05(RoundingMode::NearestEven);
+    let exact = metered(limits(D09), &run);
+    assert_eq!(exact.0, schedule.0);
+    assert_eq!(exact.2, D09);
+    let mut four = D09;
+    four[8] = 4;
+    assert_eq!(
+        metered(limits(four), &run).0,
+        Outcome::Incomplete(work_denied(4, DecimalResultRetain))
+    );
+    // One under the dividend's `sbits(1,2) = 8`, which the division repeats.
+    let mut seven = D09;
+    seven[0] = 7;
+    assert_eq!(
+        metered(limits(seven), &run).0,
+        Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            7,
+            2,
+            int(8),
+            DecimalScaleExpansion
+        ))
+    );
 }
 
 /// Trace: TC-019, FR-007-AC-2, FR-006-AC-1, FR-007-AC-6
@@ -209,7 +286,9 @@ fn tc_019_d10_malformed_decimal_types_are_ill_typed() {
                 DecimalType::new(Integer::from(lo), Integer::from(hi), min, max, RoundingMode::Exact).map(|_| ())
             })
     }};
-    let malformed = Err(IllTyped { cause: IllTypedCause::MalformedDecimalType });
+    let malformed = Err(IllTyped {
+        cause: IllTypedCause::MalformedDecimalType,
+    });
     assert_eq!(declared[..3], [malformed; 3]);
     assert_eq!(declared[3..], [Ok(()), Ok(())]);
 }
@@ -234,34 +313,65 @@ fn tc_019_d11_d19_membership_lifts_to_the_minimum_scale() {
             largest.contains(&dec(1, 0)),
         ]
     }};
-    assert_eq!(membership, [true, true, true, true, false, true, false, true, false]);
+    assert_eq!(
+        membership,
+        [true, true, true, true, false, true, false, true, false]
+    );
 }
 
 /// Trace: TC-019, FR-007-AC-2, FR-006-AC-3, FR-007-AC-6
 #[test]
 fn tc_019_d13_discarded_zero_digits_are_not_rounding() {
-    const D13: [u64; 10] = [9, 3, 0, 0, 0, 0, 0, 2, 4, 1];
+    const D13: [u64; 10] = [10, 4, 0, 0, 0, 0, 0, 2, 4, 1];
+    use ChargePoint::*;
     for mode in [RoundingMode::TowardZero, RoundingMode::Exact] {
         let exact_mode = mode == RoundingMode::Exact;
-        let (exact, short_work, short_bits) = agree! {{
+        let schedule = agree! {{
             let mode = if exact_mode { RoundingMode::Exact } else { RoundingMode::TowardZero };
-            let run = |m: &mut Meter| {
+            scheduled(UNLIMITED, |m: &mut Meter| {
                 evaluate_decimal(DecimalOperation::Multiply(&dec(150, 2), &dec(2, 0)), &decimal_type(-9, 9, 0, 0, mode), m)
-            };
-            let (mut work, mut bits) = (D13, D13);
-            work[8] = 3;
-            bits[0] = 8;
-            (metered(limits(D13), run), metered(limits(work), run), metered(limits(bits), run))
+            })
         }};
-        use ChargePoint::*;
-        let result = exact.0.completed().unwrap();
+        let result = schedule.0.clone().completed().unwrap();
         assert_eq!(coefficient_scale(result.value()).0, (int(3), 0));
         assert!(result.loss().is_none());
-        assert_eq!(exact.1, [DecimalOperands, DecimalScaleExpansion, DecimalArithmetic, DecimalResultRetain]);
-        assert_eq!(short_work.0, Outcome::Incomplete(work_denied(3, DecimalResultRetain)));
         assert_eq!(
-            short_bits.0,
-            Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 8, 8, int(9), DecimalArithmetic))
+            schedule.1,
+            [
+                DecimalOperands,
+                DecimalScaleExpansion,
+                DecimalArithmetic,
+                DecimalResultRetain
+            ]
+        );
+
+        // QSpec 7d7943a only: `bits(150) + bits(2) = 10` on the retained operand.
+        let run = |m: &mut Meter| {
+            evaluate_decimal(
+                DecimalOperation::Multiply(&dec(150, 2), &dec(2, 0)),
+                &decimal_type(-9, 9, 0, 0, mode),
+                m,
+            )
+        };
+        let exact = metered(limits(D13), run);
+        assert_eq!(exact.0, schedule.0);
+        assert_eq!(exact.2, D13);
+        let (mut work, mut bits) = (D13, D13);
+        work[8] = 3;
+        bits[0] = 9;
+        assert_eq!(
+            metered(limits(work), run).0,
+            Outcome::Incomplete(work_denied(3, DecimalResultRetain))
+        );
+        assert_eq!(
+            metered(limits(bits), run).0,
+            Outcome::Incomplete(incomplete(
+                LimitKind::IntegerBits,
+                9,
+                8,
+                int(10),
+                DecimalArithmetic
+            ))
         );
     }
 }
@@ -282,21 +392,41 @@ fn tc_019_d14_d15_d16_refusal_and_undefined_precede_later_charges() {
             evaluate_decimal(DecimalOperation::Round(&dec(25, 1)), &decimal_type(-2, 2, 0, 0, RoundingMode::NearestAway), m)
         };
         (
-            [metered(with(D09, 3), strict), metered(with(D09, 2), strict)],
-            [metered(with(D09, 1), zero), metered(with(D09, 0), zero)],
-            [metered(limits(d16_limits), away), metered(with(d16_limits, 3), away)],
+            [scheduled(with(D09, 3), strict), scheduled(with(D09, 2), strict)],
+            [scheduled(with(D09, 1), zero), scheduled(with(D09, 0), zero)],
+            [scheduled(limits(d16_limits), away), scheduled(with(d16_limits, 3), away)],
         )
     }};
     use ChargePoint::*;
     assert_eq!(d14[0].0, Outcome::Refused(Refusal::InexactDecimal));
-    assert_eq!(d14[0].1, [DecimalOperands, DecimalScaleExpansion, DecimalArithmetic]);
-    assert_eq!(d14[1].0, Outcome::Incomplete(work_denied(2, DecimalArithmetic)));
+    assert_eq!(
+        d14[0].1,
+        [DecimalOperands, DecimalScaleExpansion, DecimalArithmetic]
+    );
+    assert_eq!(
+        d14[1].0,
+        Outcome::Incomplete(work_denied(2, DecimalArithmetic))
+    );
     assert_eq!(d15[0].0, Outcome::Undefined(Undefined::DivisionByZero));
     assert_eq!(d15[0].1, [DecimalOperands]);
-    assert_eq!(d15[1].0, Outcome::Incomplete(work_denied(0, DecimalOperands)));
+    assert_eq!(
+        d15[1].0,
+        Outcome::Incomplete(work_denied(0, DecimalOperands))
+    );
     assert_eq!(d16[0].0, Outcome::Refused(Refusal::DecimalOutOfDomain));
-    assert_eq!(d16[0].1, [DecimalOperands, DecimalScaleExpansion, DecimalArithmetic, DecimalRounding]);
-    assert_eq!(d16[1].0, Outcome::Incomplete(work_denied(3, DecimalRounding)));
+    assert_eq!(
+        d16[0].1,
+        [
+            DecimalOperands,
+            DecimalScaleExpansion,
+            DecimalArithmetic,
+            DecimalRounding
+        ]
+    );
+    assert_eq!(
+        d16[1].0,
+        Outcome::Incomplete(work_denied(3, DecimalRounding))
+    );
 }
 
 /// Trace: TC-019, FR-007-AC-2, FR-006-AC-3, FR-007-AC-6
@@ -322,10 +452,19 @@ fn tc_019_d17_d18_scale_expansion_uses_the_retained_representation() {
     assert!(d17.loss().is_none());
     let d18 = d18.completed().unwrap();
     assert_eq!(coefficient_scale(d18.value()).0, (int(6), 1));
-    assert_eq!(loss_fields(&d18), (int(617), int(1000), int(6), 1, RoundingMode::NearestEven));
+    assert_eq!(
+        loss_fields(&d18),
+        (int(617), int(1000), int(6), 1, RoundingMode::NearestEven)
+    );
     assert_eq!(
         d18_short,
-        Outcome::Incomplete(incomplete(LimitKind::ScaleExpansion, 1, 0, int(2), ChargePoint::DecimalScaleExpansion))
+        Outcome::Incomplete(incomplete(
+            LimitKind::ScaleExpansion,
+            1,
+            0,
+            int(2),
+            ChargePoint::DecimalScaleExpansion
+        ))
     );
 }
 
@@ -334,8 +473,14 @@ fn tc_019_d17_d18_scale_expansion_uses_the_retained_representation() {
 fn tc_019_generated_operations_and_denials_agree() {
     const COEFFICIENTS: [i64; 10] = [-25, -10, -7, -5, -1, 0, 1, 3, 8, 10];
     let mut vectors = 0_usize;
-    for (ca, sa) in COEFFICIENTS.iter().flat_map(|c| (0..3).map(move |s| (*c, s))) {
-        for (cb, sb) in COEFFICIENTS.iter().flat_map(|c| (0..3).map(move |s| (*c, s))) {
+    for (ca, sa) in COEFFICIENTS
+        .iter()
+        .flat_map(|c| (0..3).map(move |s| (*c, s)))
+    {
+        for (cb, sb) in COEFFICIENTS
+            .iter()
+            .flat_map(|c| (0..3).map(move |s| (*c, s)))
+        {
             let _ = agree! {{
                 let (a, b) = (dec(ca, sa), dec(cb, sb));
                 let operations = [
@@ -352,7 +497,7 @@ fn tc_019_generated_operations_and_denials_agree() {
                         for mode in RoundingMode::ALL {
                             let target = decimal_type(-40, 40, 0, scale, mode);
                             let run = |m: &mut Meter| evaluate_decimal(operation, &target, m);
-                            all.push((metered(UNLIMITED, run), denials(UNLIMITED, run)));
+                            all.push((scheduled(UNLIMITED, run), denials(UNLIMITED, run)));
                         }
                     }
                 }
@@ -380,7 +525,11 @@ fn ordered(
         )
     });
     if let Outcome::Completed(value) = run.0 {
-        assert_eq!(value, OrderingOperator::Less.holds(authority), "value disagrees with the authority");
+        assert_eq!(
+            value,
+            OrderingOperator::Less.holds(authority),
+            "value disagrees with the authority"
+        );
     }
     run
 }
@@ -389,27 +538,247 @@ fn ordered(
 #[test]
 fn tc_019_d20_d21_ordering_meters_the_retained_representation() {
     use ChargePoint::{OrderingArithmetic, OrderingOperands as Operands, OrderingResultRetain};
-    let d20 = [5, 2, 1, 0, 0, 0, 0, 2, 3, 1];
+    // `sbits(2,1) = bits(2) + bits(10) = 6`.
+    let d20 = [6, 2, 1, 0, 0, 0, 0, 2, 3, 1];
     let run = ordered((15, 1), (2, 0), d20);
     assert_eq!(run.0, Outcome::Completed(true));
     assert_eq!(run.1, [Operands, OrderingArithmetic, OrderingResultRetain]);
-    assert_eq!(run.2, [5, 2, 1, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(run.2, d20);
     let mut short = d20;
-    short[0] = 4;
+    short[0] = 5;
     assert_eq!(
         ordered((15, 1), (2, 0), short).0,
-        Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 4, 4, int(5), OrderingArithmetic))
+        Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            5,
+            4,
+            int(6),
+            OrderingArithmetic
+        ))
     );
 
-    let d21 = [8, 3, 2, 0, 0, 0, 0, 2, 3, 1];
+    // `sbits(2,2) = bits(2) + bits(100) = 9`.
+    let d21 = [9, 3, 2, 0, 0, 0, 0, 2, 3, 1];
     let run = ordered((100, 2), (2, 0), d21);
     assert_eq!(run.0, Outcome::Completed(true));
     assert_eq!(run.1, [Operands, OrderingArithmetic, OrderingResultRetain]);
-    assert_eq!(run.2, [8, 3, 2, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(run.2, d21);
     let mut short = d21;
-    short[0] = 7;
+    short[0] = 8;
     assert_eq!(
         ordered((100, 2), (2, 0), short).0,
-        Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 7, 7, int(8), OrderingArithmetic))
+        Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            8,
+            7,
+            int(9),
+            OrderingArithmetic
+        ))
+    );
+}
+
+/// `(1,0) × (1,0)` into `Decimal[0,1;0,T;exact]`.
+fn unit_square(scale: u64) -> impl Fn(&mut Meter) -> Outcome<DecimalResult> {
+    move |m| {
+        evaluate_decimal(
+            DecimalOperation::Multiply(&dec(1, 0), &dec(1, 0)),
+            &decimal_type(0, 1, 0, scale, RoundingMode::Exact),
+            m,
+        )
+    }
+}
+
+/// Trace: TC-019, FR-007-AC-2, FR-006-AC-3, FR-007-AC-6
+#[test]
+fn tc_019_d22_d23_result_retain_upscale_is_charged_before_materialization() {
+    use ChargePoint::*;
+    let schedule = agree! {{
+        scheduled(UNLIMITED, |m: &mut Meter| {
+            evaluate_decimal(DecimalOperation::Multiply(&dec(1, 0), &dec(1, 0)), &decimal_type(0, 1, 0, 1000, RoundingMode::Exact), m)
+        })
+    }};
+    let power = big(&format!("1{}", "0".repeat(1000)));
+    let result = schedule.0.clone().completed().unwrap();
+    assert_eq!(
+        coefficient_scale(result.value()),
+        ((power, 1000), (int(1), 0))
+    );
+    assert!(result.loss().is_none());
+    assert_eq!(
+        schedule.1,
+        [
+            DecimalOperands,
+            DecimalScaleExpansion,
+            DecimalArithmetic,
+            DecimalResultRetain
+        ]
+    );
+
+    // QSpec 7d7943a only: `sbits(1,1000) = 3323`, `sdigits(1,1000) = 1001`.
+    const D22: [u64; 10] = [3323, 1001, 1000, 0, 0, 0, 0, 2, 4, 1];
+    let d22 = unit_square(1000);
+    let exact = metered(limits(D22), &d22);
+    assert_eq!(exact.0, schedule.0);
+    assert_eq!(exact.2, D22);
+    let (mut bits, mut shift) = (D22, D22);
+    bits[0] = 3322;
+    shift[2] = 999;
+    assert_eq!(
+        metered(limits(bits), &d22).0,
+        Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            3322,
+            2,
+            int(3323),
+            DecimalResultRetain
+        ))
+    );
+    assert_eq!(
+        metered(limits(shift), &d22).0,
+        Outcome::Incomplete(incomplete(
+            LimitKind::ScaleExpansion,
+            999,
+            0,
+            int(1000),
+            DecimalResultRetain
+        ))
+    );
+
+    // D23: `sdigits(1,4294967295) = 4294967296` is denied without the power.
+    let d23 = [u64::MAX, 64, 4_294_967_295, 0, 0, 0, 0, 2, 4, 1];
+    let denied = metered(limits(d23), unit_square(4_294_967_295));
+    assert_eq!(
+        denied.0,
+        Outcome::Incomplete(incomplete(
+            LimitKind::DecimalDigits,
+            64,
+            2,
+            int(4_294_967_296),
+            DecimalResultRetain
+        ))
+    );
+    assert_eq!(denied.2[8], 3);
+}
+
+/// Trace: TC-019, FR-006-AC-3, FR-007-AC-6
+#[test]
+fn tc_019_operand_derived_amounts_at_exact_and_one_under_limits() {
+    use ChargePoint::*;
+    // Each `(operation, target scale, mode, counter, exact amount, consumed
+    // before the denied charge, denied charge)`, checked against QSpec 7d7943a.
+    let one_under = |run: &dyn Fn(&mut Meter) -> Outcome<DecimalResult>,
+                     kind: LimitKind,
+                     amount: u64,
+                     before: u64,
+                     point: ChargePoint| {
+        let index = LimitKind::ALL.iter().position(|k| *k == kind).unwrap();
+        let mut tuple = [u64::MAX; 10];
+        tuple[index] = amount;
+        let exact = metered(limits(tuple), run);
+        assert!(
+            exact.0.clone().completed().is_some(),
+            "{kind:?} {amount}: {:?}",
+            exact.0
+        );
+        assert_eq!(exact.2[index], amount);
+        tuple[index] = amount - 1;
+        assert_eq!(
+            metered(limits(tuple), run).0,
+            Outcome::Incomplete(incomplete(
+                kind,
+                amount - 1,
+                before,
+                int(i128::from(amount)),
+                point
+            ))
+        );
+    };
+    let mode = RoundingMode::NearestEven;
+    // Alignment then addition: `(125,2) + (3,0)` expands `sbits(3,2) = 9`,
+    // `sdigits(3,2) = 3`; the sum charges `max(7, 9) + 1 = 10` and `3 + 1 = 4`.
+    let add = |m: &mut Meter| {
+        evaluate_decimal(
+            DecimalOperation::Add(&dec(125, 2), &dec(3, 0)),
+            &decimal_type(-1000, 1000, 0, 2, mode),
+            m,
+        )
+    };
+    one_under(&add, LimitKind::IntegerBits, 10, 9, DecimalArithmetic);
+    one_under(&add, LimitKind::DecimalDigits, 4, 3, DecimalArithmetic);
+    // Subtraction cancels to zero and still charges `max(A) + 1`.
+    let cancel = |m: &mut Meter| {
+        evaluate_decimal(
+            DecimalOperation::Subtract(&dec(255, 0), &dec(255, 0)),
+            &decimal_type(-1000, 1000, 0, 0, mode),
+            m,
+        )
+    };
+    one_under(&cancel, LimitKind::IntegerBits, 9, 8, DecimalArithmetic);
+    // Multiplication: `bits(-7) + bits(8) = 7`, `digits(-7) + digits(8) = 2`.
+    let product = |m: &mut Meter| {
+        evaluate_decimal(
+            DecimalOperation::Multiply(&dec(-7, 1), &dec(8, 1)),
+            &decimal_type(-1000, 1000, 0, 2, mode),
+            m,
+        )
+    };
+    one_under(&product, LimitKind::IntegerBits, 7, 4, DecimalArithmetic);
+    one_under(&product, LimitKind::DecimalDigits, 2, 1, DecimalArithmetic);
+    // Division sizes `max(A)`, never the quotient: `(255,0) / (1,0)` at `T = 0`
+    // repeats the operands' 8 bits, then retains `255` at 8 bits.
+    let quotient = |m: &mut Meter| {
+        evaluate_decimal(
+            DecimalOperation::Divide(&dec(255, 0), &dec(1, 0)),
+            &decimal_type(-1000, 1000, 0, 0, mode),
+            m,
+        )
+    };
+    one_under(&quotient, LimitKind::IntegerBits, 8, 0, DecimalOperands);
+    // Rounding repeats the arithmetic amounts: `(-25,1)` negated into scale 0
+    // charges `bits(25) = 5` at arithmetic and at rounding, retaining `2`.
+    let negated = |m: &mut Meter| {
+        evaluate_decimal(
+            DecimalOperation::Negate(&dec(-25, 1)),
+            &decimal_type(-1000, 1000, 0, 0, mode),
+            m,
+        )
+    };
+    let run = metered(UNLIMITED, &negated);
+    assert_eq!(
+        run.1,
+        [
+            DecimalOperands,
+            DecimalScaleExpansion,
+            DecimalArithmetic,
+            DecimalRounding,
+            DecimalResultRetain
+        ]
+    );
+    assert_eq!(run.2[..2], [5, 2]);
+    one_under(&negated, LimitKind::IntegerBits, 5, 0, DecimalOperands);
+    // The result upscale `k = T - s`: `(3,0) × (1,0)` into scale 3 retains
+    // `(3000, 3)`: `scale_expansion` 3, `sbits(3,3) = 2 + 10 = 12`,
+    // `sdigits(3,3) = 4`.
+    let upscale = |m: &mut Meter| {
+        evaluate_decimal(
+            DecimalOperation::Multiply(&dec(3, 0), &dec(1, 0)),
+            &decimal_type(-9000, 9000, 0, 3, mode),
+            m,
+        )
+    };
+    one_under(
+        &upscale,
+        LimitKind::ScaleExpansion,
+        3,
+        0,
+        DecimalResultRetain,
+    );
+    one_under(&upscale, LimitKind::IntegerBits, 12, 3, DecimalResultRetain);
+    one_under(
+        &upscale,
+        LimitKind::DecimalDigits,
+        4,
+        2,
+        DecimalResultRetain,
     );
 }
