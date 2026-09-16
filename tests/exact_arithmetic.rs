@@ -1,5 +1,6 @@
 //! Metered integer arithmetic, rational arithmetic, numeric ordering and Boolean
-//! connectives under QSpec 5d88578 `quire.value.accounting/v1`.
+//! connectives under QSpec 7d7943a `quire.value.accounting/v1`, whose every
+//! arithmetic amount is derived from operand bit lengths.
 //!
 //! The pinned authority (quire-spec-language d9d5273) does not meter these
 //! families yet (pending agent-ix/quire-spec-language#119), so every charge here
@@ -134,7 +135,7 @@ fn tc_023_p11_integer_atoms_order_and_subtract_with_exact_amounts() {
     assert_eq!(meter.admitted_charges(), ORDERING);
     assert_eq!(consumed(&meter), [2, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
 
-    // `n - 1`: three integer-arithmetic charges.
+    // `n - 1`: three integer-arithmetic charges; `max(bits(2), bits(1)) + 1`.
     let mut meter = Meter::new(UNLIMITED);
     let difference = evaluate_integer(
         IntegerOperation::Subtract(&int(2), &int(1)),
@@ -143,7 +144,7 @@ fn tc_023_p11_integer_atoms_order_and_subtract_with_exact_amounts() {
     );
     assert_eq!(difference, Outcome::Completed(int(1)));
     assert_eq!(meter.admitted_charges(), INTEGER);
-    assert_eq!(consumed(&meter), [2, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
 
     // The scalar atoms of `down(2)`: `n > 0`, `n - 1` twice, then `0 > 0`.
     // P11's 18 work units include three `function.call` charges owned by
@@ -185,8 +186,9 @@ fn tc_023_p11_integer_atoms_order_and_subtract_with_exact_amounts() {
 /// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
 #[test]
 fn tc_023_p11_integer_division_to_rational_and_q11_fold_steps() {
-    // `3/2`: operands integer_bits 2; arithmetic N = 3, D = 2 at integer_bits 2;
-    // normalize integer_bits 2; retain. Four work units and one result unit.
+    // `3/2`: operands integer_bits 2; arithmetic `N = bits(3) + bits(1) = 3`,
+    // `D = bits(1) + bits(2) = 3`; normalize integer_bits 2; retain. Four work
+    // units and one result unit.
     let run = |meter: &mut Meter| {
         evaluate_rational(
             RationalOperation::IntegerDivide(&int(3), &int(2)),
@@ -197,14 +199,15 @@ fn tc_023_p11_integer_division_to_rational_and_q11_fold_steps() {
     let mut meter = Meter::new(UNLIMITED);
     assert_eq!(run(&mut meter), Outcome::Completed(ratio(3, 2)));
     assert_eq!(meter.admitted_charges(), RATIONAL);
-    assert_eq!(consumed(&meter), [2, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
     assert_eq!(
         run(&mut Meter::new(work(3))),
         Outcome::Incomplete(work_denied(3, ChargePoint::RationalArithmeticResultRetain))
     );
     assert_named_denials(run);
 
-    // Q11 `acc + x` over `1, 2`: integer-arithmetic.* per step.
+    // Q11 `acc + x` over `1, 2`: integer-arithmetic.* per step; the second
+    // add charges `max(bits(1), bits(2)) + 1 = 3`.
     let mut meter = Meter::new(UNLIMITED);
     let mut acc = int(0);
     for x in [1, 2] {
@@ -218,7 +221,7 @@ fn tc_023_p11_integer_division_to_rational_and_q11_fold_steps() {
     }
     assert_eq!(acc, int(3));
     assert_eq!(meter.admitted_charges(), [INTEGER, INTEGER].concat());
-    assert_eq!(consumed(&meter), [2, 0, 0, 0, 0, 0, 0, 2, 6, 2]);
+    assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 6, 2]);
 }
 
 /// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
@@ -347,14 +350,15 @@ fn tc_023_connective_truth_tables() {
 /// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
 #[test]
 fn tc_023_rational_amounts_zero_divisors_and_domains() {
-    // `1/2 + 1/2`: N = 1×2 + 1×2 = 4 and D = 4 (3 bits), reduced 1 (1 bit).
+    // `1/2 + 1/2`: `N = max(1 + 2, 1 + 2) + 1 = 4`, `D = 2 + 2 = 4`; the
+    // unreduced `4/4` normalizes at 3 bits to `1`.
     let mut meter = Meter::new(UNLIMITED);
     let (half, zero) = (ratio(1, 2), ratio(0, 1));
     let sum = evaluate_rational(RationalOperation::Add(&half, &half), None, &mut meter);
     assert_eq!(sum, Outcome::Completed(ratio(1, 1)));
-    assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_eq!(consumed(&meter), [4, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
     let mut tuple = [u64::MAX; 10];
-    tuple[0] = 2;
+    tuple[0] = 3;
     assert_eq!(
         evaluate_rational(
             RationalOperation::Add(&half, &half),
@@ -363,9 +367,9 @@ fn tc_023_rational_amounts_zero_divisors_and_domains() {
         ),
         Outcome::Incomplete(Incomplete {
             limit_kind: LimitKind::IntegerBits,
-            limit: 2,
+            limit: 3,
             consumed: 2,
-            next_charge: int(3),
+            next_charge: int(4),
             charge_point: ChargePoint::RationalArithmeticArithmetic,
         })
     );
@@ -412,7 +416,7 @@ fn tc_023_rational_amounts_zero_divisors_and_domains() {
         ),
         Outcome::Completed(ratio(1, 2))
     );
-    // Unary minus: N = -a, D = b.
+    // Unary minus: `max(bits(a), bits(b))`, then `N = -a`, `D = b`.
     let mut meter = Meter::new(UNLIMITED);
     assert_eq!(
         evaluate_rational(RationalOperation::Negate(&ratio(-5, 8)), None, &mut meter),
@@ -431,7 +435,8 @@ fn tc_023_rational_amounts_zero_divisors_and_domains() {
 /// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
 #[test]
 fn tc_023_ordering_amounts_for_rationals_and_retained_decimals() {
-    // `7/3 < 5/8`: operands maxparts 4; arithmetic max(bits(7×8), bits(5×3)) = 6.
+    // `7/3 < 5/8`: operands maxparts 4; arithmetic
+    // `max(bits(7) + bits(8), bits(5) + bits(3)) = max(7, 5) = 7`.
     let mut meter = Meter::new(UNLIMITED);
     let (left, right) = (ratio(7, 3), ratio(5, 8));
     let less = evaluate_ordering(
@@ -441,9 +446,10 @@ fn tc_023_ordering_amounts_for_rationals_and_retained_decimals() {
     );
     assert_eq!(less, Outcome::Completed(false));
     assert_eq!(meter.admitted_charges(), ORDERING);
-    assert_eq!(consumed(&meter), [6, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(consumed(&meter), [7, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
 
-    // Retained, never normalized: `(0, 5) >= (0, 0)` aligns zero to one digit.
+    // Retained, never normalized: `(0, 5) >= (0, 0)` shifts zero by 5:
+    // `sbits(0,5) = 1 + bits(10^5) = 18`, `sdigits(0,5) = 1 + 5 = 6`.
     let mut meter = Meter::new(UNLIMITED);
     let (a, b) = (Decimal::new(int(0), 5), Decimal::new(int(0), 0));
     let ge = evaluate_ordering(
@@ -452,9 +458,10 @@ fn tc_023_ordering_amounts_for_rationals_and_retained_decimals() {
         &mut meter,
     );
     assert_eq!(ge, Outcome::Completed(true));
-    assert_eq!(consumed(&meter), [1, 1, 5, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(consumed(&meter), [18, 6, 5, 0, 0, 0, 0, 2, 3, 1]);
 
-    // `(100, 2) <= (2, 0)`: aligned 200 (8 bits, 3 digits), scale expansion 2.
+    // `(100, 2) <= (2, 0)`: `sbits(2,2) = bits(2) + bits(100) = 9` and
+    // `sdigits(2,2) = 3`, scale expansion 2.
     let mut meter = Meter::new(UNLIMITED);
     let (a, b) = (Decimal::new(int(100), 2), Decimal::new(int(2), 0));
     let le = evaluate_ordering(
@@ -463,7 +470,7 @@ fn tc_023_ordering_amounts_for_rationals_and_retained_decimals() {
         &mut meter,
     );
     assert_eq!(le, Outcome::Completed(true));
-    assert_eq!(consumed(&meter), [8, 3, 2, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(consumed(&meter), [9, 3, 2, 0, 0, 0, 0, 2, 3, 1]);
 
     // An aligned coefficient beyond u64 is sized analytically, never materialized.
     let (a, b) = (Decimal::new(int(1), 0), Decimal::new(int(1), u32::MAX));
@@ -517,38 +524,37 @@ fn tc_023_generated_integer_and_ordering_against_an_i128_oracle() {
     for a in VALUES {
         for b in VALUES {
             let (x, y) = (int(a), int(b));
-            let cases: [(IntegerOperation<'_>, i128, u64); 4] = [
-                (IntegerOperation::Add(&x, &y), a + b, 2),
-                (IntegerOperation::Subtract(&x, &y), a - b, 2),
-                (IntegerOperation::Multiply(&x, &y), a * b, 2),
-                (IntegerOperation::Negate(&x), -a, 1),
+            // `(operation, value, operand count, operand-derived amount)`.
+            let cases: [(IntegerOperation<'_>, i128, u64, u64); 4] = [
+                (
+                    IntegerOperation::Add(&x, &y),
+                    a + b,
+                    2,
+                    bits(a).max(bits(b)) + 1,
+                ),
+                (
+                    IntegerOperation::Subtract(&x, &y),
+                    a - b,
+                    2,
+                    bits(a).max(bits(b)) + 1,
+                ),
+                (
+                    IntegerOperation::Multiply(&x, &y),
+                    a * b,
+                    2,
+                    bits(a) + bits(b),
+                ),
+                (IntegerOperation::Negate(&x), -a, 1, bits(a)),
             ];
-            for (operation, expected, count) in cases {
-                let operand_bits = if count == 2 {
-                    bits(a).max(bits(b))
-                } else {
-                    bits(a)
-                };
+            for (operation, expected, count, amount) in cases {
+                // The amount never falls below the operands' or the result's bits.
+                assert!(amount >= bits(a).max(bits(expected)));
                 let mut meter = Meter::new(UNLIMITED);
                 assert_eq!(
                     evaluate_integer(operation, &IntegerDomain::Mathematical, &mut meter),
                     Outcome::Completed(int(expected))
                 );
-                assert_eq!(
-                    consumed(&meter),
-                    [
-                        operand_bits.max(bits(expected)),
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        count,
-                        3,
-                        1
-                    ]
-                );
+                assert_eq!(consumed(&meter), [amount, 0, 0, 0, 0, 0, 0, count, 3, 1]);
                 let in_range = i64::try_from(expected).is_ok();
                 let mut meter = Meter::new(UNLIMITED);
                 let outcome = evaluate_integer(operation, &bounded, &mut meter);
@@ -636,6 +642,16 @@ fn tc_023_generated_rational_arithmetic_and_ordering_against_an_i128_oracle() {
                 ),
                 (RationalOperation::Negate(&left), Some((-a, b))),
             ];
+            // The `rational-arithmetic.arithmetic` amounts of `+`, `-`, `*`,
+            // `/` and unary `-`, from operand bit lengths only.
+            let sum = (bits(a) + bits(d)).max(bits(c) + bits(b)) + 1;
+            let amounts = [
+                sum.max(bits(b) + bits(d)),
+                sum.max(bits(b) + bits(d)),
+                (bits(a) + bits(c)).max(bits(b) + bits(d)),
+                (bits(a) + bits(d)).max(bits(b) + bits(c)),
+                maxparts((a, b)),
+            ];
             for (index, (operation, intermediate)) in unreduced.into_iter().enumerate() {
                 let operand_bits = if index == 4 {
                     maxparts((a, b))
@@ -652,8 +668,10 @@ fn tc_023_generated_rational_arithmetic_and_ordering_against_an_i128_oracle() {
                     Some((n, m)) => {
                         let (rn, rd) = reduce((n, m));
                         assert_eq!(outcome, Outcome::Completed(ratio(rn, rd)));
-                        let high_water = operand_bits.max(maxparts((n, m))).max(maxparts((rn, rd)));
-                        assert_eq!(consumed(&meter)[0], high_water);
+                        // The amount bounds the unreduced intermediate, whose
+                        // normalize charge never raises the high-water mark.
+                        assert!(amounts[index] >= operand_bits.max(maxparts((n, m))));
+                        assert_eq!(consumed(&meter)[0], amounts[index]);
                         assert_named_denials(|meter| evaluate_rational(operation, None, meter));
                     }
                 }
@@ -668,7 +686,7 @@ fn tc_023_generated_rational_arithmetic_and_ordering_against_an_i128_oracle() {
                     &mut meter,
                 );
                 assert_eq!(outcome, Outcome::Completed(operator.holds(ordering)));
-                let cross = bits(a * d).max(bits(c * b));
+                let cross = (bits(a) + bits(d)).max(bits(c) + bits(b));
                 assert_eq!(
                     consumed(&meter),
                     [
@@ -746,7 +764,8 @@ fn assert_work_exact_and_one_under<T: std::fmt::Debug + PartialEq>(
 /// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
 #[test]
 fn tc_023_arithmetic_and_normalize_charges_at_exact_and_one_under_limits() {
-    // `2/3 × 3/2`: operands 2 bits; N = D = 6 at 3 bits; reduced 1/1 at 1 bit.
+    // `2/3 × 3/2`: operands 2 bits; `N = bits(2) + bits(3) = 4`,
+    // `D = bits(3) + bits(2) = 4`; the unreduced `6/6` normalizes at 3 bits.
     let (two_thirds, three_halves) = (ratio(2, 3), ratio(3, 2));
     let product = |meter: &mut Meter| {
         evaluate_rational(
@@ -757,34 +776,76 @@ fn tc_023_arithmetic_and_normalize_charges_at_exact_and_one_under_limits() {
     };
     let mut meter = Meter::new(UNLIMITED);
     assert_eq!(product(&mut meter), Outcome::Completed(ratio(1, 1)));
-    assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_eq!(consumed(&meter), [4, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
     assert_exact_and_one_under(
         product,
-        3,
-        bits_denied(2, 2, 3, ChargePoint::RationalArithmeticArithmetic),
+        4,
+        bits_denied(3, 2, 4, ChargePoint::RationalArithmeticArithmetic),
     );
     // The normalize amount never exceeds the admitted arithmetic amount, so
     // its one-under limit is on work: three charges admitted, the fourth denied.
     assert_work_exact_and_one_under(product, &RATIONAL);
 
-    // `5/7 - 4/7`: operands 3 bits; N = 35 - 28 = 7 and D = 49 at 6 bits;
-    // reduced 1/7 at 3 bits, below the operands.
+    // `3/4 ÷ 5/7`: `N = bits(3) + bits(7) = 5`, `D = bits(4) + bits(5) = 6`;
+    // the unreduced `21/20` normalizes at 5 bits.
+    let (three_quarters, five_sevenths) = (ratio(3, 4), ratio(5, 7));
+    let quotient = |meter: &mut Meter| {
+        evaluate_rational(
+            RationalOperation::Divide(&three_quarters, &five_sevenths),
+            None,
+            meter,
+        )
+    };
+    let mut meter = Meter::new(UNLIMITED);
+    assert_eq!(quotient(&mut meter), Outcome::Completed(ratio(21, 20)));
+    assert_eq!(consumed(&meter), [6, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_exact_and_one_under(
+        quotient,
+        6,
+        bits_denied(5, 3, 6, ChargePoint::RationalArithmeticArithmetic),
+    );
+    assert_work_exact_and_one_under(quotient, &RATIONAL);
+
+    // Integer `n / m` as a rational: `3 / 2` enters as `3/1 ÷ 2/1`.
+    let (three, two) = (int(3), int(2));
+    let halves = |meter: &mut Meter| {
+        evaluate_rational(RationalOperation::IntegerDivide(&three, &two), None, meter)
+    };
+    assert_exact_and_one_under(
+        halves,
+        3,
+        bits_denied(2, 2, 3, ChargePoint::RationalArithmeticArithmetic),
+    );
+
+    // `5/7 - 4/7`: operands 3 bits; `N = max(3 + 3, 3 + 3) + 1 = 7`,
+    // `D = 3 + 3 = 6`; the unreduced `7/49` normalizes at 6 bits to `1/7`.
     let (five, four) = (ratio(5, 7), ratio(4, 7));
     let difference = |meter: &mut Meter| {
         evaluate_rational(RationalOperation::Subtract(&five, &four), None, meter)
     };
     let mut meter = Meter::new(UNLIMITED);
     assert_eq!(difference(&mut meter), Outcome::Completed(ratio(1, 7)));
-    assert_eq!(consumed(&meter), [6, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_eq!(consumed(&meter), [7, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
     assert_exact_and_one_under(
         difference,
-        6,
-        bits_denied(5, 3, 6, ChargePoint::RationalArithmeticArithmetic),
+        7,
+        bits_denied(6, 3, 7, ChargePoint::RationalArithmeticArithmetic),
     );
     assert_work_exact_and_one_under(difference, &RATIONAL);
 
-    // Integer `1000 - 999 = 1`: the arithmetic amount (1) is below the operands
-    // (10), so the operands charge is the exact limit.
+    // Rational unary `-`: `max(bits(-5), bits(8)) = 4` equals the operands
+    // amount, so one under stops at the operands.
+    let negative = ratio(-5, 8);
+    let negated =
+        |meter: &mut Meter| evaluate_rational(RationalOperation::Negate(&negative), None, meter);
+    assert_exact_and_one_under(
+        negated,
+        4,
+        bits_denied(3, 0, 4, ChargePoint::RationalArithmeticOperands),
+    );
+    assert_work_exact_and_one_under(negated, &RATIONAL);
+
+    // Integer `1000 - 999 = 1`: `max(10, 10) + 1 = 11`, whatever the result.
     let (thousand, nines) = (int(1000), int(999));
     let small = |meter: &mut Meter| {
         evaluate_integer(
@@ -795,15 +856,15 @@ fn tc_023_arithmetic_and_normalize_charges_at_exact_and_one_under_limits() {
     };
     let mut meter = Meter::new(UNLIMITED);
     assert_eq!(small(&mut meter), Outcome::Completed(int(1)));
-    assert_eq!(consumed(&meter), [10, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
+    assert_eq!(consumed(&meter), [11, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
     assert_exact_and_one_under(
         small,
-        10,
-        bits_denied(9, 0, 10, ChargePoint::IntegerArithmeticOperands),
+        11,
+        bits_denied(10, 10, 11, ChargePoint::IntegerArithmeticArithmetic),
     );
     assert_work_exact_and_one_under(small, &INTEGER);
 
-    // Integer `255 × 255 = 65025`: operands 8 bits, arithmetic 16.
+    // Integer `255 × 255 = 65025`: operands 8 bits, arithmetic `8 + 8 = 16`.
     let byte = int(255);
     let square = |meter: &mut Meter| {
         evaluate_integer(
@@ -818,6 +879,37 @@ fn tc_023_arithmetic_and_normalize_charges_at_exact_and_one_under_limits() {
         bits_denied(15, 8, 16, ChargePoint::IntegerArithmeticArithmetic),
     );
     assert_work_exact_and_one_under(square, &INTEGER);
+
+    // Integer unary `-`: `bits(-256) = 9` equals the operands amount.
+    let floor = int(-256);
+    let negated = |meter: &mut Meter| {
+        evaluate_integer(
+            IntegerOperation::Negate(&floor),
+            &IntegerDomain::Mathematical,
+            meter,
+        )
+    };
+    assert_exact_and_one_under(
+        negated,
+        9,
+        bits_denied(8, 0, 9, ChargePoint::IntegerArithmeticOperands),
+    );
+    assert_work_exact_and_one_under(negated, &INTEGER);
+
+    // Ordering `7/3 < 5/8` at its cross amount 7, over operands of 4.
+    let (seven_thirds, five_eighths) = (ratio(7, 3), ratio(5, 8));
+    let less = |meter: &mut Meter| {
+        evaluate_ordering(
+            OrderingOperator::Less,
+            OrderingOperands::Rational(&seven_thirds, &five_eighths),
+            meter,
+        )
+    };
+    assert_exact_and_one_under(
+        less,
+        7,
+        bits_denied(6, 4, 7, ChargePoint::OrderingArithmetic),
+    );
 }
 
 /// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
@@ -836,22 +928,16 @@ fn tc_023_result_sizes_at_power_of_two_edges_and_cancellation() {
         }
         value
     };
-    let arithmetic_bits = |operation: IntegerOperation<'_>| {
+    // The consumed amount of `operation`, which must bound the result it
+    // computes, and that result's bit length.
+    let charged = |operation: IntegerOperation<'_>| {
         let mut meter = Meter::new(UNLIMITED);
         let result = evaluate_integer(operation, &IntegerDomain::Mathematical, &mut meter)
             .completed()
             .unwrap();
-        let operands = match operation {
-            IntegerOperation::Add(a, b)
-            | IntegerOperation::Subtract(a, b)
-            | IntegerOperation::Multiply(a, b) => a.magnitude_bits().max(b.magnitude_bits()),
-            IntegerOperation::Negate(a) => a.magnitude_bits(),
-        };
-        assert_eq!(
-            meter.consumed(LimitKind::IntegerBits),
-            operands.max(result.magnitude_bits())
-        );
-        result.magnitude_bits()
+        let amount = meter.consumed(LimitKind::IntegerBits);
+        assert!(amount >= result.magnitude_bits());
+        (amount, result.magnitude_bits())
     };
     let one = int(1);
     for exponent in [63_u32, 64, 65, 127, 128, 200, 511] {
@@ -871,41 +957,46 @@ fn tc_023_result_sizes_at_power_of_two_edges_and_cancellation() {
         .completed()
         .unwrap();
         let k = u64::from(exponent);
-        // (2^k - 1)(2^k + 1) = 2^2k - 1 sits one below a power of two.
+        // (2^k - 1)(2^k + 1) = 2^2k - 1 has 2k bits; the charge is k + (k + 1).
         assert_eq!(
-            arithmetic_bits(IntegerOperation::Multiply(&below, &above)),
-            2 * k
+            charged(IntegerOperation::Multiply(&below, &above)),
+            (2 * k + 1, 2 * k)
+        );
+        // 2^k × 2^k = 2^2k has 2k + 1 bits; the charge is (k + 1) + (k + 1).
+        assert_eq!(
+            charged(IntegerOperation::Multiply(&two_k, &two_k)),
+            (2 * k + 2, 2 * k + 1)
+        );
+        assert_eq!(charged(IntegerOperation::Add(&below, &one)), (k + 1, k + 1));
+        // Cancellation leaves the charge at the operands' `max + 1`.
+        assert_eq!(
+            charged(IntegerOperation::Subtract(&above, &two_k)),
+            (k + 2, 1)
         );
         assert_eq!(
-            arithmetic_bits(IntegerOperation::Multiply(&two_k, &two_k)),
-            2 * k + 1
-        );
-        assert_eq!(arithmetic_bits(IntegerOperation::Add(&below, &one)), k + 1);
-        assert_eq!(
-            arithmetic_bits(IntegerOperation::Subtract(&above, &two_k)),
-            1
+            charged(IntegerOperation::Subtract(&two_k, &two_k)),
+            (k + 2, 1)
         );
         assert_eq!(
-            arithmetic_bits(IntegerOperation::Subtract(&two_k, &two_k)),
-            1
+            charged(IntegerOperation::Subtract(&one, &above)),
+            (k + 2, k + 1)
         );
-        assert_eq!(
-            arithmetic_bits(IntegerOperation::Subtract(&one, &above)),
-            k + 1
-        );
-        let negative = below.clone();
         let negative = evaluate_integer(
-            IntegerOperation::Negate(&negative),
+            IntegerOperation::Negate(&below),
             &IntegerDomain::Mathematical,
             &mut Meter::new(UNLIMITED),
         )
         .completed()
         .unwrap();
-        assert_eq!(arithmetic_bits(IntegerOperation::Add(&negative, &above)), 2);
         assert_eq!(
-            arithmetic_bits(IntegerOperation::Multiply(&negative, &negative)),
-            2 * k
+            charged(IntegerOperation::Add(&negative, &above)),
+            (k + 2, 2)
         );
+        assert_eq!(
+            charged(IntegerOperation::Multiply(&negative, &negative)),
+            (2 * k, 2 * k)
+        );
+        assert_eq!(charged(IntegerOperation::Negate(&above)), (k + 1, k + 1));
     }
 }
 

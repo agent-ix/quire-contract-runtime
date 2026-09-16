@@ -96,14 +96,10 @@ pub fn modulo(
     Outcome::from_stop(euclidean_remainder(dividend, divisor, domain, meter))
 }
 
+/// `max(bits(a), bits(b))`: the operand and the operand-derived arithmetic
+/// amount. `|q| <= |a|` and `|r| < |b|`, so it bounds both results.
 fn operand_bits(dividend: &Integer, divisor: &Integer) -> u64 {
     dividend.magnitude_bits().max(divisor.magnitude_bits())
-}
-
-fn arithmetic_bits([first, rest @ ..]: [&Integer; 4]) -> u64 {
-    rest.iter()
-        .map(|value| value.magnitude_bits())
-        .fold(first.magnitude_bits(), u64::max)
 }
 
 fn reject_zero_divisor(divisor: &Integer) -> Result<(), Stop> {
@@ -129,11 +125,11 @@ fn paired(
             .size(LimitKind::ValueOccurrences, 2),
     )?;
     reject_zero_divisor(divisor)?;
+    meter.charge(
+        Charge::new(ChargePoint::IntegerDivisionArithmetic)
+            .size(LimitKind::IntegerBits, operand_bits(dividend, divisor)),
+    )?;
     let (quotient, remainder) = profile.apply(dividend, divisor);
-    meter.charge(Charge::new(ChargePoint::IntegerDivisionArithmetic).size(
-        LimitKind::IntegerBits,
-        arithmetic_bits([dividend, divisor, &quotient, &remainder]),
-    ))?;
     meter.charge(
         Charge::new(ChargePoint::IntegerDivisionDomainPair).size(LimitKind::ValueOccurrences, 2),
     )?;
@@ -164,11 +160,11 @@ fn euclidean_remainder(
             .size(LimitKind::ValueOccurrences, 2),
     )?;
     reject_zero_divisor(divisor)?;
-    let (quotient, remainder) = DivisionProfile::Euclidean.apply(dividend, divisor);
-    meter.charge(Charge::new(ChargePoint::IntegerModulusArithmetic).size(
-        LimitKind::IntegerBits,
-        arithmetic_bits([dividend, divisor, &quotient, &remainder]),
-    ))?;
+    meter.charge(
+        Charge::new(ChargePoint::IntegerModulusArithmetic)
+            .size(LimitKind::IntegerBits, operand_bits(dividend, divisor)),
+    )?;
+    let (_, remainder) = DivisionProfile::Euclidean.apply(dividend, divisor);
     meter.charge(
         Charge::new(ChargePoint::IntegerModulusDomain).size(LimitKind::ValueOccurrences, 1),
     )?;
