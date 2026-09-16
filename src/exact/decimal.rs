@@ -411,7 +411,7 @@ fn compare_shifted(value: &Integer, shift: u64, bound: &Integer) -> Ordering {
         Ordering::Equal if value.is_zero() => Ordering::Equal,
         Ordering::Equal => {
             let magnitude = shifted_digits(value, shift)
-                .cmp(&bound.decimal_digits())
+                .cmp(&Integer::from(bound.decimal_digits()))
                 .then_with(|| {
                     // Equal digit counts bound `shift` by the materialized bound.
                     value
@@ -529,6 +529,43 @@ fn retained_parts(value: &Decimal) -> Shifted<'_> {
 }
 
 impl<'a> Plan<'a> {
+    /// The `decimal.arithmetic` `(integer_bits, decimal_digits)`, which
+    /// `decimal.rounding` repeats: derived from each aligned operand's
+    /// `sbits(c_i,k_i)` and `sdigits(c_i,k_i)`, never from the intermediate.
+    fn arithmetic_sizes(&self) -> (Integer, Integer) {
+        let aligned = |(coefficient, shift): Shifted<'_>| {
+            (
+                shifted_bits(coefficient, shift),
+                shifted_digits(coefficient, shift),
+            )
+        };
+        let one = Integer::one();
+        match self {
+            Self::Combine {
+                combine,
+                left,
+                right,
+                ..
+            } => {
+                let ((a1, g1), (a2, g2)) = (aligned(*left), aligned(*right));
+                match combine {
+                    Combine::Add | Combine::Subtract => {
+                        (a1.max(a2).add(&one), g1.max(g2).add(&one))
+                    }
+                    Combine::Multiply => (a1.add(&a2), g1.add(&g2)),
+                }
+            }
+            Self::Divide {
+                numerator,
+                denominator,
+            } => {
+                let ((a1, g1), (a2, g2)) = (aligned(*numerator), aligned(*denominator));
+                (a1.max(a2), g1.max(g2))
+            }
+            Self::Unary { operand, .. } => aligned((operand, 0)),
+        }
+    }
+
     /// The `decimal.scale-expansion` shift and the expanded coefficient, if any.
     fn expansion(&self) -> (u64, Option<Shifted<'a>>) {
         let expanded = expanded_side;
@@ -631,9 +668,17 @@ fn evaluate(
     if let Some((coefficient, shift)) = expanded {
         expansion = expansion
             .exact_size(LimitKind::IntegerBits, shifted_bits(coefficient, shift))
-            .size(LimitKind::DecimalDigits, shifted_digits(coefficient, shift));
+            .exact_size(LimitKind::DecimalDigits, shifted_digits(coefficient, shift));
     }
     meter.charge(expansion)?;
+
+    // Charged from the aligned operands before the intermediate exists.
+    let (bits, digits) = plan.arithmetic_sizes();
+    meter.charge(
+        Charge::new(ChargePoint::DecimalArithmetic)
+            .exact_size(LimitKind::IntegerBits, bits.clone())
+            .exact_size(LimitKind::DecimalDigits, digits.clone()),
+    )?;
 
     let intermediate = match plan {
         Plan::Combine {
@@ -670,12 +715,6 @@ fn evaluate(
             Intermediate::Scaled { value, scale }
         }
     };
-    let (bits, digits) = intermediate.sizes();
-    meter.charge(
-        Charge::new(ChargePoint::DecimalArithmetic)
-            .size(LimitKind::IntegerBits, bits)
-            .size(LimitKind::DecimalDigits, digits),
-    )?;
 
     let placed = match in_target_units(&intermediate, target.max_scale()) {
         TargetUnits::Exact { coefficient, scale } => Placed {
@@ -687,10 +726,11 @@ fn evaluate(
             let mode = target.rounding();
             // Strict `exact` refuses here, before any charge or loss record.
             let rounded = round(&units, mode).ok_or(Stop::Refused(Refusal::InexactDecimal))?;
+            // The arithmetic row's amounts bound the rounded coefficient.
             meter.charge(
                 Charge::new(ChargePoint::DecimalRounding)
-                    .size(LimitKind::IntegerBits, rounded.magnitude_bits())
-                    .size(LimitKind::DecimalDigits, rounded.decimal_digits()),
+                    .exact_size(LimitKind::IntegerBits, bits)
+                    .exact_size(LimitKind::DecimalDigits, digits),
             )?;
             Placed {
                 loss: Some(DecimalLoss {
@@ -704,11 +744,20 @@ fn evaluate(
         }
     };
     placed.check_membership(target).map_err(Stop::Refused)?;
-    let (bits, digits) = placed.retained_sizes(target);
+    // The upscale into `T` is charged analytically; `retain` materializes
+    // `c × 10^k` only after this charge is granted.
+    let upscale = placed.upscale(target);
     meter.charge(
         Charge::new(ChargePoint::DecimalResultRetain)
-            .exact_size(LimitKind::IntegerBits, bits)
-            .size(LimitKind::DecimalDigits, digits)
+            .size(LimitKind::ScaleExpansion, upscale)
+            .exact_size(
+                LimitKind::IntegerBits,
+                shifted_bits(&placed.coefficient, upscale),
+            )
+            .exact_size(
+                LimitKind::DecimalDigits,
+                shifted_digits(&placed.coefficient, upscale),
+            )
             .size(LimitKind::ValueOccurrences, 1)
             .results(1),
     )?;
@@ -724,60 +773,23 @@ pub(crate) struct Placed {
 }
 
 impl DecimalType {
-    /// Decide how `value` is placed at `T` under the target rounding mode and
-    /// the exact retained sizes of that placement, without materializing a
-    /// coefficient larger than the inputs. Strict `exact` refuses a nonzero
+    /// Decide whether `value` is placed at `T` exactly or by a rounding step,
+    /// without materializing any coefficient. Strict `exact` refuses a nonzero
     /// discarded digit.
-    pub(crate) fn placement(&self, value: &Rational) -> Result<Placement, Refusal> {
-        let (numerator, denominator) = (value.numerator(), value.denominator());
-        let target_scale = u64::from(self.max_scale);
-        let terminating = terminating_scale(denominator)
+    pub(crate) fn placement<'a>(&self, value: &'a Rational) -> Result<Placement<'a>, Refusal> {
+        let terminating = terminating_scale(value.denominator())
             .and_then(|scale| u32::try_from(scale).ok())
             .filter(|scale| *scale <= self.max_scale);
-        if let Some(scale) = terminating {
-            // `n/d = n × (10^k / d) × 10^-k` with `k <= bits(d)`.
-            let factor = Integer::power_of_ten(u64::from(scale)).exact_div(denominator);
-            let placed = Placed {
-                coefficient: numerator.mul(&factor),
-                scale,
-                loss: None,
-            };
-            let (bits, digits) = placed.retained_sizes(self);
-            return Ok(Placement {
-                bits,
-                digits: Integer::from(digits),
-                kind: PlacementKind::Placed(placed),
-            });
-        }
         // A reduced value that is not a multiple of `10^-T` always discards a
         // nonzero digit.
-        if self.rounding == RoundingMode::Exact {
+        if terminating.is_none() && self.rounding == RoundingMode::Exact {
             return Err(Refusal::InexactDecimal);
         }
-        if target_scale
-            <= ANALYTIC_PLACEMENT_BITS_FACTOR.saturating_mul(denominator.magnitude_bits())
-        {
-            // Here `T <= ANALYTIC_PLACEMENT_BITS_FACTOR × bits(d) = 2 × bits(d)`,
-            // so `bits(10^T) <= ⌊T × log2 10⌋ + 1 < 6.65 × bits(d) + 1` and
-            // `n × 10^T` has at most `bits(n) + 7 × bits(d) + 1` bits.
-            let placed = self.round_at_target(value)?;
-            let (bits, digits) = placed.retained_sizes(self);
-            return Ok(Placement {
-                bits,
-                digits: Integer::from(digits),
-                kind: PlacementKind::Placed(placed),
-            });
-        }
-        let (bits, digits) = rounded_sizes(&numerator.abs(), denominator, target_scale);
-        Ok(Placement {
-            bits,
-            digits,
-            kind: PlacementKind::Deferred(value.clone()),
-        })
+        Ok(Placement { value, terminating })
     }
 
     /// Round `value × 10^T` to an integer coefficient at `T`, recording the
-    /// loss. The caller has charged or bounded its size.
+    /// loss. The caller has charged its size.
     fn round_at_target(&self, value: &Rational) -> Result<Placed, Refusal> {
         let (numerator, denominator) = (value.numerator(), value.denominator());
         let units = Rational::from_integer(
@@ -799,95 +811,40 @@ impl DecimalType {
     }
 }
 
-/// A rounded placement is sized analytically once `T > 2 × bits(d)`; below
-/// that, `n × 10^T` is bounded by the inputs and is materialized. The two
-/// routes agree; the bound only avoids allocating a coefficient before its
-/// charge.
-const ANALYTIC_PLACEMENT_BITS_FACTOR: u64 = 2;
-
-/// A decided placement at `T` with its exact retained `(integer_bits,
-/// decimal_digits)`.
-pub(crate) struct Placement {
-    bits: Integer,
-    digits: Integer,
-    kind: PlacementKind,
+/// A decided placement of a reduced value `a/b` at `T`, not yet materialized.
+pub(crate) struct Placement<'a> {
+    value: &'a Rational,
+    /// The least exact scale `k <= T`, or `None` for a rounding step.
+    terminating: Option<u32>,
 }
 
-enum PlacementKind {
-    /// A coefficient already bounded by the inputs.
-    Placed(Placed),
-    /// A rounded coefficient whose materialization waits for its charge.
-    Deferred(Rational),
-}
-
-impl Placement {
-    /// Exact retained `(integer_bits, decimal_digits)` of `v × 10^T`.
-    pub(crate) fn retained_sizes(&self) -> (&Integer, &Integer) {
-        (&self.bits, &self.digits)
+impl Placement<'_> {
+    /// `(sbits(a,T), sdigits(a,T))`, which bound the retained coefficient
+    /// `v × 10^T`; an integer target is scale zero, where this is `bits(a)`.
+    pub(crate) fn retained_sizes(&self, target: &DecimalType) -> (Integer, Integer) {
+        let (numerator, scale) = (self.value.numerator(), u64::from(target.max_scale));
+        (
+            shifted_bits(numerator, scale),
+            shifted_digits(numerator, scale),
+        )
     }
 
     /// Materialize the placed coefficient after its sizes were charged.
     pub(crate) fn materialize(self, target: &DecimalType) -> Result<Placed, Refusal> {
-        match self.kind {
-            PlacementKind::Placed(placed) => Ok(placed),
-            PlacementKind::Deferred(value) => target.round_at_target(&value),
+        match self.terminating {
+            Some(scale) => {
+                // `a/b = a × (10^k / b) × 10^-k`, bounded by `a × 10^T`.
+                let factor =
+                    Integer::power_of_ten(u64::from(scale)).exact_div(self.value.denominator());
+                Ok(Placed {
+                    coefficient: self.value.numerator().mul(&factor),
+                    scale,
+                    loss: None,
+                })
+            }
+            None => target.round_at_target(self.value),
         }
     }
-}
-
-/// Exact `(bits, digits)` of `round(a × 10^T / d)` for `a >= 1`, `d > 1`,
-/// `d ∤ a × 10^T` and `T > 2 × bits(d)`, without the power.
-///
-/// Let `M = a × 10^T` and `q = floor(M / d)`; `r = M mod d` is nonzero, so the
-/// rounded magnitude is `q` or `q + 1` and `M` never equals `d × 2^j` or
-/// `d × 10^j`.
-///
-/// Digits: `q >= 10^j` exactly when `a × 10^(T-j) > d`, so with `t0` the least
-/// integer where `a × 10^t0 > d`, `digits(q) = T - t0 + 1`. Bits: with
-/// `B = bits(M)`, `q >= 2^j` holds for every `j < B - bits(d)` and for no
-/// `j > B - bits(d)`, so `bits(q) = B - bits(d) + [M > d × 2^(B - bits(d))]`.
-///
-/// `q + 1` is neither a power of ten nor of two: `M + d - r = d × 10^k` or
-/// `d × 2^k` with `k >= bits(q) - 1 > bits(d)` would give
-/// `v2(d - r) >= min(T, k) >= bits(d)`, but `0 < d - r < d`. So `q + 1` has
-/// the sizes of `q` and the rounding direction does not change them.
-fn rounded_sizes(
-    magnitude: &Integer,
-    denominator: &Integer,
-    target_scale: u64,
-) -> (Integer, Integer) {
-    let ten = Integer::from(10_i64);
-    let least_scale = if magnitude > denominator {
-        // `t0 = -k` for the greatest `k` with `a > d × 10^k`.
-        let mut lifted = denominator.mul(&ten);
-        let mut k = Integer::zero();
-        while magnitude > &lifted {
-            lifted = lifted.mul(&ten);
-            k = k.add(&Integer::one());
-        }
-        k.neg()
-    } else {
-        let mut scaled = magnitude.mul(&ten);
-        let mut t = Integer::one();
-        while &scaled <= denominator {
-            scaled = scaled.mul(&ten);
-            t = t.add(&Integer::one());
-        }
-        t
-    };
-    let target_scale = Integer::from(target_scale);
-    let digits = target_scale.add(&Integer::one()).sub(&least_scale);
-    let power_bits = Integer::power_product_bits(magnitude, &ten, &target_scale);
-    let candidate = power_bits.sub(&Integer::from(denominator.magnitude_bits()));
-    let above =
-        Integer::compare_power_product(magnitude, &ten, &target_scale, denominator, &candidate)
-            .is_gt();
-    let bits = if above {
-        candidate.add(&Integer::one())
-    } else {
-        candidate
-    };
-    (bits, digits)
 }
 
 /// The least `k` with `denominator | 10^k`, or `None` when the positive
@@ -911,13 +868,9 @@ fn terminating_scale(denominator: &Integer) -> Option<u64> {
 }
 
 impl Placed {
-    /// `(integer_bits, decimal_digits)` of the retained coefficient `v × 10^T`.
-    pub(crate) fn retained_sizes(&self, target: &DecimalType) -> (Integer, u64) {
-        let lift = u64::from(target.max_scale.saturating_sub(self.scale));
-        (
-            shifted_bits(&self.coefficient, lift),
-            shifted_digits(&self.coefficient, lift),
-        )
+    /// The upscale shift `k = T − s` from this coefficient's scale into `T`.
+    fn upscale(&self, target: &DecimalType) -> u64 {
+        u64::from(target.max_scale.saturating_sub(self.scale))
     }
 
     /// Refuse a value outside the target's declared membership.
@@ -936,9 +889,9 @@ impl Placed {
 
     /// The completed result retaining `(v × 10^T, T)`.
     pub(crate) fn retain(self, target: &DecimalType) -> DecimalResult {
-        let lift = u64::from(target.max_scale.saturating_sub(self.scale));
+        let upscale = self.upscale(target);
         DecimalResult {
-            value: Decimal::new(expand_one((&self.coefficient, lift)), target.max_scale),
+            value: Decimal::new(expand_one((&self.coefficient, upscale)), target.max_scale),
             loss: self.loss,
         }
     }
@@ -962,21 +915,6 @@ enum Intermediate {
 }
 
 impl Intermediate {
-    /// `(maxparts, max(digits(numerator), digits(denominator)))`. A scaled
-    /// integer's denominator `1` never exceeds its numerator's sizes.
-    fn sizes(&self) -> (u64, u64) {
-        match self {
-            Self::Scaled { value, .. } => (value.magnitude_bits(), value.decimal_digits()),
-            Self::Quotient(value) => (
-                value.max_part_bits(),
-                value
-                    .numerator()
-                    .decimal_digits()
-                    .max(value.denominator().decimal_digits()),
-            ),
-        }
-    }
-
     /// The loss record's exact value, keeping the working-scale power of ten
     /// factored.
     fn exact_loss_value(&self, target_scale: u32) -> ExactLossValue {
@@ -1057,18 +995,26 @@ fn expand_one((coefficient, shift): Shifted<'_>) -> Integer {
     }
 }
 
-/// `bits(c × 10^shift)`, derived without allocating the power of ten.
-fn shifted_bits(value: &Integer, shift: u64) -> Integer {
-    Integer::power_product_bits(value, &Integer::from(10_i64), &Integer::from(shift))
+/// `sbits(c,k)` from `quire.value.accounting/v1`: `bits(c)` when `k = 0` and
+/// `bits(c) + bits(10^k)` otherwise, derived from the unshifted coefficient and
+/// never from the product, without allocating the power of ten.
+pub(crate) fn shifted_bits(coefficient: &Integer, shift: u64) -> Integer {
+    let bits = Integer::from(coefficient.magnitude_bits());
+    if shift == 0 {
+        return bits;
+    }
+    let power = Integer::power_product_bits(
+        &Integer::one(),
+        &Integer::from(10_i64),
+        &Integer::from(shift),
+    );
+    bits.add(&power)
 }
 
-/// `digits(c × 10^shift)`, derived without allocating the power of ten.
-fn shifted_digits(value: &Integer, shift: u64) -> u64 {
-    if value.is_zero() {
-        1
-    } else {
-        value.decimal_digits().saturating_add(shift)
-    }
+/// `sdigits(c,k) = digits(c) + k` from `quire.value.accounting/v1`, derived
+/// from the unshifted coefficient.
+pub(crate) fn shifted_digits(coefficient: &Integer, shift: u64) -> Integer {
+    Integer::from(coefficient.decimal_digits()).add(&Integer::from(shift))
 }
 
 /// Round a non-integer reduced rational to an integer, or `None` for `exact`.

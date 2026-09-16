@@ -10,8 +10,9 @@ relationships:
 
 ## Description
 
-Execute every QSpec 5d88578 TC-192 vector on the runtime and on quire-spec-language d9d5273.
-Evidence: `conformance/qsl-agreement/tests/tc_192_integer_division.rs` (`make conformance`).
+Execute every QSpec 7d7943a TC-192 vector on the runtime and on quire-spec-language d9d5273.
+Evidence: `conformance/qsl-agreement/tests/tc_192_integer_division.rs` (`make conformance`) and the
+arithmetic allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 
 ## Test Procedure
 
@@ -20,6 +21,8 @@ Evidence: `conformance/qsl-agreement/tests/tc_192_integer_division.rs` (`make co
    of value, outcome kind, charge sequence and consumed counters.
 3. Deny every admitted charge and compare the `Incomplete` records.
 4. Sweep truncating, floor and Euclidean division and modulus over generated operands.
+5. Charge division and modulus arithmetic at `max(bits(a), bits(b))` exact and one under, and deny
+   it by injection with no quotient or remainder allocation.
 
 ## Expected Results
 

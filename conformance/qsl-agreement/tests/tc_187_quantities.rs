@@ -6,6 +6,13 @@
 //! recomputed from preimages. U11's topology refusals (two roots, no root, a
 //! target cycle, an unknown target, a cross-dimension target) and U06's zero
 //! scale are evaluated through both graph admissions.
+//!
+//! QSpec 7d7943a derives every `unit.rational-arithmetic` and
+//! `unit.target-domain` amount from operands, after the pinned authority
+//! d9d5273. The vectors named in [`CHARGES_PENDING_QSL_119`] agree with the
+//! authority on values, outcome kinds and charge schedules, and have their
+//! consumed counters and tuple-dependent outcomes checked against QSpec 7d7943a
+//! only (see [`lagged!`]).
 
 #[macro_use]
 mod support;
@@ -22,6 +29,26 @@ const EVALUATED: [&str; 30] = [
 /// Compiler-owned admission vectors.
 const ADMISSION_ONLY: [&str; 1] = ["U11 owner selection and stale keys"];
 
+/// Vectors whose charge amounts the authority d9d5273 does not yet derive from
+/// operands (known upstream lag, pending agent-ix/quire-spec-language#119).
+/// Their counters and tuple-dependent outcomes are checked against QSpec
+/// 7d7943a only; runtime charges are never bent to the authority. U13's only
+/// outcome is its QSpec incomplete record, so it has no authority run.
+const CHARGES_PENDING_QSL_119: [&str; 12] = [
+    "U10", "U13", "U15", "U16", "U19", "U20", "U22", "U23", "U24", "U26", "U28", "U29",
+];
+
+/// Agree with the authority on the unlimited outcome and charge schedule of
+/// `run`, then return the runtime's metered run under the TC-187 tuple, whose
+/// counters and outcome are checked against QSpec 7d7943a only.
+macro_rules! lagged {
+    ($tuple:expr; $(let $binding:pat = $value:expr;)* run |$m:ident| $run:expr) => {{
+        let _ = agree! {{ $(let $binding = $value;)* scheduled(UNLIMITED, |$m: &mut Meter| $run) }};
+        $(let $binding = $value;)*
+        metered(unit_tuple($tuple), |$m: &mut Meter| $run)
+    }};
+}
+
 /// Trace: TC-022, FR-007-AC-5, FR-007-AC-6
 #[test]
 fn tc_022_every_tc187_vector_is_evaluated_or_admission_only() {
@@ -29,7 +56,15 @@ fn tc_022_every_tc187_vector_is_evaluated_or_admission_only() {
     expected.insert(9, "U09b".into());
     assert_eq!(EVALUATED.to_vec(), expected);
     assert!(ADMISSION_ONLY[0].starts_with("U11"));
-    println!("TC-187 agreement: {} evaluated, {} admission-only", EVALUATED.len(), ADMISSION_ONLY.len());
+    assert!(CHARGES_PENDING_QSL_119
+        .iter()
+        .all(|name| EVALUATED.contains(name)));
+    println!(
+        "TC-187 agreement: {} evaluated, {} admission-only, {} with charges pending QSL #119",
+        EVALUATED.len(),
+        ADMISSION_ONLY.len(),
+        CHARGES_PENDING_QSL_119.len()
+    );
 }
 
 const READ: ChargePoint = ChargePoint::UnitIdentityRead;
@@ -74,7 +109,10 @@ fn tc_022_u01_u04_u09b_exact_affine_conversion_through_the_root() {
     assert_eq!(conversion.source(), &f.qi(250, "cm"));
     assert_eq!(conversion.canonical(), &ratio(5, 2));
     assert_eq!(conversion.unit(), &f.unit("m"));
-    assert_eq!(conversion.unit().dimension(), f.graph.dimension(f.key("L")).unwrap());
+    assert_eq!(
+        conversion.unit().dimension(),
+        f.graph.dimension(f.key("L")).unwrap()
+    );
     assert_eq!(sum, Ok(Outcome::Completed(f.q(ratio(7, 2), "m"))));
     for kelvin in &u04 {
         assert_eq!(exact(kelvin), ratio(5463, 20));
@@ -142,22 +180,45 @@ fn tc_022_u03_u05_u09_u14_u20_u22_u23_ill_typed_before_any_charge() {
         ];
         (operations, conversions, (comparisons, charged + meter.admitted_charges().len()))
     }};
-    use IllTypedCause::{AffineUnitArithmetic as Affine, DistinctUnits, IncompatibleDimensions as Dimensions};
-    let causes = [Dimensions, Affine, Affine, Affine, Affine, Affine, Dimensions, Dimensions, Affine, DistinctUnits, Affine, Affine];
+    use IllTypedCause::{
+        AffineUnitArithmetic as Affine, DistinctUnits, IncompatibleDimensions as Dimensions,
+    };
+    let causes = [
+        Dimensions,
+        Affine,
+        Affine,
+        Affine,
+        Affine,
+        Affine,
+        Dimensions,
+        Dimensions,
+        Affine,
+        DistinctUnits,
+        Affine,
+        Affine,
+    ];
     assert_eq!(operations, causes.map(|cause| Err(ill(cause))).to_vec());
     assert_eq!(conversions, [Err(ill(Dimensions)), Err(ill(Dimensions))]);
-    assert_eq!(comparisons.0, [Err(ill(DistinctUnits)), Err(ill(DistinctUnits))]);
+    assert_eq!(
+        comparisons.0,
+        [Err(ill(DistinctUnits)), Err(ill(DistinctUnits))]
+    );
     assert_eq!(comparisons.1, 0);
 }
 
 /// Trace: TC-022, FR-007-AC-5
 #[test]
 fn tc_022_u06_u11_graph_topology_refuses_before_any_quantity() {
-    let alias = |name, dimension, target, key_as| support::UnitSpec { key_as: Some(key_as), ..unit(name, dimension, Some(target), (1, 1), (0, 1)) };
+    let alias = |name, dimension, target, key_as| support::UnitSpec {
+        key_as: Some(key_as),
+        ..unit(name, dimension, Some(target), (1, 1), (0, 1))
+    };
     let graphs = [
         GraphSpec::tc187().with(unit("zero", "L", Some("m"), (0, 1), (0, 1))),
         GraphSpec::tc187().with(unit("root2", "L", None, (1, 1), (0, 1))),
-        GraphSpec::tc187().without(&["m", "cm", "in", "rev", "m_alias"]).with(unit("lonely", "L", Some("s"), (1, 1), (0, 1))),
+        GraphSpec::tc187()
+            .without(&["m", "cm", "in", "rev", "m_alias"])
+            .with(unit("lonely", "L", Some("s"), (1, 1), (0, 1))),
         GraphSpec::tc187()
             .with(unit("c2_old", "L", Some("m"), (1, 2), (0, 1)))
             .with(unit("c1", "L", Some("c2_old"), (1, 1), (0, 1)))
@@ -174,8 +235,20 @@ fn tc_022_u06_u11_graph_topology_refuses_before_any_quantity() {
         causes.push(agree! { admit_graph(&graph).map(|_| ()) });
     }
     use SemanticGraphCause::*;
-    let expected = [ZeroScale, DuplicateRoot, CrossDimensionTarget, TargetCycle, UnknownTarget, CrossDimensionTarget];
-    assert_eq!(causes, expected.map(|cause| Err(InvalidSemanticGraph { cause })).to_vec());
+    let expected = [
+        ZeroScale,
+        DuplicateRoot,
+        CrossDimensionTarget,
+        TargetCycle,
+        UnknownTarget,
+        CrossDimensionTarget,
+    ];
+    assert_eq!(
+        causes,
+        expected
+            .map(|cause| Err(InvalidSemanticGraph { cause }))
+            .to_vec()
+    );
 
     // No root at all: every L unit targets another L unit.
     let rootless = GraphSpec::tc187()
@@ -193,25 +266,63 @@ fn tc_022_u06_u11_graph_topology_refuses_before_any_quantity() {
 #[test]
 fn tc_022_u07_u08_u16_u17_u18_explicit_decimal_targets() {
     let f = fixture();
-    let run = |value: i64, from: &'static str, lo: i64, hi: i64, smin: u64, smax: u64, mode: usize, tuple: [u64; 6]| -> Metered<Conversion> {
+    let run = |value: i64,
+               from: &'static str,
+               lo: i64,
+               hi: i64,
+               smin: u64,
+               smax: u64,
+               mode: usize,
+               tuple: [u64; 6]|
+     -> Metered<Conversion> {
         agree! {{
             let f = fixture();
             let target = QuantityTarget::Decimal(decimal_type(lo, hi, smin, smax, RoundingMode::ALL[mode]));
             metered(unit_tuple(tuple), |m| convert_quantity(&f.qi(value, from), &f.unit("m"), &target, m))
         }}
     };
+    let lagged_run = |value: i64,
+                      from: &'static str,
+                      mode: usize,
+                      tuple: [u64; 6]|
+     -> Metered<Conversion> {
+        lagged! {
+            tuple;
+            let f = fixture();
+            let target = QuantityTarget::Decimal(decimal_type(-1000, 1000, 2, 2, RoundingMode::ALL[mode]));
+            run |m| convert_quantity(&f.qi(value, from), &f.unit("m"), &target, m)
+        }
+    };
     const EXACT: usize = 0;
     const NEAREST_EVEN: usize = 4;
     let wide = [u64::MAX, u64::MAX, u64::MAX, u64::MAX, u64::MAX, u64::MAX];
 
     // U07
-    assert_eq!(run(1, "in", -1000, 1000, 2, 2, EXACT, wide).0, Ok(Outcome::Refused(Refusal::InexactDecimal)));
-    let rounded = run(1, "in", -1000, 1000, 2, 2, NEAREST_EVEN, wide).0.unwrap().completed().unwrap();
-    let ConvertedValue::Decimal(result) = rounded.value() else { panic!("not decimal") };
-    assert_eq!(result.value().representation(), &DecimalRepresentation::new(int(3), 2));
+    assert_eq!(
+        lagged_run(1, "in", EXACT, wide).0,
+        Ok(Outcome::Refused(Refusal::InexactDecimal))
+    );
+    let rounded = lagged_run(1, "in", NEAREST_EVEN, wide)
+        .0
+        .unwrap()
+        .completed()
+        .unwrap();
+    let ConvertedValue::Decimal(result) = rounded.value() else {
+        panic!("not decimal")
+    };
+    assert_eq!(
+        result.value().representation(),
+        &DecimalRepresentation::new(int(3), 2)
+    );
     let loss = result.loss().unwrap();
     assert_eq!(
-        (loss.exact_numerator(), loss.exact_denominator(), loss.rounded_coefficient(), loss.rounded_scale(), loss.mode()),
+        (
+            loss.exact_numerator(),
+            loss.exact_denominator(),
+            loss.rounded_coefficient(),
+            loss.rounded_scale(),
+            loss.mode()
+        ),
         (&int(127), int(5000), &int(3), 2, RoundingMode::NearestEven)
     );
     assert_eq!(rounded.canonical(), &ratio(127, 5000));
@@ -223,7 +334,10 @@ fn tc_022_u07_u08_u16_u17_u18_explicit_decimal_targets() {
         match outcome {
             Outcome::Completed(conversion) => {
                 assert!(admitted);
-                assert_eq!(conversion.value(), &ConvertedValue::Decimal(decimal_result(value)));
+                assert_eq!(
+                    conversion.value(),
+                    &ConvertedValue::Decimal(decimal_result(value))
+                );
             }
             other => {
                 assert!(!admitted);
@@ -232,15 +346,49 @@ fn tc_022_u07_u08_u16_u17_u18_explicit_decimal_targets() {
         }
     }
 
-    // U16
-    let exact_run = run(1, "in", -1000, 1000, 2, 2, EXACT, [13, 1, 1, 1, 6, 1]);
+    // U16: `unit.target-domain` carries `sbits(127,2) = 14` and
+    // `sdigits(127,2) = 5`; the events charge 14 (multiply) and 15 (add).
+    let exact_run = lagged_run(1, "in", EXACT, [15, 5, 1, 1, 6, 1]);
     assert_eq!(exact_run.0, Ok(Outcome::Refused(Refusal::InexactDecimal)));
     assert_eq!(exact_run.1, [READ, EDGE, EVENT, EVENT]);
-    assert_eq!(run(1, "in", -1000, 1000, 2, 2, NEAREST_EVEN, [13, 1, 1, 1, 6, 1]).0.map(|o| o.completed().is_some()), Ok(true));
-    assert_eq!(run(1, "in", -1000, 1000, 2, 2, EXACT, [13, 1, 1, 1, 4, 1]).0, Ok(Outcome::Refused(Refusal::InexactDecimal)));
+    let nearest = lagged_run(1, "in", NEAREST_EVEN, [15, 5, 1, 1, 6, 1]);
+    assert_eq!(nearest.0.map(|o| o.completed().is_some()), Ok(true));
+    assert_eq!(nearest.1, [READ, EDGE, EVENT, EVENT, TARGET, RETAIN]);
+    assert_eq!(nearest.2, [15, 5, 0, 0, 0, 0, 1, 1, 6, 1]);
     assert_eq!(
-        run(1, "in", -1000, 1000, 2, 2, NEAREST_EVEN, [13, 1, 1, 1, 4, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 4, 4, int(1), TARGET)))
+        lagged_run(1, "in", EXACT, [15, 5, 1, 1, 4, 1]).0,
+        Ok(Outcome::Refused(Refusal::InexactDecimal))
+    );
+    assert_eq!(
+        lagged_run(1, "in", NEAREST_EVEN, [15, 5, 1, 1, 4, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            4,
+            4,
+            int(1),
+            TARGET
+        )))
+    );
+    // One under each target amount.
+    assert_eq!(
+        lagged_run(1, "in", NEAREST_EVEN, [15, 4, 1, 1, 6, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::DecimalDigits,
+            4,
+            0,
+            int(5),
+            TARGET
+        )))
+    );
+    assert_eq!(
+        lagged_run(1, "in", NEAREST_EVEN, [14, 5, 1, 1, 6, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            14,
+            14,
+            int(15),
+            EVENT
+        )))
     );
 
     // U17
@@ -249,14 +397,35 @@ fn tc_022_u07_u08_u16_u17_u18_explicit_decimal_targets() {
     assert_eq!(u17.1, [READ, TARGET]);
     assert_eq!(
         run(3, "m", -2, 2, 0, 0, EXACT, [2, 1, 0, 1, 1, 0]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 1, 1, int(1), TARGET)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            1,
+            1,
+            int(1),
+            TARGET
+        )))
     );
 
     // U18
-    let u18 = run(1, "m", 0, 1, 0, 4_294_967_295, EXACT, [u64::MAX, 64, 0, 1, 2, 1]);
+    let u18 = run(
+        1,
+        "m",
+        0,
+        1,
+        0,
+        4_294_967_295,
+        EXACT,
+        [u64::MAX, 64, 0, 1, 2, 1],
+    );
     assert_eq!(
         u18.0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::DecimalDigits, 64, 0, big("4294967296"), TARGET)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::DecimalDigits,
+            64,
+            0,
+            big("4294967296"),
+            TARGET
+        )))
     );
 }
 
@@ -264,10 +433,18 @@ fn tc_022_u07_u08_u16_u17_u18_explicit_decimal_targets() {
 fn decimal_result(value: i64) -> DecimalResult {
     let target = decimal_type(-2, 2, 0, 0, RoundingMode::Exact);
     let f = fixture();
-    let converted = convert_quantity(&f.qi(value, "m"), &f.unit("m"), &QuantityTarget::Decimal(target), &mut Meter::new(UNLIMITED));
+    let converted = convert_quantity(
+        &f.qi(value, "m"),
+        &f.unit("m"),
+        &QuantityTarget::Decimal(target),
+        &mut Meter::new(UNLIMITED),
+    );
     match converted.unwrap().completed().unwrap().value() {
         ConvertedValue::Decimal(result) => {
-            assert_eq!(result.value().representation(), &DecimalRepresentation::new(int(value.into()), 0));
+            assert_eq!(
+                result.value().representation(),
+                &DecimalRepresentation::new(int(value.into()), 0)
+            );
             assert!(result.loss().is_none());
             result.clone()
         }
@@ -278,18 +455,33 @@ fn decimal_result(value: i64) -> DecimalResult {
 /// Trace: TC-022, FR-007-AC-5, FR-006-AC-3, FR-006-AC-4
 #[test]
 fn tc_022_u10_u15_u26_edge_schedules_and_named_denials() {
-    let run = |value: i64, from: &'static str, to: &'static str, tuple: [u64; 6]| -> Metered<Conversion> {
-        agree! {{
+    let run = |value: i64,
+               from: &'static str,
+               to: &'static str,
+               tuple: [u64; 6]|
+     -> Metered<Conversion> {
+        lagged! {
+            tuple;
             let f = fixture();
-            metered(unit_tuple(tuple), |m| convert_quantity(&f.qi(value, from), &f.unit(to), &QuantityTarget::Exact, m))
-        }}
+            run |m| convert_quantity(&f.qi(value, from), &f.unit(to), &QuantityTarget::Exact, m)
+        }
     };
-    // U10
-    let u10 = [7, 0, 1, 1, 6, 1];
+    // U10: the multiply event `bits(100) + bits(1)... = 8` is exact.
+    let u10 = [8, 0, 1, 1, 6, 1];
     let exact_run = run(100, "cm", "m", u10);
     assert_eq!(exact(&exact_run.0), whole(1));
     assert_eq!(exact_run.1, [READ, EDGE, EVENT, EVENT, TARGET, RETAIN]);
-    assert_eq!(exact_run.2, [7, 0, 0, 0, 0, 0, 1, 1, 6, 1]);
+    assert_eq!(exact_run.2, [8, 0, 0, 0, 0, 0, 1, 1, 6, 1]);
+    assert_eq!(
+        run(100, "cm", "m", [7, 0, 1, 1, 6, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            7,
+            7,
+            int(8),
+            EVENT
+        )))
+    );
     let denied = agree! {{
         let f = fixture();
         denials(unit_tuple(u10), |m| convert_quantity(&f.qi(100, "cm"), &f.unit("m"), &QuantityTarget::Exact, m))
@@ -300,25 +492,52 @@ fn tc_022_u10_u15_u26_edge_schedules_and_named_denials() {
         assert_eq!(results, 0);
     }
 
-    // U15
-    let u15 = run(1, "in", "cm", [13, 0, 2, 1, 9, 1]);
+    // U15: event amounts 14, 15, 15 and 14.
+    let u15 = run(1, "in", "cm", [15, 0, 2, 1, 9, 1]);
     assert_eq!(exact(&u15.0), ratio(127, 50));
-    assert_eq!(u15.1, [READ, EDGE, EDGE, EVENT, EVENT, EVENT, EVENT, TARGET, RETAIN]);
+    assert_eq!(
+        u15.1,
+        [READ, EDGE, EDGE, EVENT, EVENT, EVENT, EVENT, TARGET, RETAIN]
+    );
+    assert_eq!(u15.2, [15, 0, 0, 0, 0, 0, 2, 1, 9, 1]);
+    assert_eq!(
+        run(1, "in", "cm", [14, 0, 2, 1, 9, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            14,
+            14,
+            int(15),
+            EVENT
+        )))
+    );
     assert_eq!(
         run(1, "in", "cm", [7, 0, 1, 1, 9, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::UnitEdges, 1, 1, int(2), EDGE)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::UnitEdges,
+            1,
+            1,
+            int(2),
+            EDGE
+        )))
     );
 
     // U26
-    let u26 = run(1, "u2", "u1", [4, 0, 3, 1, 12, 1]);
+    let u26 = run(1, "u2", "u1", [6, 0, 3, 1, 12, 1]);
     assert_eq!(exact(&u26.0), whole(-9));
     let mut schedule = vec![READ, EDGE, EDGE, EDGE];
     schedule.extend([EVENT; 6]);
     schedule.extend([TARGET, RETAIN]);
     assert_eq!(u26.1, schedule);
+    assert_eq!(u26.2, [6, 0, 0, 0, 0, 0, 3, 1, 12, 1]);
     assert_eq!(
-        run(1, "u2", "u1", [4, 0, 2, 1, 12, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::UnitEdges, 2, 2, int(3), EDGE)))
+        run(1, "u2", "u1", [6, 0, 2, 1, 12, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::UnitEdges,
+            2,
+            2,
+            int(3),
+            EDGE
+        )))
     );
 }
 
@@ -327,19 +546,33 @@ fn tc_022_u10_u15_u26_edge_schedules_and_named_denials() {
 fn tc_022_u12_u13_u21_u27_u28_compound_arithmetic_and_powers() {
     let f = fixture();
     // `a op b` or `a ^ exponent`, with operands `(value, unit)`.
-    let run = |op: usize, a: (i64, &'static str), b: (i64, &'static str), exponent: &'static str, tuple: [u64; 6]| -> Metered<Quantity> {
-        agree! {{
+    let run = |op: usize,
+               a: (i64, &'static str),
+               b: (i64, &'static str),
+               exponent: &'static str,
+               tuple: [u64; 6]|
+     -> Metered<Quantity> {
+        lagged! {
+            tuple;
             let f = fixture();
             let (a, b, n) = (f.qi(a.0, a.1), f.qi(b.0, b.1), big(exponent));
-            metered(unit_tuple(tuple), |m| {
+            run |m| {
                 let operation = match op {
                     0 => QuantityOperation::Multiply(&a, &b),
                     1 => QuantityOperation::Divide(&a, &b),
                     _ => QuantityOperation::Power(&a, &n),
                 };
                 evaluate_quantity(operation, m)
-            })
-        }}
+            }
+        }
+    };
+    // U13 has no unlimited run: its power is never computable.
+    let runtime_only = |exponent: &'static str, tuple: [u64; 6]| -> Metered<Quantity> {
+        let f = fixture();
+        let (a, n) = (f.qi(2, "m"), big(exponent));
+        metered(unit_tuple(tuple), |m| {
+            evaluate_quantity(QuantityOperation::Power(&a, &n), m)
+        })
     };
     const MUL: usize = 0;
     const DIV: usize = 1;
@@ -348,31 +581,90 @@ fn tc_022_u12_u13_u21_u27_u28_compound_arithmetic_and_powers() {
     let completed = |run: Metered<Quantity>| run.0.unwrap().completed().unwrap();
 
     // U12
-    assert_eq!(completed(run(MUL, (2, "m"), (3, "s"), "0", wide)), Quantity::new(whole(6), f.compound(&[("m", 1), ("s", 1)])));
-    assert_eq!(completed(run(DIV, (6, "m"), (2, "s"), "0", wide)), Quantity::new(whole(3), f.compound(&[("m", 1), ("s", -1)])));
-    assert_eq!(completed(run(POW, (2, "m"), (0, "m"), "2", wide)), Quantity::new(whole(4), f.compound(&[("m", 2)])));
+    assert_eq!(
+        completed(run(MUL, (2, "m"), (3, "s"), "0", wide)),
+        Quantity::new(whole(6), f.compound(&[("m", 1), ("s", 1)]))
+    );
+    assert_eq!(
+        completed(run(DIV, (6, "m"), (2, "s"), "0", wide)),
+        Quantity::new(whole(3), f.compound(&[("m", 1), ("s", -1)]))
+    );
+    assert_eq!(
+        completed(run(POW, (2, "m"), (0, "m"), "2", wide)),
+        Quantity::new(whole(4), f.compound(&[("m", 2)]))
+    );
     let one = completed(run(DIV, (5, "m"), (5, "m"), "0", wide));
-    assert_eq!(one, Quantity::new(whole(1), QuantityUnit::Compound(CompoundUnit::dimensionless())));
+    assert_eq!(
+        one,
+        Quantity::new(
+            whole(1),
+            QuantityUnit::Compound(CompoundUnit::dimensionless())
+        )
+    );
     assert!(one.unit().dimension().is_dimensionless());
 
-    // U13
-    let u13 = run(POW, (2, "m"), (0, "m"), "18446744073709551616", [64, 0, 0, 1, 5, 1]);
+    // U13: `abs(n) × maxparts(2) = 2^64 × 2`, exactly, before the power.
+    let u13 = runtime_only("18446744073709551616", [64, 0, 0, 1, 5, 1]);
     assert_eq!(
         u13.0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 64, 2, big("18446744073709551617"), EVENT)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            64,
+            2,
+            big("36893488147419103232"),
+            EVENT
+        )))
     );
     assert_eq!(u13.1, [READ]);
+    // The power amount at exact and one under: `(2/3 m)^3` charges `3 × 2 = 6`.
+    let cube = |tuple: [u64; 6]| -> Metered<Quantity> {
+        lagged! {
+            tuple;
+            let f = fixture();
+            let (a, n) = (f.q(ratio(2, 3), "m"), int(3));
+            run |m| evaluate_quantity(QuantityOperation::Power(&a, &n), m)
+        }
+    };
+    assert_eq!(
+        completed(cube([6, 0, 0, 1, 4, 1])),
+        Quantity::new(ratio(8, 27), f.compound(&[("m", 3)]))
+    );
+    assert_eq!(
+        cube([5, 0, 0, 1, 4, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            5,
+            2,
+            int(6),
+            EVENT
+        )))
+    );
 
     // U21
     let u21 = run(POW, (0, "m"), (0, "m"), "0", [1, 0, 0, 1, 4, 1]);
     assert_eq!(u21.1, [READ, EVENT, TARGET, RETAIN]);
-    assert_eq!(completed(u21), Quantity::new(whole(1), QuantityUnit::Compound(CompoundUnit::dimensionless())));
+    assert_eq!(
+        completed(u21),
+        Quantity::new(
+            whole(1),
+            QuantityUnit::Compound(CompoundUnit::dimensionless())
+        )
+    );
     let undefined = run(POW, (0, "m"), (0, "m"), "-1", [1, 0, 0, 1, 1, 0]);
-    assert_eq!(undefined.0, Ok(Outcome::Undefined(Undefined::DivisionByZero)));
+    assert_eq!(
+        undefined.0,
+        Ok(Outcome::Undefined(Undefined::DivisionByZero))
+    );
     assert_eq!(undefined.1, [READ]);
     assert_eq!(
         run(POW, (0, "m"), (0, "m"), "-1", [1, 0, 0, 1, 0, 0]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 0, 0, int(1), READ)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            0,
+            0,
+            int(1),
+            READ
+        )))
     );
 
     // U27
@@ -381,20 +673,45 @@ fn tc_022_u12_u13_u21_u27_u28_compound_arithmetic_and_powers() {
     assert_eq!(u27.1, [READ, READ]);
     assert_eq!(
         run(DIV, (1, "cm"), (0, "cm"), "0", [1, 0, 0, 2, 1, 0]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 1, 1, int(1), READ)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            1,
+            1,
+            int(1),
+            READ
+        )))
     );
 
-    // U28
-    let u28 = run(MUL, (1, "cm"), (1, "in"), "0", [19, 0, 2, 2, 11, 1]);
-    assert_eq!(u28.1, [READ, READ, EDGE, EDGE, EVENT, EVENT, EVENT, EVENT, EVENT, TARGET, RETAIN]);
-    assert_eq!(completed(u28), Quantity::new(ratio(127, 500_000), f.compound(&[("m", 2)])));
+    // U28: amounts 8, 9, 14, 15, then the multiplication's 20.
+    let u28 = run(MUL, (1, "cm"), (1, "in"), "0", [20, 0, 2, 2, 11, 1]);
     assert_eq!(
-        run(MUL, (1, "cm"), (1, "in"), "0", [12, 0, 2, 2, 11, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 12, 7, int(13), EVENT)))
+        u28.1,
+        [READ, READ, EDGE, EDGE, EVENT, EVENT, EVENT, EVENT, EVENT, TARGET, RETAIN]
+    );
+    assert_eq!(u28.2, [20, 0, 0, 0, 0, 0, 2, 2, 11, 1]);
+    assert_eq!(
+        completed(u28),
+        Quantity::new(ratio(127, 500_000), f.compound(&[("m", 2)]))
     );
     assert_eq!(
-        run(MUL, (1, "cm"), (1, "in"), "0", [18, 0, 2, 2, 11, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 18, 13, int(19), EVENT)))
+        run(MUL, (1, "cm"), (1, "in"), "0", [13, 0, 2, 2, 11, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            13,
+            9,
+            int(14),
+            EVENT
+        )))
+    );
+    assert_eq!(
+        run(MUL, (1, "cm"), (1, "in"), "0", [19, 0, 2, 2, 11, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            19,
+            15,
+            int(20),
+            EVENT
+        )))
     );
 }
 
@@ -403,19 +720,38 @@ fn tc_022_u12_u13_u21_u27_u28_compound_arithmetic_and_powers() {
 fn tc_022_u19_u20_u24_same_unit_sums_charge_no_edge() {
     let f = fixture();
     let run = |a: i64, b: i64, name: &'static str, tuple: [u64; 6]| -> Metered<Quantity> {
-        agree! {{
+        lagged! {
+            tuple;
             let f = fixture();
-            metered(unit_tuple(tuple), |m| evaluate_quantity(QuantityOperation::Add(&f.qi(a, name), &f.qi(b, name)), m))
-        }}
+            run |m| evaluate_quantity(QuantityOperation::Add(&f.qi(a, name), &f.qi(b, name)), m)
+        }
     };
-    for (a, b, name, tuple, sum) in [(2, 3, "m", [3, 0, 0, 2, 5, 1], 5), (1, 2, "u2", [2, 0, 0, 2, 5, 1], 3), (1, 2, "cm", [2, 0, 0, 2, 5, 1], 3)] {
-        let exact_run = run(a, b, name, tuple);
+    // The add event `max(bits(a) + bits(1), bits(b) + bits(1)) + 1 = 4`.
+    for (a, b, name, sum) in [(2, 3, "m", 5), (1, 2, "u2", 3), (1, 2, "cm", 3)] {
+        let exact_run = run(a, b, name, [4, 0, 0, 2, 5, 1]);
         assert_eq!(exact_run.0, Ok(Outcome::Completed(f.qi(sum, name))));
         assert_eq!(exact_run.1, [READ, READ, EVENT, TARGET, RETAIN]);
+        assert_eq!(exact_run.2, [4, 0, 0, 0, 0, 0, 0, 2, 5, 1]);
+        assert_eq!(
+            run(a, b, name, [3, 0, 0, 2, 5, 1]).0,
+            Ok(Outcome::Incomplete(incomplete(
+                LimitKind::IntegerBits,
+                3,
+                2,
+                int(4),
+                EVENT
+            )))
+        );
     }
     assert_eq!(
-        run(2, 3, "m", [3, 0, 0, 2, 4, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 4, 4, int(1), RETAIN)))
+        run(2, 3, "m", [4, 0, 0, 2, 4, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            4,
+            4,
+            int(1),
+            RETAIN
+        )))
     );
 }
 
@@ -423,21 +759,34 @@ fn tc_022_u19_u20_u24_same_unit_sums_charge_no_edge() {
 #[test]
 fn tc_022_u22_u25_compound_conversions() {
     let f = fixture();
-    let run = |terms: &'static [(&'static str, i64)], to: &'static str, tuple: [u64; 6]| -> Metered<Conversion> {
-        agree! {{
+    let run = |terms: &'static [(&'static str, i64)],
+               to: &'static str,
+               tuple: [u64; 6]|
+     -> Metered<Conversion> {
+        lagged! {
+            tuple;
             let f = fixture();
-            metered(unit_tuple(tuple), |m| convert_quantity(&Quantity::new(whole(4), f.compound(terms)), &f.unit(to), &QuantityTarget::Exact, m))
-        }}
+            run |m| convert_quantity(&Quantity::new(whole(4), f.compound(terms)), &f.unit(to), &QuantityTarget::Exact, m)
+        }
     };
     let m2 = run(&[("m", 2)], "m2", [3, 0, 0, 1, 3, 1]);
     assert_eq!(exact(&m2.0), whole(4));
     assert_eq!(m2.1, [READ, TARGET, RETAIN]);
-    let cm2 = run(&[("m", 2)], "cm2", [16, 0, 1, 1, 6, 1]);
+    // The reverse edge: subtract `0/1` at 5, then divide by `1/10000` at
+    // `bits(4) + bits(10000) = 17`.
+    let cm2 = run(&[("m", 2)], "cm2", [17, 0, 1, 1, 6, 1]);
     assert_eq!(exact(&cm2.0), whole(40_000));
     assert_eq!(cm2.1, [READ, EDGE, EVENT, EVENT, TARGET, RETAIN]);
+    assert_eq!(cm2.2, [17, 0, 0, 0, 0, 0, 1, 1, 6, 1]);
     assert_eq!(
-        run(&[("m", 2)], "cm2", [15, 0, 1, 1, 6, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 15, 3, int(16), EVENT)))
+        run(&[("m", 2)], "cm2", [16, 0, 1, 1, 6, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            16,
+            5,
+            int(17),
+            EVENT
+        )))
     );
 
     // U25
@@ -460,60 +809,128 @@ fn tc_022_u22_u25_compound_conversions() {
         assert_eq!(exact(&step.0), whole(1));
         assert_eq!(step.1, [READ, TARGET, RETAIN]);
     }
-    assert_eq!(to_joule.0.unwrap().completed().unwrap().unit(), &f.unit("J"));
+    assert_eq!(
+        to_joule.0.unwrap().completed().unwrap().unit(),
+        &f.unit("J")
+    );
 }
 
 /// Trace: TC-022, FR-007-AC-5, FR-006-AC-3
 #[test]
 fn tc_022_u23_comparisons_order_by_root_value() {
     let run = |op: usize, a: i64, b: i64, name: &'static str, tuple: [u64; 6]| -> Metered<bool> {
-        agree! {{
+        lagged! {
+            tuple;
             let f = fixture();
-            metered(unit_tuple(tuple), |m| compare_quantity(ComparisonOperator::ALL[op], &f.qi(a, name), &f.qi(b, name), m))
-        }}
+            run |m| compare_quantity(ComparisonOperator::ALL[op], &f.qi(a, name), &f.qi(b, name), m)
+        }
     };
     const EQUAL: usize = 0;
     const LESS: usize = 2;
-    let ordered = run(LESS, 1, 2, "degC", [13, 0, 2, 2, 9, 1]);
+    // The offset add `2 + 5463/20` is `max(2 + 5, 13 + 1) + 1 = 15`.
+    let ordered = run(LESS, 1, 2, "degC", [15, 0, 2, 2, 9, 1]);
     assert_eq!(ordered.0, Ok(Outcome::Completed(true)));
-    assert_eq!(ordered.1, [READ, READ, EDGE, EDGE, EVENT, EVENT, EVENT, EVENT, RETAIN]);
     assert_eq!(
-        run(LESS, 1, 2, "degC", [13, 0, 2, 2, 8, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 8, 8, int(1), RETAIN)))
+        ordered.1,
+        [READ, READ, EDGE, EDGE, EVENT, EVENT, EVENT, EVENT, RETAIN]
     );
-    assert_eq!(run(LESS, 1, 2, "rev", [u64::MAX; 6]).0, Ok(Outcome::Completed(false)));
-    assert_eq!(run(EQUAL, 1, 1, "degC", [u64::MAX; 6]).0, Ok(Outcome::Completed(true)));
+    assert_eq!(ordered.2, [15, 0, 0, 0, 0, 0, 2, 2, 9, 1]);
+    assert_eq!(
+        run(LESS, 1, 2, "degC", [14, 0, 2, 2, 9, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            14,
+            2,
+            int(15),
+            EVENT
+        )))
+    );
+    assert_eq!(
+        run(LESS, 1, 2, "degC", [15, 0, 2, 2, 8, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            8,
+            8,
+            int(1),
+            RETAIN
+        )))
+    );
+    assert_eq!(
+        run(LESS, 1, 2, "rev", [u64::MAX; 6]).0,
+        Ok(Outcome::Completed(false))
+    );
+    assert_eq!(
+        run(EQUAL, 1, 1, "degC", [u64::MAX; 6]).0,
+        Ok(Outcome::Completed(true))
+    );
 }
 
 /// Trace: TC-022, FR-007-AC-5, FR-006-AC-3
 #[test]
 fn tc_022_u29_integer_targets() {
-    let run = |value: i64, from: &'static str, mode: usize, tuple: [u64; 6]| -> Metered<Conversion> {
-        agree! {{
+    let run = |value: i64,
+               from: &'static str,
+               mode: usize,
+               tuple: [u64; 6]|
+     -> Metered<Conversion> {
+        lagged! {
+            tuple;
             let f = fixture();
             let target = QuantityTarget::Integer { domain: IntegerInterval::new(int(-2), int(2)).unwrap(), rounding: RoundingMode::ALL[mode] };
-            metered(unit_tuple(tuple), |m| convert_quantity(&f.qi(value, from), &f.unit("m"), &target, m))
-        }}
+            run |m| convert_quantity(&f.qi(value, from), &f.unit("m"), &target, m)
+        }
     };
     const EXACT: usize = 0;
     const NEAREST_EVEN: usize = 4;
-    let strict = run(1, "in", EXACT, [13, 0, 1, 1, 4, 1]);
+    let strict = run(1, "in", EXACT, [15, 0, 1, 1, 4, 1]);
     assert_eq!(strict.0, Ok(Outcome::Refused(Refusal::InexactDecimal)));
     assert_eq!(strict.1, [READ, EDGE, EVENT, EVENT]);
     assert_eq!(
-        run(1, "in", NEAREST_EVEN, [13, 0, 1, 1, 4, 1]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 4, 4, int(1), TARGET)))
+        run(1, "in", NEAREST_EVEN, [15, 0, 1, 1, 4, 1]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            4,
+            4,
+            int(1),
+            TARGET
+        )))
     );
-    let rounded = run(1, "in", NEAREST_EVEN, [u64::MAX; 6]).0.unwrap().completed().unwrap();
-    let ConvertedValue::Integer { value, loss } = rounded.value() else { panic!("not integer") };
+    // The integer target carries no `decimal_digits` amount.
+    let placed = run(1, "in", NEAREST_EVEN, [u64::MAX; 6]);
+    assert_eq!(placed.2[..2], [15, 0]);
+    let rounded = placed.0.unwrap().completed().unwrap();
+    let ConvertedValue::Integer { value, loss } = rounded.value() else {
+        panic!("not integer")
+    };
     assert_eq!(value.value(), &int(0));
-    assert_eq!(loss.as_ref().map(DecimalLoss::rounded_coefficient), Some(&int(0)));
+    assert_eq!(
+        loss.as_ref().map(DecimalLoss::rounded_coefficient),
+        Some(&int(0))
+    );
     let out = run(3, "m", EXACT, [2, 0, 0, 1, 2, 0]);
     assert_eq!(out.0, Ok(Outcome::Refused(Refusal::IntegerOutOfDomain)));
     assert_eq!(out.1, [READ, TARGET]);
+    // An integer target's `bits(a)` never exceeds the reduced value's
+    // `maxparts`, so for `3 m` (read 2, target 2) one under stops at the read.
+    assert_eq!(
+        run(3, "m", EXACT, [1, 0, 0, 1, 2, 0]).0,
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            1,
+            0,
+            int(2),
+            READ
+        )))
+    );
     assert_eq!(
         run(3, "m", EXACT, [2, 0, 0, 1, 1, 0]).0,
-        Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 1, 1, int(1), TARGET)))
+        Ok(Outcome::Incomplete(incomplete(
+            LimitKind::WorkUnits,
+            1,
+            1,
+            int(1),
+            TARGET
+        )))
     );
 }
 
@@ -535,7 +952,10 @@ impl Fraction {
         Self(-self.0, self.1)
     }
     fn rational(self) -> Rational {
-        let (n, d) = (i64::try_from(self.0).unwrap(), i64::try_from(self.1).unwrap());
+        let (n, d) = (
+            i64::try_from(self.0).unwrap(),
+            i64::try_from(self.1).unwrap(),
+        );
         ratio(n, d)
     }
 }
@@ -546,7 +966,10 @@ fn to_root(spec: &GraphSpec, name: &str, value: Fraction) -> Fraction {
     match unit.target {
         None => value,
         Some(target) => {
-            let (s, o) = (Fraction(unit.scale.0.into(), unit.scale.1.into()), Fraction(unit.offset.0.into(), unit.offset.1.into()));
+            let (s, o) = (
+                Fraction(unit.scale.0.into(), unit.scale.1.into()),
+                Fraction(unit.offset.0.into(), unit.offset.1.into()),
+            );
             to_root(spec, target, value.mul(s).add(o))
         }
     }
@@ -557,31 +980,124 @@ fn from_root(spec: &GraphSpec, name: &str, root: Fraction) -> Fraction {
     match unit.target {
         None => root,
         Some(target) => {
-            let (s, o) = (Fraction(unit.scale.0.into(), unit.scale.1.into()), Fraction(unit.offset.0.into(), unit.offset.1.into()));
+            let (s, o) = (
+                Fraction(unit.scale.0.into(), unit.scale.1.into()),
+                Fraction(unit.offset.0.into(), unit.offset.1.into()),
+            );
             from_root(spec, target, root).add(o.neg()).mul(s.inverse())
         }
     }
+}
+
+/// `bits(x)`, where zero has length one.
+fn bits(value: i128) -> u64 {
+    u64::from(128 - value.unsigned_abs().leading_zeros()).max(1)
+}
+
+/// A reduced fraction with a positive denominator.
+fn reduced(Fraction(n, d): Fraction) -> Fraction {
+    let (mut a, mut b) = (n.unsigned_abs(), d.unsigned_abs());
+    while b != 0 {
+        (a, b) = (b, a % b);
+    }
+    let g = i128::try_from(a).unwrap().max(1) * d.signum();
+    Fraction(n / g, d / g)
+}
+
+/// The `(scale, offset)` edges from a declared unit to its root.
+fn edges(spec: &GraphSpec, name: &str) -> Vec<(Fraction, Fraction)> {
+    let unit = spec.units.iter().find(|u| u.name == name).unwrap();
+    match unit.target {
+        None => Vec::new(),
+        Some(target) => {
+            let edge = (
+                reduced(Fraction(unit.scale.0.into(), unit.scale.1.into())),
+                reduced(Fraction(unit.offset.0.into(), unit.offset.1.into())),
+            );
+            let mut path = vec![edge];
+            path.extend(edges(spec, target));
+            path
+        }
+    }
+}
+
+/// The QSpec 7d7943a consumed counters of an unlimited exact conversion:
+/// `unit.identity-read` at `maxparts`, one `unit.edge` per edge, and per edge
+/// two `unit.rational-arithmetic` events sized by the rational row from the
+/// reduced operands only, then `unit.target-domain` and `unit.result-retain`.
+fn conversion_counters(spec: &GraphSpec, from: &str, to: &str, value: Fraction) -> Vec<u64> {
+    let [a, b] = [value.0, value.1].map(bits);
+    let mut high = a.max(b);
+    let multiply = |x: Fraction, y: Fraction| (bits(x.0) + bits(y.0)).max(bits(x.1) + bits(y.1));
+    let divide = |x: Fraction, y: Fraction| (bits(x.0) + bits(y.1)).max(bits(x.1) + bits(y.0));
+    let sum = |x: Fraction, y: Fraction| {
+        ((bits(x.0) + bits(y.1)).max(bits(y.0) + bits(x.1)) + 1).max(bits(x.1) + bits(y.1))
+    };
+    let (source, target) = (edges(spec, from), edges(spec, to));
+    let mut current = reduced(value);
+    for (scale, offset) in &source {
+        high = high.max(multiply(current, *scale));
+        current = reduced(current.mul(*scale));
+        high = high.max(sum(current, *offset));
+        current = reduced(current.add(*offset));
+    }
+    for (scale, offset) in target.iter().rev() {
+        high = high.max(sum(current, *offset));
+        current = reduced(current.add(offset.neg()));
+        high = high.max(divide(current, *scale));
+        current = reduced(current.mul(scale.inverse()));
+    }
+    let count = (source.len() + target.len()) as u64;
+    vec![high, 0, 0, 0, 0, 0, count, 1, 3 + 3 * count, 1]
 }
 
 /// Trace: TC-022, FR-007-AC-5, FR-006-AC-4
 #[test]
 fn tc_022_generated_conversions_arithmetic_and_denials_agree() {
     let spec = GraphSpec::tc187();
-    let families: [&[&str]; 2] = [&["m", "cm", "in", "rev", "m_alias"], &["K", "degC", "degF", "u1", "u2", "u3"]];
-    let values = [Fraction(0, 1), Fraction(1, 1), Fraction(-7, 3), Fraction(250, 1), Fraction(5463, 20)];
+    let families: [&[&str]; 2] = [
+        &["m", "cm", "in", "rev", "m_alias"],
+        &["K", "degC", "degF", "u1", "u2", "u3"],
+    ];
+    let values = [
+        Fraction(0, 1),
+        Fraction(1, 1),
+        Fraction(-7, 3),
+        Fraction(250, 1),
+        Fraction(5463, 20),
+    ];
     let mut vectors = 0_u32;
     for family in families {
         for from in family {
             for to in family {
                 for value in values {
-                    let (n, d) = (i64::try_from(value.0).unwrap(), i64::try_from(value.1).unwrap());
+                    let (n, d) = (
+                        i64::try_from(value.0).unwrap(),
+                        i64::try_from(value.1).unwrap(),
+                    );
                     let (converted, denied) = agree! {{
                         let f = fixture();
                         let run = |m: &mut Meter| convert_quantity(&f.q(ratio(n, d), from), &f.unit(to), &QuantityTarget::Exact, m);
-                        (metered(UNLIMITED, run), denials(UNLIMITED, run))
+                        (scheduled(UNLIMITED, run), denials(UNLIMITED, run))
                     }};
                     let expected = from_root(&spec, to, to_root(&spec, from, value)).rational();
                     assert_eq!(exact(&converted.0), expected, "{value:?} {from} -> {to}");
+                    // The schedule agrees with the authority; the amounts are
+                    // the runtime's alone, checked against QSpec 7d7943a.
+                    let f = fixture();
+                    let (_, _, consumed) = metered(UNLIMITED, |m| {
+                        convert_quantity(
+                            &f.q(ratio(n, d), from),
+                            &f.unit(to),
+                            &QuantityTarget::Exact,
+                            m,
+                        )
+                    });
+                    assert_eq!(
+                        consumed,
+                        conversion_counters(&spec, from, to, value),
+                        "{value:?} {from} -> {to}"
+                    );
                     assert_eq!(denied.len(), converted.1.len());
                     for (work, (point, _, outcome, results)) in (0_u64..).zip(denied) {
                         assert_eq!(outcome, Ok(Outcome::Incomplete(work_denied(work, point))));
@@ -598,7 +1114,8 @@ fn tc_022_generated_conversions_arithmetic_and_denials_agree() {
     for name in ["m", "cm", "in", "rev", "u2"] {
         for left in values {
             for right in values {
-                let (ln, ld, rn, rd) = (left.0 as i64, left.1 as i64, right.0 as i64, right.1 as i64);
+                let (ln, ld, rn, rd) =
+                    (left.0 as i64, left.1 as i64, right.0 as i64, right.1 as i64);
                 let outcomes = agree! {{
                     let f = fixture();
                     let (a, b) = (f.q(ratio(ln, ld), name), f.q(ratio(rn, rd), name));
@@ -619,13 +1136,25 @@ fn tc_022_generated_conversions_arithmetic_and_denials_agree() {
                 let product = outcomes.2.unwrap().completed().unwrap();
                 assert_eq!(product.value(), &lr.mul(rr).rational());
                 match outcomes.3.unwrap() {
-                    Outcome::Completed(quotient) => assert_eq!(quotient.value(), &lr.mul(rr.inverse()).rational()),
+                    Outcome::Completed(quotient) => {
+                        assert_eq!(quotient.value(), &lr.mul(rr.inverse()).rational())
+                    }
                     Outcome::Undefined(Undefined::DivisionByZero) => assert_eq!(right.0, 0),
                     other => panic!("unexpected {other:?}"),
                 }
                 let ordering = lr.rational().cmp(&rr.rational());
-                let expected = [ordering.is_eq(), ordering.is_ne(), ordering.is_lt(), ordering.is_le(), ordering.is_gt(), ordering.is_ge()];
-                assert_eq!(outcomes.4.map(|o| o.unwrap().completed().unwrap()), expected);
+                let expected = [
+                    ordering.is_eq(),
+                    ordering.is_ne(),
+                    ordering.is_lt(),
+                    ordering.is_le(),
+                    ordering.is_gt(),
+                    ordering.is_ge(),
+                ];
+                assert_eq!(
+                    outcomes.4.map(|o| o.unwrap().completed().unwrap()),
+                    expected
+                );
                 operations += 1;
             }
         }

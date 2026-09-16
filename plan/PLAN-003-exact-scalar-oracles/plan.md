@@ -15,7 +15,7 @@ relationships:
 
 The scalar slice of `agent-ix/quire-contract-runtime#16`: an optional `exact` feature carrying
 typed outcomes, `quire.value.accounting/v1` metering and the scalar operator families of complete V1
-at agent-ix/quire-specification@5d88578. The runtime implements that definition and is checked
+at agent-ix/quire-specification@7d7943a. The runtime implements that definition and is checked
 against it; quire-spec-language d9d5273 remains the value authority.
 
 Out of scope: composites, collections, equality plans and function calls

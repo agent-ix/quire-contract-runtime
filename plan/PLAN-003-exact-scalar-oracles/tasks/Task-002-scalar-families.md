@@ -14,9 +14,10 @@ relationships:
 ## Scope
 
 Implement integer division and modulus profiles, `Decimal[..]`, IEEE 754-2019 profiles,
-Unicode 17 text, enums, unit graphs and quantities, and the 5d88578 metered integer arithmetic,
-rational arithmetic, ordering and Boolean connectives. Every intermediate materialized before its
-charge is bounded by operands already admitted.
+Unicode 17 text, enums, unit graphs and quantities, and the 7d7943a metered integer arithmetic,
+rational arithmetic, ordering and Boolean connectives. Every arithmetic, normalize, rounding,
+retain-upscale, unit-event and target-domain amount is derived from operands and charged before any
+intermediate or result is allocated.
 
 ## Completion Evidence
 

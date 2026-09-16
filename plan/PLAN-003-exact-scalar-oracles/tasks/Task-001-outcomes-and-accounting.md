@@ -16,7 +16,7 @@ relationships:
 Add the `exact` feature (`alloc`, `num-bigint`, `num-integer`, `num-traits`,
 `unicode-normalization`, all exact-pinned) with private modules re-exported from `exact`:
 `Outcome`, closed `Refusal`/`Undefined` reasons, `IllTyped`, `ScalarLimits`, `LimitKind`,
-`ChargePoint` spellings from QSpec 5d88578, `Incomplete`, `InjectedDenial` and `Meter`.
+`ChargePoint` spellings from QSpec 7d7943a, `Incomplete`, `InjectedDenial` and `Meter`.
 
 ## Completion Evidence
 

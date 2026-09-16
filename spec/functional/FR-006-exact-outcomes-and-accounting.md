@@ -12,7 +12,7 @@ relationships:
 
 When a generated oracle evaluates a complete-V1 scalar operator through the optional `exact`
 feature, the runtime shall return one typed outcome and meter every charge named by
-`quire.value.accounting/v1` at agent-ix/quire-specification@5d88578
+`quire.value.accounting/v1` at agent-ix/quire-specification@7d7943a
 (`proposals/quire-v1/definitions/value-accounting.md`). The runtime is an implementation of that
 definition, not a second semantic authority: values and outcome kinds agree with the pinned
 quire-spec-language authority (FR-007), and charge schedules are taken from the QSpec definition.
@@ -53,11 +53,11 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 |----|----------|--------------|
 | FR-006-AC-1 | The four outcome dispositions are distinct; completed `false` is a value; refusal, undefined and incomplete reasons are closed enums. | Test (TC-016) |
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
-| FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec 5d88578 spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
+| FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec 7d7943a spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
 | FR-006-AC-5 | Exact sources contain no host float, `std`, `unsafe` or panic path, and the public surface equals the private-module re-export set. | Test (TC-016) |
 
 ## Dependencies
 
 - **Upstream**: [FR-002](./FR-002-safe-operators.md);
-  `ix://agent-ix/quire-specification` at `5d88578` (`value-accounting.md`).
+  `ix://agent-ix/quire-specification` at `7d7943a` (`value-accounting.md`).

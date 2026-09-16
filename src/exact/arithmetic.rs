@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Metered integer arithmetic, rational arithmetic, numeric ordering and
-//! Boolean connectives (`quire.value.accounting/v1`, QSpec 5d88578).
+//! Boolean connectives (`quire.value.accounting/v1`, QSpec 7d7943a).
 //!
-//! Each operation charges its named family in order: operands, then the exact
-//! arithmetic amount, then (for rationals) the reduced result, then an
+//! Each operation charges its named family in order: operands, then the
+//! arithmetic amount, then (for rationals) the unreduced intermediate, then an
 //! uncharged FR-044 result-domain membership decision, then retention. Every
-//! arithmetic amount is derived from the operands before the result is
-//! materialized (QSpec 5d88578); only the reduced rational, which needs the
-//! gcd of parts already admitted, is measured after it exists. A stopped
-//! operation exposes no value.
+//! arithmetic amount is derived from the bit and digit lengths of operands that
+//! are already materialized, never from the unmaterialized result, so the
+//! charge strictly precedes every result allocation. The rational normalize
+//! amount sizes the unreduced intermediate that the admitted arithmetic charge
+//! materialized. A stopped operation exposes no value.
 
 use core::cmp::Ordering;
 
 use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
-use super::decimal::{Decimal, DecimalRepresentation};
-use super::integer::{exact_bits, Integer, IntegerDomain};
+use super::decimal::{shifted_bits, shifted_digits, Decimal, DecimalRepresentation};
+use super::integer::{Integer, IntegerDomain};
 use super::outcome::{Outcome, Refusal, Stop, Undefined};
-use super::rational::{Rational, RationalDomain};
+use super::rational::{cross_bits, Parts, Rational, RationalArithmetic, RationalDomain};
 
 /// An `Integer` or `Int[..]` `+`, `-`, `*` or unary `-`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -42,12 +43,17 @@ impl IntegerOperation<'_> {
         }
     }
 
-    /// `bits(exact result)`, derived before the result exists.
-    fn result_bits(self) -> u64 {
+    /// The `integer-arithmetic.arithmetic` amount, derived from operand bit
+    /// lengths only: `bits(a)+bits(b)` for `*`, `max(bits(a),bits(b))+1` for
+    /// `+` and `-`, and `bits(a)` for unary `-`.
+    fn arithmetic_bits(self) -> u64 {
+        // Operands are materialized, so a sum of two bit lengths stays far
+        // below `u64::MAX`.
         match self {
-            Self::Add(a, b) => exact_bits(|p| a.dyadic(p).add(&b.dyadic(p))),
-            Self::Subtract(a, b) => exact_bits(|p| a.dyadic(p).sub(&b.dyadic(p))),
-            Self::Multiply(a, b) => exact_bits(|p| a.dyadic(p).mul(&b.dyadic(p))),
+            Self::Add(a, b) | Self::Subtract(a, b) => {
+                a.magnitude_bits().max(b.magnitude_bits()).saturating_add(1)
+            }
+            Self::Multiply(a, b) => a.magnitude_bits().saturating_add(b.magnitude_bits()),
             Self::Negate(a) => a.magnitude_bits(),
         }
     }
@@ -65,7 +71,8 @@ impl IntegerOperation<'_> {
 /// Evaluate one integer operation into `domain`.
 ///
 /// Charges `integer-arithmetic.operands`, `integer-arithmetic.arithmetic` at
-/// `bits(exact result)`, decides membership without a charge, then
+/// its operand-derived amount, computes the result, decides membership without
+/// a charge, then
 /// `integer-arithmetic.result-retain`.
 pub fn evaluate_integer(
     operation: IntegerOperation<'_>,
@@ -88,7 +95,7 @@ fn integer(
     )?;
     meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticArithmetic)
-            .size(LimitKind::IntegerBits, operation.result_bits()),
+            .size(LimitKind::IntegerBits, operation.arithmetic_bits()),
     )?;
     let result = operation.apply();
     if !domain.contains(&result) {
@@ -116,33 +123,15 @@ pub enum RationalOperation<'a> {
     IntegerDivide(&'a Integer, &'a Integer),
 }
 
-/// The unreduced `N/D` of a rational operation on `a/b` and `c/d`.
-#[derive(Clone, Copy)]
-enum Unreduced {
-    /// `(a×d ± c×b) / (b×d)`.
-    CrossSum { negate: bool },
-    /// `(a×c) / (b×d)`.
-    Product,
-    /// `(a×d) / (b×c)`.
-    Quotient,
-    /// `(-a) / b`.
-    Negation,
-}
-
-/// `(a, b)` of an operand `a/b`.
-type Parts<'a> = (&'a Integer, &'a Integer);
-
-fn parts(value: &Rational) -> Parts<'_> {
-    (value.numerator(), value.denominator())
-}
-
 /// Evaluate one rational operation into `domain` (`None` for no result
 /// bound).
 ///
 /// Charges `rational-arithmetic.operands`; a zero divisor is undefined after
-/// that charge. Then `rational-arithmetic.arithmetic` at the unreduced
-/// intermediate, `rational-arithmetic.normalize` at the reduced result, an
-/// uncharged membership decision and `rational-arithmetic.result-retain`.
+/// that charge. Then `rational-arithmetic.arithmetic` at its operand-derived
+/// amount, materializes the unreduced intermediate, charges
+/// `rational-arithmetic.normalize` at that intermediate's parts, reduces it,
+/// decides membership without a charge and charges
+/// `rational-arithmetic.result-retain`.
 pub fn evaluate_rational(
     operation: RationalOperation<'_>,
     domain: Option<&RationalDomain>,
@@ -157,17 +146,25 @@ fn rational(
     meter: &mut Meter,
 ) -> Result<Rational, Stop> {
     let one = Integer::one();
-    let (left, right): (Parts<'_>, Option<Parts<'_>>) = match operation {
-        RationalOperation::Add(a, b)
-        | RationalOperation::Subtract(a, b)
-        | RationalOperation::Multiply(a, b)
-        | RationalOperation::Divide(a, b) => (parts(a), Some(parts(b))),
-        RationalOperation::Negate(a) => (parts(a), None),
-        RationalOperation::IntegerDivide(n, m) => ((n, &one), Some((m, &one))),
+    let (left, binary): (Parts<'_>, Option<(RationalArithmetic, Parts<'_>)>) = match operation {
+        RationalOperation::Add(a, b) => (a.parts(), Some((RationalArithmetic::Add, b.parts()))),
+        RationalOperation::Subtract(a, b) => {
+            (a.parts(), Some((RationalArithmetic::Subtract, b.parts())))
+        }
+        RationalOperation::Multiply(a, b) => {
+            (a.parts(), Some((RationalArithmetic::Multiply, b.parts())))
+        }
+        RationalOperation::Divide(a, b) => {
+            (a.parts(), Some((RationalArithmetic::Divide, b.parts())))
+        }
+        RationalOperation::IntegerDivide(n, m) => {
+            ((n, &one), Some((RationalArithmetic::Divide, (m, &one))))
+        }
+        RationalOperation::Negate(a) => (a.parts(), None),
     };
     let maxparts = |(n, d): Parts<'_>| n.magnitude_bits().max(d.magnitude_bits());
-    let (bits, count) = match right {
-        Some(right) => (maxparts(left).max(maxparts(right)), 2),
+    let (bits, count) = match binary {
+        Some((_, right)) => (maxparts(left).max(maxparts(right)), 2),
         None => (maxparts(left), 1),
     };
     meter.charge(
@@ -175,56 +172,30 @@ fn rational(
             .size(LimitKind::IntegerBits, bits)
             .size(LimitKind::ValueOccurrences, count),
     )?;
-    let ((a, b), (c, d)) = (left, right.unwrap_or((&one, &one)));
-    let form = match operation {
-        RationalOperation::Add(..) => Unreduced::CrossSum { negate: false },
-        RationalOperation::Subtract(..) => Unreduced::CrossSum { negate: true },
-        RationalOperation::Multiply(..) => Unreduced::Product,
-        RationalOperation::Divide(..) | RationalOperation::IntegerDivide(..) => {
-            if c.is_zero() {
-                return Err(Stop::Undefined(Undefined::DivisionByZero));
-            }
-            Unreduced::Quotient
+    // Sized from operand bit lengths, charged, and only then materialized.
+    if let Some((RationalArithmetic::Divide, (divisor, _))) = binary {
+        if divisor.is_zero() {
+            return Err(Stop::Undefined(Undefined::DivisionByZero));
         }
-        RationalOperation::Negate(..) => Unreduced::Negation,
-    };
-    // Sized from the operands, then charged, then materialized.
-    let product_bits = |x: &Integer, y: &Integer| exact_bits(|p| x.dyadic(p).mul(&y.dyadic(p)));
-    let (numerator_bits, denominator_bits) = match form {
-        Unreduced::CrossSum { negate } => (
-            exact_bits(|p| {
-                let (ad, cb) = (a.dyadic(p).mul(&d.dyadic(p)), c.dyadic(p).mul(&b.dyadic(p)));
-                if negate {
-                    ad.sub(&cb)
-                } else {
-                    ad.add(&cb)
-                }
-            }),
-            product_bits(b, d),
-        ),
-        Unreduced::Product => (product_bits(a, c), product_bits(b, d)),
-        Unreduced::Quotient => (product_bits(a, d), product_bits(b, c)),
-        Unreduced::Negation => (a.magnitude_bits(), b.magnitude_bits()),
-    };
+    }
+    // Unary `-` charges `max(bits(a), bits(b))`.
+    let amount = binary.map_or(maxparts(left), |(operation, right)| {
+        operation.charge_bits(left, right)
+    });
     meter.charge(
-        Charge::new(ChargePoint::RationalArithmeticArithmetic)
-            .size(LimitKind::IntegerBits, numerator_bits.max(denominator_bits)),
+        Charge::new(ChargePoint::RationalArithmeticArithmetic).size(LimitKind::IntegerBits, amount),
     )?;
-    let (numerator, denominator) = match form {
-        Unreduced::CrossSum { negate: false } => (a.mul(d).add(&c.mul(b)), b.mul(d)),
-        Unreduced::CrossSum { negate: true } => (a.mul(d).sub(&c.mul(b)), b.mul(d)),
-        Unreduced::Product => (a.mul(c), b.mul(d)),
-        Unreduced::Quotient => (a.mul(d), b.mul(c)),
-        Unreduced::Negation => (a.neg(), b.clone()),
+    let (numerator, denominator) = match binary {
+        Some((operation, right)) => operation.unreduced(left, right),
+        None => (left.0.neg(), left.1.clone()),
     };
-    // The reduced parts are no larger than the unreduced parts just admitted;
-    // reduction needs the gcd, so this amount is measured on the reduced value.
+    // The unreduced intermediate is materialized and sized before reduction.
+    meter.charge(Charge::new(ChargePoint::RationalArithmeticNormalize).size(
+        LimitKind::IntegerBits,
+        numerator.magnitude_bits().max(denominator.magnitude_bits()),
+    ))?;
     // Every denominator above is a product of nonzero parts.
     let result = Rational::reduce(numerator, denominator);
-    meter.charge(
-        Charge::new(ChargePoint::RationalArithmeticNormalize)
-            .size(LimitKind::IntegerBits, result.max_part_bits()),
-    )?;
     if domain.is_some_and(|domain| !domain.contains(&result)) {
         return Err(Stop::Refused(Refusal::RationalOutOfDomain));
     }
@@ -318,12 +289,10 @@ fn ordering(
                     )
                     .size(LimitKind::ValueOccurrences, 2),
             )?;
-            // `bits(a×d)` and `bits(c×b)` for `a/b` and `c/d`.
-            let one = Integer::one();
-            let cross = |x: &Integer, y: &Integer| Integer::power_product_bits(x, y, &one);
-            let bits = cross(left.numerator(), right.denominator())
-                .max(cross(right.numerator(), left.denominator()));
-            meter.charge(arithmetic_charge.exact_size(LimitKind::IntegerBits, bits))?;
+            meter.charge(arithmetic_charge.size(
+                LimitKind::IntegerBits,
+                cross_bits(left.parts(), right.parts()),
+            ))?;
             left.cmp(right)
         }
         OrderingOperands::Decimal(left, right) => {
@@ -344,37 +313,34 @@ fn ordering(
                     )
                     .size(LimitKind::ValueOccurrences, 2),
             )?;
+            // Aligned to `s = max(s1, s2)`: `sbits` and `sdigits` of each
+            // retained coefficient under its shift `s - s_i`.
             let scale = l.scale().max(r.scale());
-            let (l_bits, l_digits) = aligned(l, scale);
-            let (r_bits, r_digits) = aligned(r, scale);
+            let shift =
+                |side: &DecimalRepresentation| u64::from(scale.saturating_sub(side.scale()));
+            let (l_shift, r_shift) = (shift(l), shift(r));
             meter.charge(
                 arithmetic_charge
                     .size(
                         LimitKind::ScaleExpansion,
                         u64::from(l.scale().abs_diff(r.scale())),
                     )
-                    .exact_size(LimitKind::IntegerBits, l_bits.max(r_bits))
-                    .exact_size(LimitKind::DecimalDigits, l_digits.max(r_digits)),
+                    .exact_size(
+                        LimitKind::IntegerBits,
+                        shifted_bits(l.coefficient(), l_shift)
+                            .max(shifted_bits(r.coefficient(), r_shift)),
+                    )
+                    .exact_size(
+                        LimitKind::DecimalDigits,
+                        shifted_digits(l.coefficient(), l_shift)
+                            .max(shifted_digits(r.coefficient(), r_shift)),
+                    ),
             )?;
             left.compare(right)
         }
     };
     meter.charge(Charge::new(ChargePoint::OrderingResultRetain).results(1))?;
     Ok(operator.holds(result))
-}
-
-/// `(bits, digits)` of the retained coefficient aligned to `scale`, derived
-/// without materializing it.
-fn aligned(representation: &DecimalRepresentation, scale: u32) -> (Integer, Integer) {
-    let shift = Integer::from(u64::from(scale.saturating_sub(representation.scale())));
-    let coefficient = representation.coefficient();
-    let bits = Integer::power_product_bits(coefficient, &Integer::from(10_i64), &shift);
-    let digits = if coefficient.is_zero() {
-        Integer::one()
-    } else {
-        Integer::from(coefficient.decimal_digits()).add(&shift)
-    };
-    (bits, digits)
 }
 
 /// A binary Boolean connective.

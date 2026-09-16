@@ -101,19 +101,6 @@ impl Rational {
         )
     }
 
-    /// Exact `self - other`.
-    pub(crate) fn sub(&self, other: &Self) -> Self {
-        self.add(&other.neg())
-    }
-
-    /// Exact `-self`.
-    pub(crate) fn neg(&self) -> Self {
-        Self {
-            numerator: self.numerator.neg(),
-            denominator: self.denominator.clone(),
-        }
-    }
-
     /// Exact `self × other`.
     pub(crate) fn mul(&self, other: &Self) -> Self {
         Self::reduce(
@@ -157,6 +144,83 @@ impl Rational {
             .magnitude_bits()
             .max(self.denominator.magnitude_bits())
     }
+
+    /// `(a, b)` of this value `a/b`.
+    pub(crate) fn parts(&self) -> Parts<'_> {
+        (&self.numerator, &self.denominator)
+    }
+}
+
+/// `(a, b)` of an operand `a/b`; an integer `n` enters as `(n, 1)`.
+pub(crate) type Parts<'a> = (&'a Integer, &'a Integer);
+
+/// A binary operation of the `rational-arithmetic.arithmetic` row of
+/// `quire.value.accounting/v1`, shared by rational arithmetic and every
+/// `unit.rational-arithmetic` event.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RationalArithmetic {
+    /// `a/b + c/d`.
+    Add,
+    /// `a/b - c/d`.
+    Subtract,
+    /// `a/b × c/d`.
+    Multiply,
+    /// `a/b ÷ c/d`.
+    Divide,
+}
+
+impl RationalArithmetic {
+    /// The row's `integer_bits = max(N, D)`, derived from operand bit lengths
+    /// only: `N = bits(a)+bits(c)`, `D = bits(b)+bits(d)` for `×`;
+    /// `N = bits(a)+bits(d)`, `D = bits(b)+bits(c)` for `÷`; and
+    /// `N = max(bits(a)+bits(d), bits(c)+bits(b)) + 1`, `D = bits(b)+bits(d)`
+    /// for `+` and `-`.
+    pub(crate) fn charge_bits(self, (a, b): Parts<'_>, (c, d): Parts<'_>) -> u64 {
+        let [a, b, c, d] = [a, b, c, d].map(Integer::magnitude_bits);
+        // Every operand is materialized, so each sum of two bit lengths is far
+        // below `u64::MAX`.
+        let (numerator, denominator) = match self {
+            Self::Add | Self::Subtract => (
+                a.saturating_add(d)
+                    .max(c.saturating_add(b))
+                    .saturating_add(1),
+                b.saturating_add(d),
+            ),
+            Self::Multiply => (a.saturating_add(c), b.saturating_add(d)),
+            Self::Divide => (a.saturating_add(d), b.saturating_add(c)),
+        };
+        numerator.max(denominator)
+    }
+
+    /// The unreduced intermediate `N/D`: `(a×d ± c×b) / (b×d)`, `(a×c) /
+    /// (b×d)` or `(a×d) / (b×c)`. Materialize only after the row is charged.
+    pub(crate) fn unreduced(self, (a, b): Parts<'_>, (c, d): Parts<'_>) -> (Integer, Integer) {
+        match self {
+            Self::Add => (a.mul(d).add(&c.mul(b)), b.mul(d)),
+            Self::Subtract => (a.mul(d).sub(&c.mul(b)), b.mul(d)),
+            Self::Multiply => (a.mul(c), b.mul(d)),
+            Self::Divide => (a.mul(d), b.mul(c)),
+        }
+    }
+
+    /// The reduced exact result, or `None` for a zero divisor. Materialize only
+    /// after the row is charged.
+    pub(crate) fn apply(self, left: &Rational, right: &Rational) -> Option<Rational> {
+        if self == Self::Divide && right.is_zero() {
+            return None;
+        }
+        let (numerator, denominator) = self.unreduced(left.parts(), right.parts());
+        // Every denominator is a product of nonzero parts.
+        Some(Rational::reduce(numerator, denominator))
+    }
+}
+
+/// `max(bits(a)+bits(d), bits(c)+bits(b))`: the `ordering.arithmetic` amount of
+/// `a/b` against `c/d`, derived from operand bit lengths only.
+pub(crate) fn cross_bits((a, b): Parts<'_>, (c, d): Parts<'_>) -> u64 {
+    let [a, b, c, d] = [a, b, c, d].map(Integer::magnitude_bits);
+    // Bit lengths of materialized operands; the sums cannot approach `u64::MAX`.
+    a.saturating_add(d).max(c.saturating_add(b))
 }
 
 impl Ord for Rational {

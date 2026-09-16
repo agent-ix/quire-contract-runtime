@@ -151,7 +151,7 @@ fn tc_016_charge_point_and_limit_vocabularies_round_trip() {
     }
     assert_eq!(ChargePoint::from_code("equality.plan-form"), None);
     assert_eq!(ChargePoint::from_code("ordering"), None);
-    // The QSpec 5d88578 scalar families, in definition-row order.
+    // The QSpec 7d7943a scalar families, in definition-row order.
     assert_eq!(
         spellings[spellings.len() - 11..],
         [
@@ -212,7 +212,8 @@ fn tc_017_charges_precede_work_and_a_denied_charge_consumes_nothing() {
             limit_kind: LimitKind::IntegerBits,
             limit: 128,
             consumed: 65,
-            next_charge: int(129),
+            // `bits(2^64) + bits(2^64) = 130`, never the square's 129.
+            next_charge: int(130),
             charge_point: ChargePoint::IntegerArithmeticArithmetic,
         })
     );
