@@ -68,6 +68,7 @@ help:
 	@echo "  make lint             - Clippy with -D warnings"
 	@echo "  make test             - cargo test plus the shared-assurance tests"
 	@echo "  make test-features    - test every supported feature set"
+	@echo "  make conformance      - exact oracles against the pinned QSL authority"
 	@echo "  make doc              - warning-denied docs for runtime and footprint"
 	@echo "  make build            - Release build"
 	@echo "  make msrv             - Check all targets and features with Rust $(MSRV)"
@@ -117,6 +118,12 @@ test: assurance-inputs
 .PHONY: test-features
 test-features:
 	$(PYTHON) scripts/run_feature_matrix.py
+
+# Exact-oracle agreement against the pinned quire-spec-language authority. A
+# separate package, so the runtime's own dependency graph never contains it.
+.PHONY: conformance
+conformance:
+	$(CARGO) test --locked --release --manifest-path conformance/qsl-agreement/Cargo.toml
 
 .PHONY: doc
 doc:

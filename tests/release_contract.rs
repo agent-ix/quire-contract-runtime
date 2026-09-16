@@ -20,6 +20,10 @@ fn tc_005_optional_surface_is_explicitly_feature_gated() {
     assert!(
         CARGO_MANIFEST.contains("snapshot-json = [\"alloc\", \"dep:serde\", \"dep:serde_json\"]")
     );
+    assert!(CARGO_MANIFEST.contains(
+        "exact = [\"alloc\", \"dep:num-bigint\", \"dep:num-integer\", \"dep:num-traits\", \
+         \"dep:unicode-normalization\"]"
+    ));
 }
 
 /// Trace: TC-007, NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2, StR-001-VC-2
@@ -128,7 +132,16 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     assert!(runtime_sources
         .iter()
         .any(|(path, _)| path == "verification/kani.rs"));
-    let surface = crate_accounting_surface(&runtime_sources);
+    // `src/exact/` is the FR-006/FR-007 exact-scalar oracle behind the `exact`
+    // feature. It holds no campaign census state; its public surface is pinned
+    // separately by `tc_016_exact_surface_is_reexported_from_private_modules` in
+    // `tests/exact_outcomes.rs`.
+    let campaign_sources: Vec<(String, String)> = runtime_sources
+        .iter()
+        .filter(|(path, _)| !path.starts_with("src/exact/"))
+        .cloned()
+        .collect();
+    let surface = crate_accounting_surface(&campaign_sources);
     assert_eq!(
         surface.public_items,
         [
@@ -143,6 +156,7 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             "src/identity.rs::struct ContractIdentity",
             "src/lib.rs::const RUNTIME_CONTRACT_VERSION",
             "src/lib.rs::mod accounting",
+            "src/lib.rs::mod exact",
             "src/lib.rs::mod identity",
             "src/lib.rs::mod observation",
             "src/lib.rs::mod operators",

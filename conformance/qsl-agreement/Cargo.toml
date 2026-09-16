@@ -1,0 +1,23 @@
+[package]
+name = "quire-contract-runtime-qsl-agreement"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.98"
+description = "Shared-corpus agreement between the runtime exact scalar operators and quire-spec-language value semantics."
+license = "AGPL-3.0-or-later"
+publish = false
+
+# Its own workspace: the semantic authority needs Rust 1.98 and git
+# dependencies, neither of which may reach the runtime's 1.75 no_std build.
+[workspace]
+
+[dependencies]
+
+[dev-dependencies]
+quire-contract-runtime = { path = "../..", features = ["exact"] }
+quire-spec-language = { git = "https://github.com/agent-ix/quire-spec-language", rev = "d9d5273614cc3a28a3e906b42deb1e7db7783af9" }
+num-bigint = "=0.4.8"
+serde_json = "=1.0.151"
+
+[lints.rust]
+unsafe_code = "forbid"
