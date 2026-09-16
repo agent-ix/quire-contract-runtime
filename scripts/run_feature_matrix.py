@@ -89,6 +89,17 @@ FEATURE_SETS = (
     ("test-all", ["--all-features", *DOMAIN_TARGETS], ["TC-005"], True),
     ("test-all-doc", ["--all-features", "--doc"], ["TC-005", "TC-008"], False),
     ("test-footprint", ["-p", "quire-contract-runtime-footprint"], ["TC-005", "NFR-001"], True),
+    # The exact oracle tests are `#![cfg(feature = "exact")]`, so no other row runs
+    # them. The shared-corpus agreement package is `make conformance`, not a row
+    # here: it needs Rust 1.98 and a git dependency this crate's graph never has.
+    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation", "--test", "release_contract"], ["TC-005", "TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
+)
+
+# Actual no_std-target library builds, not host tests that can obtain std through
+# dev dependencies. No linked-footprint claim is made for either feature.
+NO_STD_BUILDS = (
+    ("build-snapshot-json-no-std-msrv", "snapshot-json", ["TC-005", "TC-015", "NFR-001"]),
+    ("build-exact-no-std-msrv", "exact", ["TC-005", "TC-016", "FR-006", "NFR-001"]),
 )
 
 
@@ -107,30 +118,28 @@ def environment() -> dict[str, str]:
     }
 
 
-def snapshot_no_std_row(available: bool) -> dict[str, Any]:
-    # Actual no_std-target library build, not a host test that can obtain std
-    # through dev dependencies. No codec linked-footprint claim is made here.
+def no_std_row(symbol: str, feature: str, traces: list[str], available: bool) -> dict[str, Any]:
     native_flags = [
         "+1.75.0", "build", "--locked", "--lib", "--no-default-features",
-        "--features", "snapshot-json", "--target", "thumbv7em-none-eabi",
+        "--features", feature, "--target", "thumbv7em-none-eabi",
         "--message-format=json",
     ]
     if available:
         built = run(native_flags)
         errors = build_errors(built.stdout)
         return {
-            "symbol": "build-snapshot-json-no-std-msrv",
+            "symbol": symbol,
             "outcome": "pass" if built.returncode == 0 and not errors else "fail",
-            "traceIds": ["TC-005", "TC-015", "NFR-001"],
+            "traceIds": traces,
             "phase": "build-only",
             "exitStatus": built.returncode,
             "argv": native_flags,
             "detail": errors[:3] or (None if built.returncode == 0 else ["cargo reported a non-zero build status"]),
         }
     return {
-        "symbol": "build-snapshot-json-no-std-msrv",
+        "symbol": symbol,
         "outcome": "unavailable",
-        "traceIds": ["TC-005", "TC-015", "NFR-001"],
+        "traceIds": traces,
         "phase": None,
         "detail": "the trusted cargo executable is absent",
     }
@@ -221,7 +230,7 @@ def collect() -> dict[str, Any]:
                 else tested.stdout.strip().splitlines()[-6:],
             }
         )
-    entries.append(snapshot_no_std_row(available))
+    entries.extend(no_std_row(symbol, feature, traces, available) for symbol, feature, traces in NO_STD_BUILDS)
     return {
         "protocol": PROTOCOL,
         "tool": {

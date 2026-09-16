@@ -23,6 +23,8 @@ the public meter. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 4. Evaluate an out-of-domain result; check the refusal precedes retention and no result unit is
    charged.
 5. Inject a denial at each admitted point; check the record and that counters are unchanged.
+6. Admit more charges than `CHARGE_LOG_CAPACITY`; check the log is capped and marked truncated,
+   counters stay exact, and an injected denial past the cap still fires.
 
 ## Expected Results
 

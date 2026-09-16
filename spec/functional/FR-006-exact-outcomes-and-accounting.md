@@ -33,8 +33,10 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 
 - A completed `false` is a value, never a refusal. `Undefined`, `Refused` and `Incomplete` carry
   closed, typed reasons; no variant carries a message string.
-- Each charge is decided before the work it pays for. A denied charge consumes nothing and exposes
-  no partial value.
+- Each charge is decided before the work it pays for, and each size amount is derived before the
+  value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
+- The meter's memory is bounded: the admitted-charge log is capped at `CHARGE_LOG_CAPACITY` and
+  reports truncation, while every counter stays exact.
 - Size counters are high-water marks; `work_units` and `result_units` are cumulative. The
   `Incomplete` record names the first unavailable counter in field order, its limit, the consumed
   amount before the charge, the exact denied amount (a mathematical integer) and the charge point.

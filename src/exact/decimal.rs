@@ -757,7 +757,9 @@ impl DecimalType {
         if target_scale
             <= ANALYTIC_PLACEMENT_BITS_FACTOR.saturating_mul(denominator.magnitude_bits())
         {
-            // `n × 10^T` has at most `bits(n) + 7 × bits(d) + 1` bits here.
+            // Here `T <= ANALYTIC_PLACEMENT_BITS_FACTOR × bits(d) = 2 × bits(d)`,
+            // so `bits(10^T) <= ⌊T × log2 10⌋ + 1 < 6.65 × bits(d) + 1` and
+            // `n × 10^T` has at most `bits(n) + 7 × bits(d) + 1` bits.
             let placed = self.round_at_target(value)?;
             let (bits, digits) = placed.retained_sizes(self);
             return Ok(Placement {

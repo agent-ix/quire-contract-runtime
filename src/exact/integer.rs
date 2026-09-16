@@ -10,11 +10,9 @@ use core::fmt;
 use core::num::NonZeroU32;
 use core::str::FromStr;
 
-use num_bigint::{BigInt, BigUint};
+use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer as _;
 use num_traits::{One, Signed, Zero};
-
-use super::accounting::length_amount;
 
 /// An exact, arbitrary-precision mathematical integer.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -49,8 +47,30 @@ impl Integer {
 
     /// `digits(x)` from `quire.value.accounting/v1`: the base-ten magnitude
     /// digit count, where zero has one digit.
+    ///
+    /// Derived from the bit length without rendering the value: `2^(b-1) <= |x|
+    /// < 2^b` places `digits(x)` between `⌊(b-1)·log10 2⌋ + 1` and
+    /// `⌊b·log10 2⌋ + 1`, taken with a lower and an upper rational bound on
+    /// `log10 2`. Each candidate above the lower end is corrected by an analytic
+    /// comparison with `10^(d-1)`.
     pub fn decimal_digits(&self) -> u64 {
-        length_amount(self.0.magnitude().to_str_radix(10).len())
+        let bits = self.magnitude_bits();
+        let scaled = |bits: u64, log10_two: u128| {
+            let floor = u128::from(bits).saturating_mul(log10_two) / LOG10_TWO_DENOMINATOR;
+            u64::try_from(floor).unwrap_or(u64::MAX).saturating_add(1)
+        };
+        let lowest = scaled(bits.saturating_sub(1), LOG10_TWO_LOWER);
+        let mut digits = scaled(bits, LOG10_TWO_UPPER);
+        let (one, ten, zero) = (Self::one(), Self::from(10_u64), Self::zero());
+        while digits > lowest {
+            let exponent = Self::from(digits.saturating_sub(1));
+            if Self::compare_power_product(&one, &ten, &exponent, self, &zero) != Ordering::Greater
+            {
+                break;
+            }
+            digits = digits.saturating_sub(1);
+        }
+        digits
     }
 
     /// The value as a `u64`, if it is one.
@@ -251,6 +271,153 @@ impl Integer {
     /// `2^exponent`.
     fn power_of_two(exponent: u32) -> Self {
         Self(BigInt::one() << u64::from(exponent))
+    }
+}
+
+/// `log10 2` lies strictly between these numerators over
+/// [`LOG10_TWO_DENOMINATOR`]. Both stay below `2^62`, so a `u64` bit length
+/// times either fits in `u128`.
+const LOG10_TWO_LOWER: u128 = 3_010_299_956_639_811_952;
+const LOG10_TWO_UPPER: u128 = 3_010_299_956_639_811_953;
+const LOG10_TWO_DENOMINATOR: u128 = 10_000_000_000_000_000_000;
+
+/// A signed dyadic interval `[low, high] × 2^shift` enclosing one exact integer
+/// expression, each mantissa kept to about `precision` bits.
+///
+/// It sizes a sum, difference or product before the value exists: operands
+/// enter truncated (the lower end rounded down, the upper end up), and every
+/// operation keeps the enclosure. With no truncation the interval is the exact
+/// value, so [`exact_bits`] terminates once `precision` covers the widest
+/// intermediate. That last round is the only one that can allocate as much as
+/// the value itself, and only for a result within one bit of a power of two or
+/// a near-total cancellation.
+#[derive(Clone, Debug)]
+pub(crate) struct Dyadic {
+    low: BigInt,
+    high: BigInt,
+    shift: u64,
+    precision: u64,
+}
+
+impl Dyadic {
+    fn truncated(low: BigInt, high: BigInt, shift: u64, precision: u64) -> Self {
+        let excess = low.bits().max(high.bits()).saturating_sub(precision);
+        if excess == 0 {
+            return Self {
+                low,
+                high,
+                shift,
+                precision,
+            };
+        }
+        Self {
+            low: floor_shift(&low, excess),
+            high: ceil_shift(&high, excess),
+            shift: shift.saturating_add(excess),
+            precision,
+        }
+    }
+
+    /// An enclosure of `self + other`.
+    pub(crate) fn add(&self, other: &Self) -> Self {
+        let shift = self.shift.max(other.shift);
+        let (left, right) = (
+            shift.saturating_sub(self.shift),
+            shift.saturating_sub(other.shift),
+        );
+        Self::truncated(
+            floor_shift(&self.low, left) + floor_shift(&other.low, right),
+            ceil_shift(&self.high, left) + ceil_shift(&other.high, right),
+            shift,
+            self.precision,
+        )
+    }
+
+    /// An enclosure of `self - other`.
+    pub(crate) fn sub(&self, other: &Self) -> Self {
+        self.add(&other.neg())
+    }
+
+    /// An enclosure of `-self`.
+    pub(crate) fn neg(&self) -> Self {
+        Self {
+            low: -&self.high,
+            high: -&self.low,
+            shift: self.shift,
+            precision: self.precision,
+        }
+    }
+
+    /// An enclosure of `self × other`.
+    pub(crate) fn mul(&self, other: &Self) -> Self {
+        let products = [
+            &self.low * &other.low,
+            &self.low * &other.high,
+            &self.high * &other.low,
+            &self.high * &other.high,
+        ];
+        let low = products.iter().min().cloned().unwrap_or_default();
+        let high = products.iter().max().cloned().unwrap_or_default();
+        Self::truncated(
+            low,
+            high,
+            self.shift.saturating_add(other.shift),
+            self.precision,
+        )
+    }
+
+    /// `bits(value)`, when the enclosure decides it.
+    fn bits(&self) -> Option<u64> {
+        let same = |small: &BigInt, large: &BigInt| {
+            (small.bits() == large.bits()).then(|| small.bits().saturating_add(self.shift))
+        };
+        match (self.low.sign(), self.high.sign()) {
+            (Sign::NoSign, Sign::NoSign) => Some(1),
+            (Sign::Plus, Sign::Plus) => same(&self.low, &self.high),
+            (Sign::Minus, Sign::Minus) => same(&self.high, &self.low),
+            _ => None,
+        }
+    }
+}
+
+/// `⌊value / 2^shift⌋`.
+fn floor_shift(value: &BigInt, shift: u64) -> BigInt {
+    value >> shift
+}
+
+/// `⌈value / 2^shift⌉`, without negating the full value.
+fn ceil_shift(value: &BigInt, shift: u64) -> BigInt {
+    let floor = value >> shift;
+    if value.trailing_zeros().is_some_and(|zeros| zeros < shift) {
+        floor + 1_u8
+    } else {
+        floor
+    }
+}
+
+/// The exact `bits` of the expression `enclose` builds at a given precision,
+/// derived before the expression's value is materialized. Precision starts at
+/// 64 bits and doubles until the enclosure decides.
+pub(crate) fn exact_bits(enclose: impl Fn(u64) -> Dyadic) -> u64 {
+    let mut precision = 64_u64;
+    loop {
+        if let Some(bits) = enclose(precision).bits() {
+            return bits;
+        }
+        precision = precision.saturating_mul(2);
+    }
+}
+
+impl Integer {
+    /// This integer entered into a [`Dyadic`] enclosure at `precision`.
+    pub(crate) fn dyadic(&self, precision: u64) -> Dyadic {
+        let excess = self.0.bits().saturating_sub(precision);
+        Dyadic::truncated(
+            floor_shift(&self.0, excess),
+            ceil_shift(&self.0, excess),
+            excess,
+            precision,
+        )
     }
 }
 

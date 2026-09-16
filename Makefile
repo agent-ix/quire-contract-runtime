@@ -256,5 +256,5 @@ assurance-record: assurance-inputs
 
 .NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic \
+ci: fmt-check spec lint test-features conformance doc msrv size deny audit-unsafe audit-panic \
 	kani kani-mutations test assurance

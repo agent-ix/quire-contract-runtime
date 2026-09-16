@@ -14,6 +14,7 @@ use quire_contract_runtime::exact::{
     BooleanConnective, ChargePoint, Decimal, Incomplete, InjectedDenial, Integer, IntegerDomain,
     IntegerInterval, IntegerOperation, LimitKind, Meter, OrderingOperands, OrderingOperator,
     Outcome, Rational, RationalDomain, RationalOperation, Refusal, ScalarLimits, Undefined,
+    CHARGE_LOG_CAPACITY,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -688,4 +689,298 @@ fn tc_023_generated_rational_arithmetic_and_ordering_against_an_i128_oracle() {
         }
     }
     assert_eq!(vectors, 10 * 10 * 9);
+}
+
+fn bits_under(bits: u64) -> ScalarLimits {
+    let mut tuple = [u64::MAX; 10];
+    tuple[0] = bits;
+    limits(tuple)
+}
+
+fn bits_denied(limit: u64, consumed: u64, next: u64, point: ChargePoint) -> Incomplete {
+    Incomplete {
+        limit_kind: LimitKind::IntegerBits,
+        limit,
+        consumed,
+        next_charge: int(i128::from(next)),
+        charge_point: point,
+    }
+}
+
+/// `run` completes with `limit` at `exact`, and one under is denied as `denied`.
+fn assert_exact_and_one_under<T: std::fmt::Debug + PartialEq>(
+    run: impl Fn(&mut Meter) -> Outcome<T>,
+    exact: u64,
+    denied: Incomplete,
+) {
+    let mut meter = Meter::new(bits_under(exact));
+    assert!(run(&mut meter).completed().is_some());
+    assert_eq!(meter.consumed(LimitKind::IntegerBits), exact);
+    assert_eq!(
+        run(&mut Meter::new(bits_under(exact - 1))),
+        Outcome::Incomplete(denied)
+    );
+}
+
+/// Every charge of `run`, in order, admitted with exactly as many work units as
+/// precede it and denied one under.
+fn assert_work_exact_and_one_under<T: std::fmt::Debug + PartialEq>(
+    run: impl Fn(&mut Meter) -> Outcome<T>,
+    points: &[ChargePoint],
+) {
+    for (index, point) in points.iter().enumerate() {
+        let before = u64::try_from(index).unwrap();
+        assert_eq!(
+            run(&mut Meter::new(work(before))),
+            Outcome::Incomplete(work_denied(before, *point))
+        );
+        let mut meter = Meter::new(work(before + 1));
+        let outcome = run(&mut meter);
+        assert_eq!(meter.admitted_charges(), &points[..=index]);
+        if index + 1 == points.len() {
+            assert!(outcome.completed().is_some());
+        }
+    }
+}
+
+/// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
+#[test]
+fn tc_023_arithmetic_and_normalize_charges_at_exact_and_one_under_limits() {
+    // `2/3 × 3/2`: operands 2 bits; N = D = 6 at 3 bits; reduced 1/1 at 1 bit.
+    let (two_thirds, three_halves) = (ratio(2, 3), ratio(3, 2));
+    let product = |meter: &mut Meter| {
+        evaluate_rational(
+            RationalOperation::Multiply(&two_thirds, &three_halves),
+            None,
+            meter,
+        )
+    };
+    let mut meter = Meter::new(UNLIMITED);
+    assert_eq!(product(&mut meter), Outcome::Completed(ratio(1, 1)));
+    assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_exact_and_one_under(
+        product,
+        3,
+        bits_denied(2, 2, 3, ChargePoint::RationalArithmeticArithmetic),
+    );
+    // The normalize amount never exceeds the admitted arithmetic amount, so
+    // its one-under limit is on work: three charges admitted, the fourth denied.
+    assert_work_exact_and_one_under(product, &RATIONAL);
+
+    // `5/7 - 4/7`: operands 3 bits; N = 35 - 28 = 7 and D = 49 at 6 bits;
+    // reduced 1/7 at 3 bits, below the operands.
+    let (five, four) = (ratio(5, 7), ratio(4, 7));
+    let difference = |meter: &mut Meter| {
+        evaluate_rational(RationalOperation::Subtract(&five, &four), None, meter)
+    };
+    let mut meter = Meter::new(UNLIMITED);
+    assert_eq!(difference(&mut meter), Outcome::Completed(ratio(1, 7)));
+    assert_eq!(consumed(&meter), [6, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
+    assert_exact_and_one_under(
+        difference,
+        6,
+        bits_denied(5, 3, 6, ChargePoint::RationalArithmeticArithmetic),
+    );
+    assert_work_exact_and_one_under(difference, &RATIONAL);
+
+    // Integer `1000 - 999 = 1`: the arithmetic amount (1) is below the operands
+    // (10), so the operands charge is the exact limit.
+    let (thousand, nines) = (int(1000), int(999));
+    let small = |meter: &mut Meter| {
+        evaluate_integer(
+            IntegerOperation::Subtract(&thousand, &nines),
+            &IntegerDomain::Mathematical,
+            meter,
+        )
+    };
+    let mut meter = Meter::new(UNLIMITED);
+    assert_eq!(small(&mut meter), Outcome::Completed(int(1)));
+    assert_eq!(consumed(&meter), [10, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
+    assert_exact_and_one_under(
+        small,
+        10,
+        bits_denied(9, 0, 10, ChargePoint::IntegerArithmeticOperands),
+    );
+    assert_work_exact_and_one_under(small, &INTEGER);
+
+    // Integer `255 × 255 = 65025`: operands 8 bits, arithmetic 16.
+    let byte = int(255);
+    let square = |meter: &mut Meter| {
+        evaluate_integer(
+            IntegerOperation::Multiply(&byte, &byte),
+            &IntegerDomain::Mathematical,
+            meter,
+        )
+    };
+    assert_exact_and_one_under(
+        square,
+        16,
+        bits_denied(15, 8, 16, ChargePoint::IntegerArithmeticArithmetic),
+    );
+    assert_work_exact_and_one_under(square, &INTEGER);
+}
+
+/// Trace: TC-023, FR-007-AC-7, FR-006-AC-3
+#[test]
+fn tc_023_result_sizes_at_power_of_two_edges_and_cancellation() {
+    let power = |exponent: u32| -> Integer {
+        let mut value = int(1);
+        for _ in 0..exponent {
+            value = evaluate_integer(
+                IntegerOperation::Add(&value, &value),
+                &IntegerDomain::Mathematical,
+                &mut Meter::new(UNLIMITED),
+            )
+            .completed()
+            .unwrap();
+        }
+        value
+    };
+    let arithmetic_bits = |operation: IntegerOperation<'_>| {
+        let mut meter = Meter::new(UNLIMITED);
+        let result = evaluate_integer(operation, &IntegerDomain::Mathematical, &mut meter)
+            .completed()
+            .unwrap();
+        let operands = match operation {
+            IntegerOperation::Add(a, b)
+            | IntegerOperation::Subtract(a, b)
+            | IntegerOperation::Multiply(a, b) => a.magnitude_bits().max(b.magnitude_bits()),
+            IntegerOperation::Negate(a) => a.magnitude_bits(),
+        };
+        assert_eq!(
+            meter.consumed(LimitKind::IntegerBits),
+            operands.max(result.magnitude_bits())
+        );
+        result.magnitude_bits()
+    };
+    let one = int(1);
+    for exponent in [63_u32, 64, 65, 127, 128, 200, 511] {
+        let two_k = power(exponent);
+        let below = evaluate_integer(
+            IntegerOperation::Subtract(&two_k, &one),
+            &IntegerDomain::Mathematical,
+            &mut Meter::new(UNLIMITED),
+        )
+        .completed()
+        .unwrap();
+        let above = evaluate_integer(
+            IntegerOperation::Add(&two_k, &one),
+            &IntegerDomain::Mathematical,
+            &mut Meter::new(UNLIMITED),
+        )
+        .completed()
+        .unwrap();
+        let k = u64::from(exponent);
+        // (2^k - 1)(2^k + 1) = 2^2k - 1 sits one below a power of two.
+        assert_eq!(
+            arithmetic_bits(IntegerOperation::Multiply(&below, &above)),
+            2 * k
+        );
+        assert_eq!(
+            arithmetic_bits(IntegerOperation::Multiply(&two_k, &two_k)),
+            2 * k + 1
+        );
+        assert_eq!(arithmetic_bits(IntegerOperation::Add(&below, &one)), k + 1);
+        assert_eq!(
+            arithmetic_bits(IntegerOperation::Subtract(&above, &two_k)),
+            1
+        );
+        assert_eq!(
+            arithmetic_bits(IntegerOperation::Subtract(&two_k, &two_k)),
+            1
+        );
+        assert_eq!(
+            arithmetic_bits(IntegerOperation::Subtract(&one, &above)),
+            k + 1
+        );
+        let negative = below.clone();
+        let negative = evaluate_integer(
+            IntegerOperation::Negate(&negative),
+            &IntegerDomain::Mathematical,
+            &mut Meter::new(UNLIMITED),
+        )
+        .completed()
+        .unwrap();
+        assert_eq!(arithmetic_bits(IntegerOperation::Add(&negative, &above)), 2);
+        assert_eq!(
+            arithmetic_bits(IntegerOperation::Multiply(&negative, &negative)),
+            2 * k
+        );
+    }
+}
+
+/// Trace: TC-016, FR-006-AC-3
+#[test]
+fn tc_016_decimal_digits_at_every_power_of_ten_boundary() {
+    let mut value = int(1);
+    let ten = int(10);
+    let one = int(1);
+    for exponent in 0..120 {
+        let below = evaluate_integer(
+            IntegerOperation::Subtract(&value, &one),
+            &IntegerDomain::Mathematical,
+            &mut Meter::new(UNLIMITED),
+        )
+        .completed()
+        .unwrap();
+        let above = evaluate_integer(
+            IntegerOperation::Add(&value, &one),
+            &IntegerDomain::Mathematical,
+            &mut Meter::new(UNLIMITED),
+        )
+        .completed()
+        .unwrap();
+        for candidate in [&below, &value, &above] {
+            let rendered = candidate.to_string();
+            let expected = u64::try_from(rendered.trim_start_matches('-').len()).unwrap();
+            assert_eq!(
+                candidate.decimal_digits(),
+                expected,
+                "{rendered} at 10^{exponent}"
+            );
+        }
+        value = evaluate_integer(
+            IntegerOperation::Multiply(&value, &ten),
+            &IntegerDomain::Mathematical,
+            &mut Meter::new(UNLIMITED),
+        )
+        .completed()
+        .unwrap();
+    }
+    for value in VALUES {
+        let expected = u64::try_from(value.unsigned_abs().to_string().len()).unwrap();
+        assert_eq!(int(value).decimal_digits(), expected);
+    }
+}
+
+/// Trace: TC-017, FR-006-AC-3
+#[test]
+fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
+    let extra = 3_u64;
+    let total = u64::try_from(CHARGE_LOG_CAPACITY).unwrap() + extra;
+    let mut meter = Meter::new(UNLIMITED);
+    for _ in 0..total {
+        assert_eq!(evaluate_not(true, &mut meter), Outcome::Completed(false));
+    }
+    assert_eq!(meter.admitted_charges().len(), CHARGE_LOG_CAPACITY);
+    assert!(meter.charge_log_truncated());
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), total);
+    assert_eq!(meter.consumed(LimitKind::ResultUnits), total);
+
+    // An injected denial still counts occurrences past the log.
+    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
+        point: ChargePoint::BooleanResultRetain,
+        occurrence: total,
+    });
+    for _ in 1..total {
+        assert!(evaluate_not(false, &mut meter).completed().is_some());
+    }
+    assert_eq!(
+        evaluate_not(false, &mut meter),
+        Outcome::Incomplete(work_denied(total - 1, ChargePoint::BooleanResultRetain))
+    );
+    let mut fresh = Meter::new(UNLIMITED);
+    assert!(!fresh.charge_log_truncated());
+    assert!(evaluate_not(false, &mut fresh).completed().is_some());
+    assert!(!fresh.charge_log_truncated());
 }

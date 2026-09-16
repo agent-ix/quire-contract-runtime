@@ -25,7 +25,11 @@ checked against QSpec 5d88578 and values against an independent `i128` oracle. E
 4. Rational amounts, zero divisors (undefined after operands only), domain refusal before retention;
    rational and retained-decimal ordering amounts, including an analytically sized aligned
    coefficient beyond `u64`.
-5. Generated sweeps: 12² integer pairs × add/subtract/multiply/negate/four orderings, and 10²
+5. Exact and one-under limits for every arithmetic and normalize charge (`2/3 × 3/2`,
+   `5/7 - 4/7`, `1000 - 999`, `255 × 255`); result sizes one below and at a power of two and
+   under total cancellation; a multiplication denied at the operand bits makes no allocation
+   request larger than an eighth of one operand.
+6. Generated sweeps: 12² integer pairs × add/subtract/multiply/negate/four orderings, and 10²
    fraction pairs × five operations and four orderings, with every named denial.
 
 ## Expected Results

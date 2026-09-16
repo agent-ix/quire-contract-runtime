@@ -399,14 +399,22 @@ impl Charge {
     }
 }
 
-/// A per-request scalar meter.
+/// How many admitted charge points a [`Meter`] records. The log is a
+/// diagnostic, not accounting: every counter stays exact past this length.
+pub const CHARGE_LOG_CAPACITY: usize = 4096;
+
+/// A per-request scalar meter. Its memory is bounded: ten counters, one
+/// occurrence counter for the injected denial's point, and a charge log capped
+/// at [`CHARGE_LOG_CAPACITY`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Meter {
     limits: ScalarLimits,
     consumed: [u64; 10],
-    occurrences: Vec<(ChargePoint, u64)>,
     denial: Option<InjectedDenial>,
+    /// Admitted charges at the injected denial's point.
+    denial_point_seen: u64,
     admitted: Vec<ChargePoint>,
+    log_truncated: bool,
 }
 
 impl Meter {
@@ -415,9 +423,10 @@ impl Meter {
         Self {
             limits,
             consumed: [0; 10],
-            occurrences: Vec::new(),
             denial: None,
+            denial_point_seen: 0,
             admitted: Vec::new(),
+            log_truncated: false,
         }
     }
 
@@ -437,16 +446,16 @@ impl Meter {
         self.consumed.get(kind.index()).copied().unwrap_or(0)
     }
 
-    /// Every admitted charge point in admission order.
+    /// Admitted charge points in admission order: the first
+    /// [`CHARGE_LOG_CAPACITY`] of them.
     pub fn admitted_charges(&self) -> &[ChargePoint] {
         &self.admitted
     }
 
-    fn occurrence(&self, point: ChargePoint) -> u64 {
-        self.occurrences
-            .iter()
-            .find(|(seen, _)| *seen == point)
-            .map_or(0, |(_, count)| *count)
+    /// Whether more charges were admitted than [`Meter::admitted_charges`]
+    /// holds.
+    pub fn charge_log_truncated(&self) -> bool {
+        self.log_truncated
     }
 
     fn incomplete(&self, kind: LimitKind, next: Integer, point: ChargePoint) -> Incomplete {
@@ -465,7 +474,7 @@ impl Meter {
         match self.denial {
             Some(denial)
                 if denial.point == point
-                    && self.occurrence(point).checked_add(1) == Some(denial.occurrence) =>
+                    && self.denial_point_seen.checked_add(1) == Some(denial.occurrence) =>
             {
                 let consumed = self.consumed(LimitKind::WorkUnits);
                 Err(Incomplete {
@@ -514,11 +523,14 @@ impl Meter {
         if let Some(slot) = LimitKind::ResultUnits.slot(&mut self.consumed) {
             *slot = results;
         }
-        match self.occurrences.iter_mut().find(|(seen, _)| *seen == point) {
-            Some((_, count)) => *count = count.saturating_add(1),
-            None => self.occurrences.push((point, 1)),
+        if self.denial.is_some_and(|denial| denial.point == point) {
+            self.denial_point_seen = self.denial_point_seen.saturating_add(1);
         }
-        self.admitted.push(point);
+        if self.admitted.len() < CHARGE_LOG_CAPACITY {
+            self.admitted.push(point);
+        } else {
+            self.log_truncated = true;
+        }
         Ok(())
     }
 }

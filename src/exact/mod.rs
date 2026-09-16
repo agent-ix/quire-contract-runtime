@@ -50,7 +50,9 @@ mod rational;
 mod text;
 mod unit;
 
-pub use accounting::{ChargePoint, Incomplete, InjectedDenial, LimitKind, Meter, ScalarLimits};
+pub use accounting::{
+    ChargePoint, Incomplete, InjectedDenial, LimitKind, Meter, ScalarLimits, CHARGE_LOG_CAPACITY,
+};
 pub use arithmetic::{
     evaluate_connective, evaluate_integer, evaluate_not, evaluate_ordering, evaluate_rational,
     BooleanConnective, IntegerOperation, OrderingOperands, OrderingOperator, RationalOperation,

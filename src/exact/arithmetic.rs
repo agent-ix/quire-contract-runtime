@@ -4,15 +4,17 @@
 //!
 //! Each operation charges its named family in order: operands, then the exact
 //! arithmetic amount, then (for rationals) the reduced result, then an
-//! uncharged FR-044 result-domain membership decision, then retention. Any
-//! intermediate materialized before its charge is bounded by operands already
-//! admitted, and a stopped operation exposes no value.
+//! uncharged FR-044 result-domain membership decision, then retention. Every
+//! arithmetic amount is derived from the operands before the result is
+//! materialized (QSpec 5d88578); only the reduced rational, which needs the
+//! gcd of parts already admitted, is measured after it exists. A stopped
+//! operation exposes no value.
 
 use core::cmp::Ordering;
 
 use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
 use super::decimal::{Decimal, DecimalRepresentation};
-use super::integer::{Integer, IntegerDomain};
+use super::integer::{exact_bits, Integer, IntegerDomain};
 use super::outcome::{Outcome, Refusal, Stop, Undefined};
 use super::rational::{Rational, RationalDomain};
 
@@ -37,6 +39,16 @@ impl IntegerOperation<'_> {
                 (a.magnitude_bits().max(b.magnitude_bits()), 2)
             }
             Self::Negate(a) => (a.magnitude_bits(), 1),
+        }
+    }
+
+    /// `bits(exact result)`, derived before the result exists.
+    fn result_bits(self) -> u64 {
+        match self {
+            Self::Add(a, b) => exact_bits(|p| a.dyadic(p).add(&b.dyadic(p))),
+            Self::Subtract(a, b) => exact_bits(|p| a.dyadic(p).sub(&b.dyadic(p))),
+            Self::Multiply(a, b) => exact_bits(|p| a.dyadic(p).mul(&b.dyadic(p))),
+            Self::Negate(a) => a.magnitude_bits(),
         }
     }
 
@@ -74,11 +86,11 @@ fn integer(
             .size(LimitKind::IntegerBits, bits)
             .size(LimitKind::ValueOccurrences, count),
     )?;
-    let result = operation.apply();
     meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticArithmetic)
-            .size(LimitKind::IntegerBits, result.magnitude_bits()),
+            .size(LimitKind::IntegerBits, operation.result_bits()),
     )?;
+    let result = operation.apply();
     if !domain.contains(&result) {
         return Err(Stop::Refused(Refusal::IntegerOutOfDomain));
     }
@@ -102,6 +114,19 @@ pub enum RationalOperation<'a> {
     Negate(&'a Rational),
     /// Integer `n / m` with a rational result; each operand is `n/1`.
     IntegerDivide(&'a Integer, &'a Integer),
+}
+
+/// The unreduced `N/D` of a rational operation on `a/b` and `c/d`.
+#[derive(Clone, Copy)]
+enum Unreduced {
+    /// `(a×d ± c×b) / (b×d)`.
+    CrossSum { negate: bool },
+    /// `(a×c) / (b×d)`.
+    Product,
+    /// `(a×d) / (b×c)`.
+    Quotient,
+    /// `(-a) / b`.
+    Negation,
 }
 
 /// `(a, b)` of an operand `a/b`.
@@ -151,22 +176,49 @@ fn rational(
             .size(LimitKind::ValueOccurrences, count),
     )?;
     let ((a, b), (c, d)) = (left, right.unwrap_or((&one, &one)));
-    let (numerator, denominator) = match operation {
-        RationalOperation::Add(..) => (a.mul(d).add(&c.mul(b)), b.mul(d)),
-        RationalOperation::Subtract(..) => (a.mul(d).sub(&c.mul(b)), b.mul(d)),
-        RationalOperation::Multiply(..) => (a.mul(c), b.mul(d)),
+    let form = match operation {
+        RationalOperation::Add(..) => Unreduced::CrossSum { negate: false },
+        RationalOperation::Subtract(..) => Unreduced::CrossSum { negate: true },
+        RationalOperation::Multiply(..) => Unreduced::Product,
         RationalOperation::Divide(..) | RationalOperation::IntegerDivide(..) => {
             if c.is_zero() {
                 return Err(Stop::Undefined(Undefined::DivisionByZero));
             }
-            (a.mul(d), b.mul(c))
+            Unreduced::Quotient
         }
-        RationalOperation::Negate(..) => (a.neg(), b.clone()),
+        RationalOperation::Negate(..) => Unreduced::Negation,
     };
-    meter.charge(Charge::new(ChargePoint::RationalArithmeticArithmetic).size(
-        LimitKind::IntegerBits,
-        numerator.magnitude_bits().max(denominator.magnitude_bits()),
-    ))?;
+    // Sized from the operands, then charged, then materialized.
+    let product_bits = |x: &Integer, y: &Integer| exact_bits(|p| x.dyadic(p).mul(&y.dyadic(p)));
+    let (numerator_bits, denominator_bits) = match form {
+        Unreduced::CrossSum { negate } => (
+            exact_bits(|p| {
+                let (ad, cb) = (a.dyadic(p).mul(&d.dyadic(p)), c.dyadic(p).mul(&b.dyadic(p)));
+                if negate {
+                    ad.sub(&cb)
+                } else {
+                    ad.add(&cb)
+                }
+            }),
+            product_bits(b, d),
+        ),
+        Unreduced::Product => (product_bits(a, c), product_bits(b, d)),
+        Unreduced::Quotient => (product_bits(a, d), product_bits(b, c)),
+        Unreduced::Negation => (a.magnitude_bits(), b.magnitude_bits()),
+    };
+    meter.charge(
+        Charge::new(ChargePoint::RationalArithmeticArithmetic)
+            .size(LimitKind::IntegerBits, numerator_bits.max(denominator_bits)),
+    )?;
+    let (numerator, denominator) = match form {
+        Unreduced::CrossSum { negate: false } => (a.mul(d).add(&c.mul(b)), b.mul(d)),
+        Unreduced::CrossSum { negate: true } => (a.mul(d).sub(&c.mul(b)), b.mul(d)),
+        Unreduced::Product => (a.mul(c), b.mul(d)),
+        Unreduced::Quotient => (a.mul(d), b.mul(c)),
+        Unreduced::Negation => (a.neg(), b.clone()),
+    };
+    // The reduced parts are no larger than the unreduced parts just admitted;
+    // reduction needs the gcd, so this amount is measured on the reduced value.
     // Every denominator above is a product of nonzero parts.
     let result = Rational::reduce(numerator, denominator);
     meter.charge(
