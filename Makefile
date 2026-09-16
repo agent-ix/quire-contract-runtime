@@ -38,6 +38,9 @@
 # agent-ix/quire-contract-runtime#10.
 
 CARGO ?= cargo
+# The QSL agreement package depends on quire-contract-model (rustc 1.98.1). rustup
+# resolves the toolchain from the working directory, not the manifest, so pin it here.
+QSL_AGREEMENT_TOOLCHAIN ?= 1.98.1
 PYTHON ?= python3
 QUIRE ?= quire
 QUOIN ?= quoin
@@ -123,7 +126,7 @@ test-features:
 # separate package, so the runtime's own dependency graph never contains it.
 .PHONY: conformance
 conformance:
-	$(CARGO) test --locked --release --manifest-path conformance/qsl-agreement/Cargo.toml
+	$(CARGO) +$(QSL_AGREEMENT_TOOLCHAIN) test --locked --release --manifest-path conformance/qsl-agreement/Cargo.toml
 
 .PHONY: doc
 doc:
