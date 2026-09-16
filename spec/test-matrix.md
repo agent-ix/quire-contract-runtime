@@ -24,6 +24,17 @@ type: TestMatrix
 | FR-005 | FR-005-AC-3 | TC-011 | ✅ Complete |
 | FR-005 | FR-005-AC-5 | TC-013 | ✅ Complete |
 | FR-005 | FR-005-AC-6 | TC-014 | ✅ Complete |
+| FR-006 | FR-006-AC-1, FR-006-AC-5 | TC-016 | ✅ implemented |
+| FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | ✅ implemented |
+| FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
+| FR-006 | FR-006-AC-4 | TC-017 | ✅ implemented |
+| FR-007 | FR-007-AC-1 | TC-018 | ✅ implemented |
+| FR-007 | FR-007-AC-2 | TC-019 | ✅ implemented |
+| FR-007 | FR-007-AC-3 | TC-020 | ✅ implemented |
+| FR-007 | FR-007-AC-4 | TC-021 | ✅ implemented |
+| FR-007 | FR-007-AC-5 | TC-022 | ✅ implemented |
+| FR-007 | FR-007-AC-6 | TC-018, TC-019, TC-020, TC-021, TC-022 | ✅ implemented |
+| FR-007 | FR-007-AC-7 | TC-023 | ✅ implemented |
 
 ## Test Case Summary
 
@@ -43,12 +54,26 @@ type: TestMatrix
 | TC-013 | Demonstrate all twelve outcomes and pair every negative with a positive control | Integration | P0 | FR-005-AC-5, NFR-002-AC-3 | ✅ Complete |
 | TC-014 | Prove no generic evidence machinery remains | Integration | P0 | FR-005-AC-6 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
+| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-5 | ✅ implemented |
+| TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
+| TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | ✅ implemented |
+| TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | ✅ implemented |
+| TC-020 | Agree with the authority on IEEE profile vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-3, FR-007-AC-6 | ✅ implemented |
+| TC-021 | Agree with the authority on text and enum vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-4, FR-007-AC-6 | ✅ implemented |
+| TC-022 | Agree with the authority on quantity and unit vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-5, FR-007-AC-6 | ✅ implemented |
+| TC-023 | Meter integer, rational, ordering and Boolean operations | Property | P0 | FR-007-AC-7 | ✅ implemented |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
 binding; executable semantic claims retain direct acceptance-criterion trace tags.
 
 ## Evidence Locations
+
+- TC-016, TC-017: `tests/exact_outcomes.rs`; TC-023: `tests/exact_arithmetic.rs`; allocation bounds for
+  TC-016 and TC-023: `tests/exact_allocation.rs`. All run with
+  `--features exact`.
+- TC-018 through TC-022: `conformance/qsl-agreement/tests/`, run by `make conformance` against
+  quire-spec-language d9d5273, with charges checked against agent-ix/quire-specification@5d88578.
 
 - TC-015: `tests/snapshot.rs`, private near-limit accounting tests, compile-fail API docs,
   and an isolated native memory-ceiling control. REV-009 records independent acceptance of

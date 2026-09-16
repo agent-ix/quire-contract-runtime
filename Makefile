@@ -38,6 +38,9 @@
 # agent-ix/quire-contract-runtime#10.
 
 CARGO ?= cargo
+# The QSL agreement package depends on quire-contract-model (rustc 1.98.1). rustup
+# resolves the toolchain from the working directory, not the manifest, so pin it here.
+QSL_AGREEMENT_TOOLCHAIN ?= 1.98.1
 PYTHON ?= python3
 QUIRE ?= quire
 QUOIN ?= quoin
@@ -68,6 +71,7 @@ help:
 	@echo "  make lint             - Clippy with -D warnings"
 	@echo "  make test             - cargo test plus the shared-assurance tests"
 	@echo "  make test-features    - test every supported feature set"
+	@echo "  make conformance      - exact oracles against the pinned QSL authority"
 	@echo "  make doc              - warning-denied docs for runtime and footprint"
 	@echo "  make build            - Release build"
 	@echo "  make msrv             - Check all targets and features with Rust $(MSRV)"
@@ -117,6 +121,12 @@ test: assurance-inputs
 .PHONY: test-features
 test-features:
 	$(PYTHON) scripts/run_feature_matrix.py
+
+# Exact-oracle agreement against the pinned quire-spec-language authority. A
+# separate package, so the runtime's own dependency graph never contains it.
+.PHONY: conformance
+conformance:
+	$(CARGO) +$(QSL_AGREEMENT_TOOLCHAIN) test --locked --release --manifest-path conformance/qsl-agreement/Cargo.toml
 
 .PHONY: doc
 doc:
@@ -249,5 +259,5 @@ assurance-record: assurance-inputs
 
 .NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny audit-unsafe audit-panic \
+ci: fmt-check spec lint test-features conformance doc msrv size deny audit-unsafe audit-panic \
 	kani kani-mutations test assurance
