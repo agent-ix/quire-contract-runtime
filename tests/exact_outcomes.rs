@@ -373,8 +373,11 @@ fn tc_016_exact_sources_have_no_host_float_std_panic_or_unsafe_path() {
                 let before = code[..at].chars().next_back();
                 let after = code[at + token.len()..].chars().next();
                 let word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
-                !(token.chars().next().unwrap().is_alphanumeric() && word(before))
-                    && !(token.chars().last().unwrap().is_alphanumeric() && word(after))
+                let starts_with_word = token.chars().next().is_some_and(char::is_alphanumeric);
+                let ends_with_word = token.chars().last().is_some_and(char::is_alphanumeric);
+                let joined_before = starts_with_word && word(before);
+                let joined_after = ends_with_word && word(after);
+                !joined_before && !joined_after
             });
             assert!(!hit, "{name} contains {token}");
         }
