@@ -7,10 +7,10 @@ use std::fs;
 use std::path::Path;
 
 use quire_contract_runtime::exact::{
-    admit_text, compare_text, evaluate_integer, evaluate_not, ChargePoint, ComparisonOperator,
-    IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerDomain, IntegerInterval,
-    IntegerOperation, LimitKind, Meter, Outcome, Refusal, ScalarLimits, TextPayload, TextProfile,
-    TextType,
+    admit_text, compare_text, evaluate_boolean, evaluate_integer_arithmetic, BooleanConnective,
+    ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer,
+    IntegerArithmetic, IntegerInterval, LimitKind, Meter, Outcome, Refusal, ScalarLimits,
+    TextPayload, TextProfile, TextType,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -68,7 +68,7 @@ fn tc_016_outcomes_are_four_distinct_dispositions_and_false_is_a_value() {
 
     // A false result is completed, never a refusal.
     assert_eq!(
-        evaluate_not(true, &mut Meter::new(UNLIMITED)),
+        evaluate_boolean(BooleanConnective::Not(true), &mut Meter::new(UNLIMITED)),
         Outcome::Completed(false)
     );
 
@@ -149,7 +149,7 @@ fn tc_016_charge_point_and_limit_vocabularies_round_trip() {
     for point in ChargePoint::ALL {
         assert_eq!(ChargePoint::from_code(point.as_str()), Some(point));
     }
-    assert_eq!(ChargePoint::from_code("equality.plan-form"), None);
+    assert_eq!(ChargePoint::from_code("equality.not-a-real-point"), None);
     assert_eq!(ChargePoint::from_code("ordering"), None);
     // The QSpec 7d7943a scalar families, in definition-row order.
     assert_eq!(
@@ -201,9 +201,9 @@ fn tc_017_charges_precede_work_and_a_denied_charge_consumes_nothing() {
     let mut tuple = [u64::MAX; 10];
     tuple[0] = 128;
     let mut meter = Meter::new(limits(tuple));
-    let outcome = evaluate_integer(
-        IntegerOperation::Multiply(&two_64, &two_64),
-        &IntegerDomain::Mathematical,
+    let outcome = evaluate_integer_arithmetic(
+        IntegerArithmetic::Multiply(&two_64, &two_64),
+        None,
         &mut meter,
     );
     assert_eq!(
@@ -226,11 +226,7 @@ fn tc_017_charges_precede_work_and_a_denied_charge_consumes_nothing() {
 
     // Size counters are high-water marks; work and result units accumulate.
     let (one, three) = (int(1), int(3));
-    let run = evaluate_integer(
-        IntegerOperation::Add(&one, &three),
-        &IntegerDomain::Mathematical,
-        &mut meter,
-    );
+    let run = evaluate_integer_arithmetic(IntegerArithmetic::Add(&one, &three), None, &mut meter);
     assert_eq!(run, Outcome::Completed(int(4)));
     expected[8] = 4;
     expected[9] = 1;
@@ -245,9 +241,9 @@ fn tc_017_first_short_counter_in_field_order_and_domain_refusal_before_retention
     let mut short = [u64::MAX; 10];
     short[0] = 7;
     short[8] = 0;
-    let outcome = evaluate_integer(
-        IntegerOperation::Add(&a, &b),
-        &IntegerDomain::Mathematical,
+    let outcome = evaluate_integer_arithmetic(
+        IntegerArithmetic::Add(&a, &b),
+        None,
         &mut Meter::new(limits(short)),
     );
     assert_eq!(
@@ -261,9 +257,13 @@ fn tc_017_first_short_counter_in_field_order_and_domain_refusal_before_retention
         })
     );
 
-    let domain = IntegerDomain::Bounded(IntegerInterval::new(int(0), int(10)).unwrap());
+    let bound = IntegerInterval::new(int(0), int(10)).unwrap();
     let mut meter = Meter::new(UNLIMITED);
-    let refused = evaluate_integer(IntegerOperation::Add(&int(7), &int(5)), &domain, &mut meter);
+    let refused = evaluate_integer_arithmetic(
+        IntegerArithmetic::Add(&int(7), &int(5)),
+        Some(&bound),
+        &mut meter,
+    );
     assert_eq!(refused, Outcome::Refused(Refusal::IntegerOutOfDomain));
     assert_eq!(
         meter.admitted_charges(),
@@ -288,11 +288,8 @@ fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
             point,
             occurrence: 1,
         });
-        let outcome = evaluate_integer(
-            IntegerOperation::Negate(&int(-9)),
-            &IntegerDomain::Mathematical,
-            &mut meter,
-        );
+        let outcome =
+            evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(-9)), None, &mut meter);
         assert_eq!(
             outcome,
             Outcome::Incomplete(Incomplete {
@@ -316,10 +313,14 @@ fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
         point: ChargePoint::BooleanResultRetain,
         occurrence: 2,
     });
-    assert_eq!(evaluate_not(false, &mut meter), Outcome::Completed(true));
-    assert!(
-        matches!(evaluate_not(false, &mut meter), Outcome::Incomplete(ref record) if record.limit == 1)
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
+        Outcome::Completed(true)
     );
+    assert!(matches!(
+        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
+        Outcome::Incomplete(ref record) if record.limit == 1
+    ));
 }
 
 /// Trace: TC-016, FR-006-AC-5
@@ -345,7 +346,7 @@ fn tc_016_exact_sources_have_no_host_float_std_panic_or_unsafe_path() {
         ));
     }
     sources.sort();
-    assert_eq!(sources.len(), 16);
+    assert_eq!(sources.len(), 22);
     let forbidden = [
         "f32",
         "f64",
@@ -440,6 +441,6 @@ fn tc_016_exact_surface_is_reexported_from_private_modules() {
             }
         }
     }
-    assert_eq!(declared.len(), 15);
+    assert_eq!(declared.len(), 21);
     assert_eq!(public, exported);
 }

@@ -502,10 +502,7 @@ fn integer_to_decimal(
             .size(LimitKind::DecimalDigits, value.decimal_digits())
             .size(LimitKind::ValueOccurrences, 1),
     )?;
-    let (bits, digits) = (
-        shifted_bits(value, scale),
-        shifted_digits(value, scale),
-    );
+    let (bits, digits) = (shifted_bits(value, scale), shifted_digits(value, scale));
     meter.charge(
         Charge::new(ChargePoint::DecimalScaleExpansion)
             .size(LimitKind::ScaleExpansion, scale)

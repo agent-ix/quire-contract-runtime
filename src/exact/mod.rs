@@ -85,8 +85,8 @@ pub use collection::{
 pub use comparison::{ComparisonOperator, IllTyped, IllTypedCause};
 pub use composite::{
     Component, CompositeDeclaration, CompositeShape, CompositeValue, ConstructionCause,
-    ConstructionRefusal, DeclarationCause, Deferred, FieldDeclaration, FieldExpression,
-    FieldValue, InvalidDeclaration, ObjectTypeDeclaration, OptionValue, Presence, RecursionEdges,
+    ConstructionRefusal, DeclarationCause, Deferred, FieldDeclaration, FieldExpression, FieldValue,
+    InvalidDeclaration, ObjectTypeDeclaration, OptionValue, Presence, RecursionEdges,
     TypeEnvironment, Value, ValueType,
 };
 pub use containment::{GraphCause, GraphNode, GraphNodeId, GraphRefusal, GraphSlot, ValueGraph};
@@ -101,8 +101,8 @@ pub use division::{
 };
 pub use enumeration::{compare_enum, EnumDeclaration, EnumValue};
 pub use equality::{
-    admits_equality_conversion, plan_equality, CheckedEquality, EqualityOperand,
-    EqualityOperator, EqualityPlan, EqualitySchedule,
+    admits_equality_conversion, plan_equality, CheckedEquality, EqualityOperand, EqualityOperator,
+    EqualityPlan, EqualitySchedule,
 };
 pub use ieee::{
     compare_ieee, convert_ieee_width, evaluate_ieee, exact_to_ieee, ieee_intrinsic_identities,

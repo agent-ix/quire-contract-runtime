@@ -997,7 +997,11 @@ fn expand_one((coefficient, shift): Shifted<'_>) -> Integer {
 
 /// `bits(10^k)`, derived without allocating the power of ten.
 pub(crate) fn power_of_ten_bits(shift: u64) -> Integer {
-    Integer::power_product_bits(&Integer::one(), &Integer::from(10_i64), &Integer::from(shift))
+    Integer::power_product_bits(
+        &Integer::one(),
+        &Integer::from(10_i64),
+        &Integer::from(shift),
+    )
 }
 
 /// `sbits(c,k)` from `quire.value.accounting/v1`: `bits(c)` when `k = 0` and

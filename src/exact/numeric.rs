@@ -99,10 +99,8 @@ fn order(
                     .size(occurrences, 2),
             )?;
             meter.charge(
-                Charge::new(ChargePoint::OrderingArithmetic).exact_size(
-                    LimitKind::IntegerBits,
-                    rational_ordering_bits(left, right),
-                ),
+                Charge::new(ChargePoint::OrderingArithmetic)
+                    .exact_size(LimitKind::IntegerBits, rational_ordering_bits(left, right)),
             )?;
             left.cmp(right)
         }
