@@ -682,7 +682,10 @@ fn tc_020_f27_ieee_to_rational_sizes_maxparts_and_admits_membership_before_reten
         Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 1074, 64, int(1075), IeeeExactIntermediate))
     );
     let zero = results[2].0.clone().completed().unwrap();
-    assert_eq!((zero.value(), zero.discarded_negative_zero()), (&ratio(0, 1), true));
+    assert_eq!(
+        (zero.value(), zero.loss()),
+        (&ratio(0, 1), Some(IeeeExactLoss::NegativeZeroSign))
+    );
     assert_eq!(results[2].1, TO_EXACT);
     assert_eq!(results[3].0, Outcome::Incomplete(work_denied(2, IeeeResultRetain)));
     assert_eq!((&results[4].0, results[4].1.as_slice()), (&Outcome::Undefined(Undefined::IeeeNotFinite), &[IeeeOperands][..]));
@@ -893,7 +896,7 @@ fn tc_020_generated_finite_classes_round_trip_through_rational_and_every_denial_
                     (
                         metered(UNLIMITED, run(RoundingMode::Exact)),
                         denials(UNLIMITED, run(RoundingMode::NearestEven)),
-                        exact.discarded_negative_zero(),
+                        exact.loss().is_some(),
                     )
                 });
                 (to_exact, back)

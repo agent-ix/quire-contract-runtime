@@ -692,16 +692,16 @@ fn ordered(
 ) -> (Outcome<bool>, Vec<ChargePoint>, Vec<u64>) {
     let authority = agree! { dec(left.0, left.1).compare(&dec(right.0, right.1)) };
     let run = metered(limits(tuple), |m| {
-        evaluate_ordering(
+        order_numbers(
             OrderingOperator::Less,
-            OrderingOperands::Decimal(&dec(left.0, left.1), &dec(right.0, right.1)),
+            OrderedOperands::Decimals(&dec(left.0, left.1), &dec(right.0, right.1)),
             m,
         )
     });
     if let Outcome::Completed(value) = run.0 {
         assert_eq!(
             value,
-            OrderingOperator::Less.holds(authority),
+            authority.is_lt(),
             "value disagrees with the authority"
         );
     }

@@ -107,8 +107,8 @@ pub use equality::{
 pub use ieee::{
     compare_ieee, convert_ieee_width, evaluate_ieee, exact_to_ieee, ieee_intrinsic_identities,
     ieee_to_exact, negotiate_ieee, ExactScalar, IeeeBackendCapabilities, IeeeComparison,
-    IeeeDisposition, IeeeExact, IeeeExactTarget, IeeeFlag, IeeeFlags, IeeeItemRequirement,
-    IeeeOperand, IeeeOperation, IeeeOperationKind, IeeeProvenance, IeeeResult,
+    IeeeDisposition, IeeeExact, IeeeExactLoss, IeeeExactTarget, IeeeFlag, IeeeFlags,
+    IeeeItemRequirement, IeeeOperand, IeeeOperation, IeeeOperationKind, IeeeProvenance, IeeeResult,
     IeeeUnsupportedCause, IeeeValue, IeeeWidth, IEEE_DEFINITION,
 };
 pub use integer::{
