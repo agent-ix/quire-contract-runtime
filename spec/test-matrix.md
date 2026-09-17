@@ -35,6 +35,10 @@ type: TestMatrix
 | FR-007 | FR-007-AC-5 | TC-022 | ✅ implemented |
 | FR-007 | FR-007-AC-6 | TC-018, TC-019, TC-020, TC-021, TC-022 | ✅ implemented |
 | FR-007 | FR-007-AC-7 | TC-023 | ✅ implemented |
+| FR-008 | FR-008-AC-1, FR-008-AC-2 | TC-024 | 🚧 Not yet implemented |
+| FR-008 | FR-008-AC-3, FR-008-AC-4 | TC-025 | 🚧 Not yet implemented |
+| FR-008 | FR-008-AC-5, FR-008-AC-6 | TC-026 | 🚧 Not yet implemented |
+| FR-008 | FR-008-AC-7, FR-008-AC-8 | TC-024, TC-025, TC-026 | 🚧 Not yet implemented |
 
 ## Test Case Summary
 
@@ -62,6 +66,9 @@ type: TestMatrix
 | TC-021 | Agree with the authority on text and enum vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-4, FR-007-AC-6 | ✅ implemented |
 | TC-022 | Agree with the authority on quantity and unit vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-5, FR-007-AC-6 | ✅ implemented |
 | TC-023 | Meter integer, rational, ordering and Boolean operations | Property | P0 | FR-007-AC-7 | ✅ implemented |
+| TC-024 | Construct composite values and their declaration environment | Unit | P0 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-7, FR-008-AC-8 | 🚧 Not yet implemented |
+| TC-025 | Construct collections and order them by the canonical key | Property | P0 | FR-008-AC-3, FR-008-AC-4, FR-008-AC-7, FR-008-AC-8 | 🚧 Not yet implemented |
+| TC-026 | Evaluate the equality matrix and terminal references | Unit | P0 | FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8 | 🚧 Not yet implemented |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
@@ -74,6 +81,8 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   `--features exact`.
 - TC-018 through TC-022: `conformance/qsl-agreement/tests/`, run by `make conformance` against
   quire-spec-language d9d5273, with charges checked against agent-ix/quire-specification@7d7943a.
+- TC-024: `tests/exact_composite.rs`; TC-025: `tests/exact_collection.rs`; TC-026:
+  `tests/exact_equality.rs`. All run with `--features exact` against quire-spec-language d01371b9.
 
 - TC-015: `tests/snapshot.rs`, private near-limit accounting tests, compile-fail API docs,
   and an isolated native memory-ceiling control. REV-009 records independent acceptance of

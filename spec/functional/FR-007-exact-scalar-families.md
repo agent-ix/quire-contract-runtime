@@ -42,8 +42,7 @@ the QSpec 7d7943a accounting schedule.
 - Every arithmetic, normalize, rounding, retain-upscale, unit-event and target-domain amount is
   derived from operand bit lengths and scales only and is charged before any intermediate or result
   is allocated; no charge is sized from a computed result.
-- Composite, collection, equality-plan and function-call semantics are out of scope
-  (agent-ix/quire-spec-language#119), as are model domains (#120) and replay (#121).
+- Model domains are out of scope (agent-ix/quire-spec-language#120), as is replay (#121).
 
 ## Acceptance Criteria
 
