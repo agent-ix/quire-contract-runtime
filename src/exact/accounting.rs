@@ -202,12 +202,35 @@ pub enum ChargePoint {
     IeeeRound,
     /// `ieee.result-retain`.
     IeeeResultRetain,
+    /// `equality.plan-form`.
+    EqualityPlanForm,
     /// `equality.plan`.
     EqualityPlan,
     /// `equality.pair`.
     EqualityPair,
     /// `equality.result-retain`.
     EqualityResultRetain,
+    /// `function.call`: one checked function call. Ported as closed
+    /// accounting vocabulary ahead of the expression-machine operator that
+    /// will charge it (agent-ix/quire-spec-language#119); no operator in this
+    /// crate charges it yet.
+    FunctionCall,
+    /// `collection.element`.
+    CollectionElement,
+    /// `collection.visit`: ported ahead of the collection-traversal operator
+    /// that will charge it (agent-ix/quire-spec-language#119); no operator in
+    /// this crate charges it yet.
+    CollectionVisit,
+    /// `collection.member-walk`.
+    CollectionMemberWalk,
+    /// `collection.member-test`.
+    CollectionMemberTest,
+    /// `collection.bound`.
+    CollectionBound,
+    /// `collection.result-retain`.
+    CollectionResultRetain,
+    /// `composite.result-retain`.
+    CompositeResultRetain,
     /// `integer-arithmetic.operands`.
     IntegerArithmeticOperands,
     /// `integer-arithmetic.arithmetic`.
@@ -234,7 +257,7 @@ pub enum ChargePoint {
 
 impl ChargePoint {
     /// Every named point, grouped by family in normative order.
-    pub const ALL: [Self; 43] = [
+    pub const ALL: [Self; 52] = [
         Self::DecimalOperands,
         Self::DecimalScaleExpansion,
         Self::DecimalArithmetic,
@@ -264,9 +287,18 @@ impl ChargePoint {
         Self::IeeeExactIntermediate,
         Self::IeeeRound,
         Self::IeeeResultRetain,
+        Self::EqualityPlanForm,
         Self::EqualityPlan,
         Self::EqualityPair,
         Self::EqualityResultRetain,
+        Self::FunctionCall,
+        Self::CollectionElement,
+        Self::CollectionVisit,
+        Self::CollectionMemberWalk,
+        Self::CollectionMemberTest,
+        Self::CollectionBound,
+        Self::CollectionResultRetain,
+        Self::CompositeResultRetain,
         Self::IntegerArithmeticOperands,
         Self::IntegerArithmeticArithmetic,
         Self::IntegerArithmeticResultRetain,
@@ -312,9 +344,18 @@ impl ChargePoint {
             Self::IeeeExactIntermediate => "ieee.exact-intermediate",
             Self::IeeeRound => "ieee.round",
             Self::IeeeResultRetain => "ieee.result-retain",
+            Self::EqualityPlanForm => "equality.plan-form",
             Self::EqualityPlan => "equality.plan",
             Self::EqualityPair => "equality.pair",
             Self::EqualityResultRetain => "equality.result-retain",
+            Self::FunctionCall => "function.call",
+            Self::CollectionElement => "collection.element",
+            Self::CollectionVisit => "collection.visit",
+            Self::CollectionMemberWalk => "collection.member-walk",
+            Self::CollectionMemberTest => "collection.member-test",
+            Self::CollectionBound => "collection.bound",
+            Self::CollectionResultRetain => "collection.result-retain",
+            Self::CompositeResultRetain => "composite.result-retain",
             Self::IntegerArithmeticOperands => "integer-arithmetic.operands",
             Self::IntegerArithmeticArithmetic => "integer-arithmetic.arithmetic",
             Self::IntegerArithmeticResultRetain => "integer-arithmetic.result-retain",
@@ -369,8 +410,8 @@ pub struct InjectedDenial {
 pub(crate) struct Charge {
     point: ChargePoint,
     sizes: Vec<(LimitKind, Integer)>,
-    work_units: u64,
-    result_units: u64,
+    work_units: Integer,
+    result_units: Integer,
 }
 
 impl Charge {
@@ -378,8 +419,8 @@ impl Charge {
         Self {
             point,
             sizes: Vec::new(),
-            work_units: 1,
-            result_units: 0,
+            work_units: Integer::one(),
+            result_units: Integer::zero(),
         }
     }
 
@@ -393,7 +434,19 @@ impl Charge {
         self
     }
 
-    pub(crate) fn results(mut self, amount: u64) -> Self {
+    /// A `work_units` addition other than the default one, which may exceed
+    /// `u64::MAX` (an occurrence-derived amount, for example).
+    pub(crate) fn work(mut self, amount: Integer) -> Self {
+        self.work_units = amount;
+        self
+    }
+
+    pub(crate) fn results(self, amount: u64) -> Self {
+        self.exact_results(Integer::from(amount))
+    }
+
+    /// A `result_units` addition that may exceed `u64::MAX`.
+    pub(crate) fn exact_results(mut self, amount: Integer) -> Self {
         self.result_units = amount;
         self
     }
@@ -470,7 +523,7 @@ impl Meter {
 
     /// The qualification-seam record: as if the `work_units` limit were the
     /// work already consumed, so `limit = consumed = w`.
-    fn check_injected(&self, point: ChargePoint, work_units: u64) -> Result<(), Incomplete> {
+    fn check_injected(&self, point: ChargePoint, work_units: Integer) -> Result<(), Incomplete> {
         match self.denial {
             Some(denial)
                 if denial.point == point
@@ -481,7 +534,7 @@ impl Meter {
                     limit_kind: LimitKind::WorkUnits,
                     limit: consumed,
                     consumed,
-                    next_charge: Integer::from(work_units),
+                    next_charge: work_units,
                     charge_point: point,
                 })
             }
@@ -489,11 +542,22 @@ impl Meter {
         }
     }
 
+    fn admit(&mut self, point: ChargePoint) {
+        if self.denial.is_some_and(|denial| denial.point == point) {
+            self.denial_point_seen = self.denial_point_seen.saturating_add(1);
+        }
+        if self.admitted.len() < CHARGE_LOG_CAPACITY {
+            self.admitted.push(point);
+        } else {
+            self.log_truncated = true;
+        }
+    }
+
     /// Atomically admit `charge` or return the first unavailable counter in
     /// `ScalarLimitsV1` field order.
     pub(crate) fn charge(&mut self, mut charge: Charge) -> Result<(), Incomplete> {
         let point = charge.point;
-        self.check_injected(point, charge.work_units)?;
+        self.check_injected(point, charge.work_units.clone())?;
         // Every semantic-size counter precedes `work_units` and `result_units`
         // in field order.
         charge.sizes.sort_by_key(|(kind, _)| kind.index());
@@ -504,11 +568,12 @@ impl Meter {
                 _ => return Err(self.incomplete(kind, amount, point)),
             }
         }
-        let cumulative = |kind: LimitKind, amount: u64| {
-            self.consumed(kind)
-                .checked_add(amount)
+        let cumulative = |kind: LimitKind, amount: Integer| {
+            amount
+                .to_u64()
+                .and_then(|addition| self.consumed(kind).checked_add(addition))
                 .filter(|total| *total <= kind.limit(&self.limits))
-                .ok_or_else(|| self.incomplete(kind, Integer::from(amount), point))
+                .ok_or_else(|| self.incomplete(kind, amount, point))
         };
         let work = cumulative(LimitKind::WorkUnits, charge.work_units)?;
         let results = cumulative(LimitKind::ResultUnits, charge.result_units)?;
@@ -523,14 +588,43 @@ impl Meter {
         if let Some(slot) = LimitKind::ResultUnits.slot(&mut self.consumed) {
             *slot = results;
         }
-        if self.denial.is_some_and(|denial| denial.point == point) {
-            self.denial_point_seen = self.denial_point_seen.saturating_add(1);
+        self.admit(point);
+        Ok(())
+    }
+
+    /// The FR-149 `equality.plan` charge: size `value_occurrences` is the
+    /// planned pair count; without changing any consumed counter it requires
+    /// `pairs + 2` remaining work units (one for each subsequent
+    /// `equality.pair` charge this plan's pairs will drive, plus one for the
+    /// closing `equality.result-retain`) and one remaining result unit, then
+    /// consumes only this charge's own single work unit. This lets a huge
+    /// pair count fail fast, atomically, at `equality.plan` itself instead of
+    /// partway through the individual `equality.pair` charges it licenses.
+    pub(crate) fn charge_plan(&mut self, pairs: &Integer) -> Result<(), Incomplete> {
+        let point = ChargePoint::EqualityPlan;
+        let reservation = pairs.add(&Integer::from(2_u64));
+        self.check_injected(point, reservation.clone())?;
+        let kind = LimitKind::ValueOccurrences;
+        let size = pairs
+            .to_u64()
+            .filter(|size| *size <= kind.limit(&self.limits))
+            .ok_or_else(|| self.incomplete(kind, pairs.clone(), point))?;
+        let remaining = |kind: LimitKind| {
+            Integer::from(kind.limit(&self.limits)).sub(&Integer::from(self.consumed(kind)))
+        };
+        if reservation > remaining(LimitKind::WorkUnits) {
+            return Err(self.incomplete(LimitKind::WorkUnits, reservation, point));
         }
-        if self.admitted.len() < CHARGE_LOG_CAPACITY {
-            self.admitted.push(point);
-        } else {
-            self.log_truncated = true;
+        if remaining(LimitKind::ResultUnits) < Integer::one() {
+            return Err(self.incomplete(LimitKind::ResultUnits, Integer::one(), point));
         }
+        if let Some(slot) = kind.slot(&mut self.consumed) {
+            *slot = (*slot).max(size);
+        }
+        if let Some(slot) = LimitKind::WorkUnits.slot(&mut self.consumed) {
+            *slot = slot.saturating_add(1);
+        }
+        self.admit(point);
         Ok(())
     }
 }

@@ -397,7 +397,7 @@ impl DecimalType {
 }
 
 /// Compare `value × 10^shift` with `bound` without materializing the power.
-fn compare_shifted(value: &Integer, shift: u64, bound: &Integer) -> Ordering {
+pub(crate) fn compare_shifted(value: &Integer, shift: u64, bound: &Integer) -> Ordering {
     let sign = |integer: &Integer| {
         if integer.is_zero() {
             Ordering::Equal
@@ -995,6 +995,11 @@ fn expand_one((coefficient, shift): Shifted<'_>) -> Integer {
     }
 }
 
+/// `bits(10^k)`, derived without allocating the power of ten.
+pub(crate) fn power_of_ten_bits(shift: u64) -> Integer {
+    Integer::power_product_bits(&Integer::one(), &Integer::from(10_i64), &Integer::from(shift))
+}
+
 /// `sbits(c,k)` from `quire.value.accounting/v1`: `bits(c)` when `k = 0` and
 /// `bits(c) + bits(10^k)` otherwise, derived from the unshifted coefficient and
 /// never from the product, without allocating the power of ten.
@@ -1003,12 +1008,7 @@ pub(crate) fn shifted_bits(coefficient: &Integer, shift: u64) -> Integer {
     if shift == 0 {
         return bits;
     }
-    let power = Integer::power_product_bits(
-        &Integer::one(),
-        &Integer::from(10_i64),
-        &Integer::from(shift),
-    );
-    bits.add(&power)
+    bits.add(&power_of_ten_bits(shift))
 }
 
 /// `sdigits(c,k) = digits(c) + k` from `quire.value.accounting/v1`, derived

@@ -7,6 +7,7 @@
 //! cases, checks the structural rules it compares under, and never recomputes
 //! a key.
 
+use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -85,17 +86,19 @@ impl EnumDeclaration {
             member,
             ordered: self.ordered,
             position,
+            case: Box::from(case),
         })
     }
 }
 
 /// An enumeration value: (declaration identity, member identity).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct EnumValue {
     declaration: NodeKey,
     member: NodeKey,
     ordered: bool,
     position: usize,
+    case: Box<str>,
 }
 
 impl EnumValue {
@@ -107,6 +110,21 @@ impl EnumValue {
     /// Member node key.
     pub fn member(&self) -> NodeKey {
         self.member
+    }
+
+    /// Zero-based declaration position of the member.
+    pub(crate) fn position(&self) -> usize {
+        self.position
+    }
+
+    /// Whether the declaration is an `ordered enum`.
+    pub fn is_ordered(&self) -> bool {
+        self.ordered
+    }
+
+    /// The case identifier.
+    pub fn case(&self) -> &str {
+        &self.case
     }
 }
 
