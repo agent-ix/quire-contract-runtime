@@ -39,7 +39,7 @@ fn consumed(meter: &Meter) -> Vec<u64> {
         .collect()
 }
 
-/// Trace: TC-024, FR-008-AC-1
+/// Trace: TC-024, FR-008-AC-8
 #[test]
 fn tc_024_p1_charge_point_vocabulary_names_uncharged_future_points() {
     assert_eq!(ChargePoint::ALL.len(), 52);
@@ -81,7 +81,7 @@ fn tc_024_p1_charge_point_vocabulary_names_uncharged_future_points() {
         .contains(&ChargePoint::CollectionVisit));
 }
 
-/// Trace: TC-024, FR-008-AC-2
+/// Trace: TC-024, FR-008-AC-1
 #[test]
 fn tc_024_p2_declaration_admission_refuses_duplicates_and_cycles() {
     // Two declarations sharing one node key.
@@ -175,7 +175,7 @@ fn tc_024_p2_declaration_admission_refuses_duplicates_and_cycles() {
     }
 }
 
-/// Trace: TC-024, FR-008-AC-3
+/// Trace: TC-024, FR-008-AC-1
 #[test]
 fn tc_024_p3_check_type_and_contains_ieee() {
     // Reference<T> to a non-object-type declaration is type-mismatch.
@@ -229,7 +229,7 @@ fn tc_024_p3_check_type_and_contains_ieee() {
     assert!(!nested_env.contains_ieee(&ValueType::Integer));
 }
 
-/// Trace: TC-024, FR-008-AC-4
+/// Trace: TC-024, FR-008-AC-1
 #[test]
 fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     let widget = CompositeDeclaration::new(
@@ -371,7 +371,7 @@ fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     );
 }
 
-/// Trace: TC-024, FR-008-AC-5
+/// Trace: TC-024, FR-008-AC-2
 #[test]
 fn tc_024_p5_value_graph_sharing_and_refusals() {
     let leaf = CompositeDeclaration::new(key(1), "Leaf", CompositeShape::Tuple(Vec::new()));
@@ -550,7 +550,7 @@ fn tc_024_p5_value_graph_sharing_and_refusals() {
     core::mem::forget(deep_value);
 }
 
-/// Trace: TC-024, FR-008-AC-6
+/// Trace: TC-024, FR-008-AC-8
 #[test]
 fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let widget = CompositeDeclaration::new(

@@ -82,7 +82,7 @@ fn unit_fixture() -> (QuantityUnit, QuantityUnit, QuantityUnit) {
     (meter_unit, kilometer_unit, kilogram_unit)
 }
 
-/// Trace: TC-026, FR-008-AC-8
+/// Trace: TC-026, FR-008-AC-5
 #[test]
 fn tc_026_p1_check_equality_refuses_before_any_charge_and_selects_schedule() {
     let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
@@ -212,7 +212,7 @@ fn tc_026_p1_check_equality_refuses_before_any_charge_and_selects_schedule() {
     assert_eq!(checked.schedule(), EqualitySchedule::Plan);
 }
 
-/// Trace: TC-026, FR-008-AC-9
+/// Trace: TC-026, FR-008-AC-5
 #[test]
 fn tc_026_p2_plan_equality_is_uncharged_and_refuses_foreign_references_at_plan_time() {
     // `plan_equality` takes no meter: it cannot charge anything by
@@ -236,7 +236,7 @@ fn tc_026_p2_plan_equality_is_uncharged_and_refuses_foreign_references_at_plan_t
     assert_eq!(refusal, Refusal::ForeignReference);
 }
 
-/// Trace: TC-026, FR-008-AC-10, FR-008-AC-11
+/// Trace: TC-026, FR-008-AC-5
 #[test]
 fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
@@ -417,7 +417,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
         .all(|point| !point.as_str().starts_with("equality.")));
 }
 
-/// Trace: TC-026, FR-008-AC-12
+/// Trace: TC-026, FR-008-AC-6
 #[test]
 fn tc_026_p4_object_reference_identity_and_no_component_substitution() {
     let universe = UniverseIdentity::new(b"universe-a").unwrap();
@@ -502,7 +502,7 @@ fn tc_026_p4_object_reference_identity_and_no_component_substitution() {
     assert!(matches!(outcome, Outcome::Completed(Value::Collection(_))));
 }
 
-/// Trace: TC-026, FR-008-AC-13
+/// Trace: TC-026, FR-008-AC-8
 #[test]
 fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
     let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();

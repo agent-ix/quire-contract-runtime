@@ -49,7 +49,7 @@ fn charges_of(meter: &Meter, point: ChargePoint) -> usize {
         .count()
 }
 
-/// Trace: TC-025, FR-008-AC-1
+/// Trace: TC-025, FR-008-AC-3
 #[test]
 fn tc_025_p1_construct_collection_charges_element_before_running_and_stops_at_first_stop() {
     for kind in [
@@ -94,7 +94,7 @@ fn tc_025_p1_construct_collection_charges_element_before_running_and_stops_at_fi
     }
 }
 
-/// Trace: TC-025, FR-008-AC-2
+/// Trace: TC-025, FR-008-AC-3
 #[test]
 fn tc_025_p2_form_collection_refuses_an_ineligible_occurrence_before_any_charge() {
     let collection_type = CollectionType::new(
@@ -163,7 +163,7 @@ fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
     }
 }
 
-/// Trace: TC-025, FR-008-AC-4
+/// Trace: TC-025, FR-008-AC-7
 #[test]
 fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     let bound = CardinalityBound::new(2, 3).unwrap();
@@ -219,7 +219,7 @@ fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     );
 }
 
-/// Trace: TC-025, FR-008-AC-5
+/// Trace: TC-025, FR-008-AC-4
 #[test]
 fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_independent() {
     let wrapper = CompositeDeclaration::new(
@@ -282,7 +282,7 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
     assert_eq!(ranks_of(b.elements()), ranks_of(a.elements()));
 }
 
-/// Trace: TC-025, FR-008-AC-5, FR-008-AC-6 (the iterative task-stack walk)
+/// Trace: TC-025, FR-008-AC-4 (the iterative task-stack walk)
 #[test]
 fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     const DEPTH: u64 = 100_000;
@@ -365,7 +365,7 @@ fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     core::mem::forget(outcome);
 }
 
-/// Trace: TC-025, FR-008-AC-7
+/// Trace: TC-025, FR-008-AC-8
 #[test]
 fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     let collection_type = CollectionType::new(
