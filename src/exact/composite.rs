@@ -704,7 +704,7 @@ impl TypeEnvironment {
                     path.pop();
                     continue;
                 };
-                *next += 1;
+                *next = next.saturating_add(1);
                 if let Some(start) = path.iter().position(|(on_path, _)| on_path == target) {
                     let mut cycle: Vec<String> =
                         path.iter().skip(start).map(|(key, _)| name(key)).collect();
