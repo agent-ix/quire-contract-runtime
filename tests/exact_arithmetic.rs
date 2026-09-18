@@ -147,8 +147,9 @@ fn tc_023_p11_integer_atoms_order_and_subtract_with_exact_amounts() {
     assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
 
     // The scalar atoms of `down(2)`: `n > 0`, `n - 1` twice, then `0 > 0`.
-    // P11's 18 work units include three `function.call` charges owned by
-    // FR-146 (agent-ix/quire-spec-language#119); the scalar atoms are 15.
+    // P11's 18 work units include three `function.call` charges, which the
+    // authority's expression machine owns (agent-ix/quire-spec-language#119);
+    // the scalar atoms are 15.
     let down = |meter: &mut Meter| -> Outcome<Integer> {
         let (zero, one) = (int(0), int(1));
         let mut n = int(2);

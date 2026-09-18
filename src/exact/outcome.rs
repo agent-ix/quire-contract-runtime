@@ -52,14 +52,16 @@ impl<T> Outcome<T> {
 }
 
 /// Why an operation is undefined.
+// Implements: FR-006
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Undefined {
     /// A divisor is (normalized) zero.
     DivisionByZero,
     /// An IEEE NaN or infinity has no exact value.
     IeeeNotFinite,
-    /// FR-145: `reduce` over an empty collection has no value. Only direct
-    /// kernel evaluation of an unlinked expression can meet it.
+    /// Per the authority's FR-145: `reduce` over an empty collection has no
+    /// value. Only direct kernel evaluation of an unlinked expression can
+    /// meet it.
     EmptyReduction,
     /// `value(e)` of `none`. Only direct kernel evaluation of an unlinked
     /// expression can meet it.

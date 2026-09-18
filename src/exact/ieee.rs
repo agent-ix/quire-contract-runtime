@@ -584,6 +584,7 @@ pub fn evaluate_ieee<'a, O: Into<IeeeOperand<'a>>>(
 
 /// Evaluate one comparison intrinsic. Cross-width or exact operands are
 /// ill-typed and consume nothing.
+// Implements: FR-007
 pub fn compare_ieee<'a>(
     comparison: IeeeComparison,
     left: impl Into<IeeeOperand<'a>>,
@@ -591,8 +592,8 @@ pub fn compare_ieee<'a>(
     meter: &mut Meter,
 ) -> Result<Outcome<bool>, IllTyped> {
     let (left, right) = (ieee_operand(left)?, ieee_operand(right)?);
-    // FR-148: every comparison whose IEEE operands differ in width is
-    // `ill_typed` before any charge.
+    // Per the authority's FR-148: every comparison whose IEEE operands differ
+    // in width is `ill_typed` before any charge.
     let width = same_width(left, &[right])?;
     Ok(Outcome::from_stop(compare(
         comparison, left, right, width, meter,
@@ -1647,6 +1648,7 @@ fn round_at(
 /// Round once and encode, with the fresh flag set.
 ///
 /// Strict `exact` computes its would-be flags under nearest-even.
+// Implements: FR-007
 fn round(format: Format, exact: Exact, rounding: RoundingMode) -> (u64, IeeeFlags) {
     let (negative, approximation) = match exact {
         Exact::Zero { negative } => return (format.zero(negative), IeeeFlags::EMPTY),
@@ -1655,7 +1657,8 @@ fn round(format: Format, exact: Exact, rounding: RoundingMode) -> (u64, IeeeFlag
             approximation,
         } => (negative, approximation),
     };
-    // FR-148-AC-8: strict `exact` reports `nearest-even` would-be flags.
+    // Per the authority's FR-148-AC-8: strict `exact` reports `nearest-even`
+    // would-be flags.
     let direction = match rounding {
         RoundingMode::Exact => RoundingMode::NearestEven,
         other => other,
@@ -1707,6 +1710,7 @@ fn round(format: Format, exact: Exact, rounding: RoundingMode) -> (u64, IeeeFlag
     (bits, flags)
 }
 
+// Implements: FR-007
 fn convert_width(
     value: IeeeValue,
     target: IeeeWidth,
@@ -1724,9 +1728,10 @@ fn convert_width(
             negative,
             signaling,
         } => {
-            // FR-148: the payload is the integer below the quiet bit, kept
-            // unchanged; one not smaller than the target's quiet bit is refused
-            // with no flags, before the NaN is consumed.
+            // Per the authority's FR-148: the payload is the integer below
+            // the quiet bit, kept unchanged; one not smaller than the
+            // target's quiet bit is refused with no flags, before the NaN is
+            // consumed.
             let payload = value.bits & source.quiet_bit().saturating_sub(1);
             if payload >= format.quiet_bit() {
                 return Err(Stop::Refused(Refusal::IeeeNanPayloadNotRepresentable));
