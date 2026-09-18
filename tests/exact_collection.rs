@@ -387,9 +387,16 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     let Outcome::Incomplete(record) = outcome else {
         panic!("expected an incomplete outcome, got {outcome:?}")
     };
+    // `collection.element` charges before its element expression runs, so the
+    // meter is still untouched when the first (and only) element's injected
+    // denial fires: the default charge is one work unit, against zero already
+    // consumed.
     let expected = Incomplete {
+        limit_kind: LimitKind::WorkUnits,
+        limit: 0,
+        consumed: 0,
+        next_charge: Integer::one(),
         charge_point: ChargePoint::CollectionElement,
-        ..record.clone()
     };
     assert_eq!(record, expected);
     assert_eq!(consumed(&meter), before);

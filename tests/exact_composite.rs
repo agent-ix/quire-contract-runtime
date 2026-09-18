@@ -576,11 +576,15 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let Outcome::Incomplete(record) = outcome else {
         panic!("expected an incomplete outcome, got {outcome:?}")
     };
-    let expected: Incomplete = Incomplete {
-        limit_kind: record.limit_kind,
-        limit: record.limit,
-        consumed: record.consumed,
-        next_charge: record.next_charge.clone(),
+    // The one field's deferred expression never charges before
+    // `composite.result-retain` runs, so the meter is still untouched when the
+    // injected denial fires: the default charge is one work unit, against zero
+    // already consumed.
+    let expected = Incomplete {
+        limit_kind: LimitKind::WorkUnits,
+        limit: 0,
+        consumed: 0,
+        next_charge: Integer::one(),
         charge_point: ChargePoint::CompositeResultRetain,
     };
     assert_eq!(record, expected);
