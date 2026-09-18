@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-143 records, tuples and finite recursive values over producer-assigned
+//! quire-specification/FR-143 records, tuples and finite recursive values over producer-assigned
 //! declaration keys.
 //!
 //! A [`TypeEnvironment`] admits one checked package's closed set of record,
@@ -46,13 +46,13 @@ pub enum ValueType {
     Int(IntegerInterval),
     /// A `Rational[n1, n2; d1, d2]` domain.
     Rational(RationalDomain),
-    /// An FR-140 `Decimal[lo, hi; smin, smax; mode]`.
+    /// An quire-specification/FR-140 `Decimal[lo, hi; smin, smax; mode]`.
     Decimal(DecimalType),
-    /// An FR-148 `Float32` or `Float64`.
+    /// An quire-specification/FR-148 `Float32` or `Float64`.
     Float(IeeeWidth),
-    /// An FR-142 quantity in exactly this unit.
+    /// An quire-specification/FR-142 quantity in exactly this unit.
     Quantity(QuantityUnit),
-    /// An FR-141 `Text[min, max; profile]`.
+    /// An quire-specification/FR-141 `Text[min, max; profile]`.
     Text(TextType),
     /// A member of the enum declaration with this node key.
     Enum(NodeKey),
@@ -121,7 +121,7 @@ impl ValueType {
 }
 
 /// A completed complete-V1 value. It deliberately has no structural
-/// `PartialEq`: equality is the FR-149 relation of
+/// `PartialEq`: equality is the quire-specification/FR-149 relation of
 /// [`CheckedEquality::evaluate`](super::CheckedEquality::evaluate).
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -484,7 +484,7 @@ impl TypeEnvironment {
 
     /// Every admitted record and tuple declaration in key order.
     ///
-    /// Ported ahead of its caller, the FR-145 expression-machine's static
+    /// Ported ahead of its caller, the quire-specification/FR-145 expression-machine's static
     /// checker, which is out of scope for this crate; no operator here calls
     /// it yet.
     #[allow(dead_code)]

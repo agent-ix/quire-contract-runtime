@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! The four distinct evaluator outcomes of AD-005.
+//! The four distinct evaluator outcomes of quire-specification/AD-005.
 //!
 //! A false Boolean is a completed value, never a refusal. `requires-bound` and
 //! `unsupported` are per-item I13 provider dispositions, not evaluator outcomes,
@@ -59,7 +59,7 @@ pub enum Undefined {
     DivisionByZero,
     /// An IEEE NaN or infinity has no exact value.
     IeeeNotFinite,
-    /// Per the authority's FR-145: `reduce` over an empty collection has no
+    /// quire-specification/FR-145: `reduce` over an empty collection has no
     /// value. Only direct kernel evaluation of an unlinked expression can
     /// meet it.
     EmptyReduction,
@@ -105,7 +105,7 @@ pub enum Refusal {
     /// An exact rational converted from an IEEE value is outside the
     /// `Rational[..]` target domain.
     IeeeRationalOutOfDomain,
-    /// An FR-149 comparison met two references of different universes.
+    /// A quire-specification/FR-149 comparison met two references of different universes.
     ForeignReference,
     /// A formed collection's bound count is outside its declared bound; no
     /// collection is materialized.
@@ -145,7 +145,7 @@ impl Refusal {
         }
     }
 
-    /// The closed FR-272 `cause` tag, where the code has one.
+    /// The closed quire-specification/FR-272 `cause` tag, where the code has one.
     pub fn cause(self) -> Option<&'static str> {
         match self {
             Self::CardinalityOutOfBound { violation, .. } => Some(violation.as_str()),
@@ -175,7 +175,7 @@ pub enum BoundViolation {
 }
 
 impl BoundViolation {
-    /// The FR-272 cause tag.
+    /// The quire-specification/FR-272 cause tag.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::BelowMinimum => "below-minimum",

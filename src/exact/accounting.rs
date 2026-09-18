@@ -395,7 +395,7 @@ pub struct Incomplete {
     pub charge_point: ChargePoint,
 }
 
-/// An NFR-071 fault-injection request: deny the `occurrence`th (1-based) charge
+/// An quire-specification/NFR-071 fault-injection request: deny the `occurrence`th (1-based) charge
 /// at `point`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct InjectedDenial {
@@ -592,7 +592,7 @@ impl Meter {
         Ok(())
     }
 
-    /// The FR-149 `equality.plan` charge: size `value_occurrences` is the
+    /// The quire-specification/FR-149 `equality.plan` charge: size `value_occurrences` is the
     /// planned pair count; without changing any consumed counter it requires
     /// `pairs + 2` remaining work units (one for each subsequent
     /// `equality.pair` charge this plan's pairs will drive, plus one for the

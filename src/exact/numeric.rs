@@ -14,7 +14,7 @@ use super::integer::{Integer, IntegerInterval};
 use super::outcome::{Outcome, Refusal, Stop, Undefined};
 use super::rational::{Rational, RationalDomain};
 
-/// A numeric ordering operator. Equality has its own FR-149 schedule.
+/// A numeric ordering operator. Equality has its own quire-specification/FR-149 schedule.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum OrderingOperator {
     /// `<`.
@@ -230,7 +230,7 @@ pub enum IntegerArithmetic<'a> {
 
 /// Evaluate integer arithmetic: `integer-arithmetic.operands`,
 /// `integer-arithmetic.arithmetic`, the uncharged membership of an optional
-/// FR-044 result bound, then `integer-arithmetic.result-retain`.
+/// quire-specification/FR-044 result bound, then `integer-arithmetic.result-retain`.
 pub fn evaluate_integer_arithmetic(
     operation: IntegerArithmetic<'_>,
     bound: Option<&IntegerInterval>,
@@ -295,7 +295,7 @@ pub enum RationalArithmetic<'a> {
 /// divisor as undefined, `rational-arithmetic.arithmetic` from the operands,
 /// `rational-arithmetic.normalize` on the unreduced intermediate, the
 /// uncharged membership of
-/// an optional FR-044 result domain, then `rational-arithmetic.result-retain`.
+/// an optional quire-specification/FR-044 result domain, then `rational-arithmetic.result-retain`.
 pub fn evaluate_rational_arithmetic(
     operation: RationalArithmetic<'_>,
     domain: Option<&RationalDomain>,

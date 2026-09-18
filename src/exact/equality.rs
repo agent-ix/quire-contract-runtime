@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! The FR-149 complete typed equality matrix.
+//! The quire-specification/FR-149 complete typed equality matrix.
 //!
 //! [`TypeEnvironment::check_equality`] is the static stage: it admits each
 //! `convert<T>(e)` operand only through the closed equality-conversion table,
 //! refuses `=` on any IEEE-bearing type as `operator-ineligible`, and selects
 //! one schedule from the common type. [`CheckedEquality::evaluate`] then runs
-//! any conversion charges in operand order and the selected schedule: FR-141
-//! text, FR-141 enum or FR-142 quantity comparison for those top-level types,
+//! any conversion charges in operand order and the selected schedule: quire-specification/FR-141
+//! text, quire-specification/FR-141 enum or quire-specification/FR-142 quantity comparison for those top-level types,
 //! and otherwise `equality.plan-form`, `equality.plan`, one `equality.pair`
 //! per planned occurrence-path pair and `equality.result-retain`.
 //!
@@ -79,14 +79,14 @@ impl EqualityOperand {
     }
 }
 
-/// The schedule FR-149 selects from the common type.
+/// The schedule quire-specification/FR-149 selects from the common type.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum EqualitySchedule {
-    /// A top-level text pair: the FR-141 text schedule.
+    /// A top-level text pair: the quire-specification/FR-141 text schedule.
     Text,
     /// A top-level enumeration pair: `enum.*`.
     Enum,
-    /// A top-level quantity pair: the FR-142 comparison schedule.
+    /// A top-level quantity pair: the quire-specification/FR-142 comparison schedule.
     Quantity,
     /// Every other common type: the occurrence-pair plan.
     Plan,
@@ -248,7 +248,7 @@ enum Pair<'a> {
     Slots(&'a FieldValue, &'a FieldValue),
 }
 
-/// Walk the FR-149 occurrence-pair tree of two values of one type. Operands
+/// Walk the quire-specification/FR-149 occurrence-pair tree of two values of one type. Operands
 /// that are not of one type, which a checked program never produces, refuse
 /// with the checked invariant.
 pub(crate) fn plan_pairs(left: &Value, right: &Value) -> Result<PlannedPairs, Refusal> {
@@ -340,7 +340,7 @@ pub(crate) fn plan_pairs(left: &Value, right: &Value) -> Result<PlannedPairs, Re
     Ok(PlannedPairs { pairs, equal })
 }
 
-/// Whether (`source`, `target`) is a row of the closed FR-149
+/// Whether (`source`, `target`) is a row of the closed quire-specification/FR-149
 /// equality-conversion table, decided from declared bounds alone.
 pub fn admits_equality_conversion(source: &ValueType, target: &ValueType) -> bool {
     match (source, target) {

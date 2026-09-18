@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-141 declaration-qualified enumerations over compiler-admitted node keys.
+//! quire-specification/FR-141 declaration-qualified enumerations over compiler-admitted node keys.
 //!
 //! The compiler computes the `quire.enum-declaration-node/v1` and
 //! `quire.enum-member-node/v1` keys, joins owners and refuses stale keys. The

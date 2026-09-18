@@ -1,4 +1,4 @@
-//! FR-144 collection algebra, membership metering and the canonical key,
+//! quire-specification/FR-144 collection algebra, membership metering and the canonical key,
 //! through the public `exact` surface.
 #![cfg(feature = "exact")]
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! The FR-144 type-owned total canonical key.
+//! The quire-specification/FR-144 type-owned total canonical key.
 //!
-//! Every type that admits FR-149 `=` has a key, and two values of one type
-//! have equal keys exactly when they are FR-149 equal. The key fixes set and
+//! Every type that admits quire-specification/FR-149 `=` has a key, and two values of one type
+//! have equal keys exactly when they are quire-specification/FR-149 equal. The key fixes set and
 //! bag canonical order and visiting order; it is not an ordering operator.
 //! Comparison is iterative, so value depth never reaches the host stack.
 

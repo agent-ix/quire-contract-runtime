@@ -147,9 +147,8 @@ fn tc_023_p11_integer_atoms_order_and_subtract_with_exact_amounts() {
     assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 3, 1]);
 
     // The scalar atoms of `down(2)`: `n > 0`, `n - 1` twice, then `0 > 0`.
-    // P11's 18 work units include three `function.call` charges, which the
-    // authority's expression machine owns (agent-ix/quire-spec-language#119);
-    // the scalar atoms are 15.
+    // P11's 18 work units include three `function.call` charges owned by
+    // quire-specification/FR-146 (agent-ix/quire-spec-language#119); the scalar atoms are 15.
     let down = |meter: &mut Meter| -> Outcome<Integer> {
         let (zero, one) = (int(0), int(1));
         let mut n = int(2);
@@ -223,7 +222,7 @@ fn tc_023_p11_integer_division_to_rational_and_q11_fold_steps() {
 }
 
 /// Short-circuit choice (Boolean `and`/`or`/`implies` skipping the right
-/// operand) is the FR-145 expression machine's business, out of scope for
+/// operand) is the quire-specification/FR-145 expression machine's business, out of scope for
 /// this crate: `evaluate_boolean` takes both operands already decided. This
 /// test plays the caller's role directly, deciding whether to evaluate the
 /// right operand before calling `evaluate_boolean`, and checks that the

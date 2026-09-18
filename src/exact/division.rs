@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-147 integer division: the three `div`/`rem` laws, independent Euclidean
+//! quire-specification/FR-147 integer division: the three `div`/`rem` laws, independent Euclidean
 //! `mod`, atomic pair admission and the named integer-division and
 //! integer-modulus charges, and the I13 negotiation disposition of a finite
 //! consumer.
