@@ -3,6 +3,7 @@
 #![cfg(feature = "exact")]
 
 use std::cell::RefCell;
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
@@ -136,7 +137,7 @@ fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
             .unwrap()
             .completed()
             .unwrap();
-        let Value::Collection(collection) = outcome else {
+        let Value::Collection(collection) = &outcome else {
             panic!("expected a collection value")
         };
         let observed: Vec<i128> = collection
@@ -265,7 +266,7 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
     .unwrap()
     .completed()
     .unwrap();
-    let Value::Collection(a) = a else {
+    let Value::Collection(a) = &a else {
         panic!("expected a collection")
     };
     assert_eq!(ranks_of(a.elements()), vec![0, 1, 2]);
@@ -276,13 +277,14 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
         .unwrap()
         .completed()
         .unwrap();
-    let Value::Collection(b) = b else {
+    let Value::Collection(b) = &b else {
         panic!("expected a collection")
     };
     assert_eq!(ranks_of(b.elements()), ranks_of(a.elements()));
 }
 
-/// Trace: TC-025, FR-008-AC-4 (the iterative task-stack walk)
+/// Trace: TC-025, FR-008-AC-4 (the iterative task-stack walk), FR-008-AC-9 (the deep values'
+/// normal, iterative `Drop` at scope end)
 #[test]
 fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     const DEPTH: u64 = 100_000;
@@ -357,13 +359,9 @@ fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     assert_eq!(first_ptr, a_ptr, "the tag=0 chain must sort before tag=1");
     assert_eq!(second_ptr, b_ptr);
 
-    // The canonical key's task-stack walk this exercised is iterative, but
-    // `Value`'s implicit `Drop` glue recurses with the chain's nesting depth
-    // (the same shape as the derived `Debug`); leak these 100,000-deep owned
-    // structures rather than overflow the host stack dropping them.
-    core::mem::forget(a);
-    core::mem::forget(b);
-    core::mem::forget(outcome);
+    // `a`, `b` and `outcome` drop here, normally, at the end of scope. `Value`'s `Drop` glue is
+    // iterative (`agent-ix/quire-contract-runtime#25`): these 100,000-deep chains must not
+    // overflow the host stack to free, `outcome`'s shared clones of `a` and `b` included.
 }
 
 /// Trace: TC-025, FR-008-AC-8
@@ -377,7 +375,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
 
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CollectionElement,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let before = consumed(&meter);
     let elements: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
@@ -423,7 +421,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     ] {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::new(1).unwrap(),
         });
         let outcome = form_collection(
             &collection_type,
@@ -437,4 +435,38 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
         assert_eq!(record.charge_point, point);
         assert_eq!(consumed(&meter), expected, "at {point:?}");
     }
+}
+
+/// Trace: TC-025, FR-008-AC-9
+///
+/// Pins `Value`'s hand-written, iterative `Debug` (`agent-ix/quire-contract-runtime#25`) to an
+/// exact literal string, in both compact and alternate form, on a small fixed collection value.
+/// See `tc_024_p8_debug_exact_string_both_forms` in `tests/exact_composite.rs` for the composite
+/// counterpart and the byte-identity-against-derived-output evidence this durable, in-tree check
+/// keeps guarding.
+#[test]
+fn tc_025_p8_debug_exact_string_both_forms() {
+    let collection_type = CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::Integer,
+        CardinalityBound::new(0, 10).unwrap(),
+    );
+    let mut meter = Meter::new(UNLIMITED);
+    let value = form_collection(
+        &collection_type,
+        vec![int_value(1), int_value(2)],
+        &mut meter,
+    )
+    .unwrap()
+    .completed()
+    .unwrap();
+
+    assert_eq!(
+        format!("{value:?}"),
+        "Collection(CollectionValue { collection_type: CollectionType { kind: Sequence, element: Integer, bound: CardinalityBound { minimum: 0, maximum: 10 } }, elements: [Integer(Integer(1)), Integer(Integer(2))], occ: Integer(3) })"
+    );
+    assert_eq!(
+        format!("{value:#?}"),
+        "Collection(\n    CollectionValue {\n        collection_type: CollectionType {\n            kind: Sequence,\n            element: Integer,\n            bound: CardinalityBound {\n                minimum: 0,\n                maximum: 10,\n            },\n        },\n        elements: [\n            Integer(\n                Integer(\n                    1,\n                ),\n            ),\n            Integer(\n                Integer(\n                    2,\n                ),\n            ),\n        ],\n        occ: Integer(\n            3,\n        ),\n    },\n)"
+    );
 }

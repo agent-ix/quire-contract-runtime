@@ -1,24 +1,47 @@
 //! Safe operator families used by generated oracles.
 
 /// Short-circuit conjunction. The right operand is skipped when `left` is false.
+///
+/// `R` carries whatever `right` returns: plain `bool` for an ordinary generated expression, or a
+/// stop-carrying type such as `exact::Outcome<bool>` (via its `From<bool>` impl) when the right
+/// operand may itself be undefined, refused or incomplete. When `left` alone decides the result,
+/// `right` is never called, so a stop it could have produced can never arise.
 // Implements: FR-002
 #[inline]
-pub fn and_short_circuit(left: bool, right: impl FnOnce() -> bool) -> bool {
-    left && right()
+pub fn and_short_circuit<R: From<bool>>(left: bool, right: impl FnOnce() -> R) -> R {
+    if left {
+        right()
+    } else {
+        R::from(false)
+    }
 }
 
 /// Short-circuit disjunction. The right operand is skipped when `left` is true.
+///
+/// See [`and_short_circuit`] for what `R` carries and the short-circuit-implies-unreached
+/// guarantee.
 // Implements: FR-002
 #[inline]
-pub fn or_short_circuit(left: bool, right: impl FnOnce() -> bool) -> bool {
-    left || right()
+pub fn or_short_circuit<R: From<bool>>(left: bool, right: impl FnOnce() -> R) -> R {
+    if left {
+        R::from(true)
+    } else {
+        right()
+    }
 }
 
 /// Short-circuit implication. The consequent is skipped when the antecedent is false.
+///
+/// See [`and_short_circuit`] for what `R` carries and the short-circuit-implies-unreached
+/// guarantee.
 // Implements: FR-002
 #[inline]
-pub fn implies_short_circuit(antecedent: bool, consequent: impl FnOnce() -> bool) -> bool {
-    !antecedent || consequent()
+pub fn implies_short_circuit<R: From<bool>>(antecedent: bool, consequent: impl FnOnce() -> R) -> R {
+    if antecedent {
+        consequent()
+    } else {
+        R::from(true)
+    }
 }
 
 /// Total conjunction. Evaluates each operand exactly once, from left to right.

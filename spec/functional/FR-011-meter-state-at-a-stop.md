@@ -89,13 +89,6 @@ and what the meter holds at all is what this requirement fixes.
 | FR-011-AC-7 | `Meter::consumed` answers for all ten `LimitKind` members with no panic path, and IEEE flag iteration, dimension and compound-unit term iteration, and the `UnitGraph::admit` and `check_terms` refusal orders are the stated ones for every input permutation. | Test (TC-032) |
 | FR-011-AC-8 | A connective whose right operand stops returns that stop unchanged, admits no `boolean.result-retain` charge and consumes no result unit. | Test (TC-032) |
 
-## Open defects
-
-`evaluate_boolean` takes both connective operands as plain, already-decided `bool`s — there is no
-variant, and no sibling function, that accepts a right operand which has stopped. FR-011-AC-8 has
-no implementation to test: a connective that needs to propagate a right-operand stop has no correct
-implementation to call today. Tracked as `agent-ix/quire-contract-runtime#27`.
-
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);

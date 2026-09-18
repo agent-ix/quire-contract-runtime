@@ -396,12 +396,12 @@ fn tc_026_e21_deep_nested_pair_count_duplicated_and_shared() {
 
         let mut denied_pair = Meter::new(limits).with_injected_denial(InjectedDenial {
             point: ChargePoint::EqualityPair,
-            occurrence: 17,
+            occurrence: to_occurrence(17),
         });
         let denied_pair = checked.evaluate(&left, &right_duplicated, &mut denied_pair);
         let mut denied_retain = Meter::new(limits).with_injected_denial(InjectedDenial {
             point: ChargePoint::EqualityResultRetain,
-            occurrence: 1,
+            occurrence: to_occurrence(1),
         });
         let denied_retain = checked.evaluate(&left, &right_duplicated, &mut denied_retain);
 

@@ -3,6 +3,7 @@
 #![cfg(feature = "exact")]
 
 use std::cell::RefCell;
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
@@ -371,7 +372,8 @@ fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     );
 }
 
-/// Trace: TC-024, FR-008-AC-2
+/// Trace: TC-024, FR-008-AC-2, FR-008-AC-9 (the deep chain's normal, iterative `Drop` at
+/// scope end)
 #[test]
 fn tc_024_p5_value_graph_sharing_and_refusals() {
     let leaf = CompositeDeclaration::new(key(1), "Leaf", CompositeShape::Tuple(Vec::new()));
@@ -408,7 +410,7 @@ fn tc_024_p5_value_graph_sharing_and_refusals() {
     ])
     .unwrap();
     let built = env.build(&graph, pair_id).unwrap();
-    let Value::Composite(pair_value) = built else {
+    let Value::Composite(pair_value) = &built else {
         panic!("expected a composite value")
     };
     let [FieldValue::Present(a), FieldValue::Present(b)] = pair_value.slots() else {
@@ -542,12 +544,72 @@ fn tc_024_p5_value_graph_sharing_and_refusals() {
         .build(&deep_graph, GraphNodeId(DEPTH - 1))
         .unwrap();
     assert!(matches!(deep_value, Value::Composite(_)));
-    // `build` itself walks the graph with an explicit worklist, never the
-    // host stack, which this assertion already exercised; the value's
-    // implicit `Drop` glue recurses with the chain's nesting depth it now
-    // owns (the same shape as the derived `Debug`), so the chain is leaked
-    // rather than dropped to avoid overflowing the host stack.
-    core::mem::forget(deep_value);
+    // `deep_value` drops here, normally, at the end of scope. Its `Drop` glue is iterative
+    // (`agent-ix/quire-contract-runtime#25`): this 100,000-deep chain must not overflow the host
+    // stack to free.
+}
+
+/// Trace: TC-024, FR-008-AC-9
+///
+/// `Value`'s `Debug` is hand-written and iterative (`agent-ix/quire-contract-runtime#25`): a chain
+/// nested past any plausible recursive-derive host-stack limit must format without overflowing.
+/// Also checks the rendering itself is exactly what the former `#[derive(Debug)]` produced, by
+/// comparing a shallow instance of the same shape against a hand-written expected string.
+#[test]
+fn tc_024_p6_debug_at_depth_has_no_stack_overflow() {
+    let leaf = CompositeDeclaration::new(key(1), "Leaf", CompositeShape::Tuple(Vec::new()));
+    let leaf_env = TypeEnvironment::new([leaf], []).unwrap();
+    let leaf_value = leaf_env.tuple(key(1), Vec::new()).unwrap();
+    let rendered = format!("{leaf_value:?}");
+    assert!(
+        rendered.starts_with("Composite(CompositeValue { declaration: NodeKey("),
+        "unexpected rendering: {rendered}"
+    );
+    assert!(
+        rendered.ends_with("], occ: Integer(1) })"),
+        "unexpected rendering: {rendered}"
+    );
+
+    let node = CompositeDeclaration::new(
+        key(3),
+        "Node",
+        CompositeShape::Record(vec![FieldDeclaration::new(
+            "child",
+            ValueType::Composite(key(3)),
+            Presence::Optional,
+        )]),
+    );
+    let env = TypeEnvironment::new([node], []).unwrap();
+    const DEPTH: u64 = 6_000;
+    let mut nodes = Vec::with_capacity(DEPTH as usize);
+    for depth in 0..DEPTH {
+        let id = GraphNodeId(depth);
+        let child = if depth == 0 {
+            GraphSlot::Absent
+        } else {
+            GraphSlot::Node(GraphNodeId(depth - 1))
+        };
+        nodes.push((
+            id,
+            GraphNode::Record {
+                declaration: key(3),
+                fields: vec![("child".into(), child)],
+            },
+        ));
+    }
+    let deep_graph = ValueGraph::new(nodes).unwrap();
+    let deep_value = env.build(&deep_graph, GraphNodeId(DEPTH - 1)).unwrap();
+
+    let rendered = format!("{deep_value:?}");
+    assert!(
+        rendered.starts_with("Composite("),
+        "unexpected rendering: {rendered}"
+    );
+    assert_eq!(
+        rendered.matches("Composite(").count(),
+        DEPTH as usize,
+        "expected one `Composite(` per nesting level"
+    );
 }
 
 /// Trace: TC-024, FR-008-AC-8
@@ -561,7 +623,7 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let env = TypeEnvironment::new([widget], []).unwrap();
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CompositeResultRetain,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let before = consumed(&meter);
     let outcome = env
@@ -589,4 +651,41 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     };
     assert_eq!(record, expected);
     assert_eq!(consumed(&meter), before);
+}
+
+/// Trace: TC-024, FR-008-AC-9
+///
+/// Pins `Value`'s hand-written, iterative `Debug` (`agent-ix/quire-contract-runtime#25`) to an
+/// exact literal string, in both compact and alternate form, on a small fixed value. Byte-identity
+/// against `#[derive(Debug)]`'s output at depth was confirmed out-of-band (a detached `origin/main`
+/// worktree, before `Value`'s `Debug` became hand-written, reproduces this exact literal for the
+/// same value, and matches this renderer byte-for-byte at 6,000 levels of nesting); this test is
+/// the durable, in-tree, always-run check that the hand-written renderer keeps producing it.
+#[test]
+fn tc_024_p8_debug_exact_string_both_forms() {
+    let node = CompositeDeclaration::new(
+        key(3),
+        "Node",
+        CompositeShape::Record(vec![FieldDeclaration::new(
+            "child",
+            ValueType::Composite(key(3)),
+            Presence::Optional,
+        )]),
+    );
+    let env = TypeEnvironment::new([node], []).unwrap();
+    let leaf = env
+        .record(key(3), vec![("child", FieldValue::Absent)])
+        .unwrap();
+    let parent = env
+        .record(key(3), vec![("child", FieldValue::Present(leaf))])
+        .unwrap();
+
+    assert_eq!(
+        format!("{parent:?}"),
+        "Composite(CompositeValue { declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303), slots: [Present(Composite(CompositeValue { declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303), slots: [Absent], occ: Integer(1) }))], occ: Integer(2) })"
+    );
+    assert_eq!(
+        format!("{parent:#?}"),
+        "Composite(\n    CompositeValue {\n        declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303),\n        slots: [\n            Present(\n                Composite(\n                    CompositeValue {\n                        declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303),\n                        slots: [\n                            Absent,\n                        ],\n                        occ: Integer(\n                            1,\n                        ),\n                    },\n                ),\n            ),\n        ],\n        occ: Integer(\n            2,\n        ),\n    },\n)"
+    );
 }

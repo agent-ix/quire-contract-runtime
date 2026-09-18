@@ -2,14 +2,17 @@
 //! `Incomplete` stop, through the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use std::cell::Cell;
+use std::num::NonZeroU64;
+
 use quire_contract_runtime::exact::{
-    divide, evaluate_boolean, evaluate_integer_arithmetic, evaluate_quantity, order_numbers,
-    BooleanConnective, ChargePoint, CompoundUnit, CompoundUnitCause, Decimal, DivisionProfile,
-    IeeeFlag, IeeeFlags, Incomplete, InjectedDenial, Integer, IntegerArithmetic, IntegerDomain,
-    IntegerInterval, InvalidCompoundUnit, InvalidSemanticGraph, LimitKind, Meter, NodeKey,
-    OrderedOperands, OrderingOperator, Outcome, Quantity, QuantityOperation, QuantityUnit,
-    Rational, Refusal, ScalarLimits, SemanticGraphCause, Undefined, UnitDeclaration, UnitGraph,
-    CHARGE_LOG_CAPACITY,
+    divide, evaluate_boolean, evaluate_boolean_short_circuit, evaluate_integer_arithmetic,
+    evaluate_quantity, order_numbers, BooleanConnective, ChargePoint, CompoundUnit,
+    CompoundUnitCause, Decimal, DivisionProfile, IeeeFlag, IeeeFlags, Incomplete, InjectedDenial,
+    Integer, IntegerArithmetic, IntegerDomain, IntegerInterval, InvalidCompoundUnit,
+    InvalidSemanticGraph, LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator, Outcome,
+    Quantity, QuantityOperation, QuantityUnit, Rational, Refusal, ScalarLimits, SemanticGraphCause,
+    ShortCircuitConnective, Undefined, UnitDeclaration, UnitGraph, CHARGE_LOG_CAPACITY,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -99,7 +102,7 @@ fn tc_032_ac1_refused_result_retains_arithmetic_not_result_unit() {
 fn tc_032_ac1_incomplete_denied_charge_retains_nothing() {
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::BooleanResultRetain,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let outcome = evaluate_boolean(BooleanConnective::Not(true), &mut meter);
     assert!(matches!(outcome, Outcome::Incomplete(_)));
@@ -155,14 +158,10 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
     assert_eq!(powered, Outcome::Undefined(Undefined::DivisionByZero));
 }
 
-/// This crate owns connective short-circuit evaluation: `quire-contract-codegen`
-/// calls directly into `src/operators.rs`'s `and_short_circuit`/`or_short_circuit`/
-/// `implies_short_circuit` by name. What `evaluate_boolean` guarantees, for any
-/// decided operand pair on any connective kind, is that the terminal charge is
-/// admitted exactly once. It does not yet accept a right operand that has
-/// stopped — no stop-carrying connective exists in the exact subsystem, tracked
-/// as `agent-ix/quire-contract-runtime#27` — so only the decided-operand half is
-/// exercised here.
+/// `evaluate_boolean` guarantees, for any decided operand pair on any connective kind, that the
+/// terminal charge is admitted exactly once. Its operands are always plain, already-decided
+/// `bool`s; `evaluate_boolean_short_circuit` (below) is the exact/metered subsystem's
+/// stop-carrying connective, for a right operand that may itself stop.
 ///
 /// Trace: TC-032, FR-011-AC-3
 #[test]
@@ -180,6 +179,107 @@ fn tc_032_ac3_evaluate_boolean_retains_exactly_once() {
     for (connective, expected) in connectives {
         let mut meter = Meter::new(UNLIMITED);
         let outcome = evaluate_boolean(connective, &mut meter);
+        assert_eq!(outcome, Outcome::Completed(expected));
+        assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
+        assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+        assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
+    }
+}
+
+/// `evaluate_boolean_short_circuit` is the exact/metered subsystem's stop-carrying connective
+/// (`agent-ix/quire-contract-runtime#27`). Two halves:
+///
+/// - When `left` alone decides the result (`And` with `left = false`, `Or` with `left = true`,
+///   `Implies` with `left = false`), `right` is never called — so a stop it could have produced
+///   can never arise — and the decided result charges `boolean.result-retain` exactly once
+///   (FR-011-AC-3's half).
+/// - Otherwise `right()` runs. If it stops (`Undefined`, `Refused` or `Incomplete`), that stop
+///   returns unchanged, with no `boolean.result-retain` charge and no result unit consumed
+///   (FR-011-AC-8). If it completes, the combined result charges `boolean.result-retain` exactly
+///   once.
+///
+/// Trace: TC-032, FR-011-AC-3, FR-011-AC-8
+#[test]
+fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
+    let stops = [
+        Outcome::Undefined(Undefined::DivisionByZero),
+        Outcome::Refused(Refusal::InexactDecimal),
+        Outcome::Incomplete(Incomplete {
+            limit_kind: LimitKind::WorkUnits,
+            limit: 0,
+            consumed: 0,
+            next_charge: int(1),
+            charge_point: ChargePoint::BooleanResultRetain,
+        }),
+    ];
+
+    // The right operand decides nothing: it is skipped entirely, and no stop it could have
+    // produced can arise.
+    let short_circuiting = [
+        (ShortCircuitConnective::And, false, false),
+        (ShortCircuitConnective::Or, true, true),
+        (ShortCircuitConnective::Implies, false, true),
+    ];
+    for (connective, left, expected) in short_circuiting {
+        for stop in &stops {
+            let stop = stop.clone();
+            let mut meter = Meter::new(UNLIMITED);
+            let called = Cell::new(false);
+            let outcome = evaluate_boolean_short_circuit(
+                connective,
+                left,
+                || {
+                    called.set(true);
+                    stop
+                },
+                &mut meter,
+            );
+            assert!(!called.get());
+            assert_eq!(outcome, Outcome::Completed(expected));
+            assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
+            assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+            assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
+        }
+    }
+
+    // The right operand decides the result: a stop it produces returns unchanged, with no
+    // boolean.result-retain charge and no result unit consumed.
+    let evaluated = [
+        (ShortCircuitConnective::And, true),
+        (ShortCircuitConnective::Or, false),
+        (ShortCircuitConnective::Implies, true),
+    ];
+    for (connective, left) in evaluated {
+        for stop in &stops {
+            let stop = stop.clone();
+            let mut meter = Meter::new(UNLIMITED);
+            let outcome =
+                evaluate_boolean_short_circuit(connective, left, || stop.clone(), &mut meter);
+            assert_eq!(outcome, stop);
+            assert_eq!(meter.admitted_charges(), []);
+            assert_eq!(meter.consumed(LimitKind::WorkUnits), 0);
+            assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
+        }
+    }
+
+    // The right operand decides the result and completes: the combined result charges
+    // boolean.result-retain exactly once.
+    let decided = [
+        (ShortCircuitConnective::And, true, true, true),
+        (ShortCircuitConnective::And, true, false, false),
+        (ShortCircuitConnective::Or, false, true, true),
+        (ShortCircuitConnective::Or, false, false, false),
+        (ShortCircuitConnective::Implies, true, true, true),
+        (ShortCircuitConnective::Implies, true, false, false),
+    ];
+    for (connective, left, right, expected) in decided {
+        let mut meter = Meter::new(UNLIMITED);
+        let outcome = evaluate_boolean_short_circuit(
+            connective,
+            left,
+            || Outcome::Completed(right),
+            &mut meter,
+        );
         assert_eq!(outcome, Outcome::Completed(expected));
         assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
         assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
@@ -294,7 +394,7 @@ fn tc_032_ac4_denied_charge_leaves_occurrence_counter_unchanged() {
     // would report the same size denial instead.
     let mut meter = meter.with_injected_denial(InjectedDenial {
         point: ChargePoint::IntegerArithmeticOperands,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let outcome =
         evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);

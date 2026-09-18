@@ -51,6 +51,16 @@ impl<T> Outcome<T> {
     }
 }
 
+impl<T> From<T> for Outcome<T> {
+    /// Wraps a completed value with no charge and no loss. Lets a generic short-circuit
+    /// decider such as `operators::and_short_circuit` construct the "left alone decided
+    /// it" result at the type its `right` thunk returns, `Outcome<T>` included, so a stop
+    /// the (unevaluated) right operand could have produced is structurally unreachable.
+    fn from(value: T) -> Self {
+        Self::Completed(value)
+    }
+}
+
 /// Why an operation is undefined.
 // Implements: FR-006
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
