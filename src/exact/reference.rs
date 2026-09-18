@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Terminal `Reference<T>` values (FR-143).
+//! Terminal `Reference<T>` values (quire-specification/FR-143).
 //!
 //! A reference is terminal: its identity is the snapshot-supplied FR-009/
-//! FR-204 triple (universe, object-type declaration identity, object
+//! quire-specification/FR-204 triple (universe, object-type declaration identity, object
 //! identity), and equality never inspects the referenced state. No source
 //! form creates one.
 //!

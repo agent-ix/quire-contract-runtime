@@ -1,4 +1,4 @@
-//! FR-143 composite construction, declaration admission and containment,
+//! quire-specification/FR-143 composite construction, declaration admission and containment,
 //! through the public `exact` surface.
 #![cfg(feature = "exact")]
 

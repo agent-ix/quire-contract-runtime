@@ -1,4 +1,4 @@
-//! The FR-149 equality matrix and terminal `Reference<T>` identity, through
+//! The quire-specification/FR-149 equality matrix and terminal `Reference<T>` identity, through
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 

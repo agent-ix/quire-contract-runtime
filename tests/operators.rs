@@ -1,4 +1,6 @@
 use core::cell::Cell;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use proptest::prelude::*;
 use quire_contract_runtime::operators::{
@@ -6,6 +8,45 @@ use quire_contract_runtime::operators::{
     implies_short_circuit, implies_total, index, option_copied, option_ref, or_short_circuit,
     or_total,
 };
+
+const OPERATORS_SOURCE: &str = include_str!("../src/operators.rs");
+
+/// Every `.rs` file under `src/`, recursively, as (path, contents) pairs.
+fn all_crate_sources() -> Vec<(PathBuf, String)> {
+    fn walk(dir: &Path, out: &mut Vec<(PathBuf, String)>) {
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                let source = fs::read_to_string(&path).unwrap();
+                out.push((path, source));
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut out);
+    out
+}
+
+/// Exercises every `CheckedInteger` member for `$ty` against the primitive's own `checked_*`,
+/// over the pairwise cross product of `$candidate`s. Callers list MIN, MAX, 0, 1, and (for signed
+/// types) -1, so the cross product covers overflow, underflow, division/remainder by zero, and
+/// (for signed types) MIN divided or remaindered by -1.
+macro_rules! assert_checked_matches_primitive {
+    ($ty:ty, [$($candidate:expr),+ $(,)?]) => {{
+        let candidates: &[$ty] = &[$($candidate),+];
+        for &left in candidates {
+            for &right in candidates {
+                assert_eq!(checked_add(left, right), left.checked_add(right));
+                assert_eq!(checked_sub(left, right), left.checked_sub(right));
+                assert_eq!(checked_mul(left, right), left.checked_mul(right));
+                assert_eq!(checked_div(left, right), left.checked_div(right));
+                assert_eq!(checked_rem(left, right), left.checked_rem(right));
+            }
+        }
+    }};
+}
 
 /// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
 #[test]
@@ -108,6 +149,92 @@ fn tc_003_definedness_boundaries_do_not_panic() {
     assert_eq!(checked_div(1_i32, 0), None);
     assert_eq!(checked_div(i32::MIN, -1), None);
     assert_eq!(checked_rem(i32::MIN, -1), None);
+}
+
+/// Trace: TC-003, FR-002-AC-4
+#[test]
+fn tc_003_checked_integer_matches_primitive_semantics_for_all_twelve_types() {
+    assert_checked_matches_primitive!(u8, [u8::MIN, u8::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u16, [u16::MIN, u16::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u32, [u32::MIN, u32::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u64, [u64::MIN, u64::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u128, [u128::MIN, u128::MAX, 0, 1]);
+    assert_checked_matches_primitive!(usize, [usize::MIN, usize::MAX, 0, 1]);
+    assert_checked_matches_primitive!(i8, [i8::MIN, i8::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i16, [i16::MIN, i16::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i32, [i32::MIN, i32::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i64, [i64::MIN, i64::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i128, [i128::MIN, i128::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(isize, [isize::MIN, isize::MAX, 0, 1, -1]);
+}
+
+/// Trace: TC-003, FR-002-AC-4
+///
+/// `CheckedInteger` cannot be implemented outside this crate because it has a private
+/// supertrait (`sealed::Sealed`, in a module with no `pub`): a downstream crate cannot name
+/// `sealed::Sealed` to satisfy the supertrait bound. That is proven at compile time by the
+/// `compile_fail` doctest on `CheckedInteger` in `src/operators.rs`
+/// (`cargo test --doc`), not by this test — an integration test cannot author a downstream
+/// `impl CheckedInteger for ...` to prove the seal holds without failing to build itself.
+///
+/// What this test checks instead is what a doctest cannot: that nothing in the crate widens the
+/// seal (`mod sealed` turning `pub`, or any `pub use` re-exporting out of `sealed`) or hides a
+/// thirteenth implementation outside the `checked_integer!` macro invocation. Widening the seal or
+/// adding a stray `impl CheckedInteger for Foo` would not change the doctest's pass/fail shape (it
+/// would just make the doctest wrong to be `compile_fail` at all — caught separately by `cargo
+/// test --doc` turning red) but would slip past a check that only inspects `operators.rs`'s
+/// declared shape, so this scans literal occurrences across every crate source file instead.
+#[test]
+fn tc_003_checked_integer_is_sealed_and_covers_exactly_twelve_types() {
+    assert!(OPERATORS_SOURCE.contains("pub trait CheckedInteger: sealed::Sealed + Copy {"));
+    assert!(OPERATORS_SOURCE.contains("\nmod sealed {"));
+    assert!(OPERATORS_SOURCE.contains(
+        "checked_integer!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);"
+    ));
+
+    let sources = all_crate_sources();
+
+    // No file may widen `mod sealed` to `pub mod sealed`, or re-export anything out of it: either
+    // would let an outside crate name `sealed::Sealed` and defeat the seal, while the checks above
+    // (which only read `operators.rs`'s own declared trait and macro invocation) would not change.
+    for (path, source) in &sources {
+        assert!(
+            !source.contains("pub mod sealed"),
+            "{} widens `sealed` to `pub mod sealed`",
+            path.display()
+        );
+        for line in source.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("pub use") && trimmed.contains("sealed") {
+                panic!(
+                    "{} re-exports out of `sealed`, defeating CheckedInteger's seal: {trimmed}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    // The only place `impl CheckedInteger for` may textually appear in the crate is the
+    // `checked_integer!` macro's own template line (it expands once per listed type, but the
+    // expansion is not itself present as source text); counting literal occurrences across every
+    // file, not just `operators.rs`, catches a stray hand-written thirteenth implementation
+    // anywhere in the crate.
+    let total_impls: usize = sources
+        .iter()
+        .map(|(_, source)| source.matches("impl CheckedInteger for").count())
+        .sum();
+    assert_eq!(
+        total_impls, 1,
+        "expected exactly one textual `impl CheckedInteger for` (the macro template)"
+    );
+    let total_sealed_impls: usize = sources
+        .iter()
+        .map(|(_, source)| source.matches("impl sealed::Sealed for").count())
+        .sum();
+    assert_eq!(
+        total_sealed_impls, 1,
+        "expected exactly one textual `impl sealed::Sealed for` (the macro template)"
+    );
 }
 
 proptest! {

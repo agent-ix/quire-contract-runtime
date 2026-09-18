@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Mathematical integers and explicit inclusive integer domains (AD-005, FR-147).
+//! Mathematical integers and explicit inclusive integer domains
+//! (quire-specification/AD-005, quire-specification/FR-147).
 //!
 //! `Integer` is unbounded. A finite consumer never narrows it: membership in an
 //! [`IntegerInterval`] is an explicit admission that either returns a

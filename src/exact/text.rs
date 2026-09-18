@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-141 text: validated UTF-8 payloads, the six text profiles, bounded
+//! quire-specification/FR-141 text: validated UTF-8 payloads, the six text profiles, bounded
 //! `Text[min,max; profile]` admission and metered comparison.
 //!
 //! Normalization uses exactly the Unicode 17.0.0 data selected by
@@ -34,7 +34,7 @@ pub const UNICODE_VERSION: (u8, u8, u8) = (17, 0, 0);
 /// build.
 const _: [(); 1] = [(); matches!(unicode_normalization::UNICODE_VERSION, (17, 0, 0)) as usize];
 
-/// One FR-141 text profile.
+/// One quire-specification/FR-141 text profile.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TextProfile {
     /// Decoded scalar sequence without normalization.
@@ -52,7 +52,7 @@ pub enum TextProfile {
 }
 
 impl TextProfile {
-    /// Every profile in FR-141 order.
+    /// Every profile in quire-specification/FR-141 order.
     pub const ALL: [Self; 6] = [
         Self::UnicodeScalars,
         Self::Nfc,

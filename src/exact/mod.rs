@@ -22,13 +22,13 @@
 //!    [`ieee_to_exact`], [`exact_to_ieee`], [`admit_text`], [`compare_text`],
 //!    [`compare_enum`], [`evaluate_quantity`], [`compare_quantity`] and
 //!    [`convert_quantity`], each after its static [`IllTyped`] refusal;
-//! 3. FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
+//! 3. quire-specification/FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
 //!    and the [`ValueGraph`] finite-value constructor, over terminal
 //!    [`ObjectReference`] identities;
-//! 4. FR-144 collections: [`CollectionType`], [`CollectionValue`] and
-//!    [`construct_collection`]/[`form_collection`], keyed by the FR-144
+//! 4. quire-specification/FR-144 collections: [`CollectionType`], [`CollectionValue`] and
+//!    [`construct_collection`]/[`form_collection`], keyed by the quire-specification/FR-144
 //!    canonical key that [`CheckedEquality`] and collection membership share;
-//! 5. the FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
+//! 5. the quire-specification/FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
 //!    [`CheckedEquality::evaluate`];
 //! 6. the distinct evaluator [`Outcome`] with typed [`Undefined`], [`Refusal`]
 //!    and [`Incomplete`] reasons;

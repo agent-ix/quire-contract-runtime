@@ -81,7 +81,22 @@ mod sealed {
 
 /// Integer operations with Rust's defined checked semantics.
 ///
-/// This trait is sealed so generated code cannot provide a panicking implementation.
+/// This trait is sealed so generated code cannot provide a panicking implementation:
+/// `sealed::Sealed` lives in a module with no `pub`, so a downstream crate cannot name it to
+/// satisfy this trait's supertrait bound.
+///
+/// ```compile_fail
+/// #[derive(Clone, Copy)]
+/// struct Custom;
+///
+/// impl quire_contract_runtime::operators::CheckedInteger for Custom {
+///     fn checked_add(self, _right: Self) -> Option<Self> { None }
+///     fn checked_sub(self, _right: Self) -> Option<Self> { None }
+///     fn checked_mul(self, _right: Self) -> Option<Self> { None }
+///     fn checked_div(self, _right: Self) -> Option<Self> { None }
+///     fn checked_rem(self, _right: Self) -> Option<Self> { None }
+/// }
+/// ```
 // Implements: FR-002
 pub trait CheckedInteger: sealed::Sealed + Copy {
     /// Checked addition.

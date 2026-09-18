@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Canonical exact rationals (AD-005, FR-140 loss records).
+//! Canonical exact rationals (quire-specification/AD-005, quire-specification/FR-140 loss records).
 
 use core::cmp::Ordering;
 use core::fmt;

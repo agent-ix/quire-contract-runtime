@@ -7,10 +7,17 @@ use std::fs;
 use std::path::Path;
 
 use quire_contract_runtime::exact::{
-    admit_text, compare_text, evaluate_boolean, evaluate_integer_arithmetic, BooleanConnective,
-    ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer,
-    IntegerArithmetic, IntegerInterval, LimitKind, Meter, Outcome, Refusal, ScalarLimits,
-    TextPayload, TextProfile, TextType,
+    admit_text, compare_enum, compare_text, construct_collection, divide, evaluate_boolean,
+    evaluate_decimal, evaluate_ieee, evaluate_integer_arithmetic, evaluate_quantity,
+    evaluate_rational_arithmetic, modulo, order_numbers, BooleanConnective, BoundViolation,
+    CardinalityBound, ChargePoint, CollectionKind, CollectionType, ComparisonOperator,
+    CompositeDeclaration, CompositeShape, Decimal, DecimalOperation, DecimalType, Deferred,
+    DivisionProfile, EnumDeclaration, EqualityOperand, EqualityOperator, IeeeFlags, IeeeOperation,
+    IeeeValue, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerArithmetic,
+    IntegerDomain, IntegerInterval, LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator,
+    Outcome, Quantity, QuantityOperation, QuantityUnit, Rational, RationalArithmetic, Refusal,
+    RoundingMode, ScalarLimits, TextPayload, TextProfile, TextType, TypeEnvironment,
+    UnitDeclaration, UnitGraph, Value, ValueType,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -443,4 +450,733 @@ fn tc_016_exact_surface_is_reexported_from_private_modules() {
     }
     assert_eq!(declared.len(), 21);
     assert_eq!(public, exported);
+}
+
+// ---- TC-031 / FR-010: the injected-charge-denial seam ---------------------
+
+fn limits_with_work(work_units: u64) -> ScalarLimits {
+    let mut tuple = [u64::MAX; 10];
+    tuple[8] = work_units;
+    limits(tuple)
+}
+
+/// Unwrap an [`Outcome`] known to be [`Outcome::Incomplete`]; panics with the
+/// disposition otherwise. `T` need not be `Debug`: only the non-`Incomplete`
+/// dispositions, which are `Debug` regardless of `T`, are ever formatted.
+fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
+    match outcome {
+        Outcome::Incomplete(record) => record,
+        Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
+        Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
+        Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
+    }
+}
+
+// One driver per admitted charge point family, run under `UNLIMITED` so every
+// charge before the point under test is genuinely admitted. Each returns the
+// `Incomplete` an injected denial at that call's first matching point
+// produces.
+
+fn drive_integer_arithmetic(meter: &mut Meter) -> Incomplete {
+    expect_incomplete(evaluate_integer_arithmetic(
+        IntegerArithmetic::Negate(&int(-9)),
+        None,
+        meter,
+    ))
+}
+
+fn drive_rational_arithmetic(meter: &mut Meter) -> Incomplete {
+    let operand = Rational::from_integer(int(5));
+    expect_incomplete(evaluate_rational_arithmetic(
+        RationalArithmetic::Negate(&operand),
+        None,
+        meter,
+    ))
+}
+
+fn drive_ordering(meter: &mut Meter) -> Incomplete {
+    expect_incomplete(order_numbers(
+        OrderingOperator::Less,
+        OrderedOperands::Integers(&int(1), &int(2)),
+        meter,
+    ))
+}
+
+fn drive_boolean(meter: &mut Meter) -> Incomplete {
+    expect_incomplete(evaluate_boolean(BooleanConnective::Not(false), meter))
+}
+
+/// A same-type equality between two `Integer` operands selects the
+/// occurrence-pair plan schedule, reaching `equality.plan-form`,
+/// `equality.plan`, `equality.pair` and `equality.result-retain` in order.
+fn drive_equality_plan(meter: &mut Meter) -> Incomplete {
+    let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
+    let checked = env
+        .check_equality(
+            EqualityOperator::Equal,
+            EqualityOperand::typed(ValueType::Integer),
+            EqualityOperand::typed(ValueType::Integer),
+        )
+        .unwrap();
+    expect_incomplete(checked.evaluate(&Value::Integer(int(3)), &Value::Integer(int(3)), meter))
+}
+
+/// A one-element `Sequence[Integer]` construction: `collection.element` for
+/// the element, then (a sequence never coalesces) `collection.bound` and
+/// `collection.result-retain`.
+fn drive_collection_basic(meter: &mut Meter) -> Incomplete {
+    let collection_type = CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::Integer,
+        CardinalityBound::new(0, 10).unwrap(),
+    );
+    let elements: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
+        Outcome::Completed(Value::Integer(int(1)))
+    })];
+    expect_incomplete(construct_collection(&collection_type, elements, meter))
+}
+
+/// A two-element `Set[Integer]` construction: the second occurrence is
+/// compared against the first retained member, charging
+/// `collection.member-walk` then `collection.member-test`.
+fn drive_collection_membership(meter: &mut Meter) -> Incomplete {
+    let collection_type = CollectionType::new(
+        CollectionKind::Set,
+        ValueType::Integer,
+        CardinalityBound::new(0, 10).unwrap(),
+    );
+    let elements: Vec<Deferred<'_>> = vec![
+        Box::new(|_meter: &mut Meter| Outcome::Completed(Value::Integer(int(1)))),
+        Box::new(|_meter: &mut Meter| Outcome::Completed(Value::Integer(int(2)))),
+    ];
+    expect_incomplete(construct_collection(&collection_type, elements, meter))
+}
+
+/// A one-position tuple construction reaches `composite.result-retain` once
+/// its sole position completes.
+fn drive_composite(meter: &mut Meter) -> Incomplete {
+    let declaration = CompositeDeclaration::new(
+        NodeKey::from_bytes([7; 32]),
+        "Pair",
+        CompositeShape::Tuple(vec![ValueType::Integer]),
+    );
+    let env = TypeEnvironment::new([declaration], Vec::new()).unwrap();
+    let positions: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
+        Outcome::Completed(Value::Integer(int(1)))
+    })];
+    expect_incomplete(
+        env.evaluate_tuple(NodeKey::from_bytes([7; 32]), positions, meter)
+            .unwrap(),
+    )
+}
+
+fn drive_decimal_basic(meter: &mut Meter) -> Incomplete {
+    let target = DecimalType::new(int(-1000), int(1000), 0, 10, RoundingMode::Exact).unwrap();
+    expect_incomplete(evaluate_decimal(
+        DecimalOperation::Negate(&Decimal::new(int(5), 0)),
+        &target,
+        meter,
+    ))
+}
+
+/// A `Divide` whose quotient (`1/3`) is not exactly representable, so it
+/// reaches `decimal.rounding` before `decimal.result-retain`.
+fn drive_decimal_rounding(meter: &mut Meter) -> Incomplete {
+    let target = DecimalType::new(int(-1000), int(1000), 0, 2, RoundingMode::TowardZero).unwrap();
+    let (one, three) = (Decimal::new(int(1), 0), Decimal::new(int(3), 0));
+    expect_incomplete(evaluate_decimal(
+        DecimalOperation::Divide(&one, &three),
+        &target,
+        meter,
+    ))
+}
+
+/// `binary-utf8` never normalizes, so this reaches `text.result-retain`
+/// without any `text.normalize-*` charge.
+fn drive_text_basic(meter: &mut Meter) -> Incomplete {
+    let payload = TextPayload::from_utf8(b"ab").unwrap();
+    let text_type = TextType::new(0, 10, TextProfile::BinaryUtf8).unwrap();
+    expect_incomplete(admit_text(&payload, &text_type, meter))
+}
+
+/// `nfc` emits one normalized scalar, charging both `text.normalize-input`
+/// and `text.normalize-output`.
+fn drive_text_normalize(meter: &mut Meter) -> Incomplete {
+    let payload = TextPayload::from_utf8(b"a").unwrap();
+    let text_type = TextType::new(0, 10, TextProfile::Nfc).unwrap();
+    expect_incomplete(admit_text(&payload, &text_type, meter))
+}
+
+fn drive_enum(meter: &mut Meter) -> Incomplete {
+    let declaration =
+        EnumDeclaration::new(NodeKey::from_bytes([9; 32]), true, &["a", "b"]).unwrap();
+    let a = declaration
+        .member("a", NodeKey::from_bytes([10; 32]))
+        .unwrap();
+    let b = declaration
+        .member("b", NodeKey::from_bytes([11; 32]))
+        .unwrap();
+    expect_incomplete(compare_enum(ComparisonOperator::Equal, &a, &b, meter).unwrap())
+}
+
+/// `a ^ 2` of a quantity in a non-canonical (one-edge) unit: charges
+/// `unit.identity-read`, `unit.edge`, `unit.rational-arithmetic` (from the
+/// edge traversal and the power itself), `unit.target-domain` and
+/// `unit.result-retain`, in that order.
+fn drive_quantity(meter: &mut Meter) -> Incomplete {
+    let dimension = NodeKey::from_bytes([1; 32]);
+    let root = NodeKey::from_bytes([2; 32]);
+    let derived = NodeKey::from_bytes([3; 32]);
+    let graph = UnitGraph::admit(
+        [(dimension, Vec::new())],
+        [
+            (
+                root,
+                UnitDeclaration {
+                    dimension,
+                    target: None,
+                    scale: Rational::from_integer(int(1)),
+                    offset: Rational::from_integer(int(0)),
+                },
+            ),
+            (
+                derived,
+                UnitDeclaration {
+                    dimension,
+                    target: Some(root),
+                    scale: Rational::new(int(1000), int(1)).unwrap(),
+                    offset: Rational::from_integer(int(0)),
+                },
+            ),
+        ],
+    )
+    .unwrap();
+    let unit = graph.unit(derived).unwrap().clone();
+    let quantity = Quantity::new(
+        Rational::from_integer(int(5)),
+        QuantityUnit::Declared(Box::new(unit)),
+    );
+    expect_incomplete(
+        evaluate_quantity(QuantityOperation::Power(&quantity, &int(2)), meter).unwrap(),
+    )
+}
+
+fn drive_integer_division(meter: &mut Meter) -> Incomplete {
+    expect_incomplete(divide(
+        DivisionProfile::Truncating,
+        &int(7),
+        &int(2),
+        &IntegerDomain::Mathematical,
+        meter,
+    ))
+}
+
+fn drive_integer_modulus(meter: &mut Meter) -> Incomplete {
+    expect_incomplete(modulo(
+        &int(7),
+        &int(2),
+        &IntegerDomain::Mathematical,
+        meter,
+    ))
+}
+
+fn drive_ieee(meter: &mut Meter) -> Incomplete {
+    let operand = IeeeValue::binary32(0x3F80_0000);
+    expect_incomplete(
+        evaluate_ieee(
+            IeeeOperation::Add(operand, operand),
+            RoundingMode::NearestEven,
+            meter,
+        )
+        .unwrap(),
+    )
+}
+
+/// One `(point, driver)` entry of the AC-1 sweep below.
+type Driver = fn(&mut Meter) -> Incomplete;
+
+/// Trace: TC-031, FR-010-AC-1
+///
+/// `function.call` and `collection.visit` are declared in `ChargePoint::ALL`
+/// (quire.value.accounting/v1) but no public `exact` operator charges them
+/// yet: both are ported ahead of the expression-machine and
+/// collection-traversal operators that will (agent-ix/quire-spec-language#119).
+/// They are therefore excluded from this AC-1 sweep as `unreachable`, not
+/// silently dropped: this is a gap between the declared `ChargePoint`
+/// vocabulary and what the runtime actually charges, not a gap in this test.
+/// Every other point FR-008 added — the `equality.*` occurrence-pair plan
+/// schedule and the `collection.*`/`composite.result-retain` family — is
+/// reachable through `CheckedEquality::evaluate`, `construct_collection` and
+/// `TypeEnvironment::evaluate_tuple`, and is driven below like any other.
+#[test]
+fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() {
+    let unreachable = [
+        // `function.call`: ported ahead of the expression-machine operator
+        // that will charge it (agent-ix/quire-spec-language#119); no operator
+        // in this crate charges it yet.
+        ChargePoint::FunctionCall,
+        // `collection.visit`: ported ahead of the collection-traversal
+        // operator that will charge it (agent-ix/quire-spec-language#119); no
+        // operator in this crate charges it yet.
+        ChargePoint::CollectionVisit,
+    ];
+    let drivers: Vec<(ChargePoint, Driver)> = vec![
+        (
+            ChargePoint::IntegerArithmeticOperands,
+            drive_integer_arithmetic,
+        ),
+        (
+            ChargePoint::IntegerArithmeticArithmetic,
+            drive_integer_arithmetic,
+        ),
+        (
+            ChargePoint::IntegerArithmeticResultRetain,
+            drive_integer_arithmetic,
+        ),
+        (
+            ChargePoint::RationalArithmeticOperands,
+            drive_rational_arithmetic,
+        ),
+        (
+            ChargePoint::RationalArithmeticArithmetic,
+            drive_rational_arithmetic,
+        ),
+        (
+            ChargePoint::RationalArithmeticNormalize,
+            drive_rational_arithmetic,
+        ),
+        (
+            ChargePoint::RationalArithmeticResultRetain,
+            drive_rational_arithmetic,
+        ),
+        (ChargePoint::OrderingOperands, drive_ordering),
+        (ChargePoint::OrderingArithmetic, drive_ordering),
+        (ChargePoint::OrderingResultRetain, drive_ordering),
+        (ChargePoint::BooleanResultRetain, drive_boolean),
+        (ChargePoint::DecimalOperands, drive_decimal_basic),
+        (ChargePoint::DecimalScaleExpansion, drive_decimal_basic),
+        (ChargePoint::DecimalArithmetic, drive_decimal_basic),
+        (ChargePoint::DecimalRounding, drive_decimal_rounding),
+        (ChargePoint::DecimalResultRetain, drive_decimal_basic),
+        (ChargePoint::TextInputBytes, drive_text_basic),
+        (ChargePoint::TextDecodeScalars, drive_text_basic),
+        (ChargePoint::TextNormalizeInput, drive_text_normalize),
+        (ChargePoint::TextNormalizeOutput, drive_text_normalize),
+        (ChargePoint::TextResultRetain, drive_text_basic),
+        (ChargePoint::EnumIdentityRead, drive_enum),
+        (ChargePoint::EnumResultRetain, drive_enum),
+        (ChargePoint::UnitIdentityRead, drive_quantity),
+        (ChargePoint::UnitEdge, drive_quantity),
+        (ChargePoint::UnitRationalArithmetic, drive_quantity),
+        (ChargePoint::UnitTargetDomain, drive_quantity),
+        (ChargePoint::UnitResultRetain, drive_quantity),
+        (ChargePoint::IntegerDivisionOperands, drive_integer_division),
+        (
+            ChargePoint::IntegerDivisionArithmetic,
+            drive_integer_division,
+        ),
+        (
+            ChargePoint::IntegerDivisionDomainPair,
+            drive_integer_division,
+        ),
+        (
+            ChargePoint::IntegerDivisionResultPair,
+            drive_integer_division,
+        ),
+        (ChargePoint::IntegerModulusOperands, drive_integer_modulus),
+        (ChargePoint::IntegerModulusArithmetic, drive_integer_modulus),
+        (ChargePoint::IntegerModulusDomain, drive_integer_modulus),
+        (
+            ChargePoint::IntegerModulusResultRetain,
+            drive_integer_modulus,
+        ),
+        (ChargePoint::IeeeOperands, drive_ieee),
+        (ChargePoint::IeeeExactIntermediate, drive_ieee),
+        (ChargePoint::IeeeRound, drive_ieee),
+        (ChargePoint::IeeeResultRetain, drive_ieee),
+        (ChargePoint::EqualityPlanForm, drive_equality_plan),
+        (ChargePoint::EqualityPlan, drive_equality_plan),
+        (ChargePoint::EqualityPair, drive_equality_plan),
+        (ChargePoint::EqualityResultRetain, drive_equality_plan),
+        (ChargePoint::CollectionElement, drive_collection_basic),
+        (ChargePoint::CollectionBound, drive_collection_basic),
+        (ChargePoint::CollectionResultRetain, drive_collection_basic),
+        (
+            ChargePoint::CollectionMemberWalk,
+            drive_collection_membership,
+        ),
+        (
+            ChargePoint::CollectionMemberTest,
+            drive_collection_membership,
+        ),
+        (ChargePoint::CompositeResultRetain, drive_composite),
+    ];
+
+    // Every declared charge point is either driven here or named as
+    // known-unreachable, with no duplicates and no omissions.
+    let covered: BTreeSet<ChargePoint> = drivers.iter().map(|(point, _)| *point).collect();
+    assert_eq!(
+        covered.len(),
+        drivers.len(),
+        "a charge point is driven twice"
+    );
+    assert_eq!(covered.len() + unreachable.len(), ChargePoint::ALL.len());
+    for point in ChargePoint::ALL {
+        assert!(
+            covered.contains(&point) || unreachable.contains(&point),
+            "{point:?} is neither driven nor declared unreachable"
+        );
+    }
+
+    for (point, drive) in drivers {
+        let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
+            point,
+            occurrence: 1,
+        });
+        let record = drive(&mut meter);
+        assert_eq!(record.limit_kind, LimitKind::WorkUnits, "{point:?}");
+        assert_eq!(record.charge_point, point);
+        assert_eq!(record.limit, record.consumed, "{point:?}");
+        // FR-010's `equality.plan` bullet states the rule these per-point amounts follow:
+        // `next_charge` is the amount each point's availability check was made against, which is
+        // the charge's own work amount everywhere except `equality.plan` (`pairs + 2`,
+        // reservation, not commit) and the two occurrence-derived points below (`occ(left) +
+        // occ(right)`, at the drivers' minimal one-occurrence-per-side operands).
+        let expected_next_charge = match point {
+            ChargePoint::EqualityPlanForm | ChargePoint::CollectionMemberWalk => int(2),
+            ChargePoint::EqualityPlan => int(3),
+            _ => int(1),
+        };
+        assert_eq!(record.next_charge, expected_next_charge, "{point:?}");
+        // The denied charge itself changed nothing: `work_units` after the
+        // call is exactly the charges admitted before it (one work unit
+        // each), no result unit was retained, and the point was not logged.
+        // The same three occurrence-derived-work points break this 1:1
+        // correspondence for whatever comes after them in a driver's own
+        // chain: `equality.plan-form` and `collection.member-walk` each
+        // admit for 2 work units instead of 1 (`occ(left) + occ(right)` at 2
+        // scalar operands), so a point immediately downstream of one of them
+        // has consumed exactly one more work unit than it has prior admitted
+        // charges. `equality.plan` (`Meter::charge_plan`) only *reserves*
+        // `pairs + 2` to decide availability; on success it still commits a
+        // single work unit like any other charge, so it adds no further
+        // drift once past `equality.plan-form`.
+        assert_eq!(
+            meter.consumed(LimitKind::WorkUnits),
+            record.consumed,
+            "{point:?}"
+        );
+        assert_eq!(meter.consumed(LimitKind::ResultUnits), 0, "{point:?}");
+        let extra_prior_work = match point {
+            ChargePoint::EqualityPlan
+            | ChargePoint::EqualityPair
+            | ChargePoint::EqualityResultRetain
+            | ChargePoint::CollectionMemberTest => 1,
+            _ => 0,
+        };
+        assert_eq!(
+            meter.admitted_charges().len() + extra_prior_work,
+            usize::try_from(record.consumed).unwrap(),
+            "{point:?}"
+        );
+        assert!(!meter.admitted_charges().contains(&point), "{point:?}");
+    }
+}
+
+/// Trace: TC-031, FR-010-AC-2
+#[test]
+fn tc_031_injected_record_is_independent_of_the_configured_work_units_limit() {
+    let point = ChargePoint::IntegerArithmeticResultRetain;
+    let denial = InjectedDenial {
+        point,
+        occurrence: 1,
+    };
+    let mut low = Meter::new(limits_with_work(5)).with_injected_denial(denial);
+    let mut high = Meter::new(limits_with_work(500)).with_injected_denial(denial);
+    let drive = |meter: &mut Meter| {
+        expect_incomplete(evaluate_integer_arithmetic(
+            IntegerArithmetic::Negate(&int(-9)),
+            None,
+            meter,
+        ))
+    };
+    let record_low = drive(&mut low);
+    let record_high = drive(&mut high);
+
+    // Same record under two different configured `work_units` limits: the
+    // report is the work already spent, not either configured limit.
+    assert_eq!(record_low, record_high);
+    assert_eq!(record_low.limit, record_low.consumed);
+    // `integer-arithmetic.operands` then `.arithmetic` precede
+    // `.result-retain`: two admitted charges.
+    assert_eq!(record_low.consumed, 2);
+    assert_eq!(record_low.next_charge, int(1));
+    assert_eq!(record_low.limit_kind, LimitKind::WorkUnits);
+    assert_ne!(record_low.limit, low.limits().work_units);
+    assert_ne!(record_high.limit, high.limits().work_units);
+    assert_eq!(low.consumed(LimitKind::WorkUnits), 2);
+    assert_eq!(high.consumed(LimitKind::WorkUnits), 2);
+}
+
+/// Trace: TC-031, FR-010-AC-3
+#[test]
+fn tc_031_injected_denial_takes_precedence_over_a_genuinely_short_counter() {
+    let mut short = [u64::MAX; 10];
+    short[0] = 1; // integer_bits: far too small for `magnitude_bits(9) = 4`.
+    let short = limits(short);
+
+    // Without injection, the real short counter denies this exact charge.
+    let real = evaluate_integer_arithmetic(
+        IntegerArithmetic::Negate(&int(-9)),
+        None,
+        &mut Meter::new(short),
+    );
+    assert_eq!(
+        real,
+        Outcome::Incomplete(Incomplete {
+            limit_kind: LimitKind::IntegerBits,
+            limit: 1,
+            consumed: 0,
+            next_charge: int(4),
+            charge_point: ChargePoint::IntegerArithmeticOperands,
+        })
+    );
+
+    // With the injection at that same point and occurrence, the injected
+    // record wins: `WorkUnits`, never the real `IntegerBits` shortfall.
+    let mut meter = Meter::new(short).with_injected_denial(InjectedDenial {
+        point: ChargePoint::IntegerArithmeticOperands,
+        occurrence: 1,
+    });
+    let injected = expect_incomplete(evaluate_integer_arithmetic(
+        IntegerArithmetic::Negate(&int(-9)),
+        None,
+        &mut meter,
+    ));
+    assert_eq!(
+        injected,
+        Incomplete {
+            limit_kind: LimitKind::WorkUnits,
+            limit: 0,
+            consumed: 0,
+            next_charge: int(1),
+            charge_point: ChargePoint::IntegerArithmeticOperands,
+        }
+    );
+    assert!(meter.admitted_charges().is_empty());
+}
+
+/// Trace: TC-031, FR-010-AC-4
+#[test]
+fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
+    let mut tuple = [u64::MAX; 10];
+    tuple[0] = 10; // integer_bits: room for a 4-bit operand, not a 20-bit one.
+    let mut meter = Meter::new(limits(tuple)).with_injected_denial(InjectedDenial {
+        point: ChargePoint::IntegerArithmeticOperands,
+        occurrence: 2,
+    });
+
+    // A charge at another point never advances the injected point's
+    // occurrence counter.
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
+        Outcome::Completed(true)
+    );
+
+    // A charge at the injected point that a genuinely short counter denies
+    // (too many bits) is not admitted, so it does not count as an occurrence.
+    let oversized = int(1_i128 << 19);
+    assert_eq!(
+        evaluate_integer_arithmetic(IntegerArithmetic::Negate(&oversized), None, &mut meter),
+        Outcome::Incomplete(Incomplete {
+            limit_kind: LimitKind::IntegerBits,
+            limit: 10,
+            consumed: 0,
+            next_charge: int(20),
+            charge_point: ChargePoint::IntegerArithmeticOperands,
+        })
+    );
+
+    // The first ADMITTED charge at the injected point: occurrence one, not
+    // denied (the injection names occurrence two).
+    let small = int(-9);
+    assert_eq!(
+        evaluate_integer_arithmetic(IntegerArithmetic::Negate(&small), None, &mut meter),
+        Outcome::Completed(int(9))
+    );
+
+    // Another charge at a different point, again uncounted.
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(true), &mut meter),
+        Outcome::Completed(false)
+    );
+
+    // The second ADMITTED charge at the injected point: occurrence two, so
+    // the injected denial fires here.
+    let record = expect_incomplete(evaluate_integer_arithmetic(
+        IntegerArithmetic::Negate(&small),
+        None,
+        &mut meter,
+    ));
+    assert_eq!(record.limit_kind, LimitKind::WorkUnits);
+    assert_eq!(record.charge_point, ChargePoint::IntegerArithmeticOperands);
+    assert_eq!(record.limit, record.consumed);
+    assert_eq!(record.next_charge, int(1));
+}
+
+/// Trace: TC-031, FR-010-AC-5
+///
+/// FR-010's Behavior section: "Exactly one charge is denied per meter... Once
+/// the injected denial has fired, the meter's subsequent charges are metered
+/// normally against the configured limits." FR-010-AC-5 restates this as "no
+/// second charge is injected-denied."
+///
+/// This test encodes that requirement as written. It currently FAILS:
+/// `Meter::charge`'s `check_injected` (`src/exact/accounting.rs`) matches on
+/// `denial_point_seen.checked_add(1) == Some(denial.occurrence)` alone, and
+/// nothing marks the denial as spent or advances `denial_point_seen` on the
+/// denial path. So every later charge at the same injected point matches the
+/// same condition again and is denied again, indefinitely, rather than
+/// exactly once. See the disagreement reported alongside this test.
+#[test]
+#[ignore = "blocked on #22: the injected denial never clears, so this asserts \
+            FR-010-AC-5's required behaviour and fails until #22 is fixed. The \
+            assertion is correct as written; do not weaken it to enable this test."]
+fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
+    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
+        point: ChargePoint::BooleanResultRetain,
+        occurrence: 1,
+    });
+    let fired = evaluate_boolean(BooleanConnective::Not(false), &mut meter);
+    assert_eq!(
+        fired,
+        Outcome::Incomplete(Incomplete {
+            limit_kind: LimitKind::WorkUnits,
+            limit: 0,
+            consumed: 0,
+            next_charge: int(1),
+            charge_point: ChargePoint::BooleanResultRetain,
+        })
+    );
+
+    // A further charge at the SAME point, under the same generous limits,
+    // must meter normally now that the one injected denial has fired.
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(true), &mut meter),
+        Outcome::Completed(false)
+    );
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
+        Outcome::Completed(true)
+    );
+}
+
+/// Trace: TC-016, FR-006-AC-6
+#[test]
+fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
+    // Exhaustive over `Refusal`: adding a variant without extending this match
+    // is a compile error, not a silently passing test.
+    fn expected_code(refusal: &Refusal) -> Option<&'static str> {
+        match refusal {
+            Refusal::IeeeNanPayloadNotRepresentable => Some("ieee_nan_payload_not_representable"),
+            Refusal::IeeeRationalOutOfDomain => Some("ieee_rational_out_of_domain"),
+            Refusal::ForeignReference => Some("foreign_reference"),
+            Refusal::CardinalityOutOfBound { .. } => Some("cardinality_out_of_bound"),
+            Refusal::InexactDecimal
+            | Refusal::DecimalOutOfDomain
+            | Refusal::DivisionPairOutOfDomain { .. }
+            | Refusal::ModuloOutOfDomain
+            | Refusal::TextLengthOutOfDomain
+            | Refusal::IntegerOutOfDomain
+            | Refusal::RationalOutOfDomain
+            | Refusal::IeeeNotExact { .. }
+            | Refusal::CheckedInvariant => None,
+        }
+    }
+
+    let variants = [
+        Refusal::InexactDecimal,
+        Refusal::DecimalOutOfDomain,
+        Refusal::DivisionPairOutOfDomain {
+            quotient_admitted: true,
+            remainder_admitted: false,
+        },
+        Refusal::ModuloOutOfDomain,
+        Refusal::TextLengthOutOfDomain,
+        Refusal::IntegerOutOfDomain,
+        Refusal::RationalOutOfDomain,
+        Refusal::IeeeNotExact {
+            would_be: IeeeFlags::EMPTY,
+        },
+        Refusal::IeeeNanPayloadNotRepresentable,
+        Refusal::IeeeRationalOutOfDomain,
+        Refusal::ForeignReference,
+        Refusal::CardinalityOutOfBound {
+            violation: BoundViolation::AboveMaximum,
+            kind: CollectionKind::Set,
+            bound: CardinalityBound::new(0, 10).unwrap(),
+            count: 11,
+        },
+        Refusal::CheckedInvariant,
+    ];
+    // Thirteen variants total: guards against silently dropping a variant from
+    // the enumeration above while `expected_code` stays exhaustive.
+    assert_eq!(variants.len(), 13, "enumerate every Refusal variant here");
+
+    let some_count = variants
+        .iter()
+        .filter(|refusal| expected_code(refusal).is_some())
+        .count();
+    assert_eq!(
+        some_count, 4,
+        "exactly four variants carry a normative code"
+    );
+
+    for refusal in variants {
+        assert_eq!(refusal.code(), expected_code(&refusal));
+    }
+}
+
+/// Trace: TC-016, FR-006-AC-6
+#[test]
+fn tc_016_refusal_undefined_incomplete_carry_no_string_field() {
+    fn type_source<'a>(source: &'a str, keyword: &str, name: &str) -> &'a str {
+        let needle = format!("{keyword} {name}");
+        let start = source
+            .find(&needle)
+            .unwrap_or_else(|| panic!("{name} not found in source"));
+        let from_start = &source[start..];
+        let open = from_start.find('{').unwrap();
+        let mut depth = 0_usize;
+        for (i, c) in from_start[open..].char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return &from_start[open..open + i + 1];
+                    }
+                }
+                _ => {}
+            }
+        }
+        panic!("unbalanced braces reading {name}");
+    }
+
+    let outcome_source = include_str!("../src/exact/outcome.rs");
+    let accounting_source = include_str!("../src/exact/accounting.rs");
+
+    let bodies = [
+        type_source(outcome_source, "pub enum", "Undefined"),
+        type_source(outcome_source, "pub enum", "Refusal"),
+        type_source(accounting_source, "pub struct", "Incomplete"),
+    ];
+    for body in bodies {
+        for token in ["String", "&str", "&'static str"] {
+            assert!(
+                !body.contains(token),
+                "found {token} in a field of the source scanned: {body}"
+            );
+        }
+    }
 }

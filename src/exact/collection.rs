@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-144 collection kinds: bounded, metered construction and the canonical
+//! quire-specification/FR-144 collection kinds: bounded, metered construction and the canonical
 //! order.
 //!
 //! A collection type `K<T>[min, max]` includes its bound. Construction charges
@@ -256,7 +256,7 @@ pub(crate) fn form(
 /// membership comparison is charged: `collection.bound`, the bound check,
 /// canonical order and `collection.result-retain`.
 ///
-/// Ported ahead of its caller, the FR-145 expression-machine's grouped
+/// Ported ahead of its caller, the quire-specification/FR-145 expression-machine's grouped
 /// literal and comprehension evaluation, which is out of scope for this
 /// crate; no operator here calls it yet.
 #[allow(dead_code)]
@@ -305,7 +305,7 @@ fn bound_and_retain(
     })))
 }
 
-/// FR-144 occurrence formation for a set, bag or ordered set. The result lists
+/// quire-specification/FR-144 occurrence formation for a set, bag or ordered set. The result lists
 /// each retained member in retention order, a bag member once per occurrence
 /// and adjacent to its equal occurrences.
 fn coalesce(

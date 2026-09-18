@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-142 quantities: exact arithmetic under normalized dimensions, explicit
+//! quire-specification/FR-142 quantities: exact arithmetic under normalized dimensions, explicit
 //! affine conversion through the canonical root and the named `unit.*`
 //! charges of `quire.value.accounting/v1`.
 
@@ -120,7 +120,7 @@ pub enum QuantityOperation<'a> {
 pub enum QuantityTarget {
     /// An unbounded exact rational; conversion reports no loss.
     Exact,
-    /// An FR-140 decimal type with its rounding and membership.
+    /// An quire-specification/FR-140 decimal type with its rounding and membership.
     Decimal(DecimalType),
     /// An integer domain, placed as a decimal target of scale zero under
     /// `rounding` and then admitted by integer-domain membership.
@@ -137,7 +137,7 @@ pub enum QuantityTarget {
 pub enum ConvertedValue {
     /// The exact converted rational.
     Exact(Rational),
-    /// The FR-140 decimal result with any loss record.
+    /// The quire-specification/FR-140 decimal result with any loss record.
     Decimal(DecimalResult),
     /// The admitted integer with any scale-zero loss record.
     Integer {

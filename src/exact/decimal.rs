@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! FR-140 exact decimals: coefficient/scale values, the six rounding spellings,
+//! quire-specification/FR-140 exact decimals: coefficient/scale values, the six rounding spellings,
 //! canonical-rational loss records and metered evaluation.
 //!
 //! Every intermediate is an exact integer or reduced rational; no binary
@@ -379,7 +379,7 @@ impl DecimalType {
         self.rounding
     }
 
-    /// FR-140 value-only membership. With normalized (`c`, `s`), the value is a
+    /// quire-specification/FR-140 value-only membership. With normalized (`c`, `s`), the value is a
     /// member exactly when `s* = max(s, smin) <= smax` and
     /// `lo <= c × 10^(s* - s) <= hi`. The lifted coefficient is never
     /// materialized and no charge is made.
@@ -429,7 +429,7 @@ pub(crate) fn compare_shifted(value: &Integer, shift: u64, bound: &Integer) -> O
     }
 }
 
-/// One FR-140 decimal operation.
+/// One quire-specification/FR-140 decimal operation.
 #[derive(Clone, Copy, Debug)]
 pub enum DecimalOperation<'a> {
     /// `a + b`.
@@ -910,7 +910,7 @@ fn reject_zero_divisor(operation: DecimalOperation<'_>) -> Result<(), Stop> {
 enum Intermediate {
     /// The integer `value` in units of `10^-scale`.
     Scaled { value: Integer, scale: u64 },
-    /// The reduced FR-140 `N/D`, already in units of `10^-T`.
+    /// The reduced quire-specification/FR-140 `N/D`, already in units of `10^-T`.
     Quotient(Rational),
 }
 

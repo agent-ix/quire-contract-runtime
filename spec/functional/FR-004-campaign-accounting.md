@@ -29,6 +29,13 @@ accepted, rejected, failed, and discarded counters.
 - Failed cases shall also increment failed.
 - Rejected preconditions shall increment rejected.
 - Framework discards shall increment discarded.
+- Where a verdict's requirement or revision does not equal the report's, the report shall increment
+  no counter — not accepted, not rejected, not failed, and not discarded — and shall return the
+  caller a typed `IdentityMismatch` carrying both identities. `discarded` counts an external
+  framework's discard of a case that belonged to this campaign; a verdict from another campaign is
+  not this report's case to discard, and counting it would overstate the campaign's population.
+  Because the mismatch is reported rather than absorbed, a caller that ignores it loses the case
+  from every counter, so the returned `Result` is the only place the loss is visible.
 - Reports shall always serialize or format all four counters as one indivisible value.
 
 ### Immutable snapshot transport
@@ -85,6 +92,7 @@ the runtime. No verdict, attestation, receipt, retained store or generic envelop
 | FR-004-AC-5 | JSON transport round-trips real mixed reports and refuses independently authored malformed, incomplete, duplicate, unsupported or inconsistent data. | Test (TC-015) |
 | FR-004-AC-6 | Conservative at-limit inspection distinguishes representable values from potentially saturated counts/totals without inventing overflow history. | Test (TC-015) |
 | FR-004-AC-7 | Byte/identity/depth limits fail boundedly without partial output; allocator/process failure is not mislabeled as semantic refusal. | Test (TC-015) |
+| FR-004-AC-8 | A verdict whose requirement or revision differs from the report's increments no counter, leaves a prior snapshot unchanged, and returns an `IdentityMismatch` carrying both identities; a report that recorded a mismatch has the same counters as one that never saw the verdict. | Test (TC-006) |
 
 ## Dependencies
 
