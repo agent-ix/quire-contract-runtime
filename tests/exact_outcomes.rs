@@ -1136,3 +1136,47 @@ fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
         assert_eq!(refusal.code(), expected_code(&refusal));
     }
 }
+
+/// Trace: TC-016, FR-006-AC-6
+#[test]
+fn tc_016_refusal_undefined_incomplete_carry_no_string_field() {
+    fn type_source<'a>(source: &'a str, keyword: &str, name: &str) -> &'a str {
+        let needle = format!("{keyword} {name}");
+        let start = source
+            .find(&needle)
+            .unwrap_or_else(|| panic!("{name} not found in source"));
+        let from_start = &source[start..];
+        let open = from_start.find('{').unwrap();
+        let mut depth = 0_usize;
+        for (i, c) in from_start[open..].char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return &from_start[open..open + i + 1];
+                    }
+                }
+                _ => {}
+            }
+        }
+        panic!("unbalanced braces reading {name}");
+    }
+
+    let outcome_source = include_str!("../src/exact/outcome.rs");
+    let accounting_source = include_str!("../src/exact/accounting.rs");
+
+    let bodies = [
+        type_source(outcome_source, "pub enum", "Undefined"),
+        type_source(outcome_source, "pub enum", "Refusal"),
+        type_source(accounting_source, "pub struct", "Incomplete"),
+    ];
+    for body in bodies {
+        for token in ["String", "&str", "&'static str"] {
+            assert!(
+                !body.contains(token),
+                "found {token} in a field of the source scanned: {body}"
+            );
+        }
+    }
+}

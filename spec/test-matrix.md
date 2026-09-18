@@ -48,8 +48,8 @@ type: TestMatrix
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | TC-030 | ✅ implemented |
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4 | TC-031 | ✅ implemented |
 | FR-010 | FR-010-AC-5 | TC-031 | ⛔ blocked on #22 |
-| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7 | TC-032 | ✅ implemented |
-| FR-011 | FR-011-AC-3 | TC-032 | ⛔ blocked on #27 |
+| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7 | TC-032 | ✅ implemented |
+| FR-011 | FR-011-AC-8 | TC-032 | ⛔ blocked on #27 |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | TC-033 | ✅ implemented |
 
 ## Test Case Summary
@@ -83,7 +83,7 @@ type: TestMatrix
 | TC-026 | Evaluate the equality matrix and terminal references | Unit | P0 | FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8 | ✅ implemented |
 | TC-030 | Dispose negotiation items independently and in input order | Unit | P0 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | ✅ implemented |
 | TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5 | ⛔ blocked on #22 |
-| TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7 | ⛔ blocked on #27 |
+| TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | ⛔ blocked on #27 |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
 
@@ -99,13 +99,14 @@ reason rather than reddening `main`. The assertion was not weakened; the test do
 `make test-ignored` runs it (and every other `#[ignore]`d test) so it is re-detected the moment #22
 lands.
 
-`FR-011-AC-3` is blocked on `agent-ix/quire-contract-runtime#27`: `evaluate_boolean` takes both
+`FR-011-AC-8` is blocked on `agent-ix/quire-contract-runtime#27`: `evaluate_boolean` takes both
 connective operands as plain, already-decided `bool`s, so no function in the exact subsystem can
-accept a right operand that has stopped, and the stop-propagation half of AC-3 has no
-implementation to test. `tc_032_ac3_evaluate_boolean_retains_exactly_once` still exercises the
-retains-exactly-once half directly against `evaluate_boolean` and passes; nothing was weakened or
-ignored to reach that pass. TC-032's status reflects that the AC it traces is not fully
-implemented, the same convention `FR-010-AC-5`/#22 sets for TC-031.
+accept a right operand that has stopped, and AC-8's stop-propagation clause has no implementation
+to test. AC-3, the retains-exactly-once half FR-011-AC-3 used to state jointly with AC-8's clause,
+is split out and stays backed: `tc_032_ac3_evaluate_boolean_retains_exactly_once` exercises it
+directly against `evaluate_boolean` and passes; nothing was weakened or ignored to reach that pass.
+TC-032's status reflects that one of the ACs it traces (AC-8) is not implemented, the same
+convention `FR-010-AC-5`/#22 sets for TC-031.
 
 ## Evidence Locations
 

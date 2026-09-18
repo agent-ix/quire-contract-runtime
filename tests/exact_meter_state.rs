@@ -155,32 +155,32 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
     assert_eq!(powered, Outcome::Undefined(Undefined::DivisionByZero));
 }
 
-/// Deciding which operand to evaluate, and propagating a right-operand stop,
-/// is quire-contract-codegen's orchestration over the short-circuit/total
-/// connective distinction quire-contract-ir's model carries (FR-014-AC-2):
-/// `evaluate_boolean` never receives an operand that has not already stopped
-/// or decided, so this crate has no orchestration of its own to test. What it
-/// guarantees is narrower and is exercised directly here: for any decided
-/// operand pair, on any connective kind, the terminal charge is admitted
-/// exactly once.
+/// This crate owns connective short-circuit evaluation: `quire-contract-codegen`
+/// calls directly into `src/operators.rs`'s `and_short_circuit`/`or_short_circuit`/
+/// `implies_short_circuit` by name. What `evaluate_boolean` guarantees, for any
+/// decided operand pair on any connective kind, is that the terminal charge is
+/// admitted exactly once. It does not yet accept a right operand that has
+/// stopped — no stop-carrying connective exists in the exact subsystem, tracked
+/// as `agent-ix/quire-contract-runtime#27` — so only the decided-operand half is
+/// exercised here.
 ///
 /// Trace: TC-032, FR-011-AC-3
 #[test]
 fn tc_032_ac3_evaluate_boolean_retains_exactly_once() {
     let connectives = [
-        BooleanConnective::And(true, true),
-        BooleanConnective::And(false, true),
-        BooleanConnective::Or(false, false),
-        BooleanConnective::Or(true, false),
-        BooleanConnective::Implies(true, false),
-        BooleanConnective::Implies(false, true),
-        BooleanConnective::Not(true),
-        BooleanConnective::Not(false),
+        (BooleanConnective::And(true, true), true),
+        (BooleanConnective::And(false, true), false),
+        (BooleanConnective::Or(false, false), false),
+        (BooleanConnective::Or(true, false), true),
+        (BooleanConnective::Implies(true, false), false),
+        (BooleanConnective::Implies(false, true), true),
+        (BooleanConnective::Not(true), false),
+        (BooleanConnective::Not(false), true),
     ];
-    for connective in connectives {
+    for (connective, expected) in connectives {
         let mut meter = Meter::new(UNLIMITED);
         let outcome = evaluate_boolean(connective, &mut meter);
-        assert!(matches!(outcome, Outcome::Completed(_)));
+        assert_eq!(outcome, Outcome::Completed(expected));
         assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
         assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
