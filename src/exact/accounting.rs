@@ -400,6 +400,9 @@ pub struct Incomplete {
 /// An quire-specification/NFR-071 fault-injection request: deny the `occurrence`th (1-based) charge
 /// at `point`.
 ///
+/// Trace: TC-031, FR-010-AC-6
+// Implements: FR-010
+///
 /// `occurrence` is `NonZeroU64`, so the malformed 0-based request cannot be written at all:
 ///
 /// ```compile_fail
@@ -410,7 +413,6 @@ pub struct Incomplete {
 ///     occurrence: 0,
 /// };
 /// ```
-// Implements: FR-010
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct InjectedDenial {
     /// The named point to deny.

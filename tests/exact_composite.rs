@@ -652,3 +652,40 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     assert_eq!(record, expected);
     assert_eq!(consumed(&meter), before);
 }
+
+/// Trace: TC-024, FR-008-AC-9
+///
+/// Pins `Value`'s hand-written, iterative `Debug` (`agent-ix/quire-contract-runtime#25`) to an
+/// exact literal string, in both compact and alternate form, on a small fixed value. Byte-identity
+/// against `#[derive(Debug)]`'s output at depth was confirmed out-of-band (a detached `origin/main`
+/// worktree, before `Value`'s `Debug` became hand-written, reproduces this exact literal for the
+/// same value, and matches this renderer byte-for-byte at 6,000 levels of nesting); this test is
+/// the durable, in-tree, always-run check that the hand-written renderer keeps producing it.
+#[test]
+fn tc_024_p8_debug_exact_string_both_forms() {
+    let node = CompositeDeclaration::new(
+        key(3),
+        "Node",
+        CompositeShape::Record(vec![FieldDeclaration::new(
+            "child",
+            ValueType::Composite(key(3)),
+            Presence::Optional,
+        )]),
+    );
+    let env = TypeEnvironment::new([node], []).unwrap();
+    let leaf = env
+        .record(key(3), vec![("child", FieldValue::Absent)])
+        .unwrap();
+    let parent = env
+        .record(key(3), vec![("child", FieldValue::Present(leaf))])
+        .unwrap();
+
+    assert_eq!(
+        format!("{parent:?}"),
+        "Composite(CompositeValue { declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303), slots: [Present(Composite(CompositeValue { declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303), slots: [Absent], occ: Integer(1) }))], occ: Integer(2) })"
+    );
+    assert_eq!(
+        format!("{parent:#?}"),
+        "Composite(\n    CompositeValue {\n        declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303),\n        slots: [\n            Present(\n                Composite(\n                    CompositeValue {\n                        declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303),\n                        slots: [\n                            Absent,\n                        ],\n                        occ: Integer(\n                            1,\n                        ),\n                    },\n                ),\n            ),\n        ],\n        occ: Integer(\n            2,\n        ),\n    },\n)"
+    );
+}

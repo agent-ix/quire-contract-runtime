@@ -1072,6 +1072,33 @@ fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
     );
 }
 
+/// Trace: TC-031, FR-010-AC-6
+///
+/// The behavioral half of FR-010-AC-6 (a zero `occurrence` is a compile error, not a runtime
+/// value) cannot be demonstrated by a `#[test]` that runs: there is no `occurrence: 0` value to
+/// construct and observe. `src/exact/accounting.rs`'s `compile_fail` doctest on `InjectedDenial`
+/// is the actual evidence that the malformed construction does not compile. This test is the
+/// structural half: it inspects the crate's own source to confirm the field that makes that
+/// doctest fail to compile is still `NonZeroU64`, not `u64`, so the doctest cannot have drifted
+/// into testing something else while still failing to compile for an unrelated reason.
+#[test]
+fn tc_031_occurrence_field_is_nonzerou64_so_zero_cannot_be_constructed() {
+    let accounting_source = include_str!("../src/exact/accounting.rs");
+    let struct_start = accounting_source
+        .find("pub struct InjectedDenial {")
+        .expect("InjectedDenial struct not found in src/exact/accounting.rs");
+    let struct_end = struct_start
+        + accounting_source[struct_start..]
+            .find('}')
+            .expect("unterminated InjectedDenial struct");
+    let struct_body = &accounting_source[struct_start..struct_end];
+    assert!(
+        struct_body.contains("pub occurrence: NonZeroU64,"),
+        "InjectedDenial::occurrence must stay NonZeroU64 for the FR-010-AC-6 doctest to mean \
+         what it claims: {struct_body}"
+    );
+}
+
 /// Trace: TC-016, FR-006-AC-6
 #[test]
 fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {

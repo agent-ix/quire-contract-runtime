@@ -20,8 +20,7 @@ depend on the configured `ScalarLimits`.
 ## Inputs
 
 - At most one `InjectedDenial { point: ChargePoint, occurrence: NonZeroU64 }` per `Meter`.
-  `occurrence` is 1-based; `NonZeroU64` makes the malformed 0-based request unrepresentable rather
-  than admitted and silently ignored.
+  `occurrence` is 1-based; `NonZeroU64` makes the malformed 0-based request unrepresentable.
 - The `ScalarLimits` the meter is otherwise metering against.
 
 ## Outputs
@@ -73,7 +72,7 @@ depend on the configured `ScalarLimits`.
 | FR-010-AC-3 | With limits short enough that the same charge would be denied on a real counter, the injected record is returned, not the real-counter record. | Test (TC-031) |
 | FR-010-AC-4 | An injection at occurrence `n` fires on the `n`th admitted charge at that point, counting no charge at any other point and no charge at that point that a short counter denied. | Test (TC-031) |
 | FR-010-AC-5 | After the injected denial fires, further charges are metered against the configured limits and no second charge is injected-denied. | Test (TC-031) |
-| FR-010-AC-6 | `occurrence` is `NonZeroU64`: the 0-based malformed request cannot be constructed, so it can never silently match no charge and degrade into "no fault injected". | Test (TC-031) |
+| FR-010-AC-6 | `occurrence` is `NonZeroU64`: the 0-based malformed request cannot be constructed, so it can never silently match no charge and degrade into "no fault injected". | Inspection (TC-031) |
 
 ## Dependencies
 

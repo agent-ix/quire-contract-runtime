@@ -182,28 +182,21 @@ impl Value {
 }
 
 impl fmt::Debug for Value {
-    /// Renders the same output `#[derive(Debug)]` would have, but iteratively. Builds each
-    /// contained `Value`'s rendering from the leaves up over an explicit worklist, then composes
-    /// a container's own rendering from its already-rendered children using the same field names
-    /// and derive-equivalent builders (`debug_tuple`, `debug_struct`) that produce the identical
-    /// bracket, comma and indentation conventions `#[derive(Debug)]` used to emit — so this is a
-    /// byte-identical, non-recursive replacement, not a different format.
+    /// Renders the same output `#[derive(Debug)]` would have, but iteratively and in O(n): a
+    /// depth-first, top-down walk over an explicit worklist writes each byte of the output
+    /// exactly once, directly into the result buffer, at the final indent depth its position in
+    /// the tree already determines — so no already-written text is ever re-scanned or re-copied
+    /// as an ancestor's rendering is composed, the way a bottom-up approach that re-embeds each
+    /// level's complete rendered text into a fresh string must. See [`render_value`].
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&render_value(self, f.alternate()))
     }
 }
 
-/// Wraps an already-rendered `Debug` string so a `debug_*` builder writes it verbatim instead of
-/// trying to format the (already-consumed) original value.
-struct Rendered<'a>(&'a str);
-
-impl fmt::Debug for Rendered<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.0)
-    }
-}
-
-fn render_one(alternate: bool, value: impl fmt::Debug) -> String {
+/// One value's already-computed `Debug` text (via its own, depth-independent `Debug` impl),
+/// paired with the indent depth its position in the tree places it at. Never re-formatted: only
+/// spliced into the output once, reindenting embedded newlines (alternate mode only) as it goes.
+fn debug_text(value: &impl fmt::Debug, alternate: bool) -> String {
     if alternate {
         format!("{value:#?}")
     } else {
@@ -211,230 +204,339 @@ fn render_one(alternate: bool, value: impl fmt::Debug) -> String {
     }
 }
 
-/// Renders `root`'s `Debug` output bottom-up over an explicit worklist: a value with no nested
-/// `Value` (every variant but `Option`, `Composite` and `Collection`) is rendered directly by its
-/// own (depth-independent) `Debug`; a container is only composed once every direct child's
-/// rendering is ready, so no step recurses with the tree's nesting depth. `Task`'s `Compose*`
-/// variants are typed per container, not `&Value`, so every match on `Task` here is exhaustive
-/// with no catch-all arm standing in for "cannot happen" — this crate's governed target treats a
-/// stack overflow as silent corruption, so nothing in `src/exact` may carry a panic path at all,
-/// not even the "this state cannot occur" macro.
-fn render_value(root: &Value, alternate: bool) -> String {
-    enum Task<'a> {
-        Render(&'a Value),
-        ComposeOption(&'a OptionValue),
-        ComposeComposite(&'a CompositeValue),
-        ComposeCollection(&'a CollectionValue),
+/// Which bracket pair a block uses. Only affects spacing in compact mode: a struct pads its
+/// braces with a space (`Name { f: v }`), a tuple or list does not (`Name(v)`, `[v]`). Alternate
+/// mode's indentation is identical for all three.
+#[derive(Clone, Copy)]
+enum BlockKind {
+    Struct,
+    TupleOrList,
+}
+
+/// Accumulates one `Value`'s complete `Debug` text into a single buffer, one write per byte.
+struct Writer {
+    out: String,
+    alternate: bool,
+}
+
+impl Writer {
+    fn newline_indent(&mut self, depth: usize) {
+        self.out.push('\n');
+        for _ in 0..depth {
+            self.out.push_str("    ");
+        }
     }
 
-    let mut tasks = vec![Task::Render(root)];
-    let mut rendered: Vec<String> = Vec::new();
-    while let Some(task) = tasks.pop() {
+    /// Written right after an opening bracket/brace/paren, before the first item, at the items'
+    /// own `depth` (one deeper than the block's own).
+    fn open(&mut self, kind: BlockKind, depth: usize) {
+        if self.alternate {
+            self.newline_indent(depth);
+        } else if matches!(kind, BlockKind::Struct) {
+            self.out.push(' ');
+        }
+    }
+
+    /// Written between two items, at the items' own `depth`.
+    fn between(&mut self, depth: usize) {
+        if self.alternate {
+            self.out.push(',');
+            self.newline_indent(depth);
+        } else {
+            self.out.push_str(", ");
+        }
+    }
+
+    /// Written after the last item, before the closing bracket/brace/paren, at the block's own
+    /// (one shallower) `depth`.
+    fn close(&mut self, kind: BlockKind, depth: usize) {
+        if self.alternate {
+            self.out.push(',');
+            self.newline_indent(depth);
+        } else if matches!(kind, BlockKind::Struct) {
+            self.out.push(' ');
+        }
+    }
+
+    fn raw(&mut self, text: &str) {
+        self.out.push_str(text);
+    }
+
+    /// Splices in `text` — one value's own, already fully-formatted `Debug` output, which may
+    /// itself span multiple lines — as this value's rendering at `depth`. In alternate mode every
+    /// embedded newline is reindented to `depth`, exactly once: the cost is proportional to this
+    /// one value's own text, never repeated as ancestors compose around it, which is what keeps
+    /// the whole walk O(n) instead of the O(n²) a bottom-up re-embedding approach pays (each
+    /// ancestor on the path to the root re-scanning and re-copying the same descendant text).
+    fn leaf(&mut self, text: &str, depth: usize) {
+        if !self.alternate {
+            self.out.push_str(text);
+            return;
+        }
+        let mut lines = text.split('\n');
+        if let Some(first) = lines.next() {
+            self.out.push_str(first);
+        }
+        for line in lines {
+            self.newline_indent(depth);
+            self.out.push_str(line);
+        }
+    }
+}
+
+/// One pending write, popped and applied to the [`Writer`] in order. A `Value` (or `FieldValue`,
+/// or an `Option<&Value>` payload slot) is expanded into further `Task`s the moment it is popped,
+/// never before — so the worklist only ever holds pending work proportional to how many ancestors
+/// are still open, not the whole rendered text of any subtree, and each `Value` node is visited
+/// exactly once.
+enum Task<'a> {
+    Value(&'a Value, usize),
+    FieldSlot(&'a FieldValue, usize),
+    Raw(&'static str),
+    Leaf(String, usize),
+    Open(BlockKind, usize),
+    Between(usize),
+    Close(BlockKind, usize),
+}
+
+/// A already-sequenced but not yet applied fragment of [`Task`]s, in the order they must be
+/// popped (first task first). Building one costs only the fragment's own direct length; nothing
+/// in it is a rendered `String` standing in for a whole subtree, so nesting fragments inside each
+/// other (a field's fragment inside its struct's fragment inside its tuple wrapper's fragment)
+/// never re-copies a descendant's text — that text is written, once, only when its own `Leaf`
+/// task is eventually popped.
+type Frag<'a> = Vec<Task<'a>>;
+
+/// `Name(<inner>)`, single-field tuple-variant shape, at `depth`; `inner`'s own content sits at
+/// `depth.saturating_add(1)`.
+fn tuple1<'a>(name: &'static str, depth: usize, inner: Frag<'a>) -> Frag<'a> {
+    let mut seq = vec![
+        Task::Raw(name),
+        Task::Raw("("),
+        Task::Open(BlockKind::TupleOrList, depth.saturating_add(1)),
+    ];
+    seq.extend(inner);
+    seq.push(Task::Close(BlockKind::TupleOrList, depth));
+    seq.push(Task::Raw(")"));
+    seq
+}
+
+/// `Name { f0: v0, f1: v1, f2: v2 }`, exactly the three-field struct shape every `*Value` struct
+/// here has, at `depth`; each field's own content sits at `depth.saturating_add(1)`.
+fn struct3<'a>(
+    name: &'static str,
+    depth: usize,
+    fields: [(&'static str, Frag<'a>); 3],
+) -> Frag<'a> {
+    let [f0, f1, f2] = fields;
+    let mut seq = vec![
+        Task::Raw(name),
+        Task::Raw(" {"),
+        Task::Open(BlockKind::Struct, depth.saturating_add(1)),
+    ];
+    seq.push(Task::Raw(f0.0));
+    seq.push(Task::Raw(": "));
+    seq.extend(f0.1);
+    seq.push(Task::Between(depth.saturating_add(1)));
+    seq.push(Task::Raw(f1.0));
+    seq.push(Task::Raw(": "));
+    seq.extend(f1.1);
+    seq.push(Task::Between(depth.saturating_add(1)));
+    seq.push(Task::Raw(f2.0));
+    seq.push(Task::Raw(": "));
+    seq.extend(f2.1);
+    seq.push(Task::Close(BlockKind::Struct, depth));
+    seq.push(Task::Raw("}"));
+    seq
+}
+
+/// `[i0, i1, ..]`, at `depth`; each item's own content sits at `depth.saturating_add(1)`. `[]` for no items, in
+/// both modes — the same "nothing to put on its own line" shape a zero-field struct or tuple
+/// would take, had this crate's `Value`-nesting types ever produced one.
+fn list<'a>(depth: usize, items: Vec<Frag<'a>>) -> Frag<'a> {
+    if items.is_empty() {
+        return vec![Task::Raw("[]")];
+    }
+    let mut seq = vec![
+        Task::Raw("["),
+        Task::Open(BlockKind::TupleOrList, depth.saturating_add(1)),
+    ];
+    let last = items.len().saturating_sub(1);
+    for (index, item) in items.into_iter().enumerate() {
+        seq.extend(item);
+        if index != last {
+            seq.push(Task::Between(depth.saturating_add(1)));
+        }
+    }
+    seq.push(Task::Close(BlockKind::TupleOrList, depth));
+    seq.push(Task::Raw("]"));
+    seq
+}
+
+fn leaf<'a>(depth: usize, text: String) -> Frag<'a> {
+    vec![Task::Leaf(text, depth)]
+}
+
+/// A single non-nesting scalar variant: `Name(<value's own Debug text>)`.
+fn scalar<'a>(
+    name: &'static str,
+    depth: usize,
+    value: &impl fmt::Debug,
+    alternate: bool,
+) -> Frag<'a> {
+    tuple1(
+        name,
+        depth,
+        leaf(depth.saturating_add(1), debug_text(value, alternate)),
+    )
+}
+
+/// Renders `root`'s `Debug` output as a single top-down, depth-first pass over an explicit
+/// worklist: every `Value`, `FieldValue` and `Option` payload slot is matched exhaustively here,
+/// with no catch-all arm standing in for "cannot happen" and no fallback text a bookkeeping bug
+/// could silently reach for instead of panicking — this crate's governed target treats a stack
+/// overflow as silent corruption, so nothing in `src/exact` may carry a panic path, and nothing
+/// here needs to reach for one in the first place: every task this walk ever pushes is one this
+/// match already knows how to pop.
+fn render_value(root: &Value, alternate: bool) -> String {
+    let mut writer = Writer {
+        out: String::new(),
+        alternate,
+    };
+    let mut stack: Vec<Task<'_>> = vec![Task::Value(root, 0)];
+    while let Some(task) = stack.pop() {
         match task {
-            Task::Render(Value::Option(option)) => {
-                tasks.push(Task::ComposeOption(option));
-                if let Some(payload) = option.payload.as_ref() {
-                    tasks.push(Task::Render(payload));
-                }
+            Task::Raw(text) => writer.raw(text),
+            Task::Leaf(text, depth) => writer.leaf(&text, depth),
+            Task::Open(kind, depth) => writer.open(kind, depth),
+            Task::Between(depth) => writer.between(depth),
+            Task::Close(kind, depth) => writer.close(kind, depth),
+
+            Task::Value(Value::Boolean(v), depth) => {
+                stack.extend(scalar("Boolean", depth, v, alternate).into_iter().rev());
             }
-            Task::Render(Value::Composite(composite)) => {
-                tasks.push(Task::ComposeComposite(composite));
-                for slot in composite.slots.iter().rev() {
-                    if let FieldValue::Present(nested) = slot {
-                        tasks.push(Task::Render(nested));
-                    }
-                }
+            Task::Value(Value::Integer(v), depth) => {
+                stack.extend(scalar("Integer", depth, v, alternate).into_iter().rev());
             }
-            Task::Render(Value::Collection(collection)) => {
-                tasks.push(Task::ComposeCollection(collection));
-                for element in collection.elements().iter().rev() {
-                    tasks.push(Task::Render(element));
-                }
+            Task::Value(Value::Rational(v), depth) => {
+                stack.extend(scalar("Rational", depth, v, alternate).into_iter().rev());
             }
-            Task::Render(leaf) => rendered.push(render_leaf(leaf, alternate)),
-            Task::ComposeOption(option) => {
-                // `rendered.pop()` already yields `Option<String>`; only call it when a payload
-                // `Render` task ran immediately before this one, so a leftover, unrelated
-                // rendering is never mistaken for this option's payload.
-                let payload = option.payload.as_ref().and_then(|_| rendered.pop());
-                rendered.push(compose_option(option, payload, alternate));
+            Task::Value(Value::Decimal(v), depth) => {
+                stack.extend(scalar("Decimal", depth, v, alternate).into_iter().rev());
             }
-            Task::ComposeComposite(composite) => {
-                let present = composite
+            Task::Value(Value::Float(v), depth) => {
+                stack.extend(scalar("Float", depth, v, alternate).into_iter().rev());
+            }
+            Task::Value(Value::Quantity(v), depth) => {
+                stack.extend(scalar("Quantity", depth, v, alternate).into_iter().rev());
+            }
+            Task::Value(Value::Text(v), depth) => {
+                stack.extend(scalar("Text", depth, v, alternate).into_iter().rev());
+            }
+            Task::Value(Value::Enum(v), depth) => {
+                stack.extend(scalar("Enum", depth, v, alternate).into_iter().rev());
+            }
+            Task::Value(Value::Reference(v), depth) => {
+                stack.extend(scalar("Reference", depth, v, alternate).into_iter().rev());
+            }
+            Task::Value(Value::Option(rc), depth) => {
+                let option = &**rc;
+                let payload: Frag<'_> = match option.payload.as_ref() {
+                    None => vec![Task::Raw("None")],
+                    Some(v) => tuple1(
+                        "Some",
+                        depth.saturating_add(2),
+                        vec![Task::Value(v, depth.saturating_add(3))],
+                    ),
+                };
+                let fields = [
+                    (
+                        "payload_type",
+                        leaf(
+                            depth.saturating_add(2),
+                            debug_text(&option.payload_type, alternate),
+                        ),
+                    ),
+                    ("payload", payload),
+                    (
+                        "occ",
+                        leaf(depth.saturating_add(2), debug_text(&option.occ, alternate)),
+                    ),
+                ];
+                let body = struct3("OptionValue", depth.saturating_add(1), fields);
+                stack.extend(tuple1("Option", depth, body).into_iter().rev());
+            }
+            Task::Value(Value::Composite(rc), depth) => {
+                let composite = &**rc;
+                let slots: Vec<Frag<'_>> = composite
                     .slots
                     .iter()
-                    .filter(|slot| matches!(slot, FieldValue::Present(_)))
-                    .count();
-                let split_at = rendered.len().saturating_sub(present);
-                let children = rendered.split_off(split_at);
-                rendered.push(compose_composite(composite, children, alternate));
+                    .map(|slot| vec![Task::FieldSlot(slot, depth.saturating_add(3))])
+                    .collect();
+                let fields = [
+                    (
+                        "declaration",
+                        leaf(
+                            depth.saturating_add(2),
+                            debug_text(&composite.declaration, alternate),
+                        ),
+                    ),
+                    ("slots", list(depth.saturating_add(2), slots)),
+                    (
+                        "occ",
+                        leaf(
+                            depth.saturating_add(2),
+                            debug_text(&composite.occ, alternate),
+                        ),
+                    ),
+                ];
+                let body = struct3("CompositeValue", depth.saturating_add(1), fields);
+                stack.extend(tuple1("Composite", depth, body).into_iter().rev());
             }
-            Task::ComposeCollection(collection) => {
-                let split_at = rendered.len().saturating_sub(collection.elements().len());
-                let children = rendered.split_off(split_at);
-                rendered.push(compose_collection(collection, children, alternate));
+            Task::Value(Value::Collection(rc), depth) => {
+                let collection = &**rc;
+                let elements: Vec<Frag<'_>> = collection
+                    .elements()
+                    .iter()
+                    .map(|element| vec![Task::Value(element, depth.saturating_add(3))])
+                    .collect();
+                let fields = [
+                    (
+                        "collection_type",
+                        leaf(
+                            depth.saturating_add(2),
+                            debug_text(collection.collection_type(), alternate),
+                        ),
+                    ),
+                    ("elements", list(depth.saturating_add(2), elements)),
+                    (
+                        "occ",
+                        leaf(
+                            depth.saturating_add(2),
+                            debug_text(collection.occ(), alternate),
+                        ),
+                    ),
+                ];
+                let body = struct3("CollectionValue", depth.saturating_add(1), fields);
+                stack.extend(tuple1("Collection", depth, body).into_iter().rev());
             }
-        }
-    }
-    rendered.pop().unwrap_or_default()
-}
 
-/// Renders one of the variants that never nests another `Value`, exactly as
-/// `#[derive(Debug)]`'s tuple-variant rendering would (`Name(<field>)`). Only ever called on a
-/// leaf variant (every [`render_value`] call site already matched `Option`, `Composite` and
-/// `Collection` separately), but still total: an unreached container arm renders empty text
-/// rather than needing a `match` this crate's no-panic-path rule forbids from claiming is
-/// unreachable.
-fn render_leaf(value: &Value, alternate: bool) -> String {
-    struct Tuple1<'a, T>(&'static str, &'a T);
-    impl<T: fmt::Debug> fmt::Debug for Tuple1<'_, T> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_tuple(self.0).field(self.1).finish()
-        }
-    }
-    match value {
-        Value::Boolean(v) => render_one(alternate, Tuple1("Boolean", v)),
-        Value::Integer(v) => render_one(alternate, Tuple1("Integer", v)),
-        Value::Rational(v) => render_one(alternate, Tuple1("Rational", v)),
-        Value::Decimal(v) => render_one(alternate, Tuple1("Decimal", v)),
-        Value::Float(v) => render_one(alternate, Tuple1("Float", v)),
-        Value::Quantity(v) => render_one(alternate, Tuple1("Quantity", v)),
-        Value::Text(v) => render_one(alternate, Tuple1("Text", v)),
-        Value::Enum(v) => render_one(alternate, Tuple1("Enum", v)),
-        Value::Reference(v) => render_one(alternate, Tuple1("Reference", v)),
-        Value::Option(_) | Value::Composite(_) | Value::Collection(_) => String::new(),
-    }
-}
-
-/// Renders `Name(<inner>)`, matching `#[derive(Debug)]`'s rendering of a single-field tuple
-/// variant whose field is already-rendered text rather than a live value.
-fn wrap_tuple1(name: &str, inner: &str, alternate: bool) -> String {
-    struct Wrap<'a>(&'a str, &'a str);
-    impl fmt::Debug for Wrap<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_tuple(self.0).field(&Rendered(self.1)).finish()
-        }
-    }
-    render_one(alternate, Wrap(name, inner))
-}
-
-fn compose_option(option: &OptionValue, payload: Option<String>, alternate: bool) -> String {
-    struct Repr<'a> {
-        payload_type: &'a ValueType,
-        payload: &'a Option<Rendered<'a>>,
-        occ: &'a Integer,
-    }
-    impl fmt::Debug for Repr<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_struct("OptionValue")
-                .field("payload_type", self.payload_type)
-                .field("payload", self.payload)
-                .field("occ", self.occ)
-                .finish()
-        }
-    }
-    let payload_rendered = payload.as_deref().map(Rendered);
-    let inner = render_one(
-        alternate,
-        Repr {
-            payload_type: &option.payload_type,
-            payload: &payload_rendered,
-            occ: &option.occ,
-        },
-    );
-    wrap_tuple1("Option", &inner, alternate)
-}
-
-fn compose_composite(composite: &CompositeValue, children: Vec<String>, alternate: bool) -> String {
-    enum SlotRepr<'a> {
-        Present(Rendered<'a>),
-        Absent,
-        Null,
-    }
-    impl fmt::Debug for SlotRepr<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                Self::Present(rendered) => f.debug_tuple("Present").field(rendered).finish(),
-                Self::Absent => write!(f, "Absent"),
-                Self::Null => write!(f, "Null"),
+            Task::FieldSlot(FieldValue::Present(v), depth) => {
+                stack.extend(
+                    tuple1(
+                        "Present",
+                        depth,
+                        vec![Task::Value(v, depth.saturating_add(1))],
+                    )
+                    .into_iter()
+                    .rev(),
+                );
             }
+            Task::FieldSlot(FieldValue::Absent, _) => writer.raw("Absent"),
+            Task::FieldSlot(FieldValue::Null, _) => writer.raw("Null"),
         }
     }
-
-    let mut next_child = children.iter();
-    let slot_reprs: Vec<SlotRepr<'_>> = composite
-        .slots
-        .iter()
-        .map(|slot| match slot {
-            // One rendering was pushed per `Present` slot before this call (see
-            // `Task::ComposeComposite`), but degrade to an empty string rather than reach for a
-            // panicking accessor: no path in `src/exact` may carry one, per the module's own
-            // invariant (`src/exact/mod.rs`).
-            FieldValue::Present(_) => {
-                SlotRepr::Present(Rendered(next_child.next().map_or("", String::as_str)))
-            }
-            FieldValue::Absent => SlotRepr::Absent,
-            FieldValue::Null => SlotRepr::Null,
-        })
-        .collect();
-
-    struct Repr<'a> {
-        declaration: NodeKey,
-        slots: &'a [SlotRepr<'a>],
-        occ: &'a Integer,
-    }
-    impl fmt::Debug for Repr<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_struct("CompositeValue")
-                .field("declaration", &self.declaration)
-                .field("slots", &self.slots)
-                .field("occ", self.occ)
-                .finish()
-        }
-    }
-    let inner = render_one(
-        alternate,
-        Repr {
-            declaration: composite.declaration,
-            slots: &slot_reprs,
-            occ: &composite.occ,
-        },
-    );
-    wrap_tuple1("Composite", &inner, alternate)
-}
-
-fn compose_collection(
-    collection: &CollectionValue,
-    children: Vec<String>,
-    alternate: bool,
-) -> String {
-    let rendered_children: Vec<Rendered<'_>> = children
-        .iter()
-        .map(|child| Rendered(child.as_str()))
-        .collect();
-    struct Repr<'a> {
-        collection_type: &'a CollectionType,
-        elements: &'a [Rendered<'a>],
-        occ: &'a Integer,
-    }
-    impl fmt::Debug for Repr<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_struct("CollectionValue")
-                .field("collection_type", self.collection_type)
-                .field("elements", &self.elements)
-                .field("occ", self.occ)
-                .finish()
-        }
-    }
-    let inner = render_one(
-        alternate,
-        Repr {
-            collection_type: collection.collection_type(),
-            elements: &rendered_children,
-            occ: collection.occ(),
-        },
-    );
-    wrap_tuple1("Collection", &inner, alternate)
+    writer.out
 }
 
 impl Drop for Value {
