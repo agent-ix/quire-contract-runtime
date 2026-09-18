@@ -1081,9 +1081,29 @@ fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
 /// structural half: it inspects the crate's own source to confirm the field that makes that
 /// doctest fail to compile is still `NonZeroU64`, not `u64`, so the doctest cannot have drifted
 /// into testing something else while still failing to compile for an unrelated reason.
+///
+/// It asserts the doctest's own presence too, and not only the field's type. Asserting the field
+/// alone leaves AC-6 backed by a test that still passes after the doctest is deleted — the
+/// criterion would report green with its actual evidence gone, which is the defect class this
+/// whole criterion exists to refuse.
 #[test]
 fn tc_031_occurrence_field_is_nonzerou64_so_zero_cannot_be_constructed() {
     let accounting_source = include_str!("../src/exact/accounting.rs");
+    let doctest_start = accounting_source.find("/// ```compile_fail").expect(
+        "the FR-010-AC-6 compile_fail doctest is gone from src/exact/accounting.rs; it is the \
+         only evidence that a zero occurrence does not compile, and this test is not a \
+         substitute for it",
+    );
+    let doctest_end = doctest_start
+        + accounting_source[doctest_start..]
+            .find("/// ```\n#[derive")
+            .expect("unterminated compile_fail doctest in src/exact/accounting.rs");
+    let doctest = &accounting_source[doctest_start..doctest_end];
+    assert!(
+        doctest.contains("occurrence: 0,"),
+        "the FR-010-AC-6 doctest must still construct `occurrence: 0`; a doctest that no longer \
+         names the malformed value proves nothing about it: {doctest}"
+    );
     let struct_start = accounting_source
         .find("pub struct InjectedDenial {")
         .expect("InjectedDenial struct not found in src/exact/accounting.rs");
