@@ -49,61 +49,6 @@ fn integer_bound(domain: &IntegerDomain) -> Option<&IntegerInterval> {
     }
 }
 
-/// A binary Boolean connective's identity, independent of its operands.
-/// `evaluate_boolean` now takes both operands already decided and charges
-/// only the terminal retain; deciding from the left operand without running
-/// the right, and propagating a right-operand stop unchanged, is orchestration
-/// this crate no longer performs internally (quire-specification/FR-011:
-/// "the left operand enters as an already-decided `bool` and is charged for
-/// by whoever produced it, never by the connective"). This mirrors that
-/// caller-side orchestration so the two behaviors it names stay under test.
-#[derive(Clone, Copy, Debug)]
-enum Connective {
-    And,
-    Or,
-    Implies,
-}
-
-impl Connective {
-    const ALL: [Self; 3] = [Self::And, Self::Or, Self::Implies];
-
-    /// The result the left operand alone decides, if any.
-    fn decide(self, left: bool) -> Option<bool> {
-        match (self, left) {
-            (Self::And, false) => Some(false),
-            (Self::Or, true) | (Self::Implies, false) => Some(true),
-            _ => None,
-        }
-    }
-
-    fn kernel(self, left: bool, right: bool) -> BooleanConnective {
-        match self {
-            Self::And => BooleanConnective::And(left, right),
-            Self::Or => BooleanConnective::Or(left, right),
-            Self::Implies => BooleanConnective::Implies(left, right),
-        }
-    }
-}
-
-/// The caller-side orchestration `evaluate_connective` used to provide: skip
-/// the right operand entirely when the left operand decides, otherwise
-/// evaluate it and propagate a stop unchanged; only a fully decided pair
-/// reaches `evaluate_boolean`, which retains exactly once.
-fn evaluate_connective(
-    connective: Connective,
-    left: bool,
-    right: impl FnOnce(&mut Meter) -> Outcome<bool>,
-    meter: &mut Meter,
-) -> Outcome<bool> {
-    match connective.decide(left) {
-        Some(decided) => evaluate_boolean(connective.kernel(left, decided), meter),
-        None => match right(meter) {
-            Outcome::Completed(value) => evaluate_boolean(connective.kernel(left, value), meter),
-            stopped => stopped,
-        },
-    }
-}
-
 /// Trace: TC-032, FR-011-AC-1
 #[test]
 fn tc_032_ac1_undefined_division_by_zero_retains_operands_only() {
@@ -210,60 +155,35 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
     assert_eq!(powered, Outcome::Undefined(Undefined::DivisionByZero));
 }
 
+/// Deciding which operand to evaluate, and propagating a right-operand stop,
+/// is quire-contract-codegen's orchestration over the short-circuit/total
+/// connective distinction quire-contract-ir's model carries (FR-014-AC-2):
+/// `evaluate_boolean` never receives an operand that has not already stopped
+/// or decided, so this crate has no orchestration of its own to test. What it
+/// guarantees is narrower and is exercised directly here: for any decided
+/// operand pair, on any connective kind, the terminal charge is admitted
+/// exactly once.
+///
 /// Trace: TC-032, FR-011-AC-3
 #[test]
-fn tc_032_ac3_short_circuit_retains_exactly_once() {
-    for connective in Connective::ALL {
-        let (deciding_left, expected) = match connective {
-            Connective::And => (false, false),
-            Connective::Or => (true, true),
-            Connective::Implies => (false, true),
-        };
+fn tc_032_ac3_evaluate_boolean_retains_exactly_once() {
+    let connectives = [
+        BooleanConnective::And(true, true),
+        BooleanConnective::And(false, true),
+        BooleanConnective::Or(false, false),
+        BooleanConnective::Or(true, false),
+        BooleanConnective::Implies(true, false),
+        BooleanConnective::Implies(false, true),
+        BooleanConnective::Not(true),
+        BooleanConnective::Not(false),
+    ];
+    for connective in connectives {
         let mut meter = Meter::new(UNLIMITED);
-        let outcome = evaluate_connective(
-            connective,
-            deciding_left,
-            |_| panic!("the right operand must not run when the left operand decides"),
-            &mut meter,
-        );
-        assert_eq!(outcome, Outcome::Completed(expected));
+        let outcome = evaluate_boolean(connective, &mut meter);
+        assert!(matches!(outcome, Outcome::Completed(_)));
         assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
         assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
-    }
-}
-
-/// Trace: TC-032, FR-011-AC-3
-#[test]
-fn tc_032_ac3_stopped_right_operand_propagates_without_retention() {
-    let incomplete = Outcome::Incomplete(Incomplete {
-        limit_kind: LimitKind::WorkUnits,
-        limit: 0,
-        consumed: 0,
-        next_charge: int(1),
-        charge_point: ChargePoint::OrderingResultRetain,
-    });
-    let stops: [Outcome<bool>; 3] = [
-        Outcome::Undefined(Undefined::DivisionByZero),
-        Outcome::Refused(Refusal::IntegerOutOfDomain),
-        incomplete,
-    ];
-    for connective in Connective::ALL {
-        // The left value that does *not* decide the result, so the right
-        // operand runs and its stop must propagate unchanged.
-        let non_deciding_left = match connective {
-            Connective::And => true,
-            Connective::Or => false,
-            Connective::Implies => true,
-        };
-        for stop in &stops {
-            let mut meter = Meter::new(UNLIMITED);
-            let outcome =
-                evaluate_connective(connective, non_deciding_left, |_| stop.clone(), &mut meter);
-            assert_eq!(outcome, stop.clone());
-            assert!(meter.admitted_charges().is_empty());
-            assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
-        }
     }
 }
 

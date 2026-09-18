@@ -9,15 +9,15 @@ use std::path::Path;
 use quire_contract_runtime::exact::{
     admit_text, compare_enum, compare_text, construct_collection, divide, evaluate_boolean,
     evaluate_decimal, evaluate_ieee, evaluate_integer_arithmetic, evaluate_quantity,
-    evaluate_rational_arithmetic, modulo, order_numbers, BooleanConnective, CardinalityBound,
-    ChargePoint, CollectionKind, CollectionType, ComparisonOperator, CompositeDeclaration,
-    CompositeShape, Decimal, DecimalOperation, DecimalType, Deferred, DivisionProfile,
-    EnumDeclaration, EqualityOperand, EqualityOperator, IeeeFlags, IeeeOperation, IeeeValue,
-    IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerArithmetic, IntegerDomain,
-    IntegerInterval, LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator, Outcome,
-    Quantity, QuantityOperation, QuantityUnit, Rational, RationalArithmetic, Refusal, RoundingMode,
-    ScalarLimits, TextPayload, TextProfile, TextType, TypeEnvironment, UnitDeclaration, UnitGraph,
-    Value, ValueType,
+    evaluate_rational_arithmetic, modulo, order_numbers, BooleanConnective, BoundViolation,
+    CardinalityBound, ChargePoint, CollectionKind, CollectionType, ComparisonOperator,
+    CompositeDeclaration, CompositeShape, Decimal, DecimalOperation, DecimalType, Deferred,
+    DivisionProfile, EnumDeclaration, EqualityOperand, EqualityOperator, IeeeFlags, IeeeOperation,
+    IeeeValue, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerArithmetic,
+    IntegerDomain, IntegerInterval, LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator,
+    Outcome, Quantity, QuantityOperation, QuantityUnit, Rational, RationalArithmetic, Refusal,
+    RoundingMode, ScalarLimits, TextPayload, TextProfile, TextType, TypeEnvironment,
+    UnitDeclaration, UnitGraph, Value, ValueType,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -837,16 +837,11 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() 
         assert_eq!(record.limit_kind, LimitKind::WorkUnits, "{point:?}");
         assert_eq!(record.charge_point, point);
         assert_eq!(record.limit, record.consumed, "{point:?}");
-        // Every point this crate charged before FR-008 admits exactly one
-        // default work unit, so the first (occurrence-one) charge always
-        // needs exactly one more. FR-008 added three points whose work is
-        // occurrence-derived rather than the default: `equality.plan-form`
-        // and `collection.member-walk` charge `occ(left) + occ(right)`, and
-        // `equality.plan` (`Meter::charge_plan`) reserves `pairs + 2`. The
-        // two scalar `Integer` operands these drivers compare are the
-        // smallest inputs either family can take (occ 1 each, one top-level
-        // pair), so these are the minimum amounts those points can ever
-        // report, not values chosen to make the assertion pass.
+        // FR-010's `equality.plan` bullet states the rule these per-point amounts follow:
+        // `next_charge` is the amount each point's availability check was made against, which is
+        // the charge's own work amount everywhere except `equality.plan` (`pairs + 2`,
+        // reservation, not commit) and the two occurrence-derived points below (`occ(left) +
+        // occ(right)`, at the drivers' minimal one-occurrence-per-side operands).
         let expected_next_charge = match point {
             ChargePoint::EqualityPlanForm | ChargePoint::CollectionMemberWalk => int(2),
             ChargePoint::EqualityPlan => int(3),
@@ -1078,7 +1073,27 @@ fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
 
 /// Trace: TC-016, FR-006-AC-6
 #[test]
-fn tc_016_refusal_code_is_some_for_exactly_two_ieee_variants() {
+fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
+    // Exhaustive over `Refusal`: adding a variant without extending this match
+    // is a compile error, not a silently passing test.
+    fn expected_code(refusal: &Refusal) -> Option<&'static str> {
+        match refusal {
+            Refusal::IeeeNanPayloadNotRepresentable => Some("ieee_nan_payload_not_representable"),
+            Refusal::IeeeRationalOutOfDomain => Some("ieee_rational_out_of_domain"),
+            Refusal::ForeignReference => Some("foreign_reference"),
+            Refusal::CardinalityOutOfBound { .. } => Some("cardinality_out_of_bound"),
+            Refusal::InexactDecimal
+            | Refusal::DecimalOutOfDomain
+            | Refusal::DivisionPairOutOfDomain { .. }
+            | Refusal::ModuloOutOfDomain
+            | Refusal::TextLengthOutOfDomain
+            | Refusal::IntegerOutOfDomain
+            | Refusal::RationalOutOfDomain
+            | Refusal::IeeeNotExact { .. }
+            | Refusal::CheckedInvariant => None,
+        }
+    }
+
     let variants = [
         Refusal::InexactDecimal,
         Refusal::DecimalOutOfDomain,
@@ -1089,27 +1104,35 @@ fn tc_016_refusal_code_is_some_for_exactly_two_ieee_variants() {
         Refusal::ModuloOutOfDomain,
         Refusal::TextLengthOutOfDomain,
         Refusal::IntegerOutOfDomain,
+        Refusal::RationalOutOfDomain,
         Refusal::IeeeNotExact {
             would_be: IeeeFlags::EMPTY,
         },
         Refusal::IeeeNanPayloadNotRepresentable,
         Refusal::IeeeRationalOutOfDomain,
-        Refusal::RationalOutOfDomain,
+        Refusal::ForeignReference,
+        Refusal::CardinalityOutOfBound {
+            violation: BoundViolation::AboveMaximum,
+            kind: CollectionKind::Set,
+            bound: CardinalityBound::new(0, 10).unwrap(),
+            count: 11,
+        },
+        Refusal::CheckedInvariant,
     ];
-    let codes: Vec<Option<&str>> = variants.into_iter().map(Refusal::code).collect();
+    // Thirteen variants total: guards against silently dropping a variant from
+    // the enumeration above while `expected_code` stays exhaustive.
+    assert_eq!(variants.len(), 13, "enumerate every Refusal variant here");
+
+    let some_count = variants
+        .iter()
+        .filter(|refusal| expected_code(refusal).is_some())
+        .count();
     assert_eq!(
-        codes,
-        [
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some("ieee_nan_payload_not_representable"),
-            Some("ieee_rational_out_of_domain"),
-            None,
-        ]
+        some_count, 4,
+        "exactly four variants carry a normative code"
     );
+
+    for refusal in variants {
+        assert_eq!(refusal.code(), expected_code(&refusal));
+    }
 }

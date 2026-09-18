@@ -34,12 +34,13 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 - A completed `false` is a value, never a refusal. `Undefined`, `Refused` and `Incomplete` carry
   closed, typed reasons; no variant carries a message string.
 - A `Refusal` carries a normative `refused { code }` spelling exactly where the pinned language
-  defines one. At `7d7943a` the language defines two — `ieee_nan_payload_not_representable` and
-  `ieee_rational_out_of_domain` — and `Refusal::code()` is `Some` for exactly those two variants
-  and `None` for every other. `None` means "the language names no code for this refusal", not
-  "this refusal has no reason": the typed variant is always the reason. An oracle that must emit
-  `refused { code }` for a variant the language does not spell shall report the absence rather
-  than invent a code, and this set is pinned so that a language change is a test failure here.
+  defines one. At `7d7943a` the language defines four — `ieee_nan_payload_not_representable`,
+  `ieee_rational_out_of_domain`, `foreign_reference` (FR-149) and `cardinality_out_of_bound`
+  (FR-272) — and `Refusal::code()` is `Some` for exactly those four variants and `None` for every
+  other. `None` means "the language names no code for this refusal", not "this refusal has no
+  reason": the typed variant is always the reason. An oracle that must emit `refused { code }` for
+  a variant the language does not spell shall report the absence rather than invent a code, and
+  this set is pinned so that a language change is a test failure here.
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
 - The meter's memory is bounded: the admitted-charge log is capped at `CHARGE_LOG_CAPACITY` and
@@ -67,7 +68,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec 7d7943a spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
 | FR-006-AC-5 | Exact sources contain no host float, `std`, `unsafe` or panic path, and the public surface equals the private-module re-export set. | Test (TC-016) |
-| FR-006-AC-6 | `Refusal::code()` is `Some` for exactly `IeeeNanPayloadNotRepresentable` and `IeeeRationalOutOfDomain` with their normative spellings, and `None` for all eight other variants; no `Refusal`, `Undefined` or `Incomplete` variant carries a string field. | Test (TC-016) |
+| FR-006-AC-6 | `Refusal::code()` is `Some` for exactly `IeeeNanPayloadNotRepresentable`, `IeeeRationalOutOfDomain`, `ForeignReference` and `CardinalityOutOfBound` with their normative spellings, and `None` for all nine other variants; no `Refusal`, `Undefined` or `Incomplete` variant carries a string field. | Test (TC-016) |
 
 ## Dependencies
 

@@ -27,7 +27,9 @@ depend on the configured `ScalarLimits`.
 
 - `Incomplete` for the matching charge, with `limit_kind = WorkUnits`, `charge_point` the injected
   point, `limit` and `consumed` both equal to the `work_units` consumed before the denied charge,
-  and `next_charge` the denied charge's own `work_units` amount as a mathematical integer.
+  and `next_charge` the amount that charge point checks its availability against before admitting
+  anything — the charge's own `work_units` amount for every point except `equality.plan`, which is
+  covered below.
 - No change to any counter, to the admitted-charge log, or to the meter's occurrence counter.
 
 ## Behavior
@@ -48,6 +50,14 @@ depend on the configured `ScalarLimits`.
   subsequent charges are metered normally against the configured limits.
 - A `Meter` carries at most one `InjectedDenial`, and it names exactly one point. Charges at every
   other point are unaffected, including charges at other points interleaved with the injected one.
+- **`equality.plan`'s injected `next_charge` is its reservation, not its commit.** `equality.plan`
+  (`Meter::charge_plan`) checks availability against `pairs + 2` — one remaining work unit for each
+  subsequent `equality.pair` charge the plan's pairs will drive, plus one for the closing
+  `equality.result-retain` — before admitting anything, but on success it commits only its own
+  single work unit, the same as any other charge. The qualification seam is decided at that same
+  availability check (`check_injected`, before either counter is inspected), so an injected denial
+  at `equality.plan` reports `next_charge = pairs + 2`: the reservation the check was made against,
+  not the one work unit a real charge at that point would have committed.
 - The denied charge consumes nothing and exposes no partial value: FR-011's stop discipline applies
   unchanged to an injected `Incomplete`.
 - The occurrence counter is saturating. Past `u64::MAX` admitted charges at the injected point no
@@ -58,7 +68,7 @@ depend on the configured `ScalarLimits`.
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-010-AC-1 | For every admitted charge point, an injected denial at occurrence 1 yields `Incomplete` naming that point with `limit_kind = WorkUnits`, every counter unchanged, and no entry appended to the admitted-charge log. | Test (TC-031) |
-| FR-010-AC-2 | The injected record's `limit` and `consumed` are both the `work_units` consumed before the charge and are independent of the configured `ScalarLimits.work_units`; `next_charge` is the denied charge's own work amount. | Test (TC-031) |
+| FR-010-AC-2 | The injected record's `limit` and `consumed` are both the `work_units` consumed before the charge and are independent of the configured `ScalarLimits.work_units`; `next_charge` is the amount that charge point's availability check was made against — the charge's own work amount at every point except `equality.plan`, whose `next_charge` is its `pairs + 2` reservation. | Test (TC-031) |
 | FR-010-AC-3 | With limits short enough that the same charge would be denied on a real counter, the injected record is returned, not the real-counter record. | Test (TC-031) |
 | FR-010-AC-4 | An injection at occurrence `n` fires on the `n`th admitted charge at that point, counting no charge at any other point and no charge at that point that a short counter denied. | Test (TC-031) |
 | FR-010-AC-5 | After the injected denial fires, further charges are metered against the configured limits and no second charge is injected-denied. | Test (TC-031) |

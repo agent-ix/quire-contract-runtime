@@ -37,8 +37,10 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
   strings.
 - `SelectionRefusalCode`, `PackageRefusalCode`, `PackageCause` and `PackageRefusal` values with
   their normative `as_str` spellings.
-- An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, or an `InvalidSemanticGraph`
-  carrying one typed `SemanticGraphCause`.
+- An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
+  path to its canonical root, or an `InvalidSemanticGraph` carrying one typed `SemanticGraphCause`.
+- An `InvalidCompoundUnit` carrying one typed `CompoundUnitCause`, where a compound unit is refused
+  at construction.
 
 ## Behavior
 
@@ -76,6 +78,13 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
   failed check**, in the order fixed by FR-011: per-node semantics, then duplicate keys, then graph
   topology. The runtime admits a graph or refuses it; it never repairs one and never admits a graph
   with a repaired node.
+- **A `UnitEdge` is one exact affine edge `target = scale × source + offset`.** `UnitDeclaration`
+  admits it, as `check_semantics`'s `Ok` result, after refusing a zero scale or a non-identity
+  root; each `Unit`'s path to its canonical root and its own canonical edge are `UnitEdge` values,
+  carried unchanged.
+- **A `CompoundUnit` construction that fails is refused as `InvalidCompoundUnit`, carrying one
+  typed `CompoundUnitCause`.** The five causes are `NonCanonicalPreimage` (compiler-reader
+  preimage only), `ZeroExponent`, `DuplicateTerm`, `UnsortedTerms` and `NotRootUnit`.
 - **`Dimension` and `CompoundUnit` are normalized value identities.** Exponents are never zero, the
   empty map is the sole dimensionless value, terms are ascending by node key, and structural
   equality is value equality — two compound units are equal exactly when they denote the same unit.
@@ -91,7 +100,7 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 | FR-012-AC-3 | `SelectionRefusalCode::ALL` is the eight codes in normative check order, `as_str` yields the lock spelling for each, `from_code` resolves exactly those eight spellings and nothing else, and `PackageRefusalCode::as_str` is `invalid_package`. | Test (TC-033) |
 | FR-012-AC-4 | Each of the thirteen graph causes is raised by an admissible input to `UnitGraph::admit`, and `UndeclaredCase` by reading a case against its declaration; no graph input raises any of the four compiler-admission causes; `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for exactly the malformed member lists named above; and `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no raise site in the crate. | Test (TC-033) |
 | FR-012-AC-5 | `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every construction order of the same terms. | Test (TC-033) |
-| FR-012-AC-6 | No item re-exported by `src/exact/mod.rs` from `node.rs`, `definition.rs` or `unit.rs` takes or returns a `Meter`, and every one of them is named by this requirement. | Inspection (TC-033) |
+| FR-012-AC-6 | No item re-exported by `src/exact/mod.rs` from `node.rs`, `definition.rs` or `unit.rs` takes or returns a `Meter`, and every one of them is named by this requirement. | Test (TC-033) |
 
 ## Dependencies
 

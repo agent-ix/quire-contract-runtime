@@ -71,6 +71,7 @@ help:
 	@echo "  make lint             - Clippy with -D warnings"
 	@echo "  make test             - cargo test plus the shared-assurance tests"
 	@echo "  make test-features    - test every supported feature set"
+	@echo "  make test-ignored     - run #[ignore]d tests, to re-detect a cleared blocker"
 	@echo "  make conformance      - exact oracles against the pinned QSL authority"
 	@echo "  make doc              - warning-denied docs for runtime and footprint"
 	@echo "  make build            - Release build"
@@ -121,6 +122,13 @@ test: assurance-inputs
 .PHONY: test-features
 test-features:
 	$(PYTHON) scripts/run_feature_matrix.py
+
+# `#[ignore]`d tests are evidence blocked on an open defect, not dropped
+# coverage: this is the only target that runs them, so a fix that clears the
+# blocking defect is re-detected here rather than staying silently ignored.
+.PHONY: test-ignored
+test-ignored:
+	$(CARGO) test --all-features -- --ignored
 
 # Exact-oracle agreement against the pinned quire-spec-language authority. A
 # separate package, so the runtime's own dependency graph never contains it.

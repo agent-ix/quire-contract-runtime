@@ -44,10 +44,14 @@ and what the meter holds at all is what this requirement fixes.
 - A quantity `power` with a zero base and a negative exponent is `Undefined::DivisionByZero`: the
   value is `1/0^|n|`, a division by zero, and the vocabulary carries no separate cause for it.
   Zero-divisor and zero-base-under-negative-exponent are tested in that order, first match wins.
-- **A Boolean connective's stop propagates unchanged.** When the right operand stops, the connective
-  returns that stop verbatim and admits no `boolean.result-retain` charge, so a stopped connective
-  costs no result unit. The left operand enters as an already-decided `bool` and is charged for by
-  whoever produced it, never by the connective.
+- **Connective short-circuit orchestration is out of this crate's scope.** Deciding whether the
+  right operand of `and`/`or`/`implies` runs at all, and propagating a right-operand stop, is
+  `quire-contract-codegen`'s work over the short-circuit/total connective distinction
+  `quire-contract-ir` represents in its model (`ix://agent-ix/quire-contract-ir/FR-014-AC-2`).
+  `evaluate_boolean` never receives an operand that has not already stopped or decided: both
+  operands arrive as plain, already-decided `bool`s, and the caller that produced each one pays for
+  it. What this crate guarantees is narrower: `evaluate_boolean` admits `boolean.result-retain`
+  exactly once per call, for any decided operand pair.
 - **One charge is all-or-nothing.** Within a single charge every semantic size is checked against
   its limit and both cumulative counters are checked for availability before any counter is
   written. A charge that fails any check writes no counter, appends no log entry and advances no
@@ -82,7 +86,7 @@ and what the meter holds at all is what this requirement fixes.
 |----|----------|--------------|
 | FR-011-AC-1 | For each of `Undefined`, `Refused` and `Incomplete`, the meter after the stop holds exactly the charges admitted before it: an `Undefined` division by zero retains the operands charge and no arithmetic charge; a refused result retains the arithmetic charge and no result unit; a denied charge retains neither. | Test (TC-032) |
 | FR-011-AC-2 | A quantity `power` with zero base and negative exponent is `Undefined::DivisionByZero`, and a divide by zero is reported in preference to it when both hold. | Test (TC-032) |
-| FR-011-AC-3 | A connective whose right operand stops returns that stop unchanged, admits no `boolean.result-retain` charge and consumes no result unit; a connective that short-circuits charges retain exactly once. | Test (TC-032) |
+| FR-011-AC-3 | `evaluate_boolean` admits exactly one `boolean.result-retain` charge per call, for every connective kind and every decided operand pair; orchestrating which operand runs and propagating a right-operand stop is `quire-contract-codegen`'s scope, not this crate's. | Test (TC-032) |
 | FR-011-AC-4 | A charge whose second-scanned counter is short writes no counter, appends no log entry and advances no occurrence counter; and a charge presented with its size vector in either order reports the same first short counter in `ScalarLimitsV1` field order. | Test (TC-032) |
 | FR-011-AC-5 | Past `CHARGE_LOG_CAPACITY` admitted charges the log holds exactly the first 4096 points in admission order, `charge_log_truncated()` is true, and the counters are still exact and still enforced. | Test (TC-032) |
 | FR-011-AC-6 | A cumulative counter at `u64::MAX - 1` denies rather than wraps; a derived amount that exceeds `u64::MAX` saturates and the resulting charge is denied rather than admitted. | Test (TC-032) |

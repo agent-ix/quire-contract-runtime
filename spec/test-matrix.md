@@ -92,8 +92,11 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 
 `FR-010-AC-5` is blocked on `agent-ix/quire-contract-runtime#22`: the injected denial never clears,
 so every later charge at the injected point is denied. Its test
-(`tc_031_further_charges_after_the_injected_denial_meter_normally`) encodes the requirement and
-fails. The assertion was not weakened and the test is not ignored.
+(`tc_031_further_charges_after_the_injected_denial_meter_normally`) encodes the requirement
+correctly and fails until #22 is fixed, so `0646317` landed it `#[ignore]`d with the ticket in the
+reason rather than reddening `main`. The assertion was not weakened; the test does not run.
+`make test-ignored` runs it (and every other `#[ignore]`d test) so it is re-detected the moment #22
+lands.
 
 ## Evidence Locations
 

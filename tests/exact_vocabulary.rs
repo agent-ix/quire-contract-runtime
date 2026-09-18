@@ -555,7 +555,7 @@ fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
 
 /// Trace: TC-033, FR-012-AC-6
 #[test]
-fn tc_033_node_definition_unit_reexports_never_touch_a_meter() {
+fn tc_033_node_definition_unit_reexports_never_touch_a_meter_and_are_all_named() {
     let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/exact");
     let mod_rs = fs::read_to_string(directory.join("mod.rs")).unwrap();
 
@@ -597,6 +597,23 @@ fn tc_033_node_definition_unit_reexports_never_touch_a_meter() {
         });
         assert!(!mentions_meter, "{module}.rs mentions Meter");
     }
+
+    // Every re-export must be named by FR-012 itself, as a backtick-quoted identifier somewhere
+    // in the requirement's own text, so an unnamed re-export fails this test rather than passing
+    // silently.
+    let requirement = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("spec/functional/FR-012-carried-compiler-vocabulary.md"),
+    )
+    .unwrap();
+    let unnamed: Vec<&String> = reexported
+        .iter()
+        .filter(|qualified| {
+            let name = qualified.rsplit("::").next().unwrap();
+            !requirement.contains(&format!("`{name}`"))
+        })
+        .collect();
+    assert!(unnamed.is_empty(), "FR-012 does not name: {unnamed:?}");
 }
 
 /// Trace: TC-033, FR-012-AC-4

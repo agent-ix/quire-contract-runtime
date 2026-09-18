@@ -57,52 +57,71 @@ fn tc_004_recording_adapter_preserves_the_campaign_census() {
     assert_eq!(report.counts().discarded(), 0);
 }
 
+/// `adapt` records nothing because it has no `CampaignReport` to record into: its signature takes
+/// only a verdict. That is a fact about the function's type, not a value this test could
+/// construct and compare (a `report` never passed to `adapt` trivially stays unchanged, which the
+/// compiler already guarantees and no runtime assertion could falsify), so it is checked in the
+/// source text, the same way `CheckedInteger`'s seal and FR-012's re-export set are.
+///
 /// Trace: TC-004, FR-003-AC-3
 #[test]
-fn tc_004_adapt_is_stateless_and_never_records() {
-    let identity = ContractIdentity::new(RequirementId::new("FR-003"), RevisionId::new("rev-1"));
-    let context = VerdictContext::new(identity, ExecutionPoint::new("property"), &[]);
-    let detail = FailureDetail::new(ClauseId::new("clause"), FailureKind::Contract, 1, None);
-    let report = CampaignReport::new(identity);
-    let counts_before = report.counts();
-
-    for verdict in [
-        Verdict::passed(context),
-        Verdict::failed_postcondition(context, detail),
-        Verdict::rejected_precondition(context, detail),
-    ] {
-        // `adapt` takes no report at all, so there is nothing for it to record into; this
-        // confirms a report that was never passed to it stays exactly as it was.
-        let _ = proptest_adapter::adapt(&verdict);
-        assert_eq!(report.counts(), counts_before);
-    }
+fn tc_004_adapt_signature_takes_no_report() {
+    let source = include_str!("../src/proptest_adapter.rs");
+    assert!(source.contains("pub fn adapt(verdict: &Verdict<'_>) -> TestCaseResult {"));
+    assert!(source.contains(
+        "pub fn adapt_recording(report: &mut CampaignReport<'_>, verdict: &Verdict<'_>) -> TestCaseResult {"
+    ));
 }
 
 /// Trace: TC-004, FR-003-AC-3
 #[test]
-fn tc_004_recording_adapter_maps_matching_verdicts_exactly_as_adapt_does() {
+fn tc_004_recording_adapter_maps_matching_verdicts_to_pinned_results_and_records_exactly_once() {
     let identity = ContractIdentity::new(RequirementId::new("FR-003"), RevisionId::new("rev-1"));
     let context = VerdictContext::new(identity, ExecutionPoint::new("property"), &[]);
     let detail = FailureDetail::new(ClauseId::new("clause"), FailureKind::Contract, 1, None);
 
-    for verdict in [
-        Verdict::passed(context),
-        Verdict::failed_postcondition(context, detail),
-        Verdict::rejected_precondition(context, detail),
-    ] {
-        let mut report = CampaignReport::new(identity);
-        let counts_before = report.counts();
+    // Passed: `Ok(())`, exactly one accepted case and no other counter moves.
+    let mut report = CampaignReport::new(identity);
+    let result = proptest_adapter::adapt_recording(&mut report, &Verdict::passed(context));
+    assert!(result.is_ok());
+    assert_eq!(report.counts().accepted(), 1);
+    assert_eq!(report.counts().failed(), 0);
+    assert_eq!(report.counts().rejected(), 0);
+    assert_eq!(report.counts().discarded(), 0);
 
-        let stateless = proptest_adapter::adapt(&verdict);
-        let recorded = proptest_adapter::adapt_recording(&mut report, &verdict);
-
-        assert_eq!(format!("{stateless:?}"), format!("{recorded:?}"));
-        assert_ne!(
-            report.counts(),
-            counts_before,
-            "a matching verdict must be recorded exactly once"
-        );
+    // Failed postcondition: the pinned failure message, one accepted case that is also failed.
+    let mut report = CampaignReport::new(identity);
+    let result = proptest_adapter::adapt_recording(
+        &mut report,
+        &Verdict::failed_postcondition(context, detail),
+    );
+    match result {
+        Err(TestCaseError::Fail(message)) => {
+            assert_eq!(message.to_string(), "contract postcondition failed");
+        }
+        other => panic!("expected a postcondition failure, observed {other:?}"),
     }
+    assert_eq!(report.counts().accepted(), 1);
+    assert_eq!(report.counts().failed(), 1);
+    assert_eq!(report.counts().rejected(), 0);
+    assert_eq!(report.counts().discarded(), 0);
+
+    // Rejected precondition: the pinned rejection message, one rejected case and nothing else.
+    let mut report = CampaignReport::new(identity);
+    let result = proptest_adapter::adapt_recording(
+        &mut report,
+        &Verdict::rejected_precondition(context, detail),
+    );
+    match result {
+        Err(TestCaseError::Reject(message)) => {
+            assert_eq!(message.to_string(), "contract precondition rejected case");
+        }
+        other => panic!("expected a precondition rejection, observed {other:?}"),
+    }
+    assert_eq!(report.counts().accepted(), 0);
+    assert_eq!(report.counts().failed(), 0);
+    assert_eq!(report.counts().rejected(), 1);
+    assert_eq!(report.counts().discarded(), 0);
 }
 
 /// Trace: TC-004, FR-003-AC-3
