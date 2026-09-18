@@ -31,7 +31,12 @@ const DIRECTIONS: [RoundingMode; 5] = [
 ];
 
 use ChargePoint::{IeeeExactIntermediate, IeeeOperands, IeeeResultRetain, IeeeRound};
-const FINITE: [ChargePoint; 4] = [IeeeOperands, IeeeExactIntermediate, IeeeRound, IeeeResultRetain];
+const FINITE: [ChargePoint; 4] = [
+    IeeeOperands,
+    IeeeExactIntermediate,
+    IeeeRound,
+    IeeeResultRetain,
+];
 const CLASSIFIED: [ChargePoint; 2] = [IeeeOperands, IeeeResultRetain];
 const TO_EXACT: [ChargePoint; 3] = [IeeeOperands, IeeeExactIntermediate, IeeeResultRetain];
 
@@ -41,7 +46,9 @@ fn bf(outcome: &Outcome<IeeeResult>) -> (u64, IeeeFlags) {
 }
 
 fn not_exact(list: &[IeeeFlag]) -> Outcome<IeeeResult> {
-    Outcome::Refused(Refusal::IeeeNotExact { would_be: flags(list) })
+    Outcome::Refused(Refusal::IeeeNotExact {
+        would_be: flags(list),
+    })
 }
 
 fn retain_denied(work: u64) -> Outcome<IeeeResult> {
@@ -92,7 +99,10 @@ fn tc_020_f01_f02_f02b_zeros_and_nans_separate_equality_order_and_identity() {
     }};
     assert_eq!(
         results,
-        [true, false, true, false, false, false, true, true, true, false, true, false, true, false]
+        [
+            true, false, true, false, false, false, true, true, true, false, true, false, true,
+            false
+        ]
     );
 }
 
@@ -130,7 +140,13 @@ fn tc_020_f03_f04_f04b_leftmost_nan_is_retained_and_signaling_raises_invalid() {
 #[test]
 fn tc_020_f05_infinities_and_finite_extrema_follow_value_order() {
     const ORDERED: [u32; 8] = [
-        0xff80_0000, 0xff7f_ffff, 0x8000_0001, 0x8000_0000, 0x0000_0000, 0x0000_0001, 0x7f7f_ffff,
+        0xff80_0000,
+        0xff7f_ffff,
+        0x8000_0001,
+        0x8000_0000,
+        0x0000_0000,
+        0x0000_0001,
+        0x7f7f_ffff,
         0x7f80_0000,
     ];
     let table = agree! {{
@@ -197,10 +213,16 @@ fn tc_020_f06_f20_cross_width_and_exact_operands_are_ill_typed_before_any_charge
     }};
     let ill = |cause| -> Result<(), IllTyped> { Err(IllTyped { cause }) };
     for (outcome, charges, consumed) in &comparisons {
-        assert_eq!(outcome.clone().map(|_| ()), ill(IllTypedCause::DistinctIeeeWidths));
+        assert_eq!(
+            outcome.clone().map(|_| ()),
+            ill(IllTypedCause::DistinctIeeeWidths)
+        );
         assert!(charges.is_empty() && consumed.iter().all(|c| *c == 0));
     }
-    let causes: Vec<_> = attempts.iter().map(|(outcome, _, _)| outcome.clone()).collect();
+    let causes: Vec<_> = attempts
+        .iter()
+        .map(|(outcome, _, _)| outcome.clone())
+        .collect();
     assert_eq!(
         causes,
         [
@@ -212,9 +234,9 @@ fn tc_020_f06_f20_cross_width_and_exact_operands_are_ill_typed_before_any_charge
             ill(IllTypedCause::IeeeToNonRationalExact),
         ]
     );
-    assert!(attempts.iter().all(|(_, charges, consumed)| {
-        charges.is_empty() && consumed.iter().all(|c| *c == 0)
-    }));
+    assert!(attempts
+        .iter()
+        .all(|(_, charges, consumed)| { charges.is_empty() && consumed.iter().all(|c| *c == 0) }));
     assert_eq!(bf(&converted.0), (0x3ff0_0000_0000_0000, IeeeFlags::EMPTY));
     assert_eq!(converted.1, [true, true, true]);
 }
@@ -241,9 +263,24 @@ fn tc_020_f07_f08_f10_each_direction_rounds_once_and_changes_provenance() {
     let inexact = flags(&[IeeeFlag::Inexact]);
     use RoundingMode::{NearestAway, TowardNegative, TowardPositive};
     let expected: [(u64, u64, [RoundingMode; 2], IeeeWidth); 3] = [
-        (0x3f80_0000, 0x3f80_0001, [NearestAway, TowardPositive], IeeeWidth::Binary32),
-        (0xbf80_0000, 0xbf80_0001, [NearestAway, TowardNegative], IeeeWidth::Binary32),
-        (0x3ff0_0000_0000_0000, 0x3ff0_0000_0000_0001, [NearestAway, TowardPositive], IeeeWidth::Binary64),
+        (
+            0x3f80_0000,
+            0x3f80_0001,
+            [NearestAway, TowardPositive],
+            IeeeWidth::Binary32,
+        ),
+        (
+            0xbf80_0000,
+            0xbf80_0001,
+            [NearestAway, TowardNegative],
+            IeeeWidth::Binary32,
+        ),
+        (
+            0x3ff0_0000_0000_0000,
+            0x3ff0_0000_0000_0001,
+            [NearestAway, TowardPositive],
+            IeeeWidth::Binary64,
+        ),
     ];
     for (table, (down, up, up_modes, width)) in tables.iter().zip(expected) {
         for ((outcome, provenance), mode) in table.iter().zip(DIRECTIONS) {
@@ -277,7 +314,15 @@ fn tc_020_f09_f14_f23_strict_exact_refuses_with_would_be_flags_and_no_bits() {
     let overflow = [IeeeFlag::Overflow, IeeeFlag::Inexact];
     assert_eq!(results[0], not_exact(&[IeeeFlag::Inexact]));
     assert_eq!(bf(&results[1]), (0x3f80_0001, IeeeFlags::EMPTY));
-    assert_eq!(results[1].clone().completed().unwrap().provenance().rounding(), RoundingMode::Exact);
+    assert_eq!(
+        results[1]
+            .clone()
+            .completed()
+            .unwrap()
+            .provenance()
+            .rounding(),
+        RoundingMode::Exact
+    );
     assert_eq!(bf(&results[2]), (0x7f80_0000, flags(&overflow)));
     assert_eq!(results[3], not_exact(&overflow));
     assert_eq!(bf(&results[4]), (0x7f80_0000, flags(&overflow)));
@@ -367,7 +412,10 @@ fn tc_020_f15_f16_f29_subnormal_and_extreme_flags() {
     let inexact = flags(&[IeeeFlag::Inexact]);
     assert_eq!(bf(&results[0]), (0x0040_0000, IeeeFlags::EMPTY));
     assert_eq!(bf(&results[1]), (0x0040_0000, IeeeFlags::EMPTY));
-    assert_eq!(bf(&results[2]), (0, flags(&[IeeeFlag::Underflow, IeeeFlag::Inexact])));
+    assert_eq!(
+        bf(&results[2]),
+        (0, flags(&[IeeeFlag::Underflow, IeeeFlag::Inexact]))
+    );
     assert_eq!(bf(&results[3]), (0x7f7f_ffff, inexact));
     assert_eq!(results[4], not_exact(&[IeeeFlag::Inexact]));
     assert_eq!(bf(&results[5]), (0x0080_0000, inexact));
@@ -405,13 +453,22 @@ fn tc_020_f17_f18_classified_paths_charge_only_operands_and_retention() {
         assert_eq!(outcome, Outcome::Incomplete(work_denied(work, point)));
         assert_eq!(results, 0);
     }
-    assert_eq!(equal_short.0, Outcome::Incomplete(work_denied(1, IeeeResultRetain)));
+    assert_eq!(
+        equal_short.0,
+        Outcome::Incomplete(work_denied(1, IeeeResultRetain))
+    );
     assert_eq!(bf(&invalid.0), (0x7fc0_0000, flags(&[IeeeFlag::Invalid])));
     assert_eq!(invalid.1, CLASSIFIED);
     assert_eq!(invalid_denials[1].2, retain_denied(1));
     assert_eq!(
         no_result.0,
-        Outcome::Incomplete(incomplete(LimitKind::ResultUnits, 0, 0, int(1), IeeeResultRetain))
+        Outcome::Incomplete(incomplete(
+            LimitKind::ResultUnits,
+            0,
+            0,
+            int(1),
+            IeeeResultRetain
+        ))
     );
 }
 
@@ -462,16 +519,28 @@ fn tc_020_f10_binary64_limit_tuple_and_its_denials() {
             metered(UNLIMITED, run(RoundingMode::TowardPositive)),
         )
     }};
-    assert_eq!(bf(&exact.0), (0x3ff0_0000_0000_0000, flags(&[IeeeFlag::Inexact])));
+    assert_eq!(
+        bf(&exact.0),
+        (0x3ff0_0000_0000_0000, flags(&[IeeeFlag::Inexact]))
+    );
     assert_eq!(exact.1, FINITE);
     assert_eq!(exact.2, [64, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
     assert_eq!(denied[3].2, retain_denied(3));
     assert_eq!(short_work.0, retain_denied(3));
     assert_eq!(
         short_bits.0,
-        Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 63, 0, int(64), IeeeOperands))
+        Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            63,
+            0,
+            int(64),
+            IeeeOperands
+        ))
     );
-    assert_eq!(bf(&sibling.0), (0x3ff0_0000_0000_0001, flags(&[IeeeFlag::Inexact])));
+    assert_eq!(
+        bf(&sibling.0),
+        (0x3ff0_0000_0000_0001, flags(&[IeeeFlag::Inexact]))
+    );
 }
 
 /// Trace: TC-020, FR-007-AC-3, FR-006-AC-3, FR-007-AC-6
@@ -498,15 +567,24 @@ fn tc_020_f21_f22_f30_zero_operands_and_strict_exact_charge_positions() {
             run(root, even, ieee_limits(32, 1, 3, 1)),
         ]
     }};
-    assert_eq!((bf(&results[0].0), results[0].1.as_slice()), ((0, IeeeFlags::EMPTY), &FINITE[..]));
+    assert_eq!(
+        (bf(&results[0].0), results[0].1.as_slice()),
+        ((0, IeeeFlags::EMPTY), &FINITE[..])
+    );
     assert_eq!(results[1].0, retain_denied(3));
-    assert_eq!((bf(&results[2].0), results[2].1.as_slice()), ((0x8000_0000, IeeeFlags::EMPTY), &FINITE[..]));
+    assert_eq!(
+        (bf(&results[2].0), results[2].1.as_slice()),
+        ((0x8000_0000, IeeeFlags::EMPTY), &FINITE[..])
+    );
     assert_eq!(results[3].0, retain_denied(3));
     assert_eq!(results[4].0, not_exact(&[IeeeFlag::Inexact]));
     assert_eq!(results[4].1, FINITE[..3]);
     assert_eq!(results[5].0, retain_denied(3));
     assert_eq!(results[6].0, Outcome::Incomplete(work_denied(2, IeeeRound)));
-    assert_eq!((bf(&results[7].0), results[7].1.as_slice()), ((0x8000_0000, IeeeFlags::EMPTY), &FINITE[..]));
+    assert_eq!(
+        (bf(&results[7].0), results[7].1.as_slice()),
+        ((0x8000_0000, IeeeFlags::EMPTY), &FINITE[..])
+    );
     assert_eq!(results[8].0, retain_denied(3));
 }
 
@@ -544,18 +622,42 @@ fn tc_020_f24_f28_conversions_charge_at_their_stated_widths_and_positions() {
         (widths, thirds, halves, decimals, largest)
     }};
     let bits = LimitKind::IntegerBits;
-    assert_eq!((bf(&widths[0].0), widths[0].1.as_slice()), ((0x3ff0_0000_0000_0000, IeeeFlags::EMPTY), &FINITE[..]));
-    assert_eq!(widths[1].0, Outcome::Incomplete(incomplete(bits, 32, 32, int(64), IeeeExactIntermediate)));
-    assert_eq!(widths[2].0, Outcome::Incomplete(incomplete(bits, 32, 0, int(64), IeeeOperands)));
-    assert_eq!((bf(&thirds[0].0), thirds[0].1.as_slice()), ((0x3eaa_aaab, flags(&[IeeeFlag::Inexact])), &FINITE[..]));
-    assert_eq!(thirds[1].0, Outcome::Incomplete(incomplete(bits, 2, 2, int(32), IeeeExactIntermediate)));
+    assert_eq!(
+        (bf(&widths[0].0), widths[0].1.as_slice()),
+        ((0x3ff0_0000_0000_0000, IeeeFlags::EMPTY), &FINITE[..])
+    );
+    assert_eq!(
+        widths[1].0,
+        Outcome::Incomplete(incomplete(bits, 32, 32, int(64), IeeeExactIntermediate))
+    );
+    assert_eq!(
+        widths[2].0,
+        Outcome::Incomplete(incomplete(bits, 32, 0, int(64), IeeeOperands))
+    );
+    assert_eq!(
+        (bf(&thirds[0].0), thirds[0].1.as_slice()),
+        ((0x3eaa_aaab, flags(&[IeeeFlag::Inexact])), &FINITE[..])
+    );
+    assert_eq!(
+        thirds[1].0,
+        Outcome::Incomplete(incomplete(bits, 2, 2, int(32), IeeeExactIntermediate))
+    );
     let half = halves.0 .0.clone().completed().unwrap();
-    assert_eq!((half.value(), half.value().max_part_bits()), (&ratio(1, 2), 2));
+    assert_eq!(
+        (half.value(), half.value().max_part_bits()),
+        (&ratio(1, 2), 2)
+    );
     assert_eq!(halves.0 .1, TO_EXACT);
     assert_eq!(halves.1 .0, Outcome::Undefined(Undefined::IeeeNotFinite));
     assert_eq!(halves.1 .1, [IeeeOperands]);
-    assert_eq!((bf(&decimals[0].0), decimals[0].1.as_slice()), ((0x3f80_0000, IeeeFlags::EMPTY), &FINITE[..]));
-    assert_eq!(decimals[1].0, Outcome::Incomplete(incomplete(bits, 6, 0, int(7), IeeeOperands)));
+    assert_eq!(
+        (bf(&decimals[0].0), decimals[0].1.as_slice()),
+        ((0x3f80_0000, IeeeFlags::EMPTY), &FINITE[..])
+    );
+    assert_eq!(
+        decimals[1].0,
+        Outcome::Incomplete(incomplete(bits, 6, 0, int(7), IeeeOperands))
+    );
     assert_eq!(
         largest.0,
         Outcome::Incomplete(incomplete(bits, 64, 0, int(14_267_572_524), IeeeOperands))
@@ -579,7 +681,11 @@ fn tc_020_f25_nan_width_conversion_keeps_sign_and_payload_or_refuses() {
         ]
     }};
     let expected = [
-        (0x7fc0_0001, flags(&[IeeeFlag::Invalid]), IeeeWidth::Binary32),
+        (
+            0x7fc0_0001,
+            flags(&[IeeeFlag::Invalid]),
+            IeeeWidth::Binary32,
+        ),
         (0xffc0_0003, IeeeFlags::EMPTY, IeeeWidth::Binary32),
         (0x7ff8_0000_0000_0001, IeeeFlags::EMPTY, IeeeWidth::Binary64),
     ];
@@ -589,9 +695,18 @@ fn tc_020_f25_nan_width_conversion_keeps_sign_and_payload_or_refuses() {
         assert_eq!(*charges, CLASSIFIED);
     }
     let refused = Outcome::Refused(Refusal::IeeeNanPayloadNotRepresentable);
-    assert_eq!((&results[3].0, results[3].1.as_slice()), (&refused, &[IeeeOperands][..]));
-    assert_eq!(results[4].0, Outcome::Incomplete(work_denied(0, IeeeOperands)));
-    assert_eq!((&results[5].0, results[5].1.as_slice()), (&refused, &[IeeeOperands][..]));
+    assert_eq!(
+        (&results[3].0, results[3].1.as_slice()),
+        (&refused, &[IeeeOperands][..])
+    );
+    assert_eq!(
+        results[4].0,
+        Outcome::Incomplete(work_denied(0, IeeeOperands))
+    );
+    assert_eq!(
+        (&results[5].0, results[5].1.as_slice()),
+        (&refused, &[IeeeOperands][..])
+    );
     assert_eq!(
         Refusal::IeeeNanPayloadNotRepresentable.code(),
         Some("ieee_nan_payload_not_representable")
@@ -620,13 +735,23 @@ fn tc_020_f26_zero_signs_survive_width_conversion_sums_and_differences() {
         });
         (widened, table)
     }};
-    assert_eq!((bf(&widened[0].0), widened[0].1.as_slice()), ((0x8000_0000_0000_0000, IeeeFlags::EMPTY), &FINITE[..]));
+    assert_eq!(
+        (bf(&widened[0].0), widened[0].1.as_slice()),
+        ((0x8000_0000_0000_0000, IeeeFlags::EMPTY), &FINITE[..])
+    );
     assert_eq!(widened[1].0, retain_denied(3));
     for (row, mode) in table.iter().zip(RoundingMode::ALL) {
-        let cancelled = if mode == RoundingMode::TowardNegative { 0x8000_0000 } else { 0 };
+        let cancelled = if mode == RoundingMode::TowardNegative {
+            0x8000_0000
+        } else {
+            0
+        };
         let expected = [0x8000_0000, cancelled, 0x8000_0000, cancelled, cancelled];
         let observed: Vec<_> = row.iter().map(bf).collect();
-        let expected: Vec<_> = expected.iter().map(|bits| (*bits, IeeeFlags::EMPTY)).collect();
+        let expected: Vec<_> = expected
+            .iter()
+            .map(|bits| (*bits, IeeeFlags::EMPTY))
+            .collect();
         assert_eq!(observed, expected, "{mode:?}");
     }
 }
@@ -644,8 +769,20 @@ fn tc_020_fused_multiply_add_exact_zero_takes_the_sum_sign_rule() {
         })
     }};
     for (row, mode) in table.iter().zip(RoundingMode::ALL) {
-        let opposite = if mode == RoundingMode::TowardNegative { 0x8000_0000 } else { 0 };
-        let expected = [0x8000_0000, 0, 0x8000_0000, opposite, opposite, opposite, opposite];
+        let opposite = if mode == RoundingMode::TowardNegative {
+            0x8000_0000
+        } else {
+            0
+        };
+        let expected = [
+            0x8000_0000,
+            0,
+            0x8000_0000,
+            opposite,
+            opposite,
+            opposite,
+            opposite,
+        ];
         let observed: Vec<_> = row.iter().map(|o| bf(o).0).collect();
         assert_eq!(observed, expected, "{mode:?}");
     }
@@ -675,24 +812,57 @@ fn tc_020_f27_ieee_to_rational_sizes_maxparts_and_admits_membership_before_reten
         ]
     }};
     let tiny = results[0].0.clone().completed().unwrap();
-    assert_eq!(tiny.value(), &Rational::new(int(1), big(&smallest)).unwrap());
+    assert_eq!(
+        tiny.value(),
+        &Rational::new(int(1), big(&smallest)).unwrap()
+    );
     assert_eq!(results[0].1, TO_EXACT);
     assert_eq!(
         results[1].0,
-        Outcome::Incomplete(incomplete(LimitKind::IntegerBits, 1074, 64, int(1075), IeeeExactIntermediate))
+        Outcome::Incomplete(incomplete(
+            LimitKind::IntegerBits,
+            1074,
+            64,
+            int(1075),
+            IeeeExactIntermediate
+        ))
     );
     let zero = results[2].0.clone().completed().unwrap();
-    assert_eq!((zero.value(), zero.discarded_negative_zero()), (&ratio(0, 1), true));
+    assert_eq!(
+        (zero.value(), zero.loss()),
+        (&ratio(0, 1), Some(IeeeExactLoss::NegativeZeroSign))
+    );
     assert_eq!(results[2].1, TO_EXACT);
-    assert_eq!(results[3].0, Outcome::Incomplete(work_denied(2, IeeeResultRetain)));
-    assert_eq!((&results[4].0, results[4].1.as_slice()), (&Outcome::Undefined(Undefined::IeeeNotFinite), &[IeeeOperands][..]));
-    assert_eq!(results[5].0, Outcome::Incomplete(work_denied(0, IeeeOperands)));
+    assert_eq!(
+        results[3].0,
+        Outcome::Incomplete(work_denied(2, IeeeResultRetain))
+    );
+    assert_eq!(
+        (&results[4].0, results[4].1.as_slice()),
+        (
+            &Outcome::Undefined(Undefined::IeeeNotFinite),
+            &[IeeeOperands][..]
+        )
+    );
+    assert_eq!(
+        results[5].0,
+        Outcome::Incomplete(work_denied(0, IeeeOperands))
+    );
     assert_eq!(
         (&results[6].0, results[6].1.as_slice()),
-        (&Outcome::Refused(Refusal::IeeeRationalOutOfDomain), &TO_EXACT[..2])
+        (
+            &Outcome::Refused(Refusal::IeeeRationalOutOfDomain),
+            &TO_EXACT[..2]
+        )
     );
-    assert_eq!(results[7].0, Outcome::Incomplete(work_denied(1, IeeeExactIntermediate)));
-    assert_eq!(Refusal::IeeeRationalOutOfDomain.code(), Some("ieee_rational_out_of_domain"));
+    assert_eq!(
+        results[7].0,
+        Outcome::Incomplete(work_denied(1, IeeeExactIntermediate))
+    );
+    assert_eq!(
+        Refusal::IeeeRationalOutOfDomain.code(),
+        Some("ieee_rational_out_of_domain")
+    );
 }
 
 /// Trace: TC-020, FR-007-AC-3, FR-006-AC-3, FR-007-AC-6
@@ -719,16 +889,31 @@ fn tc_020_f31_narrowing_conversion_rounds_overflows_and_underflows_once() {
         ]
     }};
     let inexact = flags(&[IeeeFlag::Inexact]);
-    assert_eq!((bf(&results[0].0), results[0].1.as_slice()), ((0xff80_0000, IeeeFlags::EMPTY), &CLASSIFIED[..]));
+    assert_eq!(
+        (bf(&results[0].0), results[0].1.as_slice()),
+        ((0xff80_0000, IeeeFlags::EMPTY), &CLASSIFIED[..])
+    );
     assert_eq!(results[1].0, retain_denied(1));
-    assert_eq!((bf(&results[2].0), results[2].1.as_slice()), ((0x3dcc_cccd, inexact), &FINITE[..]));
-    assert_eq!((&results[3].0, results[3].1.as_slice()), (&not_exact(&[IeeeFlag::Inexact]), &FINITE[..3]));
+    assert_eq!(
+        (bf(&results[2].0), results[2].1.as_slice()),
+        ((0x3dcc_cccd, inexact), &FINITE[..])
+    );
+    assert_eq!(
+        (&results[3].0, results[3].1.as_slice()),
+        (&not_exact(&[IeeeFlag::Inexact]), &FINITE[..3])
+    );
     assert_eq!(results[4].0, Outcome::Incomplete(work_denied(2, IeeeRound)));
     assert_eq!(bf(&results[5].0), (0x7f7f_ffff, IeeeFlags::EMPTY));
-    assert_eq!(bf(&results[6].0), (0x7f80_0000, flags(&[IeeeFlag::Overflow, IeeeFlag::Inexact])));
+    assert_eq!(
+        bf(&results[6].0),
+        (0x7f80_0000, flags(&[IeeeFlag::Overflow, IeeeFlag::Inexact]))
+    );
     assert_eq!(results[7].0, retain_denied(3));
     assert_eq!(bf(&results[8].0), (0x7f7f_ffff, inexact));
-    assert_eq!(bf(&results[9].0), (0, flags(&[IeeeFlag::Underflow, IeeeFlag::Inexact])));
+    assert_eq!(
+        bf(&results[9].0),
+        (0, flags(&[IeeeFlag::Underflow, IeeeFlag::Inexact]))
+    );
     assert_eq!(results[10].0, retain_denied(3));
 }
 
@@ -775,10 +960,16 @@ fn tc_020_i13_negotiation_is_per_item() {
         dispositions,
         [
             vec![Supported; 3],
-            vec![Unsupported(IeeeUnsupportedCause::Width(IeeeWidth::Binary64)), Supported, Supported],
+            vec![
+                Unsupported(IeeeUnsupportedCause::Width(IeeeWidth::Binary64)),
+                Supported,
+                Supported
+            ],
             vec![
                 Supported,
-                Unsupported(IeeeUnsupportedCause::Operation(IeeeOperationKind::FusedMultiplyAdd)),
+                Unsupported(IeeeUnsupportedCause::Operation(
+                    IeeeOperationKind::FusedMultiplyAdd
+                )),
                 Supported
             ],
             vec![
@@ -806,11 +997,25 @@ fn classes(width: usize) -> Vec<u64> {
     let one = ((1_u64 << (exponent_bits - 1)) - 1) << fraction_bits;
     let three = one + (1 << fraction_bits) + quiet;
     let max = exponent - (1 << fraction_bits) + fraction;
-    [0, 1, fraction, 1 << fraction_bits, max, one, three, exponent]
-        .into_iter()
-        .flat_map(|bits| [bits, bits | sign])
-        .chain([exponent | 1, sign | exponent | 2, exponent | quiet | 3, sign | exponent | quiet])
-        .collect()
+    [
+        0,
+        1,
+        fraction,
+        1 << fraction_bits,
+        max,
+        one,
+        three,
+        exponent,
+    ]
+    .into_iter()
+    .flat_map(|bits| [bits, bits | sign])
+    .chain([
+        exponent | 1,
+        sign | exponent | 2,
+        exponent | quiet | 3,
+        sign | exponent | quiet,
+    ])
+    .collect()
 }
 
 /// Trace: TC-020, FR-007-AC-3, FR-006-AC-3, FR-006-AC-4, FR-007-AC-6
@@ -893,7 +1098,7 @@ fn tc_020_generated_finite_classes_round_trip_through_rational_and_every_denial_
                     (
                         metered(UNLIMITED, run(RoundingMode::Exact)),
                         denials(UNLIMITED, run(RoundingMode::NearestEven)),
-                        exact.discarded_negative_zero(),
+                        exact.loss().is_some(),
                     )
                 });
                 (to_exact, back)

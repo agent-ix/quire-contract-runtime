@@ -20,15 +20,16 @@ upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 2. For every vector with an authority run, compare value and outcome kind on both sides; for
    vectors whose charges the authority meters, also compare charges, counters and every injected
    denial.
-3. For the vectors in `CHARGES_PENDING_QSL_119`, check the runtime charges and counters against the
-   QSpec 7d7943a schedule only, at the exact limit tuple and one under the first short counter.
-   D20–D21 short `integer_bits` at `ordering.arithmetic`; D22–D23 charge the result-retain upscale
-   before materialization, and D23 has no authority run.
+3. For D09, D13 and D20–D23, meter the runtime alone at the exact QSpec 7d7943a limit tuple and one
+   under the first short counter, and check the runtime's charges and counters agree with the
+   authority like every other vector. D20–D21 short `integer_bits` at `ordering.arithmetic`; D22–D23
+   charge the result-retain upscale before materialization, and D23 has no authority run.
 4. Check each operand-derived decimal amount exact and one under: add alignment, subtract
    cancellation, multiply, divide, negate with rounding and retain upscale.
 5. Deny the digits charge of a `2^20` scale upscale and check no allocation reaches 4096 bytes.
 
 ## Expected Results
 
-23 vectors agree in value and outcome kind. D09, D13 and D20–D23 charges are listed in
-`CHARGES_PENDING_QSL_119` as a known upstream lag (quire-spec-language#119) and match QSpec.
+23 vectors agree in value, outcome kind and charges, D09, D13 and D20–D23 included: QSL
+`quire-spec-language#119` is fixed, so every vector's charges are asserted against the authority
+like every other vector.

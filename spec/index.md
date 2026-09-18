@@ -52,10 +52,11 @@ its own.
 
 ## Requirements Architecture
 
-Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004 and
+Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-008 and
 quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral runtime API
-contract implemented by those FRs. Test cases TC-001 through TC-006 provide the verification matrix.
-The assurance artifacts bind the intended use, boundary, evidence, and open human decision.
+contract implemented by those FRs. Test cases TC-001 through TC-026 (TC-012 unused) provide the
+verification matrix. The assurance artifacts bind the intended use, boundary, evidence, and open
+human decision.
 
 ## References
 

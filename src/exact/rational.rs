@@ -215,14 +215,6 @@ impl RationalArithmetic {
     }
 }
 
-/// `max(bits(a)+bits(d), bits(c)+bits(b))`: the `ordering.arithmetic` amount of
-/// `a/b` against `c/d`, derived from operand bit lengths only.
-pub(crate) fn cross_bits((a, b): Parts<'_>, (c, d): Parts<'_>) -> u64 {
-    let [a, b, c, d] = [a, b, c, d].map(Integer::magnitude_bits);
-    // Bit lengths of materialized operands; the sums cannot approach `u64::MAX`.
-    a.saturating_add(d).max(c.saturating_add(b))
-}
-
 impl Ord for Rational {
     fn cmp(&self, other: &Self) -> Ordering {
         // Denominators are positive, so cross multiplication preserves order.

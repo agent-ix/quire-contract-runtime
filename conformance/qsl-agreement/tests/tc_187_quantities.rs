@@ -7,12 +7,10 @@
 //! target cycle, an unknown target, a cross-dimension target) and U06's zero
 //! scale are evaluated through both graph admissions.
 //!
-//! QSpec 7d7943a derives every `unit.rational-arithmetic` and
-//! `unit.target-domain` amount from operands, after the pinned authority
-//! d9d5273. The vectors named in [`CHARGES_PENDING_QSL_119`] agree with the
-//! authority on values, outcome kinds and charge schedules, and have their
-//! consumed counters and tuple-dependent outcomes checked against QSpec 7d7943a
-//! only (see [`lagged!`]).
+//! The authority at revision `d01371b` derives every `unit.rational-arithmetic`
+//! and `unit.target-domain` amount from operands
+//! (agent-ix/quire-spec-language#119), so [`lagged!`] runs its metered
+//! comparison, under the caller's own tuple, through [`agree!`].
 
 #[macro_use]
 mod support;
@@ -29,23 +27,11 @@ const EVALUATED: [&str; 30] = [
 /// Compiler-owned admission vectors.
 const ADMISSION_ONLY: [&str; 1] = ["U11 owner selection and stale keys"];
 
-/// Vectors whose charge amounts the authority d9d5273 does not yet derive from
-/// operands (known upstream lag, pending agent-ix/quire-spec-language#119).
-/// Their counters and tuple-dependent outcomes are checked against QSpec
-/// 7d7943a only; runtime charges are never bent to the authority. U13's only
-/// outcome is its QSpec incomplete record, so it has no authority run.
-const CHARGES_PENDING_QSL_119: [&str; 12] = [
-    "U10", "U13", "U15", "U16", "U19", "U20", "U22", "U23", "U24", "U26", "U28", "U29",
-];
-
-/// Agree with the authority on the unlimited outcome and charge schedule of
-/// `run`, then return the runtime's metered run under the TC-187 tuple, whose
-/// counters and outcome are checked against QSpec 7d7943a only.
+/// Agree with the authority on the value, charge schedule and consumed
+/// counters of `run`, metered under the caller's TC-187 tuple.
 macro_rules! lagged {
     ($tuple:expr; $(let $binding:pat = $value:expr;)* run |$m:ident| $run:expr) => {{
-        let _ = agree! {{ $(let $binding = $value;)* scheduled(UNLIMITED, |$m: &mut Meter| $run) }};
-        $(let $binding = $value;)*
-        metered(unit_tuple($tuple), |$m: &mut Meter| $run)
+        agree! {{ $(let $binding = $value;)* metered(unit_tuple($tuple), |$m: &mut Meter| $run) }}
     }};
 }
 
@@ -56,14 +42,10 @@ fn tc_022_every_tc187_vector_is_evaluated_or_admission_only() {
     expected.insert(9, "U09b".into());
     assert_eq!(EVALUATED.to_vec(), expected);
     assert!(ADMISSION_ONLY[0].starts_with("U11"));
-    assert!(CHARGES_PENDING_QSL_119
-        .iter()
-        .all(|name| EVALUATED.contains(name)));
     println!(
-        "TC-187 agreement: {} evaluated, {} admission-only, {} with charges pending QSL #119",
+        "TC-187 agreement: {} evaluated, {} admission-only",
         EVALUATED.len(),
-        ADMISSION_ONLY.len(),
-        CHARGES_PENDING_QSL_119.len()
+        ADMISSION_ONLY.len()
     );
 }
 
@@ -566,14 +548,6 @@ fn tc_022_u12_u13_u21_u27_u28_compound_arithmetic_and_powers() {
             }
         }
     };
-    // U13 has no unlimited run: its power is never computable.
-    let runtime_only = |exponent: &'static str, tuple: [u64; 6]| -> Metered<Quantity> {
-        let f = fixture();
-        let (a, n) = (f.qi(2, "m"), big(exponent));
-        metered(unit_tuple(tuple), |m| {
-            evaluate_quantity(QuantityOperation::Power(&a, &n), m)
-        })
-    };
     const MUL: usize = 0;
     const DIV: usize = 1;
     const POW: usize = 2;
@@ -604,7 +578,13 @@ fn tc_022_u12_u13_u21_u27_u28_compound_arithmetic_and_powers() {
     assert!(one.unit().dimension().is_dimensionless());
 
     // U13: `abs(n) × maxparts(2) = 2^64 × 2`, exactly, before the power.
-    let u13 = runtime_only("18446744073709551616", [64, 0, 0, 1, 5, 1]);
+    let u13: Metered<Quantity> = agree! {{
+        let f = fixture();
+        let (a, n) = (f.qi(2, "m"), big("18446744073709551616"));
+        metered(unit_tuple([64, 0, 0, 1, 5, 1]), |m: &mut Meter| {
+            evaluate_quantity(QuantityOperation::Power(&a, &n), m)
+        })
+    }};
     assert_eq!(
         u13.0,
         Ok(Outcome::Incomplete(incomplete(

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complete-V1 exact scalar oracle operators and typed runtime outcomes.
 //!
-//! Implements: FR-006, FR-007.
+//! Implements: FR-006, FR-007, FR-008.
 //!
 //! `quire-spec-language` `quire_spec_language::value` is the semantic
 //! authority. This module is a conformance-gated `no_std + alloc` port of that
@@ -15,16 +15,24 @@
 //! 1. typed values: [`Integer`], [`IntegerInterval`]/[`BoundedInteger`],
 //!    [`Rational`], [`Decimal`], [`IeeeValue`], [`Text`], [`EnumValue`] and
 //!    [`Quantity`] over a [`UnitGraph`];
-//! 2. explicit operation tables: [`evaluate_integer`], [`evaluate_rational`],
-//!    [`evaluate_ordering`], [`evaluate_connective`], [`evaluate_not`],
+//! 2. explicit operation tables: [`evaluate_integer_arithmetic`],
+//!    [`evaluate_rational_arithmetic`], [`order_numbers`], [`evaluate_boolean`],
 //!    [`evaluate_decimal`], [`divide`] and
 //!    [`modulo`], [`evaluate_ieee`], [`compare_ieee`], [`convert_ieee_width`],
 //!    [`ieee_to_exact`], [`exact_to_ieee`], [`admit_text`], [`compare_text`],
 //!    [`compare_enum`], [`evaluate_quantity`], [`compare_quantity`] and
 //!    [`convert_quantity`], each after its static [`IllTyped`] refusal;
-//! 3. the distinct evaluator [`Outcome`] with typed [`Undefined`], [`Refusal`]
+//! 3. FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
+//!    and the [`ValueGraph`] finite-value constructor, over terminal
+//!    [`ObjectReference`] identities;
+//! 4. FR-144 collections: [`CollectionType`], [`CollectionValue`] and
+//!    [`construct_collection`]/[`form_collection`], keyed by the FR-144
+//!    canonical key that [`CheckedEquality`] and collection membership share;
+//! 5. the FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
+//!    [`CheckedEquality::evaluate`];
+//! 6. the distinct evaluator [`Outcome`] with typed [`Undefined`], [`Refusal`]
 //!    and [`Incomplete`] reasons;
-//! 4. `quire.value.accounting/v1` charge-before-work metering through
+//! 7. `quire.value.accounting/v1` charge-before-work metering through
 //!    [`Meter`].
 //!
 //! Node keys, definition-lock selection, owner joins, stale keys and package
@@ -33,31 +41,63 @@
 //! ([`SelectionRefusalCode`], [`PackageRefusal`], [`SemanticGraphCause`]) so a
 //! compiler refusal is reported with its exact code. No host floating-point
 //! operation, panic path or ambient effect exists on any semantic path.
+//!
+//! Every algorithm that walks a [`Value`] (the canonical key, the equality
+//! occurrence-pair plan, collection membership and coalescing, and containment
+//! graph construction) is iterative over an explicit worklist, so value depth
+//! never reaches the host stack there. Two paths are exceptions: the derived
+//! [`Debug`](core::fmt::Debug) on [`Value`] and the implicit `Drop` glue of its
+//! [`alloc::rc::Rc`] chain both recurse with the value's nesting depth, the
+//! same shape the authority has. In practice, depth is bounded only by the
+//! deployment's `value_occurrences` limit; a generous limit admits a nesting
+//! deep enough to overflow the host stack on `Debug` or `Drop`, which is
+//! silent corruption rather than a panic on the governed
+//! `thumbv7em-none-eabi` target, so `make audit-panic` cannot see it.
+//! [`Value`] shares nested composite and collection values through
+//! [`alloc::rc::Rc`], never `Arc`: this crate has no concurrency and no
+//! `target_has_atomic` requirement. A closed
+//! `ObjectEnvironment` that resolves an [`ObjectReference`] against a bound
+//! model snapshot is out of scope: it is business logic for a consumer
+//! holding that snapshot, not part of this exact value/collection/equality
+//! core.
 
 mod accounting;
-mod arithmetic;
+mod collection;
 mod comparison;
+mod composite;
+mod containment;
 mod decimal;
 mod definition;
 mod division;
 mod enumeration;
+mod equality;
 mod ieee;
 mod integer;
+mod key;
 mod node;
+mod numeric;
 mod outcome;
 mod quantity;
 mod rational;
+mod reference;
 mod text;
 mod unit;
 
 pub use accounting::{
     ChargePoint, Incomplete, InjectedDenial, LimitKind, Meter, ScalarLimits, CHARGE_LOG_CAPACITY,
 };
-pub use arithmetic::{
-    evaluate_connective, evaluate_integer, evaluate_not, evaluate_ordering, evaluate_rational,
-    BooleanConnective, IntegerOperation, OrderingOperands, OrderingOperator, RationalOperation,
+pub use collection::{
+    construct_collection, form_collection, CardinalityBound, CollectionKind, CollectionType,
+    CollectionValue, EmptyCardinalityBound,
 };
 pub use comparison::{ComparisonOperator, IllTyped, IllTypedCause};
+pub use composite::{
+    Component, CompositeDeclaration, CompositeShape, CompositeValue, ConstructionCause,
+    ConstructionRefusal, DeclarationCause, Deferred, FieldDeclaration, FieldExpression, FieldValue,
+    InvalidDeclaration, ObjectTypeDeclaration, OptionValue, Presence, RecursionEdges,
+    TypeEnvironment, Value, ValueType,
+};
+pub use containment::{GraphCause, GraphNode, GraphNodeId, GraphRefusal, GraphSlot, ValueGraph};
 pub use decimal::{
     evaluate_decimal, Decimal, DecimalLoss, DecimalOperation, DecimalRepresentation, DecimalResult,
     DecimalType, RoundingMode,
@@ -68,11 +108,15 @@ pub use division::{
     IntegerDivisionConsumer, IntegerDivisionDisposition, QuotientRemainder,
 };
 pub use enumeration::{compare_enum, EnumDeclaration, EnumValue};
+pub use equality::{
+    admits_equality_conversion, plan_equality, CheckedEquality, EqualityOperand, EqualityOperator,
+    EqualityPlan, EqualitySchedule,
+};
 pub use ieee::{
     compare_ieee, convert_ieee_width, evaluate_ieee, exact_to_ieee, ieee_intrinsic_identities,
     ieee_to_exact, negotiate_ieee, ExactScalar, IeeeBackendCapabilities, IeeeComparison,
-    IeeeDisposition, IeeeExact, IeeeExactTarget, IeeeFlag, IeeeFlags, IeeeItemRequirement,
-    IeeeOperand, IeeeOperation, IeeeOperationKind, IeeeProvenance, IeeeResult,
+    IeeeDisposition, IeeeExact, IeeeExactLoss, IeeeExactTarget, IeeeFlag, IeeeFlags,
+    IeeeItemRequirement, IeeeOperand, IeeeOperation, IeeeOperationKind, IeeeProvenance, IeeeResult,
     IeeeUnsupportedCause, IeeeValue, IeeeWidth, IEEE_DEFINITION,
 };
 pub use integer::{
@@ -80,12 +124,17 @@ pub use integer::{
     OutOfDomain,
 };
 pub use node::{InvalidSemanticGraph, NodeKey, SemanticGraphCause, NODE_KEY_DOMAIN};
-pub use outcome::{Outcome, Refusal, Undefined};
+pub use numeric::{
+    evaluate_boolean, evaluate_integer_arithmetic, evaluate_rational_arithmetic, order_numbers,
+    BooleanConnective, IntegerArithmetic, OrderedOperands, OrderingOperator, RationalArithmetic,
+};
+pub use outcome::{BoundViolation, Outcome, Refusal, Undefined};
 pub use quantity::{
     compare_quantity, convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity,
     QuantityOperation, QuantityTarget, QuantityUnit,
 };
 pub use rational::{NonPositiveDenominatorBound, Rational, RationalDomain, ZeroDenominator};
+pub use reference::{InvalidObjectIdentity, ObjectIdentity, ObjectReference, UniverseIdentity};
 pub use text::{
     admit_text, compare_text, EmptyTextBounds, InvalidTextLiteral, InvalidUtf8, NormalizationForm,
     Text, TextPayload, TextProfile, TextProvenance, TextType, UNICODE_TEXT_DEFINITION,

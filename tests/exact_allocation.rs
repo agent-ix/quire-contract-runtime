@@ -11,10 +11,10 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 
 use quire_contract_runtime::exact::{
-    divide, evaluate_decimal, evaluate_integer, evaluate_rational, modulo, ChargePoint, Decimal,
-    DecimalOperation, DecimalType, DivisionProfile, Incomplete, InjectedDenial, Integer,
-    IntegerDomain, IntegerOperation, LimitKind, Meter, Outcome, Rational, RationalOperation,
-    RoundingMode, ScalarLimits,
+    divide, evaluate_decimal, evaluate_integer_arithmetic, evaluate_rational_arithmetic, modulo,
+    ChargePoint, Decimal, DecimalOperation, DecimalType, DivisionProfile, Incomplete,
+    InjectedDenial, Integer, IntegerArithmetic, IntegerDomain, LimitKind, Meter, Outcome, Rational,
+    RationalArithmetic, RoundingMode, ScalarLimits,
 };
 
 thread_local! {
@@ -91,9 +91,9 @@ fn bits_limit(bits: u64) -> ScalarLimits {
 fn large() -> Integer {
     let mut value = Integer::from(3_u64);
     for _ in 0..16 {
-        value = evaluate_integer(
-            IntegerOperation::Multiply(&value, &value),
-            &IntegerDomain::Mathematical,
+        value = evaluate_integer_arithmetic(
+            IntegerArithmetic::Multiply(&value, &value),
+            None,
             &mut Meter::new(UNLIMITED),
         )
         .completed()
@@ -106,21 +106,17 @@ fn byte_len(value: &Integer) -> usize {
     usize::try_from(value.magnitude_bits().div_ceil(8)).unwrap()
 }
 
-fn integer(operation: IntegerOperation<'_>) -> Integer {
-    evaluate_integer(
-        operation,
-        &IntegerDomain::Mathematical,
-        &mut Meter::new(UNLIMITED),
-    )
-    .completed()
-    .unwrap()
+fn integer(operation: IntegerArithmetic<'_>) -> Integer {
+    evaluate_integer_arithmetic(operation, None, &mut Meter::new(UNLIMITED))
+        .completed()
+        .unwrap()
 }
 
 /// `2^(2^16)`: exactly 65,537 bits.
 fn power_of_two() -> Integer {
     let mut value = Integer::from(2_u64);
     for _ in 0..16 {
-        value = integer(IntegerOperation::Multiply(&value, &value));
+        value = integer(IntegerArithmetic::Multiply(&value, &value));
     }
     value
 }
@@ -160,13 +156,10 @@ fn tc_023_arithmetic_denied_at_the_operand_bits_allocates_no_result() {
     let x = large();
     let operand_bits = x.magnitude_bits();
     let mut unlimited = Meter::new(UNLIMITED);
-    let square = evaluate_integer(
-        IntegerOperation::Multiply(&x, &x),
-        &IntegerDomain::Mathematical,
-        &mut unlimited,
-    )
-    .completed()
-    .unwrap();
+    let square =
+        evaluate_integer_arithmetic(IntegerArithmetic::Multiply(&x, &x), None, &mut unlimited)
+            .completed()
+            .unwrap();
     // `bits(a) + bits(b)` bounds the square, which is never measured.
     assert!(square.magnitude_bits() <= 2 * operand_bits);
     assert_eq!(unlimited.consumed(LimitKind::IntegerBits), 2 * operand_bits);
@@ -175,11 +168,7 @@ fn tc_023_arithmetic_denied_at_the_operand_bits_allocates_no_result() {
     for limit in [operand_bits, 2 * operand_bits - 1] {
         let mut meter = Meter::new(bits_limit(limit));
         let (outcome, peak) = peak_request(|| {
-            evaluate_integer(
-                IntegerOperation::Multiply(&x, &x),
-                &IntegerDomain::Mathematical,
-                &mut meter,
-            )
+            evaluate_integer_arithmetic(IntegerArithmetic::Multiply(&x, &x), None, &mut meter)
         });
         assert_eq!(
             stop(outcome),
@@ -199,8 +188,9 @@ fn tc_023_arithmetic_denied_at_the_operand_bits_allocates_no_result() {
         Rational::new(x.clone(), Integer::from(2_u64)).unwrap(),
     );
     let mut meter = Meter::new(bits_limit(operand_bits + 2));
-    let (outcome, peak) =
-        peak_request(|| evaluate_rational(RationalOperation::Add(&left, &right), None, &mut meter));
+    let (outcome, peak) = peak_request(|| {
+        evaluate_rational_arithmetic(RationalArithmetic::Add(&left, &right), None, &mut meter)
+    });
     assert_eq!(
         stop(outcome),
         bits_denied(
@@ -219,18 +209,18 @@ fn tc_023_power_of_two_products_and_cancellation_deny_before_any_result() {
     let two_k = power_of_two();
     let k = two_k.magnitude_bits() - 1;
     let one = Integer::one();
-    let below = integer(IntegerOperation::Subtract(&two_k, &one));
-    let above = integer(IntegerOperation::Add(&two_k, &one));
+    let below = integer(IntegerArithmetic::Subtract(&two_k, &one));
+    let above = integer(IntegerArithmetic::Add(&two_k, &one));
 
     // `(2^k - 1)(2^k + 1) = 2^2k - 1` has `2k` bits but charges `k + (k + 1)`:
     // a limit equal to the result's size is still denied, before the product.
-    let product = integer(IntegerOperation::Multiply(&below, &above));
+    let product = integer(IntegerArithmetic::Multiply(&below, &above));
     assert_eq!(product.magnitude_bits(), 2 * k);
     let mut meter = Meter::new(bits_limit(2 * k));
     let (outcome, peak) = peak_request(|| {
-        evaluate_integer(
-            IntegerOperation::Multiply(&below, &above),
-            &IntegerDomain::Mathematical,
+        evaluate_integer_arithmetic(
+            IntegerArithmetic::Multiply(&below, &above),
+            None,
             &mut meter,
         )
     });
@@ -248,9 +238,9 @@ fn tc_023_power_of_two_products_and_cancellation_deny_before_any_result() {
     // Cancellation: `(2^k + 1) - 2^k = 1` still charges `max(k+1, k+1) + 1`.
     let mut meter = Meter::new(bits_limit(k + 1));
     let (outcome, peak) = peak_request(|| {
-        evaluate_integer(
-            IntegerOperation::Subtract(&above, &two_k),
-            &IntegerDomain::Mathematical,
+        evaluate_integer_arithmetic(
+            IntegerArithmetic::Subtract(&above, &two_k),
+            None,
             &mut meter,
         )
     });
@@ -273,8 +263,8 @@ fn tc_023_power_of_two_products_and_cancellation_deny_before_any_result() {
     );
     let mut meter = Meter::new(bits_limit(k + 1));
     let (outcome, peak) = peak_request(|| {
-        evaluate_rational(
-            RationalOperation::Multiply(&whole, &inverse),
+        evaluate_rational_arithmetic(
+            RationalArithmetic::Multiply(&whole, &inverse),
             None,
             &mut meter,
         )
