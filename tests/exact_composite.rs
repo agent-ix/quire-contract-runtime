@@ -544,9 +544,9 @@ fn tc_024_p5_value_graph_sharing_and_refusals() {
     assert!(matches!(deep_value, Value::Composite(_)));
     // `build` itself walks the graph with an explicit worklist, never the
     // host stack, which this assertion already exercised; the value's
-    // ordinary field-wise `Drop` glue recurses through the chain it now
-    // owns, an unrelated host limitation this test is not about, so the
-    // chain is leaked rather than dropped.
+    // implicit `Drop` glue recurses with the chain's nesting depth it now
+    // owns (the same shape as the derived `Debug`), so the chain is leaked
+    // rather than dropped to avoid overflowing the host stack.
     core::mem::forget(deep_value);
 }
 

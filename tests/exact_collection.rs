@@ -357,9 +357,10 @@ fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     assert_eq!(first_ptr, a_ptr, "the tag=0 chain must sort before tag=1");
     assert_eq!(second_ptr, b_ptr);
 
-    // The canonical key's task-stack walk this exercised is iterative; leak
-    // the chains rather than exercise the host's unrelated, recursive
-    // `Drop` glue for a 100,000-deep owned structure.
+    // The canonical key's task-stack walk this exercised is iterative, but
+    // `Value`'s implicit `Drop` glue recurses with the chain's nesting depth
+    // (the same shape as the derived `Debug`); leak these 100,000-deep owned
+    // structures rather than overflow the host stack dropping them.
     core::mem::forget(a);
     core::mem::forget(b);
     core::mem::forget(outcome);
