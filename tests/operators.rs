@@ -7,6 +7,27 @@ use quire_contract_runtime::operators::{
     or_total,
 };
 
+const OPERATORS_SOURCE: &str = include_str!("../src/operators.rs");
+
+/// Exercises every `CheckedInteger` member for `$ty` against the primitive's own `checked_*`,
+/// over the pairwise cross product of `$candidate`s. Callers list MIN, MAX, 0, 1, and (for signed
+/// types) -1, so the cross product covers overflow, underflow, division/remainder by zero, and
+/// (for signed types) MIN divided or remaindered by -1.
+macro_rules! assert_checked_matches_primitive {
+    ($ty:ty, [$($candidate:expr),+ $(,)?]) => {{
+        let candidates: &[$ty] = &[$($candidate),+];
+        for &left in candidates {
+            for &right in candidates {
+                assert_eq!(checked_add(left, right), left.checked_add(right));
+                assert_eq!(checked_sub(left, right), left.checked_sub(right));
+                assert_eq!(checked_mul(left, right), left.checked_mul(right));
+                assert_eq!(checked_div(left, right), left.checked_div(right));
+                assert_eq!(checked_rem(left, right), left.checked_rem(right));
+            }
+        }
+    }};
+}
+
 /// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
 #[test]
 fn tc_002_boolean_truth_tables() {
@@ -108,6 +129,42 @@ fn tc_003_definedness_boundaries_do_not_panic() {
     assert_eq!(checked_div(1_i32, 0), None);
     assert_eq!(checked_div(i32::MIN, -1), None);
     assert_eq!(checked_rem(i32::MIN, -1), None);
+}
+
+/// Trace: TC-003, FR-002-AC-4
+#[test]
+fn tc_003_checked_integer_matches_primitive_semantics_for_all_twelve_types() {
+    assert_checked_matches_primitive!(u8, [u8::MIN, u8::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u16, [u16::MIN, u16::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u32, [u32::MIN, u32::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u64, [u64::MIN, u64::MAX, 0, 1]);
+    assert_checked_matches_primitive!(u128, [u128::MIN, u128::MAX, 0, 1]);
+    assert_checked_matches_primitive!(usize, [usize::MIN, usize::MAX, 0, 1]);
+    assert_checked_matches_primitive!(i8, [i8::MIN, i8::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i16, [i16::MIN, i16::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i32, [i32::MIN, i32::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i64, [i64::MIN, i64::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(i128, [i128::MIN, i128::MAX, 0, 1, -1]);
+    assert_checked_matches_primitive!(isize, [isize::MIN, isize::MAX, 0, 1, -1]);
+}
+
+/// Trace: TC-003, FR-002-AC-4
+///
+/// `CheckedInteger` cannot be implemented outside this crate because it has a private
+/// supertrait (`sealed::Sealed`, in a module with no `pub`). That is a property of the trait
+/// definition, not of any value this test could construct and compare, so it is inspected in the
+/// source text rather than proven by compiling a positive or negative instance: this crate cannot
+/// author a downstream `impl CheckedInteger for ...` inside an integration test to prove the seal
+/// holds, and a doc-based `compile_fail` example belongs to the library crate's own docs (already
+/// present on `CheckedInteger` in `src/operators.rs`), not to a file under `tests/`.
+#[test]
+fn tc_003_checked_integer_is_sealed_and_covers_exactly_twelve_types() {
+    assert!(OPERATORS_SOURCE.contains("pub trait CheckedInteger: sealed::Sealed + Copy {"));
+    assert!(OPERATORS_SOURCE.contains("\nmod sealed {"));
+    assert!(!OPERATORS_SOURCE.contains("pub mod sealed"));
+    assert!(OPERATORS_SOURCE.contains(
+        "checked_integer!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);"
+    ));
 }
 
 proptest! {

@@ -628,3 +628,7 @@ impl Meter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "../exact_accounting_tests.rs"]
+mod tests;

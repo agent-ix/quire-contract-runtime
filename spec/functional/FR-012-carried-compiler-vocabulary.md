@@ -53,13 +53,25 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
   spelling for each, and `from_code` is its exact inverse: it resolves every listed spelling and
   resolves nothing else. `PackageRefusalCode::as_str` is `invalid_package`. A generated oracle
   reports a compiler refusal by carrying one of these; it never spells a code itself.
-- **`SemanticGraphCause` is one closed vocabulary shared with the compiler, split by who may raise
-  it.** The preimage, unordered-member, owner-selection and stale-key causes are compiler-admission
-  causes; the runtime carries them and never raises them. The structural causes — foreign
-  declaration, undeclared case, zero exponent, duplicate term, unsorted terms, unreduced rational,
-  zero scale, non-identity root, duplicate node, unknown dimension, non-base dimension term, unknown
-  target, cross-dimension target, missing root, duplicate root, target cycle — are the ones the
-  runtime raises over the graphs it is handed.
+- **`SemanticGraphCause` is one closed vocabulary shared with the compiler, split by who raises
+  each cause.** Three groups, and the split is a fact about this runtime's API shape, not a
+  preference:
+  - *Raised by the runtime over a graph it is handed*: zero exponent, duplicate term, unsorted
+    terms, zero scale, non-identity root, duplicate node, unknown dimension, non-base dimension
+    term, unknown target, cross-dimension target, missing root, duplicate root, target cycle — and
+    undeclared case, raised where a case is read against its declaration rather than at graph
+    admission.
+  - *Raised by the runtime at its own declaration-admission point*: `EnumDeclaration::new` admits a
+    declaration node from caller-supplied member strings, and that is a runtime admission, so it
+    raises `NonCanonicalPreimage` for an empty, repeated or non-identifier member list and
+    `UnsortedUnorderedMembers` for an unordered declaration whose cases are not sorted. Those two
+    causes are raised there and nowhere else; no graph handed to the runtime raises either.
+  - *Carried only, never raised here*: `OwnerNotSelected` and `StaleKey`, which only a compiler that
+    computes keys and resolves a lock selection can decide; and `ForeignDeclaration` and
+    `UnreducedRational`, which this API cannot present — a member node never carries a declaration
+    key of its own for the runtime to compare, and `Rational`'s only public constructor reduces, so
+    no unreduced scale or offset can reach `UnitDeclaration::check_semantics`. The runtime carries
+    all four so a generated oracle can report a compiler refusal it was handed.
 - **Every unit-graph refusal is `invalid_semantic_graph` with one typed cause naming the first
   failed check**, in the order fixed by FR-011: per-node semantics, then duplicate keys, then graph
   topology. The runtime admits a graph or refuses it; it never repairs one and never admits a graph
@@ -77,7 +89,7 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 | FR-012-AC-1 | `NodeKey::from_hex` accepts exactly the 64-lowercase-hex-digit inputs and returns `None` for every wrong length, uppercase digit and non-hexadecimal byte; `from_bytes`/`as_bytes`/`from_hex`/`Display` round-trip every digest unchanged. | Test (TC-033) |
 | FR-012-AC-2 | `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` equal their normative strings, and no code path constructs either from parts. | Test (TC-033) |
 | FR-012-AC-3 | `SelectionRefusalCode::ALL` is the eight codes in normative check order, `as_str` yields the lock spelling for each, `from_code` resolves exactly those eight spellings and nothing else, and `PackageRefusalCode::as_str` is `invalid_package`. | Test (TC-033) |
-| FR-012-AC-4 | Every structural `SemanticGraphCause` is raised by at least one admissible input to `UnitGraph::admit` or `check_terms`, and no compiler-admission cause (`NonCanonicalPreimage`, `UnsortedUnorderedMembers`, `OwnerNotSelected`, `StaleKey`) is raised by any runtime input. | Test (TC-033) |
+| FR-012-AC-4 | Each of the thirteen graph causes is raised by an admissible input to `UnitGraph::admit`, and `UndeclaredCase` by reading a case against its declaration; no graph input raises any of the four compiler-admission causes; `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for exactly the malformed member lists named above; and `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no raise site in the crate. | Test (TC-033) |
 | FR-012-AC-5 | `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every construction order of the same terms. | Test (TC-033) |
 | FR-012-AC-6 | No item re-exported by `src/exact/mod.rs` from `node.rs`, `definition.rs` or `unit.rs` takes or returns a `Meter`, and every one of them is named by this requirement. | Inspection (TC-033) |
 

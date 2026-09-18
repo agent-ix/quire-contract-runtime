@@ -14,10 +14,10 @@ relationships:
 
 ## Description
 
-When a backend asks whether it may execute a package's integer-division or IEEE items, the runtime
-shall return one disposition per item. The runtime shall decide each disposition from the item's
-declared requirement and the backend's declared capabilities alone, without evaluating the item and
-without altering the item, the package or any meter.
+When a backend asks whether it may execute a package's integer-division or IEEE items,
+the runtime shall return one disposition per item, decided from the item's declared requirement and
+the backend's declared capabilities alone.
+The runtime shall neither evaluate the item nor alter the item, the package or any meter.
 
 ## Inputs
 
