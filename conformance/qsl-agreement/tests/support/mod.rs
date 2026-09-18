@@ -89,6 +89,33 @@ macro_rules! shared_helpers {
             Integer::from(value)
         }
 
+        /// A distinct node key from one repeated byte, since the authority
+        /// exposes only [`NodeKey::from_hex`] and not the runtime's
+        /// `from_bytes` convenience constructor.
+        pub fn key(byte: u8) -> NodeKey {
+            NodeKey::from_hex(&format!("{byte:02x}").repeat(32)).unwrap()
+        }
+
+        /// A distinct universe identity from one repeated byte.
+        pub fn universe(byte: u8) -> UniverseIdentity {
+            UniverseIdentity::new(&[byte; 8]).unwrap()
+        }
+
+        /// A distinct object identity from one repeated byte.
+        pub fn object_identity(byte: u8) -> ObjectIdentity {
+            ObjectIdentity::new(&[byte; 8]).unwrap()
+        }
+
+        /// A terminal reference in `universe` of `object_type`, identified by
+        /// `identity`.
+        pub fn reference(universe: u8, object_type: NodeKey, identity: u8) -> ObjectReference {
+            ObjectReference::new(
+                self::universe(universe),
+                object_type,
+                object_identity(identity),
+            )
+        }
+
         pub fn big(spelling: &str) -> Integer {
             spelling.parse().unwrap()
         }
@@ -105,7 +132,13 @@ macro_rules! shared_helpers {
             Rational::from_integer(Integer::from(value))
         }
 
-        pub fn decimal_type(lower: i64, upper: i64, min: u64, max: u64, mode: RoundingMode) -> DecimalType {
+        pub fn decimal_type(
+            lower: i64,
+            upper: i64,
+            min: u64,
+            max: u64,
+            mode: RoundingMode,
+        ) -> DecimalType {
             DecimalType::new(Integer::from(lower), Integer::from(upper), min, max, mode).unwrap()
         }
 
@@ -118,9 +151,13 @@ macro_rules! shared_helpers {
         }
 
         pub fn text(text: &str, profile: TextProfile) -> Text {
-            admit_text(&payload(text), &text_type(0, 64, profile), &mut Meter::new(UNLIMITED))
-                .completed()
-                .unwrap()
+            admit_text(
+                &payload(text),
+                &text_type(0, 64, profile),
+                &mut Meter::new(UNLIMITED),
+            )
+            .completed()
+            .unwrap()
         }
 
         /// An admission outcome reduced to the retained profile length.
@@ -140,7 +177,10 @@ macro_rules! shared_helpers {
         ) -> (T, Vec<ChargePoint>, Vec<u64>) {
             let mut meter = Meter::new(limits);
             let outcome = run(&mut meter);
-            let consumed = LimitKind::ALL.iter().map(|kind| meter.consumed(*kind)).collect();
+            let consumed = LimitKind::ALL
+                .iter()
+                .map(|kind| meter.consumed(*kind))
+                .collect();
             (outcome, meter.admitted_charges().to_vec(), consumed)
         }
 
@@ -173,7 +213,12 @@ macro_rules! shared_helpers {
                     let mut denied = Meter::new(limits)
                         .with_injected_denial(InjectedDenial { point, occurrence });
                     let outcome = run(&mut denied);
-                    (point, occurrence, outcome, denied.consumed(LimitKind::ResultUnits))
+                    (
+                        point,
+                        occurrence,
+                        outcome,
+                        denied.consumed(LimitKind::ResultUnits),
+                    )
                 })
                 .collect()
         }
@@ -219,12 +264,24 @@ macro_rules! shared_helpers {
             next_charge: Integer,
             charge_point: ChargePoint,
         ) -> Incomplete {
-            Incomplete { limit_kind, limit, consumed, next_charge, charge_point }
+            Incomplete {
+                limit_kind,
+                limit,
+                consumed,
+                next_charge,
+                charge_point,
+            }
         }
 
         /// The injected-denial or work-unit exhaustion record.
         pub fn work_denied(limit: u64, point: ChargePoint) -> Incomplete {
-            incomplete(LimitKind::WorkUnits, limit, limit, Integer::from(1_i64), point)
+            incomplete(
+                LimitKind::WorkUnits,
+                limit,
+                limit,
+                Integer::from(1_i64),
+                point,
+            )
         }
 
         impl Fixture {
@@ -296,7 +353,12 @@ pub struct GraphSpec {
 }
 
 const fn base(name: &'static str, declaration: &'static str) -> DimSpec {
-    DimSpec { name, owner: "example-model", declaration, terms: &[] }
+    DimSpec {
+        name,
+        owner: "example-model",
+        declaration,
+        terms: &[],
+    }
 }
 
 pub const fn unit(
@@ -306,7 +368,14 @@ pub const fn unit(
     scale: (i64, i64),
     offset: (i64, i64),
 ) -> UnitSpec {
-    UnitSpec { name, dimension, target, scale, offset, key_as: None }
+    UnitSpec {
+        name,
+        dimension,
+        target,
+        scale,
+        offset,
+        key_as: None,
+    }
 }
 
 const fn root(name: &'static str, dimension: &'static str) -> UnitSpec {
@@ -325,10 +394,30 @@ impl GraphSpec {
                 base("T", "Time"),
                 base("Theta", "Temperature"),
                 base("M", "Mass"),
-                DimSpec { name: "Torque", owner: "example-model", declaration: "Torque", terms: WORK },
-                DimSpec { name: "Energy", owner: "example-model", declaration: "Energy", terms: WORK },
-                DimSpec { name: "Area", owner: "example-model", declaration: "Area", terms: &[("L", 2)] },
-                DimSpec { name: "L_other", owner: "other-model", declaration: "Length", terms: &[] },
+                DimSpec {
+                    name: "Torque",
+                    owner: "example-model",
+                    declaration: "Torque",
+                    terms: WORK,
+                },
+                DimSpec {
+                    name: "Energy",
+                    owner: "example-model",
+                    declaration: "Energy",
+                    terms: WORK,
+                },
+                DimSpec {
+                    name: "Area",
+                    owner: "example-model",
+                    declaration: "Area",
+                    terms: &[("L", 2)],
+                },
+                DimSpec {
+                    name: "L_other",
+                    owner: "other-model",
+                    declaration: "Length",
+                    terms: &[],
+                },
             ],
             units: vec![
                 root("m", "L"),
@@ -363,8 +452,11 @@ impl GraphSpec {
     }
 
     pub fn dimension_json(dimension: &DimSpec, keys: &BTreeMap<&'static str, String>) -> Value {
-        let mut terms: Vec<(&String, i64)> =
-            dimension.terms.iter().map(|(name, exponent)| (&keys[name], *exponent)).collect();
+        let mut terms: Vec<(&String, i64)> = dimension
+            .terms
+            .iter()
+            .map(|(name, exponent)| (&keys[name], *exponent))
+            .collect();
         terms.sort();
         let terms: Vec<Value> = terms
             .into_iter()
@@ -381,7 +473,8 @@ impl GraphSpec {
     }
 
     pub fn unit_json(unit: &UnitSpec, keys: &BTreeMap<&'static str, String>) -> Value {
-        let rational = |(n, d): (i64, i64)| json!({"numerator": n.to_string(), "denominator": d.to_string()});
+        let rational =
+            |(n, d): (i64, i64)| json!({"numerator": n.to_string(), "denominator": d.to_string()});
         json!({
             "version": "quire.unit-node/v1",
             "owner": Self::owner("example-model"),
@@ -398,12 +491,17 @@ impl GraphSpec {
         let mut keys = BTreeMap::new();
         for dimension in &self.dimensions {
             let preimage =
-                authority::DimensionPreimage::from_json(Self::dimension_json(dimension, &keys)).unwrap();
+                authority::DimensionPreimage::from_json(Self::dimension_json(dimension, &keys))
+                    .unwrap();
             keys.insert(dimension.name, preimage.node_key().unwrap().to_string());
         }
         for unit in &self.units {
-            let preimage = authority::UnitPreimage::from_json(Self::unit_json(unit, &keys)).unwrap();
-            if keys.insert(unit.name, preimage.node_key().unwrap().to_string()).is_some() {
+            let preimage =
+                authority::UnitPreimage::from_json(Self::unit_json(unit, &keys)).unwrap();
+            if keys
+                .insert(unit.name, preimage.node_key().unwrap().to_string())
+                .is_some()
+            {
                 panic!("duplicate fixture name {}", unit.name);
             }
         }
@@ -416,11 +514,15 @@ impl GraphSpec {
     }
 
     pub fn present_dimensions(&self) -> impl Iterator<Item = &DimSpec> {
-        self.dimensions.iter().filter(|d| !self.removed.contains(&d.name))
+        self.dimensions
+            .iter()
+            .filter(|d| !self.removed.contains(&d.name))
     }
 
     pub fn present_units(&self) -> impl Iterator<Item = &UnitSpec> {
-        self.units.iter().filter(|u| !self.removed.contains(&u.name))
+        self.units
+            .iter()
+            .filter(|u| !self.removed.contains(&u.name))
     }
 
     pub fn with(mut self, unit: UnitSpec) -> Self {
@@ -471,8 +573,8 @@ pub mod qsl_side {
     use std::collections::BTreeMap;
     use std::sync::OnceLock;
 
-    pub use quire_spec_language::value::*;
     use quire_spec_language::value as authority;
+    pub use quire_spec_language::value::*;
 
     shared_helpers!();
 
@@ -501,7 +603,11 @@ pub mod qsl_side {
     fn profile() -> &'static AdmittedIeeeProfile {
         static PROFILE: OnceLock<AdmittedIeeeProfile> = OnceLock::new();
         PROFILE.get_or_init(|| {
-            let reference = lock().entry(CatalogRole::IeeeProfile).unwrap().definition.clone();
+            let reference = lock()
+                .entry(CatalogRole::IeeeProfile)
+                .unwrap()
+                .definition
+                .clone();
             lock().admit_ieee_profile(&[reference], &[]).unwrap()
         })
     }
@@ -571,7 +677,8 @@ pub mod qsl_side {
         let dimensions: Vec<_> = spec
             .present_dimensions()
             .map(|d| {
-                let preimage = DimensionPreimage::from_json(GraphSpec::dimension_json(d, &hex)).unwrap();
+                let preimage =
+                    DimensionPreimage::from_json(GraphSpec::dimension_json(d, &hex)).unwrap();
                 (preimage, key(&hex[d.name]))
             })
             .collect();
@@ -583,12 +690,18 @@ pub mod qsl_side {
             })
             .collect();
         let graph = UnitGraph::admit(dimensions, units, &owners())?;
-        let keys = hex.iter().map(|(name, digest)| (*name, key(digest))).collect();
+        let keys = hex
+            .iter()
+            .map(|(name, digest)| (*name, key(digest)))
+            .collect();
         Ok(Fixture { graph, keys })
     }
 
     impl Fixture {
-        pub fn compound_unit(&self, terms: &[(&str, i64)]) -> Result<CompoundUnit, InvalidCompoundUnit> {
+        pub fn compound_unit(
+            &self,
+            terms: &[(&str, i64)],
+        ) -> Result<CompoundUnit, InvalidCompoundUnit> {
             let terms: Vec<serde_json::Value> = self
                 .sorted(terms)
                 .into_iter()
@@ -624,9 +737,12 @@ pub mod qsl_side {
         pub fn value(&self, case: &str) -> Result<EnumValue, InvalidSemanticGraph> {
             let declaration = self.0.key().to_string();
             let key = crate::support::enum_member_key(&declaration, case);
-            let preimage =
-                EnumMemberPreimage::from_json(crate::support::enum_member_json(&declaration, case))?;
-            self.0.admit_member(&preimage, NodeKey::from_hex(&key).unwrap())
+            let preimage = EnumMemberPreimage::from_json(crate::support::enum_member_json(
+                &declaration,
+                case,
+            ))?;
+            self.0
+                .admit_member(&preimage, NodeKey::from_hex(&key).unwrap())
         }
 
         pub fn key(&self) -> NodeKey {
@@ -681,12 +797,18 @@ pub mod rt_side {
             })
             .collect();
         let graph = UnitGraph::admit(dimensions, units)?;
-        let keys = hex.iter().map(|(name, digest)| (*name, key(digest))).collect();
+        let keys = hex
+            .iter()
+            .map(|(name, digest)| (*name, key(digest)))
+            .collect();
         Ok(Fixture { graph, keys })
     }
 
     impl Fixture {
-        pub fn compound_unit(&self, terms: &[(&str, i64)]) -> Result<CompoundUnit, InvalidCompoundUnit> {
+        pub fn compound_unit(
+            &self,
+            terms: &[(&str, i64)],
+        ) -> Result<CompoundUnit, InvalidCompoundUnit> {
             self.graph.compound_unit(&self.sorted(terms))
         }
     }

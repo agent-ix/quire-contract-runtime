@@ -520,9 +520,8 @@ fn tc_019_generated_operations_and_denials_agree() {
                 for scale in 0..3 {
                     for mode in RoundingMode::ALL {
                         let target = decimal_type(-40, 40, 0, scale, mode);
-                        let (outcome, charges, consumed) = metered(UNLIMITED, |m| {
-                            evaluate_decimal(operation, &target, m)
-                        });
+                        let (outcome, charges, consumed) =
+                            metered(UNLIMITED, |m| evaluate_decimal(operation, &target, m));
                         let expected = decimal_counters(
                             index,
                             (ca.into(), sa.into()),
@@ -671,7 +670,10 @@ fn decimal_counters(
                 .parse()
                 .unwrap();
             let placed = retained / 10_i128.pow(u32::try_from(upscale).unwrap());
-            assert_eq!(placed * 10_i128.pow(u32::try_from(upscale).unwrap()), retained);
+            assert_eq!(
+                placed * 10_i128.pow(u32::try_from(upscale).unwrap()),
+                retained
+            );
             counters(
                 high_bits.max(sbits(placed, upscale)),
                 high_digits.max(sdigits(placed, upscale)),

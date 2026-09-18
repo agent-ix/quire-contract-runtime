@@ -29,8 +29,14 @@ fn tc_021_every_tc186_vector_is_evaluated_or_admission_only() {
     let mut all: Vec<&str> = EVALUATED.to_vec();
     all.insert(5, "T05b");
     assert_eq!(all, expected);
-    assert!(ADMISSION_ONLY.iter().all(|id| id.starts_with("T05b") || id.starts_with("T09")));
-    println!("TC-186 agreement: {} evaluated, {} admission-only", EVALUATED.len(), ADMISSION_ONLY.len());
+    assert!(ADMISSION_ONLY
+        .iter()
+        .all(|id| id.starts_with("T05b") || id.starts_with("T09")));
+    println!(
+        "TC-186 agreement: {} evaluated, {} admission-only",
+        EVALUATED.len(),
+        ADMISSION_ONLY.len()
+    );
 }
 
 const E_ACUTE: &str = "\u{e9}";
@@ -63,7 +69,10 @@ fn tc_021_t01_t02_t03_profiles_select_the_equality_domain() {
     };
     assert_eq!(
         retained,
-        [(E_ACUTE.to_owned(), E_ACUTE.to_owned()), (E_COMBINING.to_owned(), E_COMBINING.to_owned())]
+        [
+            (E_ACUTE.to_owned(), E_ACUTE.to_owned()),
+            (E_COMBINING.to_owned(), E_COMBINING.to_owned())
+        ]
     );
     assert!(equal("\u{fb00}", "ff", NFKC));
     assert!(equal("\u{fb00}", "ff", NFKD));
@@ -141,7 +150,9 @@ fn tc_021_t07_t09_t15_enum_identity_is_the_declaration_node_never_the_spelling()
         let t09 = compare_enum(ComparisonOperator::Equal, &a.value("READY").unwrap(), &reordered.value("READY").unwrap(), &mut zero());
         (t07, t09, t15.admitted_charges().to_vec())
     }};
-    let distinct = Err(IllTyped { cause: IllTypedCause::DistinctEnumDeclarations });
+    let distinct = Err(IllTyped {
+        cause: IllTypedCause::DistinctEnumDeclarations,
+    });
     assert_eq!(t07, distinct);
     assert_eq!(t09, distinct);
     assert_eq!(t15, []);
@@ -161,7 +172,12 @@ fn tc_021_t08_t15_ordered_members_order_and_unordered_ordering_refuses() {
         )
     }};
     assert_eq!(ordered, Ok(Outcome::Completed(true)));
-    assert_eq!(unordered, Err(IllTyped { cause: IllTypedCause::UnorderedEnumOrdering }));
+    assert_eq!(
+        unordered,
+        Err(IllTyped {
+            cause: IllTypedCause::UnorderedEnumOrdering
+        })
+    );
     assert_eq!(charges, []);
 }
 
@@ -171,7 +187,12 @@ fn tc_021_t10_distinct_profiles_are_ill_typed_not_false() {
     let outcome = agree! {
         compare_text(ComparisonOperator::Equal, &text("abc", TextProfile::Nfc), &text("abc", TextProfile::BinaryUtf8), &mut Meter::new(limits([0; 10])))
     };
-    assert_eq!(outcome, Err(IllTyped { cause: IllTypedCause::DistinctTextProfiles }));
+    assert_eq!(
+        outcome,
+        Err(IllTyped {
+            cause: IllTypedCause::DistinctTextProfiles
+        })
+    );
 }
 
 const T11: [u64; 10] = [0, 0, 0, 5, 3, 2, 0, 2, 6, 1];
@@ -192,12 +213,21 @@ fn tc_021_t11_nfc_exact_tuple_and_named_denials() {
     assert_eq!(exact.0, Ok(Outcome::Completed(true)));
     assert_eq!(
         exact.1,
-        [TextInputBytes, TextDecodeScalars, TextNormalizeInput, TextNormalizeOutput, TextNormalizeOutput, TextResultRetain]
+        [
+            TextInputBytes,
+            TextDecodeScalars,
+            TextNormalizeInput,
+            TextNormalizeOutput,
+            TextNormalizeOutput,
+            TextResultRetain
+        ]
     );
     assert_eq!(exact.2, T11);
     let named: Vec<_> = denied
         .into_iter()
-        .filter(|(point, occurrence, ..)| (*point, *occurrence) == (TextNormalizeOutput, 2) || *point == TextResultRetain)
+        .filter(|(point, occurrence, ..)| {
+            (*point, *occurrence) == (TextNormalizeOutput, 2) || *point == TextResultRetain
+        })
         .collect();
     assert_eq!(named.len(), 2);
     for (work, (point, _, outcome, results)) in [4, 5].into_iter().zip(named) {
@@ -215,7 +245,10 @@ fn tc_021_t12_scalar_and_unsigned_byte_lexicographic_order() {
             compare_text(ComparisonOperator::Less, &text("\u{7f}", TextProfile::BinaryUtf8), &text("\u{80}", TextProfile::BinaryUtf8), &mut Meter::new(UNLIMITED)),
         ]
     };
-    assert_eq!(less, [Ok(Outcome::Completed(true)), Ok(Outcome::Completed(true))]);
+    assert_eq!(
+        less,
+        [Ok(Outcome::Completed(true)), Ok(Outcome::Completed(true))]
+    );
     assert_eq!(payload("\u{80}").bytes(), [0xc2, 0x80]);
 }
 
@@ -235,11 +268,20 @@ fn tc_021_t14_non_normalizing_profiles_charge_no_normalization() {
         }};
         use ChargePoint::*;
         assert_eq!(exact.0, Ok(Outcome::Completed(false)));
-        assert_eq!(exact.1, [TextInputBytes, TextDecodeScalars, TextResultRetain]);
+        assert_eq!(
+            exact.1,
+            [TextInputBytes, TextDecodeScalars, TextResultRetain]
+        );
         assert_eq!(exact.2, T14);
         assert_eq!(
             short.0,
-            Ok(Outcome::Incomplete(incomplete(LimitKind::WorkUnits, 2, 2, int(1), TextResultRetain)))
+            Ok(Outcome::Incomplete(incomplete(
+                LimitKind::WorkUnits,
+                2,
+                2,
+                int(1),
+                TextResultRetain
+            )))
         );
     }
 }
@@ -258,12 +300,35 @@ fn tc_021_t16_length_refusal_follows_the_profile_charge_that_measures_it() {
     let nfd = [0, 0, 0, 3, 2, 2, 0, 1, 5, 1];
     let exact = run(E_COMBINING, NFD, nfd);
     assert_eq!(exact.0, refused);
-    assert_eq!(exact.1, [TextInputBytes, TextDecodeScalars, TextNormalizeInput, TextNormalizeOutput, TextNormalizeOutput]);
+    assert_eq!(
+        exact.1,
+        [
+            TextInputBytes,
+            TextDecodeScalars,
+            TextNormalizeInput,
+            TextNormalizeOutput,
+            TextNormalizeOutput
+        ]
+    );
     let mut short = nfd;
     short[5] = 1;
     let short = run(E_COMBINING, NFD, short);
-    assert_eq!(short.1, [TextInputBytes, TextDecodeScalars, TextNormalizeInput, TextNormalizeOutput]);
-    let expected = incomplete(LimitKind::NormalizedScalars, 1, 1, int(2), TextNormalizeOutput);
+    assert_eq!(
+        short.1,
+        [
+            TextInputBytes,
+            TextDecodeScalars,
+            TextNormalizeInput,
+            TextNormalizeOutput
+        ]
+    );
+    let expected = incomplete(
+        LimitKind::NormalizedScalars,
+        1,
+        1,
+        int(2),
+        TextNormalizeOutput,
+    );
     assert_eq!(short.0, Outcome::Incomplete(expected));
 
     let scalars = [0, 0, 0, 3, 2, 0, 0, 1, 2, 1];
@@ -273,7 +338,10 @@ fn tc_021_t16_length_refusal_follows_the_profile_charge_that_measures_it() {
     let mut short = scalars;
     short[4] = 1;
     let expected = incomplete(LimitKind::TextScalars, 1, 0, int(2), TextDecodeScalars);
-    assert_eq!(run(E_COMBINING, SCALARS, short).0, Outcome::Incomplete(expected));
+    assert_eq!(
+        run(E_COMBINING, SCALARS, short).0,
+        Outcome::Incomplete(expected)
+    );
 
     let binary = [0, 0, 0, 2, 0, 0, 0, 1, 1, 1];
     let exact = run(E_ACUTE, BINARY, binary);
@@ -286,7 +354,18 @@ fn tc_021_t16_length_refusal_follows_the_profile_charge_that_measures_it() {
 }
 
 const SEQUENCES: [&str; 12] = [
-    "", "a", "b", "ab", E_ACUTE, E_COMBINING, "\u{fb00}", "ff", "\u{7f}", "\u{80}", "\u{1e0a}\u{323}", "\u{1e0c}\u{307}",
+    "",
+    "a",
+    "b",
+    "ab",
+    E_ACUTE,
+    E_COMBINING,
+    "\u{fb00}",
+    "ff",
+    "\u{7f}",
+    "\u{80}",
+    "\u{1e0a}\u{323}",
+    "\u{1e0c}\u{307}",
 ];
 
 /// Trace: TC-021, FR-007-AC-4, FR-006-AC-4
@@ -302,7 +381,10 @@ fn tc_021_generated_profiles_operators_and_denials_agree() {
                         (metered(UNLIMITED, run), if o == 0 { denials(UNLIMITED, run) } else { Vec::new() })
                     }};
                     let exact = outcome.0 .0.unwrap().completed().unwrap();
-                    let (l, r) = (text(left, TextProfile::ALL[p]), text(right, TextProfile::ALL[p]));
+                    let (l, r) = (
+                        text(left, TextProfile::ALL[p]),
+                        text(right, TextProfile::ALL[p]),
+                    );
                     let ordering = if p == BINARY {
                         l.retained().as_bytes().cmp(r.retained().as_bytes())
                     } else {
@@ -318,7 +400,9 @@ fn tc_021_generated_profiles_operators_and_denials_agree() {
                     };
                     assert_eq!(exact, expected, "{left:?} {right:?} {p} {o}");
                     for (point, _, denied, results) in outcome.1 {
-                        assert!(matches!(denied, Ok(Outcome::Incomplete(ref record)) if record.charge_point == point));
+                        assert!(
+                            matches!(denied, Ok(Outcome::Incomplete(ref record)) if record.charge_point == point)
+                        );
                         assert_eq!(results, 0);
                     }
                     vectors += 1;
@@ -347,8 +431,12 @@ fn tc_021_generated_profiles_operators_and_denials_agree() {
                         }};
                         let operator = ComparisonOperator::ALL[o];
                         match outcome.0 {
-                            Err(IllTyped { cause: IllTypedCause::DistinctEnumDeclarations }) => assert_ne!(dl, dr),
-                            Err(IllTyped { cause: IllTypedCause::UnorderedEnumOrdering }) => {
+                            Err(IllTyped {
+                                cause: IllTypedCause::DistinctEnumDeclarations,
+                            }) => assert_ne!(dl, dr),
+                            Err(IllTyped {
+                                cause: IllTypedCause::UnorderedEnumOrdering,
+                            }) => {
                                 assert!(!lo && operator.is_ordering());
                                 assert!(outcome.1.is_empty());
                             }
@@ -356,7 +444,11 @@ fn tc_021_generated_profiles_operators_and_denials_agree() {
                                 assert_eq!(dl, dr);
                                 assert_eq!(
                                     outcome.1,
-                                    [ChargePoint::EnumIdentityRead, ChargePoint::EnumIdentityRead, ChargePoint::EnumResultRetain]
+                                    [
+                                        ChargePoint::EnumIdentityRead,
+                                        ChargePoint::EnumIdentityRead,
+                                        ChargePoint::EnumResultRetain
+                                    ]
                                 );
                             }
                             other => panic!("unexpected {other:?}"),
