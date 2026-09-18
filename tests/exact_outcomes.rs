@@ -1124,6 +1124,123 @@ fn tc_031_work_accounting_is_correct_before_and_after_the_injected_denial() {
     );
 }
 
+// ---- TC-031 / FR-010-AC-5 at the other `check_injected` caller: `Meter::charge_plan` ---------
+//
+// `check_injected` has exactly two callers (`src/exact/accounting.rs`): `Meter::charge` (driven
+// above at `ChargePoint::BooleanResultRetain`) and `Meter::charge_plan`, reached only through the
+// `equality.plan` charge (`src/exact/equality.rs:229`) with its `pairs + 2` reservation. No other
+// call site reaches `ChargePoint::EqualityPlan`, so injecting a denial there necessarily drives
+// `charge_plan`, never `charge` (issue #35).
+
+/// A `CheckedEquality` over two `Integer` operands, reusable across calls on one `Meter`.
+/// `plan_pairs` walks one leaf pair for two scalar `Integer` operands, so `pairs = 1` and the
+/// `equality.plan` reservation `charge_plan` checks availability against is `pairs + 2 = 3`.
+fn checked_int_equality() -> impl Fn(&mut Meter) -> Outcome<bool> {
+    let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
+    let checked = env
+        .check_equality(
+            EqualityOperator::Equal,
+            EqualityOperand::typed(ValueType::Integer),
+            EqualityOperand::typed(ValueType::Integer),
+        )
+        .unwrap();
+    move |meter: &mut Meter| {
+        checked.evaluate(&Value::Integer(int(3)), &Value::Integer(int(3)), meter)
+    }
+}
+
+/// Trace: TC-031, FR-010-AC-5
+///
+/// The outcomes half of the `charge_plan` sweep: an injected denial at `equality.plan` fires
+/// exactly once, through `charge_plan`, and a further `equality.plan` charge under the same
+/// limits meters normally rather than being injected-denied again.
+#[test]
+fn tc_031_further_charge_plan_calls_after_the_injected_denial_meter_normally() {
+    let equality = checked_int_equality();
+    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
+        point: ChargePoint::EqualityPlan,
+        occurrence: NonZeroU64::new(1).unwrap(),
+    });
+
+    // Occurrence one: the injection fires at `equality.plan`, so this whole equality returns
+    // `Incomplete`, never reaching `equality.pair`/`equality.result-retain`. `equality.plan-form`
+    // admits first (its own work amount is `occ(left) + occ(right) = 1 + 1 = 2` for two scalar
+    // `Integer` operands), so `limit = consumed = 2`; `next_charge` is the `pairs + 2 = 3`
+    // reservation `charge_plan` checked availability against, not the one work unit a real charge
+    // here would commit.
+    let fired = expect_incomplete(equality(&mut meter));
+    assert_eq!(
+        fired,
+        Incomplete {
+            limit_kind: LimitKind::WorkUnits,
+            limit: 2,
+            consumed: 2,
+            next_charge: int(3),
+            charge_point: ChargePoint::EqualityPlan,
+        }
+    );
+
+    // Further `equality.plan` charges, under the same generous limits, must meter normally now
+    // that the one injected denial has fired: the whole equality completes both times.
+    assert_eq!(equality(&mut meter), Outcome::Completed(true));
+    assert_eq!(equality(&mut meter), Outcome::Completed(true));
+}
+
+/// Trace: TC-031, FR-010-AC-5
+///
+/// The reservation half of the `charge_plan` sweep, checking the counters directly rather than
+/// the outcome. FR-010's `equality.plan` bullet: `charge_plan` checks availability against
+/// `pairs + 2` before admitting anything, but "on success it commits only its own single work
+/// unit, the same as any other charge." The denied call commits nothing at all (FR-010's Outputs:
+/// "No change to any counter"), so the `pairs + 2` it merely checked against must leave no trace:
+/// a second `equality.plan` charge right after it must see the same remaining `work_units`
+/// capacity it would have seen had the first `equality.plan` charge never been attempted, not a
+/// capacity already reduced by the denied reservation.
+///
+/// The limit below is the exact minimum a full call needs once the first call's `equality.plan`
+/// is denied: call 1's `equality.plan-form` (2) + call 2's `equality.plan-form` (2) + call 2's
+/// `equality.plan` commit (1) + call 2's `equality.pair` (1) + call 2's `equality.result-retain`
+/// (1) = 7, with call 2's own `equality.plan` reservation check (`pairs + 2 = 3`) landing on
+/// exactly 3 remaining (`7 - 4`) at that point. If the denied reservation had leaked into
+/// `consumed`, or been double-reserved across calls, call 2's reservation check would see less
+/// than 3 remaining and be denied for real — not injected — insufficient work, and this test
+/// would fail.
+#[test]
+fn tc_031_charge_plan_reservation_is_unaffected_by_the_injected_denial() {
+    let equality = checked_int_equality();
+    let mut meter = Meter::new(limits_with_work(7)).with_injected_denial(InjectedDenial {
+        point: ChargePoint::EqualityPlan,
+        occurrence: NonZeroU64::new(1).unwrap(),
+    });
+
+    let fired = expect_incomplete(equality(&mut meter));
+    assert_eq!(fired.charge_point, ChargePoint::EqualityPlan);
+    // The denied `charge_plan` call commits nothing beyond what `equality.plan-form` already
+    // admitted before the reservation check ran: `work_units` is still 2, not `2 + 3` (the
+    // reservation) and not `2 + 1` (what a real charge here would commit).
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 2);
+
+    // A second `equality.plan` charge, on the tight limit computed above, succeeds in full: the
+    // first call's denied reservation left no trace on the meter's remaining capacity.
+    assert_eq!(equality(&mut meter), Outcome::Completed(true));
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 7);
+    assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
+
+    // Exactly the charges admitted charges are logged: call 1's `equality.plan-form` (its
+    // `equality.plan` was denied and injected-denials never log), then call 2's full schedule.
+    // The denied `equality.plan` never appears.
+    assert_eq!(
+        meter.admitted_charges(),
+        &[
+            ChargePoint::EqualityPlanForm,
+            ChargePoint::EqualityPlanForm,
+            ChargePoint::EqualityPlan,
+            ChargePoint::EqualityPair,
+            ChargePoint::EqualityResultRetain,
+        ]
+    );
+}
+
 /// Trace: TC-031, FR-010-AC-6
 ///
 /// The behavioral half of FR-010-AC-6 (a zero `occurrence` is a compile error, not a runtime
