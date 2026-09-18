@@ -4,6 +4,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
+use std::num::NonZeroU64;
 use std::path::Path;
 
 use quire_contract_runtime::exact::{
@@ -293,7 +294,7 @@ fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
     for (work, point) in (0_u64..).zip(points) {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::new(1).unwrap(),
         });
         let outcome =
             evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(-9)), None, &mut meter);
@@ -318,7 +319,7 @@ fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
     // A second occurrence is denied only on its second charge.
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::BooleanResultRetain,
-        occurrence: 2,
+        occurrence: NonZeroU64::new(2).unwrap(),
     });
     assert_eq!(
         evaluate_boolean(BooleanConnective::Not(false), &mut meter),
@@ -831,7 +832,7 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() 
     for (point, drive) in drivers {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::new(1).unwrap(),
         });
         let record = drive(&mut meter);
         assert_eq!(record.limit_kind, LimitKind::WorkUnits, "{point:?}");
@@ -889,7 +890,7 @@ fn tc_031_injected_record_is_independent_of_the_configured_work_units_limit() {
     let point = ChargePoint::IntegerArithmeticResultRetain;
     let denial = InjectedDenial {
         point,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     };
     let mut low = Meter::new(limits_with_work(5)).with_injected_denial(denial);
     let mut high = Meter::new(limits_with_work(500)).with_injected_denial(denial);
@@ -946,7 +947,7 @@ fn tc_031_injected_denial_takes_precedence_over_a_genuinely_short_counter() {
     // record wins: `WorkUnits`, never the real `IntegerBits` shortfall.
     let mut meter = Meter::new(short).with_injected_denial(InjectedDenial {
         point: ChargePoint::IntegerArithmeticOperands,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let injected = expect_incomplete(evaluate_integer_arithmetic(
         IntegerArithmetic::Negate(&int(-9)),
@@ -973,7 +974,7 @@ fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
     tuple[0] = 10; // integer_bits: room for a 4-bit operand, not a 20-bit one.
     let mut meter = Meter::new(limits(tuple)).with_injected_denial(InjectedDenial {
         point: ChargePoint::IntegerArithmeticOperands,
-        occurrence: 2,
+        occurrence: NonZeroU64::new(2).unwrap(),
     });
 
     // A charge at another point never advances the injected point's
@@ -1045,7 +1046,7 @@ fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
 fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::BooleanResultRetain,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let fired = evaluate_boolean(BooleanConnective::Not(false), &mut meter);
     assert_eq!(

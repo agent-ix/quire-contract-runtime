@@ -3,6 +3,7 @@
 #![cfg(feature = "exact")]
 
 use std::cell::RefCell;
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
@@ -136,7 +137,7 @@ fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
             .unwrap()
             .completed()
             .unwrap();
-        let Value::Collection(collection) = outcome else {
+        let Value::Collection(collection) = &outcome else {
             panic!("expected a collection value")
         };
         let observed: Vec<i128> = collection
@@ -265,7 +266,7 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
     .unwrap()
     .completed()
     .unwrap();
-    let Value::Collection(a) = a else {
+    let Value::Collection(a) = &a else {
         panic!("expected a collection")
     };
     assert_eq!(ranks_of(a.elements()), vec![0, 1, 2]);
@@ -276,13 +277,14 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
         .unwrap()
         .completed()
         .unwrap();
-    let Value::Collection(b) = b else {
+    let Value::Collection(b) = &b else {
         panic!("expected a collection")
     };
     assert_eq!(ranks_of(b.elements()), ranks_of(a.elements()));
 }
 
-/// Trace: TC-025, FR-008-AC-4 (the iterative task-stack walk)
+/// Trace: TC-025, FR-008-AC-4 (the iterative task-stack walk), FR-008-AC-9 (the deep values'
+/// normal, iterative `Drop` at scope end)
 #[test]
 fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     const DEPTH: u64 = 100_000;
@@ -377,7 +379,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
 
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CollectionElement,
-        occurrence: 1,
+        occurrence: NonZeroU64::new(1).unwrap(),
     });
     let before = consumed(&meter);
     let elements: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
@@ -423,7 +425,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     ] {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::new(1).unwrap(),
         });
         let outcome = form_collection(
             &collection_type,

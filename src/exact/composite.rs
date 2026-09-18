@@ -14,11 +14,13 @@
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
+use core::mem;
 
 use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
 use super::collection::{CollectionKind, CollectionType, CollectionValue};
@@ -123,7 +125,13 @@ impl ValueType {
 /// A completed complete-V1 value. It deliberately has no structural
 /// `PartialEq`: equality is the quire-specification/FR-149 relation of
 /// [`CheckedEquality::evaluate`](super::CheckedEquality::evaluate).
-#[derive(Clone, Debug)]
+///
+/// `Debug` (below) and `Drop` (further below) are both hand-written and iterative: a value chain
+/// nested as deep as a package's declared recursion bound allows must never recurse the host
+/// stack to format or to free, because on the governed `thumbv7em-none-eabi` target a stack
+/// overflow is silent memory corruption, not a panic (see the module-level invariant in
+/// `src/exact/mod.rs`).
+#[derive(Clone)]
 pub enum Value {
     /// A Boolean.
     Boolean(bool),
@@ -170,6 +178,318 @@ impl Value {
             | Self::Enum(_)
             | Self::Reference(_) => Integer::one(),
         }
+    }
+}
+
+impl fmt::Debug for Value {
+    /// Renders the same output `#[derive(Debug)]` would have, but iteratively. Builds each
+    /// contained `Value`'s rendering from the leaves up over an explicit worklist, then composes
+    /// a container's own rendering from its already-rendered children using the same field names
+    /// and derive-equivalent builders (`debug_tuple`, `debug_struct`) that produce the identical
+    /// bracket, comma and indentation conventions `#[derive(Debug)]` used to emit — so this is a
+    /// byte-identical, non-recursive replacement, not a different format.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&render_value(self, f.alternate()))
+    }
+}
+
+/// Wraps an already-rendered `Debug` string so a `debug_*` builder writes it verbatim instead of
+/// trying to format the (already-consumed) original value.
+struct Rendered<'a>(&'a str);
+
+impl fmt::Debug for Rendered<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.0)
+    }
+}
+
+fn render_one(alternate: bool, value: impl fmt::Debug) -> String {
+    if alternate {
+        format!("{value:#?}")
+    } else {
+        format!("{value:?}")
+    }
+}
+
+/// Renders `root`'s `Debug` output bottom-up over an explicit worklist: a value with no nested
+/// `Value` (every variant but `Option`, `Composite` and `Collection`) is rendered directly by its
+/// own (depth-independent) `Debug`; a container is only composed once every direct child's
+/// rendering is ready, so no step recurses with the tree's nesting depth. `Task`'s `Compose*`
+/// variants are typed per container, not `&Value`, so every match on `Task` here is exhaustive
+/// with no catch-all arm standing in for "cannot happen" — this crate's governed target treats a
+/// stack overflow as silent corruption, so nothing in `src/exact` may carry a panic path at all,
+/// not even the "this state cannot occur" macro.
+fn render_value(root: &Value, alternate: bool) -> String {
+    enum Task<'a> {
+        Render(&'a Value),
+        ComposeOption(&'a OptionValue),
+        ComposeComposite(&'a CompositeValue),
+        ComposeCollection(&'a CollectionValue),
+    }
+
+    let mut tasks = vec![Task::Render(root)];
+    let mut rendered: Vec<String> = Vec::new();
+    while let Some(task) = tasks.pop() {
+        match task {
+            Task::Render(Value::Option(option)) => {
+                tasks.push(Task::ComposeOption(option));
+                if let Some(payload) = option.payload.as_ref() {
+                    tasks.push(Task::Render(payload));
+                }
+            }
+            Task::Render(Value::Composite(composite)) => {
+                tasks.push(Task::ComposeComposite(composite));
+                for slot in composite.slots.iter().rev() {
+                    if let FieldValue::Present(nested) = slot {
+                        tasks.push(Task::Render(nested));
+                    }
+                }
+            }
+            Task::Render(Value::Collection(collection)) => {
+                tasks.push(Task::ComposeCollection(collection));
+                for element in collection.elements().iter().rev() {
+                    tasks.push(Task::Render(element));
+                }
+            }
+            Task::Render(leaf) => rendered.push(render_leaf(leaf, alternate)),
+            Task::ComposeOption(option) => {
+                // `rendered.pop()` already yields `Option<String>`; only call it when a payload
+                // `Render` task ran immediately before this one, so a leftover, unrelated
+                // rendering is never mistaken for this option's payload.
+                let payload = option.payload.as_ref().and_then(|_| rendered.pop());
+                rendered.push(compose_option(option, payload, alternate));
+            }
+            Task::ComposeComposite(composite) => {
+                let present = composite
+                    .slots
+                    .iter()
+                    .filter(|slot| matches!(slot, FieldValue::Present(_)))
+                    .count();
+                let split_at = rendered.len().saturating_sub(present);
+                let children = rendered.split_off(split_at);
+                rendered.push(compose_composite(composite, children, alternate));
+            }
+            Task::ComposeCollection(collection) => {
+                let split_at = rendered.len().saturating_sub(collection.elements().len());
+                let children = rendered.split_off(split_at);
+                rendered.push(compose_collection(collection, children, alternate));
+            }
+        }
+    }
+    rendered.pop().unwrap_or_default()
+}
+
+/// Renders one of the variants that never nests another `Value`, exactly as
+/// `#[derive(Debug)]`'s tuple-variant rendering would (`Name(<field>)`). Only ever called on a
+/// leaf variant (every [`render_value`] call site already matched `Option`, `Composite` and
+/// `Collection` separately), but still total: an unreached container arm renders empty text
+/// rather than needing a `match` this crate's no-panic-path rule forbids from claiming is
+/// unreachable.
+fn render_leaf(value: &Value, alternate: bool) -> String {
+    struct Tuple1<'a, T>(&'static str, &'a T);
+    impl<T: fmt::Debug> fmt::Debug for Tuple1<'_, T> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_tuple(self.0).field(self.1).finish()
+        }
+    }
+    match value {
+        Value::Boolean(v) => render_one(alternate, Tuple1("Boolean", v)),
+        Value::Integer(v) => render_one(alternate, Tuple1("Integer", v)),
+        Value::Rational(v) => render_one(alternate, Tuple1("Rational", v)),
+        Value::Decimal(v) => render_one(alternate, Tuple1("Decimal", v)),
+        Value::Float(v) => render_one(alternate, Tuple1("Float", v)),
+        Value::Quantity(v) => render_one(alternate, Tuple1("Quantity", v)),
+        Value::Text(v) => render_one(alternate, Tuple1("Text", v)),
+        Value::Enum(v) => render_one(alternate, Tuple1("Enum", v)),
+        Value::Reference(v) => render_one(alternate, Tuple1("Reference", v)),
+        Value::Option(_) | Value::Composite(_) | Value::Collection(_) => String::new(),
+    }
+}
+
+/// Renders `Name(<inner>)`, matching `#[derive(Debug)]`'s rendering of a single-field tuple
+/// variant whose field is already-rendered text rather than a live value.
+fn wrap_tuple1(name: &str, inner: &str, alternate: bool) -> String {
+    struct Wrap<'a>(&'a str, &'a str);
+    impl fmt::Debug for Wrap<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_tuple(self.0).field(&Rendered(self.1)).finish()
+        }
+    }
+    render_one(alternate, Wrap(name, inner))
+}
+
+fn compose_option(option: &OptionValue, payload: Option<String>, alternate: bool) -> String {
+    struct Repr<'a> {
+        payload_type: &'a ValueType,
+        payload: &'a Option<Rendered<'a>>,
+        occ: &'a Integer,
+    }
+    impl fmt::Debug for Repr<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("OptionValue")
+                .field("payload_type", self.payload_type)
+                .field("payload", self.payload)
+                .field("occ", self.occ)
+                .finish()
+        }
+    }
+    let payload_rendered = payload.as_deref().map(Rendered);
+    let inner = render_one(
+        alternate,
+        Repr {
+            payload_type: &option.payload_type,
+            payload: &payload_rendered,
+            occ: &option.occ,
+        },
+    );
+    wrap_tuple1("Option", &inner, alternate)
+}
+
+fn compose_composite(composite: &CompositeValue, children: Vec<String>, alternate: bool) -> String {
+    enum SlotRepr<'a> {
+        Present(Rendered<'a>),
+        Absent,
+        Null,
+    }
+    impl fmt::Debug for SlotRepr<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Self::Present(rendered) => f.debug_tuple("Present").field(rendered).finish(),
+                Self::Absent => write!(f, "Absent"),
+                Self::Null => write!(f, "Null"),
+            }
+        }
+    }
+
+    let mut next_child = children.iter();
+    let slot_reprs: Vec<SlotRepr<'_>> = composite
+        .slots
+        .iter()
+        .map(|slot| match slot {
+            // One rendering was pushed per `Present` slot before this call (see
+            // `Task::ComposeComposite`), but degrade to an empty string rather than reach for a
+            // panicking accessor: no path in `src/exact` may carry one, per the module's own
+            // invariant (`src/exact/mod.rs`).
+            FieldValue::Present(_) => {
+                SlotRepr::Present(Rendered(next_child.next().map_or("", String::as_str)))
+            }
+            FieldValue::Absent => SlotRepr::Absent,
+            FieldValue::Null => SlotRepr::Null,
+        })
+        .collect();
+
+    struct Repr<'a> {
+        declaration: NodeKey,
+        slots: &'a [SlotRepr<'a>],
+        occ: &'a Integer,
+    }
+    impl fmt::Debug for Repr<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("CompositeValue")
+                .field("declaration", &self.declaration)
+                .field("slots", &self.slots)
+                .field("occ", self.occ)
+                .finish()
+        }
+    }
+    let inner = render_one(
+        alternate,
+        Repr {
+            declaration: composite.declaration,
+            slots: &slot_reprs,
+            occ: &composite.occ,
+        },
+    );
+    wrap_tuple1("Composite", &inner, alternate)
+}
+
+fn compose_collection(
+    collection: &CollectionValue,
+    children: Vec<String>,
+    alternate: bool,
+) -> String {
+    let rendered_children: Vec<Rendered<'_>> = children
+        .iter()
+        .map(|child| Rendered(child.as_str()))
+        .collect();
+    struct Repr<'a> {
+        collection_type: &'a CollectionType,
+        elements: &'a [Rendered<'a>],
+        occ: &'a Integer,
+    }
+    impl fmt::Debug for Repr<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("CollectionValue")
+                .field("collection_type", self.collection_type)
+                .field("elements", &self.elements)
+                .field("occ", self.occ)
+                .finish()
+        }
+    }
+    let inner = render_one(
+        alternate,
+        Repr {
+            collection_type: collection.collection_type(),
+            elements: &rendered_children,
+            occ: collection.occ(),
+        },
+    );
+    wrap_tuple1("Collection", &inner, alternate)
+}
+
+impl Drop for Value {
+    /// Drains this value's owned nested `Value`s into an explicit worklist rather than letting
+    /// the compiler-generated glue recurse with the chain's nesting depth, for the same reason
+    /// `Debug` above is iterative: on the governed `thumbv7em-none-eabi` target a stack overflow
+    /// is silent memory corruption, not a panic.
+    fn drop(&mut self) {
+        let mut worklist: Vec<Value> = Vec::new();
+        drain_children(self, &mut worklist);
+        while let Some(mut next) = worklist.pop() {
+            drain_children(&mut next, &mut worklist);
+            // `next` drops here. Its own owned children were just drained onto `worklist`, so
+            // this nested call back into `Value::drop` finds nothing left to walk: O(1).
+        }
+    }
+}
+
+/// Moves `value`'s directly owned nested `Value`s onto `worklist`, if `value` is the sole owner
+/// of its `Rc`. A shared `Rc` (strong count > 1) is left untouched: dropping this `Value` only
+/// decrements the refcount, and the contents are still reachable through the other owner.
+fn drain_children(value: &mut Value, worklist: &mut Vec<Value>) {
+    match value {
+        Value::Option(rc) => {
+            if let Some(inner) = Rc::get_mut(rc) {
+                if let Some(payload) = inner.payload.take() {
+                    worklist.push(payload);
+                }
+            }
+        }
+        Value::Composite(rc) => {
+            if let Some(inner) = Rc::get_mut(rc) {
+                for slot in Vec::from(mem::take(&mut inner.slots)) {
+                    if let FieldValue::Present(nested) = slot {
+                        worklist.push(nested);
+                    }
+                }
+            }
+        }
+        Value::Collection(rc) => {
+            if let Some(inner) = Rc::get_mut(rc) {
+                for nested in Vec::from(inner.take_elements()) {
+                    worklist.push(nested);
+                }
+            }
+        }
+        Value::Boolean(_)
+        | Value::Integer(_)
+        | Value::Rational(_)
+        | Value::Decimal(_)
+        | Value::Float(_)
+        | Value::Quantity(_)
+        | Value::Text(_)
+        | Value::Enum(_)
+        | Value::Reference(_) => {}
     }
 }
 

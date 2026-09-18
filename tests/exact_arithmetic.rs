@@ -9,6 +9,7 @@
 #![cfg(feature = "exact")]
 
 use std::cmp::Ordering;
+use std::num::NonZeroU64;
 
 use quire_contract_runtime::exact::{
     evaluate_boolean, evaluate_integer_arithmetic, evaluate_rational_arithmetic, order_numbers,
@@ -93,7 +94,7 @@ fn assert_named_denials<T: std::fmt::Debug + PartialEq>(run: impl Fn(&mut Meter)
             .count();
         let mut denied = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point: *point,
-            occurrence: u64::try_from(occurrence).unwrap(),
+            occurrence: NonZeroU64::new(u64::try_from(occurrence).unwrap()).unwrap(),
         });
         let work = u64::try_from(index).unwrap();
         assert_eq!(
@@ -1067,7 +1068,7 @@ fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
     // An injected denial still counts occurrences past the log.
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::BooleanResultRetain,
-        occurrence: total,
+        occurrence: NonZeroU64::new(total).unwrap(),
     });
     for _ in 1..total {
         assert!(evaluate_boolean(BooleanConnective::Not(false), &mut meter)

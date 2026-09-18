@@ -54,8 +54,8 @@ MUTATIONS = (
     ),
     (
         "src/operators.rs",
-        "    left && right()\n",
-        "    false\n",
+        "        R::from(false)\n",
+        "        R::from(true)\n",
         "tc_002_boolean_truth_tables",
         "TC-002",
     ),

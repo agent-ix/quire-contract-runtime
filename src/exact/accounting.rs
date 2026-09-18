@@ -7,6 +7,8 @@
 //! unavailable counter, in `ScalarLimitsV1` field order, returns
 //! [`Incomplete`] and nothing is consumed.
 
+use core::num::NonZeroU64;
+
 use alloc::vec::Vec;
 
 use super::integer::Integer;
@@ -397,12 +399,27 @@ pub struct Incomplete {
 
 /// An quire-specification/NFR-071 fault-injection request: deny the `occurrence`th (1-based) charge
 /// at `point`.
+///
+/// `occurrence` is `NonZeroU64`, so the malformed 0-based request cannot be written at all:
+///
+/// ```compile_fail
+/// use quire_contract_runtime::exact::{ChargePoint, InjectedDenial};
+///
+/// let _ = InjectedDenial {
+///     point: ChargePoint::BooleanResultRetain,
+///     occurrence: 0,
+/// };
+/// ```
+// Implements: FR-010
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct InjectedDenial {
     /// The named point to deny.
     pub point: ChargePoint,
-    /// Which occurrence of that point to deny, starting at one.
-    pub occurrence: u64,
+    /// Which occurrence of that point to deny, starting at one. `NonZeroU64` makes the malformed,
+    /// 0-based request unrepresentable rather than a silent no-op: `occurrence` is documented as
+    /// 1-based, and a plain `u64` let `0` compile and match no charge, ever, so a caller believed
+    /// it had injected a denial that never fired.
+    pub occurrence: NonZeroU64,
 }
 
 /// One exact `{ counter: amount }` charge vector.
@@ -527,7 +544,7 @@ impl Meter {
         match self.denial {
             Some(denial)
                 if denial.point == point
-                    && self.denial_point_seen.checked_add(1) == Some(denial.occurrence) =>
+                    && self.denial_point_seen.checked_add(1) == Some(denial.occurrence.get()) =>
             {
                 let consumed = self.consumed(LimitKind::WorkUnits);
                 Err(Incomplete {

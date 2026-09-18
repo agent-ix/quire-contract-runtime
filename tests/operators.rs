@@ -134,6 +134,58 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
     assert_eq!(sequence.get(), 2);
 }
 
+/// `and_short_circuit`/`or_short_circuit`/`implies_short_circuit` are generic over what `right`
+/// returns (`R: From<bool>`): a plain `bool` for an ordinary generated expression, or a
+/// stop-carrying type such as `exact::Outcome<bool>` when the right operand may itself be
+/// undefined, refused or incomplete. `quire-contract-codegen`'s oracle renderer calls these three
+/// functions by name for `BooleanOperator::ShortCircuitAnd`/`ShortCircuitOr`/`Implication`
+/// (`agent-ix/quire-contract-runtime#27`), so this crate must be able to carry a stop through them
+/// without the caller deciding it outside the connective.
+///
+/// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
+#[cfg(feature = "exact")]
+#[test]
+fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {
+    use quire_contract_runtime::exact::{Outcome, Refusal};
+
+    let stop: Outcome<bool> = Outcome::Refused(Refusal::InexactDecimal);
+
+    // The right operand decides the result and stops: the stop returns unchanged.
+    assert_eq!(and_short_circuit(true, || stop.clone()), stop);
+    assert_eq!(or_short_circuit(false, || stop.clone()), stop);
+    assert_eq!(implies_short_circuit(true, || stop.clone()), stop);
+
+    // The left operand alone decides the result: the right thunk is never called, so the stop it
+    // would have produced can never arise.
+    let calls = Cell::new(0);
+    let right = || {
+        calls.set(calls.get() + 1);
+        stop.clone()
+    };
+    assert_eq!(and_short_circuit(false, right), Outcome::Completed(false));
+    assert_eq!(or_short_circuit(true, right), Outcome::Completed(true));
+    assert_eq!(
+        implies_short_circuit(false, right),
+        Outcome::Completed(true)
+    );
+    assert_eq!(calls.get(), 0);
+
+    // The right operand decides the result and completes: the plain bool it produces propagates
+    // unchanged, wrapped as a completed outcome.
+    assert_eq!(
+        and_short_circuit(true, || Outcome::Completed(false)),
+        Outcome::Completed(false)
+    );
+    assert_eq!(
+        or_short_circuit(false, || Outcome::Completed(true)),
+        Outcome::Completed(true)
+    );
+    assert_eq!(
+        implies_short_circuit(true, || Outcome::Completed(false)),
+        Outcome::Completed(false)
+    );
+}
+
 /// Trace: TC-003, FR-002-AC-3, NFR-002-AC-1
 #[test]
 fn tc_003_definedness_boundaries_do_not_panic() {

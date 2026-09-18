@@ -2,6 +2,8 @@
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use std::num::NonZeroU64;
+
 use quire_contract_runtime::exact::{
     admit_text, CardinalityBound, ChargePoint, CollectionKind, CollectionType, Component,
     CompositeDeclaration, CompositeShape, ConstructionCause, ConstructionRefusal, DecimalType,
@@ -548,7 +550,7 @@ fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
     for (point, expected_consumed, next_charge) in cases {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::new(1).unwrap(),
         });
         let outcome = checked.evaluate(&int_value(1), &int_value(1), &mut meter);
         let Outcome::Incomplete(record) = outcome else {

@@ -17,6 +17,7 @@
 //!    [`Quantity`] over a [`UnitGraph`];
 //! 2. explicit operation tables: [`evaluate_integer_arithmetic`],
 //!    [`evaluate_rational_arithmetic`], [`order_numbers`], [`evaluate_boolean`],
+//!    [`evaluate_boolean_short_circuit`],
 //!    [`evaluate_decimal`], [`divide`] and
 //!    [`modulo`], [`evaluate_ieee`], [`compare_ieee`], [`convert_ieee_width`],
 //!    [`ieee_to_exact`], [`exact_to_ieee`], [`admit_text`], [`compare_text`],
@@ -43,16 +44,16 @@
 //! operation, panic path or ambient effect exists on any semantic path.
 //!
 //! Every algorithm that walks a [`Value`] (the canonical key, the equality
-//! occurrence-pair plan, collection membership and coalescing, and containment
-//! graph construction) is iterative over an explicit worklist, so value depth
-//! never reaches the host stack there. Two paths are exceptions: the derived
-//! [`Debug`](core::fmt::Debug) on [`Value`] and the implicit `Drop` glue of its
-//! [`alloc::rc::Rc`] chain both recurse with the value's nesting depth, the
-//! same shape the authority has. In practice, depth is bounded only by the
-//! deployment's `value_occurrences` limit; a generous limit admits a nesting
-//! deep enough to overflow the host stack on `Debug` or `Drop`, which is
-//! silent corruption rather than a panic on the governed
-//! `thumbv7em-none-eabi` target, so `make audit-panic` cannot see it.
+//! occurrence-pair plan, collection membership and coalescing, containment
+//! graph construction, and [`Value`]'s own hand-written
+//! [`Debug`](core::fmt::Debug) and `Drop`) is iterative over an explicit
+//! worklist, so value depth never reaches the host stack. In practice, depth
+//! is bounded only by the deployment's `value_occurrences` limit; a generous
+//! limit admits a nesting deep enough that a *recursive* walk would overflow
+//! the host stack, which is silent corruption rather than a panic on the
+//! governed `thumbv7em-none-eabi` target, so `make audit-panic` cannot see
+//! it — which is why `Debug` and `Drop` are hand-written rather than derived,
+//! the same as every other value-walking algorithm here.
 //! [`Value`] shares nested composite and collection values through
 //! [`alloc::rc::Rc`], never `Arc`: this crate has no concurrency and no
 //! `target_has_atomic` requirement. A closed
@@ -125,8 +126,9 @@ pub use integer::{
 };
 pub use node::{InvalidSemanticGraph, NodeKey, SemanticGraphCause, NODE_KEY_DOMAIN};
 pub use numeric::{
-    evaluate_boolean, evaluate_integer_arithmetic, evaluate_rational_arithmetic, order_numbers,
-    BooleanConnective, IntegerArithmetic, OrderedOperands, OrderingOperator, RationalArithmetic,
+    evaluate_boolean, evaluate_boolean_short_circuit, evaluate_integer_arithmetic,
+    evaluate_rational_arithmetic, order_numbers, BooleanConnective, IntegerArithmetic,
+    OrderedOperands, OrderingOperator, RationalArithmetic, ShortCircuitConnective,
 };
 pub use outcome::{BoundViolation, Outcome, Refusal, Undefined};
 pub use quantity::{

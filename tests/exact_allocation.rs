@@ -9,6 +9,7 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
+use std::num::NonZeroU64;
 
 use quire_contract_runtime::exact::{
     divide, evaluate_decimal, evaluate_integer_arithmetic, evaluate_rational_arithmetic, modulo,
@@ -314,7 +315,7 @@ fn tc_018_division_arithmetic_is_charged_before_the_quotient_exists() {
     let deny_arithmetic = |point| {
         Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::new(1).unwrap(),
         })
     };
     let mut meter = deny_arithmetic(ChargePoint::IntegerDivisionArithmetic);

@@ -18,6 +18,7 @@ use alloc::vec::Vec;
 use core::cell::Cell;
 use core::cmp::Ordering;
 use core::fmt;
+use core::mem;
 
 use super::accounting::{length_amount, Charge, ChargePoint, LimitKind, Meter};
 use super::composite::{
@@ -174,6 +175,13 @@ impl CollectionValue {
     /// `occ` of the collection.
     pub(crate) fn occ(&self) -> &Integer {
         &self.occ
+    }
+
+    /// Takes the elements, leaving an empty collection behind. Used only by [`Value`]'s
+    /// iterative `Drop` to drain a sole-owned collection's contents onto a worklist without
+    /// recursing the host stack; never call this on a value still reachable any other way.
+    pub(crate) fn take_elements(&mut self) -> Box<[Value]> {
+        mem::take(&mut self.elements)
     }
 }
 
