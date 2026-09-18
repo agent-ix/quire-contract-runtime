@@ -8,13 +8,13 @@
 use std::cmp::Ordering;
 
 use quire_contract_runtime::exact::{
-    convert_ieee_width, divide, evaluate_decimal, evaluate_ieee, evaluate_ordering,
-    evaluate_quantity, evaluate_rational, ieee_to_exact, modulo, ChargePoint, Decimal,
-    DecimalOperation, DecimalType, DivisionProfile, IeeeExactTarget, IeeeFlag, IeeeOperation,
-    IeeeValue, IeeeWidth, IllTypedCause, Integer, IntegerDomain, IntegerInterval, LimitKind, Meter,
-    NodeKey, OrderingOperands, OrderingOperator, Outcome, Quantity, QuantityOperation,
-    QuantityUnit, Rational, RationalDomain, RationalOperation, Refusal, RoundingMode, ScalarLimits,
-    UnitDeclaration, UnitGraph,
+    convert_ieee_width, divide, evaluate_decimal, evaluate_ieee, evaluate_quantity,
+    evaluate_rational_arithmetic, ieee_to_exact, modulo, order_numbers, ChargePoint, Decimal,
+    DecimalOperation, DecimalType, DivisionProfile, IeeeExactLoss, IeeeExactTarget, IeeeFlag,
+    IeeeOperation, IeeeValue, IeeeWidth, IllTypedCause, Integer, IntegerDomain, IntegerInterval,
+    LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator, Outcome, Quantity,
+    QuantityOperation, QuantityUnit, Rational, RationalArithmetic, RationalDomain, Refusal,
+    RoundingMode, ScalarLimits, UnitDeclaration, UnitGraph,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -267,8 +267,8 @@ fn tc_034_ieee_negative_and_positive_zero_convert_to_equal_exact_value() {
         exact_positive.value(),
         &Rational::from_integer(Integer::zero())
     );
-    assert!(!exact_positive.discarded_negative_zero());
-    assert!(exact_negative.discarded_negative_zero());
+    assert_eq!(exact_positive.loss(), None);
+    assert_eq!(exact_negative.loss(), Some(IeeeExactLoss::NegativeZeroSign));
 }
 
 /// Trace: TC-034, FR-007-AC-9
@@ -320,8 +320,11 @@ fn tc_034_rational_domain_excludes_one_third_by_denominator_interval() {
     .unwrap();
     assert!(!domain.contains(&ratio(1, 3)));
 
-    let refused = evaluate_rational(
-        RationalOperation::IntegerDivide(&int(1), &int(3)),
+    let refused = evaluate_rational_arithmetic(
+        RationalArithmetic::Divide(
+            &Rational::from_integer(int(1)),
+            &Rational::from_integer(int(3)),
+        ),
         Some(&domain),
         &mut Meter::new(UNLIMITED),
     );
@@ -329,8 +332,11 @@ fn tc_034_rational_domain_excludes_one_third_by_denominator_interval() {
 
     // The identical operation with no result domain performs no membership
     // decision at all and retains the result.
-    let retained = evaluate_rational(
-        RationalOperation::IntegerDivide(&int(1), &int(3)),
+    let retained = evaluate_rational_arithmetic(
+        RationalArithmetic::Divide(
+            &Rational::from_integer(int(1)),
+            &Rational::from_integer(int(3)),
+        ),
         None,
         &mut Meter::new(UNLIMITED),
     );
@@ -378,15 +384,15 @@ fn tc_034_decimal_value_equality_is_normalized_but_charges_are_retained() {
     assert_eq!(retained_wide.compare(&retained_narrow), Ordering::Equal);
     assert!(retained_wide.numerically_equal(&retained_narrow));
 
-    let less = evaluate_ordering(
+    let less = order_numbers(
         OrderingOperator::Less,
-        OrderingOperands::Decimal(&retained_wide, &retained_narrow),
+        OrderedOperands::Decimals(&retained_wide, &retained_narrow),
         &mut Meter::new(UNLIMITED),
     );
     assert_eq!(less, Outcome::Completed(false));
-    let greater = evaluate_ordering(
+    let greater = order_numbers(
         OrderingOperator::Greater,
-        OrderingOperands::Decimal(&retained_wide, &retained_narrow),
+        OrderedOperands::Decimals(&retained_wide, &retained_narrow),
         &mut Meter::new(UNLIMITED),
     );
     assert_eq!(greater, Outcome::Completed(false));
@@ -396,15 +402,15 @@ fn tc_034_decimal_value_equality_is_normalized_but_charges_are_retained() {
     // narrow-retained `1.1` costs a different amount than comparing the
     // narrow-retained value against itself, even though the values agree.
     let mut wide_vs_narrow = Meter::new(UNLIMITED);
-    let _ = evaluate_ordering(
+    let _ = order_numbers(
         OrderingOperator::Less,
-        OrderingOperands::Decimal(&retained_wide, &retained_narrow),
+        OrderedOperands::Decimals(&retained_wide, &retained_narrow),
         &mut wide_vs_narrow,
     );
     let mut narrow_vs_narrow = Meter::new(UNLIMITED);
-    let _ = evaluate_ordering(
+    let _ = order_numbers(
         OrderingOperator::Less,
-        OrderingOperands::Decimal(&retained_narrow, &retained_narrow),
+        OrderedOperands::Decimals(&retained_narrow, &retained_narrow),
         &mut narrow_vs_narrow,
     );
     assert_ne!(consumed(&wide_vs_narrow), consumed(&narrow_vs_narrow));

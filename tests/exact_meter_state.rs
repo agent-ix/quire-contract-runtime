@@ -3,13 +3,13 @@
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{
-    divide, evaluate_connective, evaluate_integer, evaluate_not, evaluate_ordering,
-    evaluate_quantity, BooleanConnective, ChargePoint, CompoundUnit, CompoundUnitCause, Decimal,
-    DivisionProfile, IeeeFlag, IeeeFlags, Incomplete, InjectedDenial, Integer, IntegerDomain,
-    IntegerInterval, IntegerOperation, InvalidCompoundUnit, InvalidSemanticGraph, LimitKind, Meter,
-    NodeKey, OrderingOperands, OrderingOperator, Outcome, Quantity, QuantityOperation,
-    QuantityUnit, Rational, Refusal, ScalarLimits, SemanticGraphCause, Undefined, UnitDeclaration,
-    UnitGraph, CHARGE_LOG_CAPACITY,
+    divide, evaluate_boolean, evaluate_integer_arithmetic, evaluate_quantity, order_numbers,
+    BooleanConnective, ChargePoint, CompoundUnit, CompoundUnitCause, Decimal, DivisionProfile,
+    IeeeFlag, IeeeFlags, Incomplete, InjectedDenial, Integer, IntegerArithmetic, IntegerDomain,
+    IntegerInterval, InvalidCompoundUnit, InvalidSemanticGraph, LimitKind, Meter, NodeKey,
+    OrderedOperands, OrderingOperator, Outcome, Quantity, QuantityOperation, QuantityUnit,
+    Rational, Refusal, ScalarLimits, SemanticGraphCause, Undefined, UnitDeclaration, UnitGraph,
+    CHARGE_LOG_CAPACITY,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -38,6 +38,70 @@ fn key(byte: u8) -> NodeKey {
     let mut bytes = [0_u8; 32];
     bytes[31] = byte;
     NodeKey::from_bytes(bytes)
+}
+
+/// `evaluate_integer_arithmetic` takes an optional result bound rather than
+/// `IntegerDomain`; `Mathematical` is no bound at all.
+fn integer_bound(domain: &IntegerDomain) -> Option<&IntegerInterval> {
+    match domain {
+        IntegerDomain::Mathematical => None,
+        IntegerDomain::Bounded(interval) => Some(interval),
+    }
+}
+
+/// A binary Boolean connective's identity, independent of its operands.
+/// `evaluate_boolean` now takes both operands already decided and charges
+/// only the terminal retain; deciding from the left operand without running
+/// the right, and propagating a right-operand stop unchanged, is orchestration
+/// this crate no longer performs internally (quire-specification/FR-011:
+/// "the left operand enters as an already-decided `bool` and is charged for
+/// by whoever produced it, never by the connective"). This mirrors that
+/// caller-side orchestration so the two behaviors it names stay under test.
+#[derive(Clone, Copy, Debug)]
+enum Connective {
+    And,
+    Or,
+    Implies,
+}
+
+impl Connective {
+    const ALL: [Self; 3] = [Self::And, Self::Or, Self::Implies];
+
+    /// The result the left operand alone decides, if any.
+    fn decide(self, left: bool) -> Option<bool> {
+        match (self, left) {
+            (Self::And, false) => Some(false),
+            (Self::Or, true) | (Self::Implies, false) => Some(true),
+            _ => None,
+        }
+    }
+
+    fn kernel(self, left: bool, right: bool) -> BooleanConnective {
+        match self {
+            Self::And => BooleanConnective::And(left, right),
+            Self::Or => BooleanConnective::Or(left, right),
+            Self::Implies => BooleanConnective::Implies(left, right),
+        }
+    }
+}
+
+/// The caller-side orchestration `evaluate_connective` used to provide: skip
+/// the right operand entirely when the left operand decides, otherwise
+/// evaluate it and propagate a stop unchanged; only a fully decided pair
+/// reaches `evaluate_boolean`, which retains exactly once.
+fn evaluate_connective(
+    connective: Connective,
+    left: bool,
+    right: impl FnOnce(&mut Meter) -> Outcome<bool>,
+    meter: &mut Meter,
+) -> Outcome<bool> {
+    match connective.decide(left) {
+        Some(decided) => evaluate_boolean(connective.kernel(left, decided), meter),
+        None => match right(meter) {
+            Outcome::Completed(value) => evaluate_boolean(connective.kernel(left, value), meter),
+            stopped => stopped,
+        },
+    }
 }
 
 /// Trace: TC-032, FR-011-AC-1
@@ -69,7 +133,11 @@ fn tc_032_ac1_undefined_division_by_zero_retains_operands_only() {
 fn tc_032_ac1_refused_result_retains_arithmetic_not_result_unit() {
     let domain = IntegerDomain::Bounded(IntegerInterval::new(int(0), int(10)).unwrap());
     let mut meter = Meter::new(UNLIMITED);
-    let outcome = evaluate_integer(IntegerOperation::Add(&int(7), &int(5)), &domain, &mut meter);
+    let outcome = evaluate_integer_arithmetic(
+        IntegerArithmetic::Add(&int(7), &int(5)),
+        integer_bound(&domain),
+        &mut meter,
+    );
     assert_eq!(outcome, Outcome::Refused(Refusal::IntegerOutOfDomain));
     assert_eq!(
         meter.admitted_charges(),
@@ -88,7 +156,7 @@ fn tc_032_ac1_incomplete_denied_charge_retains_nothing() {
         point: ChargePoint::BooleanResultRetain,
         occurrence: 1,
     });
-    let outcome = evaluate_not(true, &mut meter);
+    let outcome = evaluate_boolean(BooleanConnective::Not(true), &mut meter);
     assert!(matches!(outcome, Outcome::Incomplete(_)));
     assert!(meter.admitted_charges().is_empty());
     assert!(!meter.charge_log_truncated());
@@ -145,11 +213,11 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
 /// Trace: TC-032, FR-011-AC-3
 #[test]
 fn tc_032_ac3_short_circuit_retains_exactly_once() {
-    for connective in BooleanConnective::ALL {
+    for connective in Connective::ALL {
         let (deciding_left, expected) = match connective {
-            BooleanConnective::And => (false, false),
-            BooleanConnective::Or => (true, true),
-            BooleanConnective::Implies => (false, true),
+            Connective::And => (false, false),
+            Connective::Or => (true, true),
+            Connective::Implies => (false, true),
         };
         let mut meter = Meter::new(UNLIMITED);
         let outcome = evaluate_connective(
@@ -180,13 +248,13 @@ fn tc_032_ac3_stopped_right_operand_propagates_without_retention() {
         Outcome::Refused(Refusal::IntegerOutOfDomain),
         incomplete,
     ];
-    for connective in BooleanConnective::ALL {
+    for connective in Connective::ALL {
         // The left value that does *not* decide the result, so the right
         // operand runs and its stop must propagate unchanged.
         let non_deciding_left = match connective {
-            BooleanConnective::And => true,
-            BooleanConnective::Or => false,
-            BooleanConnective::Implies => true,
+            Connective::And => true,
+            Connective::Or => false,
+            Connective::Implies => true,
         };
         for stop in &stops {
             let mut meter = Meter::new(UNLIMITED);
@@ -206,9 +274,9 @@ fn tc_032_ac4_second_scanned_counter_short_writes_nothing() {
     tuple[1] = 5; // decimal_digits
     let mut meter = Meter::new(limits(tuple));
     let (a, b) = (Decimal::new(int(0), 5), Decimal::new(int(0), 0));
-    let outcome = evaluate_ordering(
+    let outcome = order_numbers(
         OrderingOperator::GreaterOrEqual,
-        OrderingOperands::Decimal(&a, &b),
+        OrderedOperands::Decimals(&a, &b),
         &mut meter,
     );
     // `ordering.arithmetic`'s sorted sizes are `integer_bits = 18` (passes),
@@ -244,9 +312,9 @@ fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     tuple[0] = 0; // integer_bits
     tuple[7] = 0; // value_occurrences
 
-    let ascending = evaluate_integer(
-        IntegerOperation::Negate(&int(5)),
-        &IntegerDomain::Mathematical,
+    let ascending = evaluate_integer_arithmetic(
+        IntegerArithmetic::Negate(&int(5)),
+        None,
         &mut Meter::new(limits(tuple)),
     );
     assert_eq!(
@@ -287,11 +355,8 @@ fn tc_032_ac4_denied_charge_leaves_occurrence_counter_unchanged() {
     tuple[0] = 0; // integer_bits: every attempt below is size-denied here
     let mut meter = Meter::new(limits(tuple));
     for _ in 0..3 {
-        let outcome = evaluate_integer(
-            IntegerOperation::Add(&int(1), &int(1)),
-            &IntegerDomain::Mathematical,
-            &mut meter,
-        );
+        let outcome =
+            evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);
         assert!(matches!(
             outcome,
             Outcome::Incomplete(Incomplete {
@@ -311,11 +376,8 @@ fn tc_032_ac4_denied_charge_leaves_occurrence_counter_unchanged() {
         point: ChargePoint::IntegerArithmeticOperands,
         occurrence: 1,
     });
-    let outcome = evaluate_integer(
-        IntegerOperation::Add(&int(1), &int(1)),
-        &IntegerDomain::Mathematical,
-        &mut meter,
-    );
+    let outcome =
+        evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);
     assert_eq!(
         outcome,
         Outcome::Incomplete(Incomplete {
@@ -340,13 +402,11 @@ fn tc_032_ac5_log_holds_first_4096_in_admission_order() {
     let iterations = 1400_u64;
     let mut meter = Meter::new(UNLIMITED);
     for _ in 0..iterations {
-        assert!(evaluate_integer(
-            IntegerOperation::Negate(&int(3)),
-            &IntegerDomain::Mathematical,
-            &mut meter,
-        )
-        .completed()
-        .is_some());
+        assert!(
+            evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter)
+                .completed()
+                .is_some()
+        );
     }
     let total_charges = iterations * 3;
     assert!(total_charges > u64::try_from(CHARGE_LOG_CAPACITY).unwrap());
@@ -369,19 +429,13 @@ fn tc_032_ac5_limits_still_enforced_past_the_cap() {
     tuple[8] = total_charges - 1; // work_units: one short of every charge admitted
     let mut meter = Meter::new(limits(tuple));
     for _ in 0..iterations - 1 {
-        assert!(evaluate_integer(
-            IntegerOperation::Negate(&int(3)),
-            &IntegerDomain::Mathematical,
-            &mut meter,
-        )
-        .completed()
-        .is_some());
+        assert!(
+            evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter)
+                .completed()
+                .is_some()
+        );
     }
-    let last = evaluate_integer(
-        IntegerOperation::Negate(&int(3)),
-        &IntegerDomain::Mathematical,
-        &mut meter,
-    );
+    let last = evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter);
     assert_eq!(
         last,
         Outcome::Incomplete(Incomplete {
@@ -447,7 +501,9 @@ fn tc_032_ac7_consumed_is_total_for_every_limit_kind() {
         assert_eq!(fresh.consumed(kind), 0);
     }
     let mut meter = Meter::new(UNLIMITED);
-    assert!(evaluate_not(true, &mut meter).completed().is_some());
+    assert!(evaluate_boolean(BooleanConnective::Not(true), &mut meter)
+        .completed()
+        .is_some());
     for kind in LimitKind::ALL {
         let _ = meter.consumed(kind);
     }

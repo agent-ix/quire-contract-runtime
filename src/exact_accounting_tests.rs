@@ -6,7 +6,7 @@
 //! cumulative-counter overflow boundary of FR-011-AC-6 is reachable only from
 //! inside the crate.
 
-use super::{Charge, ChargePoint, LimitKind, Meter, ScalarLimits};
+use super::{Charge, ChargePoint, Integer, LimitKind, Meter, ScalarLimits};
 
 const fn limits(work_units: u64, result_units: u64) -> ScalarLimits {
     ScalarLimits {
