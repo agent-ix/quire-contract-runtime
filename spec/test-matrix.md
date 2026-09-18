@@ -47,8 +47,7 @@ type: TestMatrix
 | FR-008 | FR-008-AC-9 | TC-024, TC-025 | ✅ implemented |
 | FR-007 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | TC-034 | ✅ implemented |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | TC-030 | ✅ implemented |
-| FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-6 | TC-031 | ✅ implemented |
-| FR-010 | FR-010-AC-5 | TC-031 | ⛔ blocked on #22 |
+| FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | TC-033 | ✅ implemented |
 
@@ -82,7 +81,7 @@ type: TestMatrix
 | TC-025 | Construct collections and order them by the canonical key | Property | P0 | FR-008-AC-3, FR-008-AC-4, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9 | ✅ implemented |
 | TC-026 | Evaluate the equality matrix and terminal references | Unit | P0 | FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8 | ✅ implemented |
 | TC-030 | Dispose negotiation items independently and in input order | Unit | P0 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | ✅ implemented |
-| TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | ⛔ blocked on #22 |
+| TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | ✅ implemented |
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | ✅ implemented |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
@@ -91,13 +90,12 @@ Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
 binding; executable semantic claims retain direct acceptance-criterion trace tags.
 
-`FR-010-AC-5` is blocked on `agent-ix/quire-contract-runtime#22`: the injected denial never clears,
-so every later charge at the injected point is denied. Its test
-(`tc_031_further_charges_after_the_injected_denial_meter_normally`) encodes the requirement
-correctly and fails until #22 is fixed, so `0646317` landed it `#[ignore]`d with the ticket in the
-reason rather than reddening `main`. The assertion was not weakened; the test does not run.
-`make test-ignored` runs it (and every other `#[ignore]`d test) so it is re-detected the moment #22
-lands.
+`FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
+(`tc_031_further_charges_after_the_injected_denial_meter_normally`,
+`tc_031_work_accounting_is_correct_before_and_after_the_injected_denial`) and
+`Meter::charge_plan`
+(`tc_031_further_charge_plan_calls_after_the_injected_denial_meter_normally`,
+`tc_031_charge_plan_reservation_is_unaffected_by_the_injected_denial`).
 
 ## Evidence Locations
 

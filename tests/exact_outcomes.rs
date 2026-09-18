@@ -1226,7 +1226,7 @@ fn tc_031_charge_plan_reservation_is_unaffected_by_the_injected_denial() {
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 7);
     assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
 
-    // Exactly the charges admitted charges are logged: call 1's `equality.plan-form` (its
+    // Exactly the admitted charges are logged: call 1's `equality.plan-form` (its
     // `equality.plan` was denied and injected-denials never log), then call 2's full schedule.
     // The denied `equality.plan` never appears.
     assert_eq!(
