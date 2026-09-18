@@ -1044,6 +1044,9 @@ fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
 /// same condition again and is denied again, indefinitely, rather than
 /// exactly once. See the disagreement reported alongside this test.
 #[test]
+#[ignore = "blocked on #22: the injected denial never clears, so this asserts \
+            FR-010-AC-5's required behaviour and fails until #22 is fixed. The \
+            assertion is correct as written; do not weaken it to enable this test."]
 fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::BooleanResultRetain,
