@@ -1032,17 +1032,15 @@ fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
 /// normally against the configured limits." FR-010-AC-5 restates this as "no
 /// second charge is injected-denied."
 ///
-/// This test encodes that requirement as written. It currently FAILS:
-/// `Meter::charge`'s `check_injected` (`src/exact/accounting.rs`) matches on
+/// This test encodes that requirement as written. It used to FAIL (issue #22):
+/// `Meter::charge`'s `check_injected` (`src/exact/accounting.rs`) matched on
 /// `denial_point_seen.checked_add(1) == Some(denial.occurrence)` alone, and
-/// nothing marks the denial as spent or advances `denial_point_seen` on the
-/// denial path. So every later charge at the same injected point matches the
-/// same condition again and is denied again, indefinitely, rather than
-/// exactly once. See the disagreement reported alongside this test.
+/// nothing marked the denial as spent or advanced `denial_point_seen` on the
+/// denial path, so every later charge at the same injected point matched the
+/// same condition again and was denied again, indefinitely, rather than
+/// exactly once. `check_injected` now clears `self.denial` on the arm that
+/// fires, which is what makes the seam single-shot.
 #[test]
-#[ignore = "blocked on #22: the injected denial never clears, so this asserts \
-            FR-010-AC-5's required behaviour and fails until #22 is fixed. The \
-            assertion is correct as written; do not weaken it to enable this test."]
 fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::BooleanResultRetain,
@@ -1069,6 +1067,60 @@ fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
     assert_eq!(
         evaluate_boolean(BooleanConnective::Not(false), &mut meter),
         Outcome::Completed(true)
+    );
+}
+
+/// Trace: TC-031, FR-010-AC-5
+///
+/// The companion half of `tc_031_further_charges_after_the_injected_denial_meter_normally`:
+/// that test only checks the *outcomes* of the charges after the fired denial fire. This
+/// test checks the *counters* directly, at occurrence 2 rather than 1 so there is a real
+/// admitted charge before the denial as well as after it: the denied charge must consume
+/// nothing (FR-010's Outputs: "No change to any counter"), and every admitted charge before
+/// and after it must accumulate `work_units` normally with no gap and no double-count, and
+/// the admitted-charge log must list only the admitted charges, never the denied one.
+#[test]
+fn tc_031_work_accounting_is_correct_before_and_after_the_injected_denial() {
+    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
+        point: ChargePoint::BooleanResultRetain,
+        occurrence: NonZeroU64::new(2).unwrap(),
+    });
+
+    // Occurrence one: admitted normally, one work unit consumed.
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
+        Outcome::Completed(true)
+    );
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+
+    // Occurrence two: the injection fires here and consumes nothing.
+    let fired = expect_incomplete(evaluate_boolean(BooleanConnective::Not(true), &mut meter));
+    assert_eq!(fired.charge_point, ChargePoint::BooleanResultRetain);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+
+    // The next two charges at the same point must not be denied again, and
+    // must keep accumulating from where the denied charge left off — not
+    // reset, and not skipping a unit for the charge that never landed.
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
+        Outcome::Completed(true)
+    );
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 2);
+
+    assert_eq!(
+        evaluate_boolean(BooleanConnective::Not(true), &mut meter),
+        Outcome::Completed(false)
+    );
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 3);
+
+    // Exactly the three admitted charges are logged; the denied one never is.
+    assert_eq!(
+        meter.admitted_charges(),
+        &[
+            ChargePoint::BooleanResultRetain,
+            ChargePoint::BooleanResultRetain,
+            ChargePoint::BooleanResultRetain,
+        ]
     );
 }
 

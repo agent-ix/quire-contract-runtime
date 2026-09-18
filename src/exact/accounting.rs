@@ -542,12 +542,24 @@ impl Meter {
 
     /// The qualification-seam record: as if the `work_units` limit were the
     /// work already consumed, so `limit = consumed = w`.
-    fn check_injected(&self, point: ChargePoint, work_units: Integer) -> Result<(), Incomplete> {
+    ///
+    /// FR-010's Behavior section: "Exactly one charge is denied per meter.
+    /// Once the injected denial has fired, the meter's subsequent charges are
+    /// metered normally against the configured limits." Clearing `self.denial`
+    /// on the fired arm is what makes the seam single-shot: no later call can
+    /// match `Some(denial) if ...` once `self.denial` is `None`, regardless of
+    /// how `denial_point_seen` moves afterward.
+    fn check_injected(
+        &mut self,
+        point: ChargePoint,
+        work_units: Integer,
+    ) -> Result<(), Incomplete> {
         match self.denial {
             Some(denial)
                 if denial.point == point
                     && self.denial_point_seen.checked_add(1) == Some(denial.occurrence.get()) =>
             {
+                self.denial = None;
                 let consumed = self.consumed(LimitKind::WorkUnits);
                 Err(Incomplete {
                     limit_kind: LimitKind::WorkUnits,
