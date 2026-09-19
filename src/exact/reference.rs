@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Terminal `Reference<T>` values (quire-specification/FR-143).
+//! Terminal `Reference<T>` values and closed object environments
+//! (quire-specification/FR-143).
 //!
 //! A reference is terminal: its identity is the snapshot-supplied FR-009/
 //! quire-specification/FR-204 triple (universe, object-type declaration identity, object
 //! identity), and equality never inspects the referenced state. No source
-//! form creates one.
-//!
-//! The closed `ObjectEnvironment` machinery that resolves a reference against
-//! a bound model snapshot is out of scope for this crate: it is business
-//! logic that belongs to a consumer holding that snapshot, not to the exact
-//! value/collection/equality core ported here.
+//! form creates one. Cycles between objects are representable only through
+//! references resolved in an [`ObjectEnvironment`], which
+//! [`crate::exact::expression`]'s function-application surface (FR-273)
+//! checks every argument reference against.
 
 use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 use core::fmt;
 
+use super::composite::{
+    fill_slots, ConstructionRefusal, FieldValue, ObjectTypeDeclaration, TypeEnvironment, Value,
+};
 use super::node::NodeKey;
 
 /// A universe identity in its canonical identity bytes.
@@ -98,4 +102,134 @@ impl ObjectReference {
     pub fn identity(&self) -> &ObjectIdentity {
         &self.identity
     }
+}
+
+/// Why an [`ObjectEnvironment`] is not closed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ObjectEnvironmentRefusal {
+    /// The object where the refusal originates.
+    pub object: ObjectReference,
+    /// The typed cause.
+    pub cause: ObjectEnvironmentCause,
+}
+
+impl fmt::Display for ObjectEnvironmentRefusal {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "object environment refused at {:?}: {:?}",
+            self.object, self.cause
+        )
+    }
+}
+
+/// The typed cause of an [`ObjectEnvironmentRefusal`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ObjectEnvironmentCause {
+    /// Two objects share one identity triple.
+    DuplicateObject,
+    /// The object type is not a model object type of the environment.
+    UnknownObjectType,
+    /// An attribute does not match its declaration.
+    Attribute(ConstructionRefusal),
+    /// A contained reference names no object of the environment.
+    DanglingReference(Box<ObjectReference>),
+}
+
+/// A closed object environment: every reference held by any attribute
+/// resolves to an object of the environment.
+#[derive(Clone, Debug, Default)]
+pub struct ObjectEnvironment {
+    objects: BTreeMap<ObjectReference, Box<[FieldValue]>>,
+}
+
+impl ObjectEnvironment {
+    /// Admit `objects` as `(reference, attributes)` pairs against the model
+    /// object types of `types`. An omitted `?` attribute is `absent`.
+    pub fn new<'n>(
+        types: &TypeEnvironment,
+        objects: impl IntoIterator<Item = (ObjectReference, Vec<(&'n str, FieldValue)>)>,
+    ) -> Result<Self, ObjectEnvironmentRefusal> {
+        let mut admitted = BTreeMap::new();
+        for (reference, attributes) in objects {
+            let refuse = |cause| ObjectEnvironmentRefusal {
+                object: reference.clone(),
+                cause,
+            };
+            let Some(declaration) = types.object_type(reference.object_type) else {
+                return Err(refuse(ObjectEnvironmentCause::UnknownObjectType));
+            };
+            let slots = fill_slots(declaration.attributes(), attributes)
+                .map_err(|refusal| refuse(ObjectEnvironmentCause::Attribute(refusal)))?;
+            if admitted.contains_key(&reference) {
+                return Err(refuse(ObjectEnvironmentCause::DuplicateObject));
+            }
+            admitted.insert(reference, slots);
+        }
+        let environment = Self { objects: admitted };
+        for (owner, slots) in &environment.objects {
+            environment.check_closed(owner, slots)?;
+        }
+        Ok(environment)
+    }
+
+    /// Whether the referenced object is in the environment.
+    pub fn contains(&self, reference: &ObjectReference) -> bool {
+        self.objects.contains_key(reference)
+    }
+
+    /// The named attribute slot of the referenced object.
+    pub fn attribute(
+        &self,
+        types: &TypeEnvironment,
+        reference: &ObjectReference,
+        name: &str,
+    ) -> Option<&FieldValue> {
+        let declaration: &ObjectTypeDeclaration = types.object_type(reference.object_type)?;
+        let position = declaration
+            .attributes()
+            .iter()
+            .position(|attribute| attribute.name() == name)?;
+        self.objects.get(reference)?.get(position)
+    }
+
+    fn check_closed(
+        &self,
+        owner: &ObjectReference,
+        slots: &[FieldValue],
+    ) -> Result<(), ObjectEnvironmentRefusal> {
+        let mut pending: Vec<&Value> = present(slots).collect();
+        while let Some(value) = pending.pop() {
+            match value {
+                Value::Reference(reference) if !self.objects.contains_key(reference) => {
+                    return Err(ObjectEnvironmentRefusal {
+                        object: owner.clone(),
+                        cause: ObjectEnvironmentCause::DanglingReference(Box::new(
+                            reference.clone(),
+                        )),
+                    });
+                }
+                Value::Option(option) => pending.extend(option.payload()),
+                Value::Composite(composite) => pending.extend(present(composite.slots())),
+                Value::Collection(collection) => pending.extend(collection.elements()),
+                Value::Reference(_)
+                | Value::Boolean(_)
+                | Value::Integer(_)
+                | Value::Rational(_)
+                | Value::Decimal(_)
+                | Value::Float(_)
+                | Value::Quantity(_)
+                | Value::Text(_)
+                | Value::Enum(_) => {}
+            }
+        }
+        Ok(())
+    }
+}
+
+fn present(slots: &[FieldValue]) -> impl Iterator<Item = &Value> {
+    slots.iter().filter_map(|slot| match slot {
+        FieldValue::Present(value) => Some(value),
+        FieldValue::Absent | FieldValue::Null => None,
+    })
 }

@@ -791,6 +791,20 @@ pub enum IeeeUnsupportedCause {
 
 /// The per-item I13 negotiation disposition. It is not an evaluator outcome
 /// and never changes package admission or selects a substitute evaluator.
+///
+/// Trace: TC-195, FR-273-AC-4
+///
+/// `IeeeDisposition` converts to neither `Outcome<Value>` nor `InputRefusal`:
+/// no such `From`/`Into` impl exists, so this would-be conversion is a
+/// compile error, not a runtime one.
+///
+/// ```compile_fail
+/// use quire_contract_runtime::exact::{
+///     IeeeDisposition, IeeeUnsupportedCause, IeeeWidth, Outcome, Value,
+/// };
+/// let disposition = IeeeDisposition::Unsupported(IeeeUnsupportedCause::Width(IeeeWidth::Binary64));
+/// let _: Outcome<Value> = disposition.into();
+/// ```
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeDisposition {
     /// The backend implements the item exactly.

@@ -15,7 +15,7 @@ publish = false
 
 [dev-dependencies]
 quire-contract-runtime = { path = "../..", features = ["exact"] }
-quire-spec-language = { git = "https://github.com/agent-ix/quire-spec-language", rev = "d01371b9baf7ecdc35e3c93c2a29161882c41a35" }
+quire-spec-language = { git = "https://github.com/agent-ix/quire-spec-language", rev = "ea39f91e57e72eea5a6ea648c574c192609f672b" }
 num-bigint = "=0.4.8"
 serde_json = "=1.0.151"
 

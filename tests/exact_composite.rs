@@ -42,7 +42,7 @@ fn consumed(meter: &Meter) -> Vec<u64> {
 
 /// Trace: TC-024, FR-008-AC-8
 #[test]
-fn tc_024_p1_charge_point_vocabulary_names_uncharged_future_points() {
+fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point() {
     assert_eq!(ChargePoint::ALL.len(), 52);
     assert!(ChargePoint::ALL.contains(&ChargePoint::FunctionCall));
     assert!(ChargePoint::ALL.contains(&ChargePoint::CollectionVisit));
@@ -57,7 +57,10 @@ fn tc_024_p1_charge_point_vocabulary_names_uncharged_future_points() {
         Some(ChargePoint::CollectionVisit)
     );
 
-    // No sequence any operator in this slice admits ever charges either point.
+    // `function.call` is charged elsewhere (FR-273's `CheckedPackage::call`/
+    // `Frame::call`; see `tests/exact_function_application.rs`), so this test
+    // narrows to what remains true here: no sequence any operator in this
+    // slice admits ever charges `collection.visit`.
     let leaf = CompositeDeclaration::new(key(1), "Leaf", CompositeShape::Tuple(Vec::new()));
     let env = TypeEnvironment::new([leaf], []).unwrap();
     let mut meter = Meter::new(UNLIMITED);
@@ -74,9 +77,6 @@ fn tc_024_p1_charge_point_vocabulary_names_uncharged_future_points() {
     )
     .unwrap();
     assert!(matches!(outcome, Outcome::Completed(_)));
-    assert!(!meter
-        .admitted_charges()
-        .contains(&ChargePoint::FunctionCall));
     assert!(!meter
         .admitted_charges()
         .contains(&ChargePoint::CollectionVisit));

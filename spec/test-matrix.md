@@ -50,8 +50,9 @@ type: TestMatrix
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | TC-033 | ✅ implemented |
-| FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6 | TC-194 | 🚧 planned, tracked by #34 |
-| FR-273 | FR-273-AC-4 | TC-195 | 🚧 planned, tracked by #34 |
+| FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented |
+| FR-273 | FR-273-AC-5 | TC-194 | 🟡 partially implemented: agrees on the closed `InputRefusal` vocabulary, the arity/kind/reference check order and the `function.call` charge count; body semantics have no shared corpus (see Evidence Locations) |
+| FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented |
 
 ## Test Case Summary
 
@@ -87,8 +88,8 @@ type: TestMatrix
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | ✅ implemented |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
-| TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6 | 🚧 planned, tracked by #34 |
-| TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | 🚧 planned, tracked by #34 |
+| TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6 | 🟡 partially implemented (AC-5 conformance is partial; see Evidence Locations) |
+| TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | ✅ implemented |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
@@ -103,8 +104,20 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 
 ## Evidence Locations
 
-- TC-194, TC-195: planned `tests/exact_function_application.rs` (`--features exact`); no evidence
-  symbol exists yet, and none is claimed. Landing is scoped to agent-ix/quire-contract-runtime#34.
+- TC-194, TC-195: `tests/exact_function_application.rs` (`--features exact`), landed under
+  agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
+  `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.
+- FR-273-AC-5 (TC-194's shared-corpus row): `conformance/qsl-agreement/tests/tc_191_function_application.rs`,
+  pinned to the quire-spec-language `ea39f91` authority (`conformance/qsl-agreement/Cargo.toml`).
+  It agrees on the closed `InputRefusal` vocabulary (`UnknownFunction`, `Arity`, `WrongValueKind`,
+  `DanglingReference`) with its codes and causes, the "arity, then per-argument kind and reference,
+  then the `function.call` charge" ordering, and the charge count of one admitted call. It does
+  **not** agree on function-body semantics: AD-002 draws the runtime's boundary at typed values and
+  operators, so `Body` is an opaque Rust closure while the authority's function bodies are a typed
+  `Expression` AST an interpreter runs — there is no `Debug` rendering that could compare the two,
+  so no shared corpus exists for arithmetic, `let`, `if`, recursion or any other body form. Those
+  are covered by `tests/exact_function_application.rs` against the runtime alone, which is why
+  AC-5 is recorded as partially, not fully, implemented.
 - TC-030: `tests/exact_negotiation.rs`; TC-032: `tests/exact_meter_state.rs` and the in-crate
   `src/exact/accounting_tests.rs` for the cumulative-counter boundary no public operator can
   reach;

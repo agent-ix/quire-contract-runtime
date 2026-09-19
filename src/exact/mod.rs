@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complete-V1 exact scalar oracle operators and typed runtime outcomes.
 //!
-//! Implements: FR-006, FR-007, FR-008.
+//! Implements: FR-006, FR-007, FR-008, FR-273.
 //!
 //! `quire-spec-language` `quire_spec_language::value` is the semantic
 //! authority. This module is a conformance-gated `no_std + alloc` port of that
@@ -34,7 +34,10 @@
 //! 6. the distinct evaluator [`Outcome`] with typed [`Undefined`], [`Refusal`]
 //!    and [`Incomplete`] reasons;
 //! 7. `quire.value.accounting/v1` charge-before-work metering through
-//!    [`Meter`].
+//!    [`Meter`];
+//! 8. the quire-specification/FR-146 function-application surface:
+//!    [`PackageDeclarations::check`] and [`CheckedPackage::call`]/
+//!    [`CheckedPackage::evaluate`], ported to the boundary AD-002 sets.
 //!
 //! Node keys, definition-lock selection, owner joins, stale keys and package
 //! admission are compiler work. The runtime consumes admitted keys and
@@ -56,11 +59,10 @@
 //! the same as every other value-walking algorithm here.
 //! [`Value`] shares nested composite and collection values through
 //! [`alloc::rc::Rc`], never `Arc`: this crate has no concurrency and no
-//! `target_has_atomic` requirement. A closed
-//! `ObjectEnvironment` that resolves an [`ObjectReference`] against a bound
-//! model snapshot is out of scope: it is business logic for a consumer
-//! holding that snapshot, not part of this exact value/collection/equality
-//! core.
+//! `target_has_atomic` requirement. [`ObjectEnvironment`] closes a set of
+//! objects against a bound model snapshot's references, and is what
+//! [`plan_call`]/[`plan_evaluation`] check every function argument's
+//! references against.
 
 mod accounting;
 mod collection;
@@ -72,6 +74,7 @@ mod definition;
 mod division;
 mod enumeration;
 mod equality;
+mod expression;
 mod ieee;
 mod integer;
 mod key;
@@ -113,6 +116,12 @@ pub use equality::{
     admits_equality_conversion, plan_equality, CheckedEquality, EqualityOperand, EqualityOperator,
     EqualityPlan, EqualitySchedule,
 };
+pub use expression::{
+    plan_call, plan_evaluation, Body, CallPlan, CheckCause, CheckMode, CheckRefusal,
+    CheckedExpression, CheckedPackage, CheckingLimits, DepthAboveMaximum, Evaluation, Frame,
+    FunctionDeclaration, InputRefusal, LocatedLoss, Location, Origin, PackageDeclarations,
+    ValueLoss, MAX_CALL_DEPTH,
+};
 pub use ieee::{
     compare_ieee, convert_ieee_width, evaluate_ieee, exact_to_ieee, ieee_intrinsic_identities,
     ieee_to_exact, negotiate_ieee, ExactScalar, IeeeBackendCapabilities, IeeeComparison,
@@ -136,7 +145,10 @@ pub use quantity::{
     QuantityOperation, QuantityTarget, QuantityUnit,
 };
 pub use rational::{NonPositiveDenominatorBound, Rational, RationalDomain, ZeroDenominator};
-pub use reference::{InvalidObjectIdentity, ObjectIdentity, ObjectReference, UniverseIdentity};
+pub use reference::{
+    InvalidObjectIdentity, ObjectEnvironment, ObjectEnvironmentCause, ObjectEnvironmentRefusal,
+    ObjectIdentity, ObjectReference, UniverseIdentity,
+};
 pub use text::{
     admit_text, compare_text, EmptyTextBounds, InvalidTextLiteral, InvalidUtf8, NormalizationForm,
     Text, TextPayload, TextProfile, TextProvenance, TextType, UNICODE_TEXT_DEFINITION,

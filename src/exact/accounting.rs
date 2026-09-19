@@ -212,10 +212,10 @@ pub enum ChargePoint {
     EqualityPair,
     /// `equality.result-retain`.
     EqualityResultRetain,
-    /// `function.call`: one checked function call. Ported as closed
-    /// accounting vocabulary ahead of the expression-machine operator that
-    /// will charge it (agent-ix/quire-spec-language#119); no operator in this
-    /// crate charges it yet.
+    /// `function.call`: one checked function call, charged by
+    /// [`super::CheckedPackage::call`] before a function's own body runs, and
+    /// by [`super::Frame::call`] before each re-entrant application a body
+    /// makes (FR-273).
     FunctionCall,
     /// `collection.element`.
     CollectionElement,

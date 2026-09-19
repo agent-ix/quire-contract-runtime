@@ -1,0 +1,687 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//! Function application under exact semantics (quire-specification/FR-146,
+//! FR-273).
+//!
+//! AD-002 controls the boundary this module ports: the runtime carries the
+//! *call surface* of `quire_spec_language::value::expression` only. A
+//! function's body is a host callable ([`Body`]) supplied by generated code;
+//! this crate never derives purity, termination or definedness itself, and
+//! is not a second semantic authority for them. [`PackageDeclarations::check`]
+//! therefore checks only what a generated package can carry as its own
+//! admitted facts (declared types, name uniqueness, an upstream-discharged
+//! termination measure) before any package becomes callable and before any
+//! charge, mirroring the authority's own admit-before-call ordering.
+//!
+//! The plan/execute split mirrors [`super::equality`]: [`plan_call`] and
+//! [`plan_evaluation`] validate a call's arguments and take no [`Meter`] at
+//! all, so every [`InputRefusal`] is reachable with no charge in scope,
+//! before [`CheckedPackage::call`]/[`CheckedPackage::evaluate`] charge
+//! `function.call` and run the body. Re-entrant calls a body makes through
+//! [`Frame::call`] are bounded by [`CheckingLimits::depth`]
+//! (`MAX_CALL_DEPTH`): unbounded host recursion is silent stack corruption on
+//! the governed `thumbv7em-none-eabi` target, so depth is threaded through
+//! each [`Frame`] rather than recursing without a bound, and the shared
+//! [`Meter`] is reached through a [`core::cell::RefCell`] (never `unsafe`,
+//! never atomics), consistent with this crate's single-threaded, `Rc`-not-
+//! `Arc` stance.
+
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use core::cell::RefCell;
+
+use super::accounting::{Charge, ChargePoint, Meter};
+use super::comparison::{IllTyped, IllTypedCause};
+use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
+use super::decimal::DecimalLoss;
+use super::division::IntegerDivisionConsumer;
+use super::ieee::{IeeeExactLoss, IeeeFlags, IeeeItemRequirement};
+use super::integer::Integer;
+use super::outcome::{Outcome, Refusal, Stop};
+use super::reference::ObjectEnvironment;
+
+/// The authority's two checking modes. Only [`CheckMode::Linked`] ever admits
+/// a callable package (FR-273-AC-6; AD-002).
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum CheckMode {
+    /// Every definedness obligation is discharged; the package is callable.
+    Linked,
+    /// Typing-only. Out of scope here: [`PackageDeclarations::check`] refuses
+    /// it structurally, so no package checked under `Kernel` is ever
+    /// callable.
+    Kernel,
+}
+
+/// Mirrors the authority's `MAX_CHECKING_DEPTH`: the greatest re-entrant
+/// [`Frame::call`] depth [`CheckingLimits::new`] admits.
+pub const MAX_CALL_DEPTH: u64 = 128;
+
+/// A checking budget: a node-count ceiling and a call-depth bound of at most
+/// [`MAX_CALL_DEPTH`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CheckingLimits {
+    nodes: u64,
+    depth: u64,
+}
+
+/// `depth` exceeds [`MAX_CALL_DEPTH`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DepthAboveMaximum {
+    /// The refused depth.
+    pub depth: u64,
+}
+
+impl CheckingLimits {
+    /// A checking budget, refusing a `depth` above [`MAX_CALL_DEPTH`].
+    pub fn new(nodes: u64, depth: u64) -> Result<Self, DepthAboveMaximum> {
+        if depth > MAX_CALL_DEPTH {
+            return Err(DepthAboveMaximum { depth });
+        }
+        Ok(Self { nodes, depth })
+    }
+
+    /// The node-count ceiling.
+    pub fn nodes(self) -> u64 {
+        self.nodes
+    }
+
+    /// The call-depth bound.
+    pub fn depth(self) -> u64 {
+        self.depth
+    }
+}
+
+impl Default for CheckingLimits {
+    fn default() -> Self {
+        Self {
+            nodes: u64::MAX,
+            depth: MAX_CALL_DEPTH,
+        }
+    }
+}
+
+/// A host-supplied function body: given the [`Frame`] it runs in and its
+/// bound arguments, produces the applied [`Outcome`]. `for<'f>` lets each
+/// re-entrant call bind a fresh, shorter-lived frame rather than reusing one
+/// lifetime for an entire call tree.
+pub type Body = Box<dyn for<'f> Fn(&Frame<'f>, &[Value]) -> Outcome<Value>>;
+
+/// One function of a [`PackageDeclarations`], declared before checking.
+pub struct FunctionDeclaration {
+    /// The function's name, unique within its package.
+    pub name: String,
+    /// Parameter names and declared types, in call order.
+    pub parameters: Vec<(String, ValueType)>,
+    /// The declared result type.
+    pub result: ValueType,
+    /// The IEEE item requirements this function's body discharges (FR-009).
+    pub ieee_requirements: Vec<IeeeItemRequirement>,
+    /// The integer-division consumers this function's body discharges
+    /// (FR-009).
+    pub integer_division_consumers: Vec<IntegerDivisionConsumer>,
+    /// Whether this function's `decreases` termination measure was
+    /// discharged upstream. `check` refuses a function for which this is
+    /// `false`: AD-002 keeps this crate from re-deriving that proof itself.
+    pub measure_discharged: bool,
+    /// The host callable this function applies.
+    pub body: Body,
+}
+
+/// An unchecked package: its [`TypeEnvironment`] and its declared functions.
+#[derive(Default)]
+pub struct PackageDeclarations {
+    /// The package's type environment.
+    pub types: TypeEnvironment,
+    /// The package's declared functions.
+    pub functions: Vec<FunctionDeclaration>,
+}
+
+/// Where a [`CheckRefusal`] or a non-completed [`Evaluation`] originates.
+/// Ported from the authority verbatim: variant names, fields and order.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum Origin {
+    /// The `index`-th declared function's own body.
+    Body {
+        /// The function's name.
+        function: String,
+        /// The function's index in its package.
+        index: usize,
+    },
+    /// The `index`-th declared function's termination measure.
+    Measure {
+        /// The function's name.
+        function: String,
+        /// The function's index in its package.
+        index: usize,
+    },
+    /// A standalone [`CheckedExpression`], not any package function.
+    Expression,
+}
+
+/// An origin and the child path reached from it. Ported from the authority
+/// verbatim: field names and order.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Location {
+    /// The origin.
+    pub origin: Origin,
+    /// The child-index path from the origin.
+    pub path: Vec<usize>,
+}
+
+fn location_at(origin: Origin) -> Location {
+    Location {
+        origin,
+        path: Vec::new(),
+    }
+}
+
+/// Why [`PackageDeclarations::check`] or [`CheckedPackage::check_expression`]
+/// refuses, before any charge.
+///
+/// This crate does not derive purity, termination or definedness itself
+/// (AD-002): that proof stays entirely in the authority's own
+/// `Typer`/definedness/termination machinery, deliberately not ported here.
+/// `check` here verifies only what a generated package can carry as its own
+/// admitted fact: declared types are members of the package's
+/// [`TypeEnvironment`], no two functions share a name, every function's
+/// termination measure was discharged upstream, and the package is checked
+/// under [`CheckMode::Linked`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CheckCause {
+    /// A declared parameter or result type is not admitted by the package's
+    /// [`TypeEnvironment`].
+    IllTyped(IllTypedCause),
+    /// Two functions share one name: `call` could not tell which is meant.
+    AmbiguousName {
+        /// The ambiguous name.
+        name: String,
+        /// Every declaring locus.
+        loci: Vec<Location>,
+    },
+    /// The function's termination measure was not discharged upstream: no
+    /// termination proof backs its body, so it can never become callable.
+    UndischargedMeasure,
+    /// [`CheckMode::Kernel`]: out of scope (AD-002; FR-273-AC-6). Only a
+    /// package checked under [`CheckMode::Linked`] is ever callable.
+    UnsupportedCheckMode,
+}
+
+/// A single refusal `check` produced, located at its origin.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CheckRefusal {
+    /// Where the refusal originates.
+    pub location: Location,
+    /// The typed cause.
+    pub cause: CheckCause,
+}
+
+impl PackageDeclarations {
+    /// Admit this package under `mode`, or refuse every violation found.
+    /// Admission never charges: this happens once, before any package is
+    /// callable (FR-273-AC-1).
+    pub fn check(
+        self,
+        mode: CheckMode,
+        limits: CheckingLimits,
+    ) -> Result<CheckedPackage, Vec<CheckRefusal>> {
+        if matches!(mode, CheckMode::Kernel) {
+            return Err(alloc::vec![CheckRefusal {
+                location: location_at(Origin::Expression),
+                cause: CheckCause::UnsupportedCheckMode,
+            }]);
+        }
+
+        let mut refusals = Vec::new();
+        for (index, function) in self.functions.iter().enumerate() {
+            let loci: Vec<Location> = self
+                .functions
+                .iter()
+                .enumerate()
+                .filter(|(_, other)| other.name == function.name)
+                .map(|(other_index, other)| {
+                    location_at(Origin::Body {
+                        function: other.name.clone(),
+                        index: other_index,
+                    })
+                })
+                .collect();
+            if loci.len() > 1 {
+                refusals.push(CheckRefusal {
+                    location: location_at(Origin::Body {
+                        function: function.name.clone(),
+                        index,
+                    }),
+                    cause: CheckCause::AmbiguousName {
+                        name: function.name.clone(),
+                        loci,
+                    },
+                });
+            }
+        }
+        if !refusals.is_empty() {
+            return Err(refusals);
+        }
+
+        for (index, function) in self.functions.iter().enumerate() {
+            let location = || {
+                location_at(Origin::Body {
+                    function: function.name.clone(),
+                    index,
+                })
+            };
+            for (_, value_type) in &function.parameters {
+                if let Err(IllTyped { cause }) = self.types.check_type(value_type) {
+                    refusals.push(CheckRefusal {
+                        location: location(),
+                        cause: CheckCause::IllTyped(cause),
+                    });
+                }
+            }
+            if let Err(IllTyped { cause }) = self.types.check_type(&function.result) {
+                refusals.push(CheckRefusal {
+                    location: location(),
+                    cause: CheckCause::IllTyped(cause),
+                });
+            }
+            if !function.measure_discharged {
+                refusals.push(CheckRefusal {
+                    location: location(),
+                    cause: CheckCause::UndischargedMeasure,
+                });
+            }
+        }
+        if !refusals.is_empty() {
+            return Err(refusals);
+        }
+
+        Ok(CheckedPackage {
+            types: self.types,
+            functions: self.functions,
+            limits,
+        })
+    }
+}
+
+/// A package admitted by [`PackageDeclarations::check`]: every declared
+/// function is callable by name.
+pub struct CheckedPackage {
+    types: TypeEnvironment,
+    functions: Vec<FunctionDeclaration>,
+    limits: CheckingLimits,
+}
+
+/// A standalone expression checked against an already-checked package's
+/// [`TypeEnvironment`], with its own parameters and host body.
+pub struct CheckedExpression {
+    parameters: Vec<(String, ValueType)>,
+    root: Body,
+}
+
+/// Why a runtime input is refused, before any charge. Ported verbatim from
+/// the authority (variant names, fields and order), minus its `thiserror`
+/// derive: this crate is `no_std` and has no `std::error::Error`.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum InputRefusal {
+    /// No function of this name is declared.
+    UnknownFunction(String),
+    /// The supplied argument count does not match the declared parameter
+    /// count.
+    Arity {
+        /// The declared parameter count.
+        declared: usize,
+        /// The supplied argument count.
+        supplied: usize,
+    },
+    /// The argument at `parameter` is not admitted by its declared type.
+    WrongValueKind {
+        /// The zero-based parameter position.
+        parameter: usize,
+    },
+    /// The argument at `parameter` contains a reference absent from the
+    /// supplied [`ObjectEnvironment`].
+    DanglingReference {
+        /// The zero-based parameter position.
+        parameter: usize,
+    },
+}
+
+impl InputRefusal {
+    /// The authority returns a `crate::diagnostic::Code` this crate does not
+    /// have; this is that port, as the stable string the authority's `Code`
+    /// itself renders.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::UnknownFunction(_) => "missing_declaration",
+            Self::Arity { .. } | Self::WrongValueKind { .. } => "invalid_runtime_input",
+            Self::DanglingReference { .. } => "dangling_reference",
+        }
+    }
+
+    /// The stable machine-readable cause tag.
+    pub fn cause(&self) -> &'static str {
+        match self {
+            Self::UnknownFunction(_) => "missing-name",
+            Self::Arity { .. } | Self::WrongValueKind { .. } => "wrong-value-kind",
+            Self::DanglingReference { .. } => "absent-target-in-complete-population",
+        }
+    }
+}
+
+/// What a completed application discarded. Ported verbatim from the
+/// authority: variant names and order.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ValueLoss {
+    /// A rounded decimal operation or conversion (FR-140).
+    Decimal(DecimalLoss),
+    /// An IEEE-to-exact conversion (FR-148).
+    IeeeExact(IeeeExactLoss),
+    /// The non-empty flag set an IEEE operation raised (FR-148).
+    IeeeFlags(IeeeFlags),
+}
+
+/// A loss record and the expression that produced it. Ported verbatim from
+/// the authority: field names and order.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocatedLoss {
+    /// The producing location.
+    pub location: Location,
+    /// What was discarded.
+    pub loss: ValueLoss,
+}
+
+/// A completed, undefined, refused or incomplete application. Ported
+/// verbatim from the authority: field names and order.
+///
+/// This crate has no AST to walk, so no producer here ever populates
+/// `location` or `losses`: a host body reports neither through [`Frame`]'s
+/// public surface. Both fields keep the authority's shape so a future
+/// codegen-emitted location path (tracked separately from this issue) is an
+/// additive change, not a breaking one; today `location` is always `None`
+/// and `losses` is always empty.
+#[derive(Clone, Debug)]
+pub struct Evaluation {
+    /// The outcome.
+    pub outcome: Outcome<Value>,
+    /// Where a non-completed outcome originated; `None` when completed, and
+    /// today always `None` (see the struct's own documentation).
+    pub location: Option<Location>,
+    /// The loss records of the operations a completed evaluation performed,
+    /// in evaluation order; today always empty (see the struct's own
+    /// documentation).
+    pub losses: Vec<LocatedLoss>,
+}
+
+/// The events a planned call or evaluation contributes at its own root, with
+/// no charge and no body invoked. Mirrors [`super::equality::EqualityPlan`].
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct CallPlan {
+    call_events: Integer,
+}
+
+impl CallPlan {
+    /// The number of `function.call` charges this plan's own root
+    /// contributes: exactly one for [`plan_call`] (the call itself), and
+    /// exactly zero for [`plan_evaluation`] (an expression's root is not
+    /// itself an application; FR-273's "resolved" ordering note).
+    pub fn call_events(&self) -> &Integer {
+        &self.call_events
+    }
+}
+
+fn validate_arguments(
+    parameters: &[(String, ValueType)],
+    arguments: &[Value],
+    objects: &ObjectEnvironment,
+) -> Result<(), InputRefusal> {
+    if parameters.len() != arguments.len() {
+        return Err(InputRefusal::Arity {
+            declared: parameters.len(),
+            supplied: arguments.len(),
+        });
+    }
+    for (parameter, ((_, value_type), argument)) in parameters.iter().zip(arguments).enumerate() {
+        if !value_type.admits(argument) {
+            return Err(InputRefusal::WrongValueKind { parameter });
+        }
+        let mut pending: Vec<&Value> = alloc::vec![argument];
+        while let Some(value) = pending.pop() {
+            match value {
+                Value::Reference(reference) => {
+                    if !objects.contains(reference) {
+                        return Err(InputRefusal::DanglingReference { parameter });
+                    }
+                }
+                Value::Option(option) => pending.extend(option.payload()),
+                Value::Composite(composite) => {
+                    pending.extend(composite.slots().iter().filter_map(|slot| match slot {
+                        FieldValue::Present(value) => Some(value),
+                        FieldValue::Absent | FieldValue::Null => None,
+                    }));
+                }
+                Value::Collection(collection) => pending.extend(collection.elements()),
+                Value::Boolean(_)
+                | Value::Integer(_)
+                | Value::Rational(_)
+                | Value::Decimal(_)
+                | Value::Float(_)
+                | Value::Quantity(_)
+                | Value::Text(_)
+                | Value::Enum(_) => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Validate a would-be [`CheckedPackage::call`] with no [`Meter`] in scope:
+/// every [`InputRefusal`] is reachable here, before any charge (FR-273-AC-2,
+/// FR-273-AC-3).
+pub fn plan_call(
+    package: &CheckedPackage,
+    function: &str,
+    arguments: &[Value],
+    objects: &ObjectEnvironment,
+) -> Result<CallPlan, InputRefusal> {
+    let declaration = package
+        .function(function)
+        .ok_or_else(|| InputRefusal::UnknownFunction(function.to_string()))?;
+    validate_arguments(&declaration.parameters, arguments, objects)?;
+    Ok(CallPlan {
+        call_events: Integer::one(),
+    })
+}
+
+/// Validate a would-be [`CheckedPackage::evaluate`] with no [`Meter`] in
+/// scope, sharing [`plan_call`]'s validation exactly.
+pub fn plan_evaluation(
+    _package: &CheckedPackage,
+    expression: &CheckedExpression,
+    arguments: &[Value],
+    objects: &ObjectEnvironment,
+) -> Result<CallPlan, InputRefusal> {
+    validate_arguments(&expression.parameters, arguments, objects)?;
+    Ok(CallPlan {
+        call_events: Integer::zero(),
+    })
+}
+
+fn charge_call(meter: &mut Meter) -> Result<(), Stop> {
+    meter.charge(Charge::new(ChargePoint::FunctionCall))?;
+    Ok(())
+}
+
+impl CheckedPackage {
+    fn function(&self, name: &str) -> Option<&FunctionDeclaration> {
+        self.functions.iter().find(|function| function.name == name)
+    }
+
+    /// Check a standalone expression's parameters and result type against
+    /// this package's [`TypeEnvironment`].
+    pub fn check_expression(
+        &self,
+        parameters: Vec<(String, ValueType)>,
+        result: ValueType,
+        root: Body,
+    ) -> Result<CheckedExpression, CheckRefusal> {
+        let refuse = |cause| CheckRefusal {
+            location: location_at(Origin::Expression),
+            cause,
+        };
+        for (_, value_type) in &parameters {
+            if let Err(IllTyped { cause }) = self.types.check_type(value_type) {
+                return Err(refuse(CheckCause::IllTyped(cause)));
+            }
+        }
+        if let Err(IllTyped { cause }) = self.types.check_type(&result) {
+            return Err(refuse(CheckCause::IllTyped(cause)));
+        }
+        Ok(CheckedExpression { parameters, root })
+    }
+
+    /// Apply the named function: validate (no charge), charge one
+    /// `function.call` for its own body, then run it in a fresh root
+    /// [`Frame`]. `evaluate` does not charge for its own root; every
+    /// application it reaches charges through [`Frame::call`].
+    pub fn call(
+        &self,
+        function: &str,
+        arguments: Vec<Value>,
+        objects: &ObjectEnvironment,
+        meter: &mut Meter,
+    ) -> Result<Evaluation, InputRefusal> {
+        plan_call(self, function, &arguments, objects)?;
+        let outcome = Outcome::from_stop(self.run_call(function, &arguments, objects, meter));
+        Ok(Evaluation {
+            outcome,
+            location: None,
+            losses: Vec::new(),
+        })
+    }
+
+    fn run_call(
+        &self,
+        function: &str,
+        arguments: &[Value],
+        objects: &ObjectEnvironment,
+        meter: &mut Meter,
+    ) -> Result<Value, Stop> {
+        charge_call(meter)?;
+        let Some(declaration) = self.function(function) else {
+            return Err(Stop::Refused(Refusal::CheckedInvariant));
+        };
+        let cell = RefCell::new(meter);
+        let frame = Frame {
+            package: self,
+            objects,
+            meter: cell,
+            depth: 0,
+        };
+        (declaration.body)(&frame, arguments).into_stop()
+    }
+
+    /// Evaluate a [`CheckedExpression`] against this package: validate (no
+    /// charge), then run its root in a fresh root [`Frame`] with no charge
+    /// for the root itself.
+    pub fn evaluate(
+        &self,
+        expression: &CheckedExpression,
+        arguments: Vec<Value>,
+        objects: &ObjectEnvironment,
+        meter: &mut Meter,
+    ) -> Result<Evaluation, InputRefusal> {
+        plan_evaluation(self, expression, &arguments, objects)?;
+        let cell = RefCell::new(meter);
+        let frame = Frame {
+            package: self,
+            objects,
+            meter: cell,
+            depth: 0,
+        };
+        let outcome = (expression.root)(&frame, &arguments);
+        Ok(Evaluation {
+            outcome,
+            location: None,
+            losses: Vec::new(),
+        })
+    }
+
+    /// The IEEE item requirements the named function's body discharges
+    /// (FR-009), or `None` if no such function is declared.
+    pub fn ieee_requirements(&self, function: &str) -> Option<&[IeeeItemRequirement]> {
+        self.function(function)
+            .map(|declaration| declaration.ieee_requirements.as_slice())
+    }
+
+    /// The integer-division consumers the named function's body discharges
+    /// (FR-009), or `None` if no such function is declared.
+    pub fn integer_division_consumers(&self, function: &str) -> Option<&[IntegerDivisionConsumer]> {
+        self.function(function)
+            .map(|declaration| declaration.integer_division_consumers.as_slice())
+    }
+}
+
+/// The re-entrant call surface a running [`Body`] sees: the applications it
+/// makes, and the [`Meter`] and [`ObjectEnvironment`] it runs against.
+///
+/// Depth is threaded by value, not shared mutable state: [`Frame::call`]
+/// hands the callee a fresh `Frame` one deeper than its own, so the greatest
+/// depth reached along any one call chain is exactly what
+/// [`CheckingLimits::depth`] bounds, with no unbounded host recursion. The
+/// [`Meter`] is reached through a [`RefCell`] because many `Frame`s across
+/// one call tree share it; `RefCell`, never `unsafe` or atomics.
+pub struct Frame<'a> {
+    package: &'a CheckedPackage,
+    objects: &'a ObjectEnvironment,
+    meter: RefCell<&'a mut Meter>,
+    depth: u64,
+}
+
+impl<'a> Frame<'a> {
+    /// Apply the named function from within a running body: charge one
+    /// `function.call`, then run it in a frame one deeper than this one.
+    /// Beyond [`CheckingLimits::depth`], refuses with
+    /// [`Refusal::CheckedInvariant`] before any charge: `check` admits no
+    /// recursion without a discharged termination measure, so reaching the
+    /// bound means a checked-program invariant was violated.
+    pub fn call(&self, function: &str, arguments: &[Value]) -> Outcome<Value> {
+        Outcome::from_stop(self.run(function, arguments))
+    }
+
+    fn run(&self, function: &str, arguments: &[Value]) -> Result<Value, Stop> {
+        if self.depth >= self.package.limits.depth() {
+            return Err(Stop::Refused(Refusal::CheckedInvariant));
+        }
+        let Some(declaration) = self.package.function(function) else {
+            return Err(Stop::Refused(Refusal::CheckedInvariant));
+        };
+        {
+            let mut guard = self.meter.borrow_mut();
+            charge_call(&mut guard)?;
+        }
+        let mut guard = self.meter.borrow_mut();
+        let child = Frame {
+            package: self.package,
+            objects: self.objects,
+            meter: RefCell::new(&mut guard),
+            depth: self.depth.saturating_add(1),
+        };
+        (declaration.body)(&child, arguments).into_stop()
+    }
+
+    /// Run `run` against the shared [`Meter`] this frame's whole call tree
+    /// charges through.
+    pub fn meter<R>(&self, run: impl FnOnce(&mut Meter) -> R) -> R {
+        let mut guard = self.meter.borrow_mut();
+        run(&mut guard)
+    }
+
+    /// The [`ObjectEnvironment`] this call was made against.
+    pub fn objects(&self) -> &ObjectEnvironment {
+        self.objects
+    }
+
+    /// This frame's re-entrant call depth: `0` at the root.
+    pub fn depth(&self) -> u64 {
+        self.depth
+    }
+}
