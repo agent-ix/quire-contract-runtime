@@ -122,11 +122,11 @@ name and order; and no operator here decides anything the authority does not.
   and high-water/cumulative rules already require.
 - The expression machine and total pure functions (`Expression`, `FunctionDeclaration`,
   `PackageDeclarations::check`, `CheckedPackage::{check_expression, call, evaluate}`,
-  `CheckingLimits`, `CheckRefusal`, `Evaluation`) are out of scope
-  (agent-ix/quire-spec-language#119, next runtime slice); `function.call` and `collection.visit` are
-  ported as closed accounting vocabulary now, ahead of the operator that will charge them. Object
-  environments and attribute dereference (`ObjectEnvironment`, `ObjectEnvironmentCause`,
-  `ObjectEnvironmentRefusal`) are out of scope (agent-ix/quire-spec-language#120). Temporal and
+  `CheckingLimits`, `CheckRefusal`, `Evaluation`), and object environments and attribute dereference
+  (`ObjectEnvironment`, `ObjectEnvironmentCause`, `ObjectEnvironmentRefusal`), are outside this
+  requirement; [FR-273](./FR-273-exact-function-application.md) admits the application surface and the
+  object environment it validates reference arguments against. `function.call` and `collection.visit`
+  are ported as closed accounting vocabulary here, ahead of the operator that charges them. Temporal and
   protocol encodings and replay are out of scope (agent-ix/quire-spec-language#121). Library
   resolution and package identity (`resolve_libraries`, `PackageId::of_preimage`, `check_migration`)
   are not this crate's work at all: recomputing a package id from a preimage is compiler work, and
