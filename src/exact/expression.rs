@@ -40,6 +40,7 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::cell::{Cell, RefCell};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use super::accounting::{Charge, ChargePoint, Meter};
 use super::comparison::{IllTyped, IllTypedCause};
@@ -84,6 +85,14 @@ pub enum CheckMode {
 /// `thumbv7em-none-eabi` recursion would cause. Same number, different
 /// invariant.
 pub const MAX_CALL_DEPTH: u64 = 128;
+
+/// The source of [`CheckedPackage::id`]: a monotonic counter stamped once per
+/// [`PackageDeclarations::check`] call, never reused. `thumbv7em-none-eabi`
+/// has compare-and-swap, so `AtomicUsize` is available at this crate's MSRV
+/// (1.75) on the governed target; `Ordering::Relaxed` is enough because the
+/// only property this counter needs is "never returns the same value twice,"
+/// not any cross-thread happens-before relationship with other state.
+static NEXT_PACKAGE_ID: AtomicUsize = AtomicUsize::new(0);
 
 /// A checking budget: a node-count ceiling and a call-depth bound of at most
 /// [`MAX_CALL_DEPTH`].
@@ -351,6 +360,7 @@ impl PackageDeclarations {
             functions: self.functions,
             limits,
             depth: Cell::new(0),
+            id: NEXT_PACKAGE_ID.fetch_add(1, Ordering::Relaxed),
         })
     }
 }
@@ -366,6 +376,17 @@ pub struct CheckedPackage {
     /// `Frame::call`): see this module's own documentation for why the bound
     /// lives here rather than threaded per-`Frame`.
     depth: Cell<u64>,
+    /// This package's identity, stamped once from [`NEXT_PACKAGE_ID`] at
+    /// [`PackageDeclarations::check`] time and carried by value from then on.
+    /// Not derived from the package's address: `check` returns `CheckedPackage`
+    /// by value, so any move (into an `Rc`, a `Box`, or simply up the stack)
+    /// after `check` would change an address-derived identity out from under
+    /// every [`CheckedExpression`] already checked against it — refusing the
+    /// package's own, unmoved expression as `ForeignExpression`, silently
+    /// indistinguishable from a genuine invariant violation. A monotonic
+    /// counter is immune to moves and, unlike an address, is never reused
+    /// once a package is dropped and its allocation recycled.
+    id: usize,
 }
 
 /// A standalone expression checked against an already-checked package's
@@ -374,13 +395,15 @@ pub struct CheckedExpression {
     parameters: Vec<(String, ValueType)>,
     root: Body,
     /// The identity of the [`CheckedPackage`] this expression was checked
-    /// against (`self as *const CheckedPackage as usize` at
-    /// [`CheckedPackage::check_expression`] time): the smallest value that
+    /// against ([`CheckedPackage::identity`], a monotonic id stamped at
+    /// [`PackageDeclarations::check`] time — see [`CheckedPackage`]'s own
+    /// documentation) at [`CheckedPackage::check_expression`] time: it
     /// discriminates "checked against this package" from "checked against a
-    /// different one" while both are alive, with no lifetime threaded onto
-    /// this otherwise-detachable, owned value. [`plan_evaluation`] compares
-    /// it against the package `evaluate` is actually called on and refuses a
-    /// mismatch at the plan boundary, before any charge.
+    /// different one" for as long as this owned, detachable value outlives
+    /// the package's own lifetime, and survives the package being moved.
+    /// [`plan_evaluation`] compares it against the package `evaluate` is
+    /// actually called on and refuses a mismatch at the plan boundary, before
+    /// any charge.
     package: usize,
 }
 
@@ -648,12 +671,13 @@ impl CheckedPackage {
         self.functions.iter().find(|function| function.name == name)
     }
 
-    /// This package's own identity: the smallest value that discriminates it
-    /// from any other live `CheckedPackage`, used to bind a
+    /// This package's own identity: a monotonic id stamped once at
+    /// [`PackageDeclarations::check`] time, used to bind a
     /// [`CheckedExpression`] to the package that checked it. See
-    /// [`CheckedExpression`]'s own documentation.
+    /// [`CheckedPackage::id`]'s and [`CheckedExpression`]'s own documentation
+    /// for why this is not derived from the package's address.
     fn identity(&self) -> usize {
-        self as *const Self as usize
+        self.id
     }
 
     /// Claim one more level of this package's shared re-entrant call depth,
@@ -876,12 +900,20 @@ impl<'a> Frame<'a> {
     }
 
     /// Run `run` against the shared [`Meter`] this frame's whole call tree
-    /// charges through. `None` if this frame's `Meter` is already mutably
-    /// borrowed by an enclosing call on the same re-entrant chain, rather
-    /// than panicking on the double borrow.
-    pub fn meter<R>(&self, run: impl FnOnce(&mut Meter) -> R) -> Option<R> {
-        let mut guard = self.meter.try_borrow_mut().ok()?;
-        Some(run(&mut guard))
+    /// charges through. `Err(Stop::Refused(Refusal::CheckedInvariant))` if
+    /// this frame's `Meter` is already mutably borrowed by an enclosing call
+    /// on the same re-entrant chain, rather than panicking on the double
+    /// borrow. Returning `Result` rather than `Option` matters here: a body
+    /// that needed to charge through this access and silently swallowed a
+    /// `None` would keep running unmetered with no signal, exactly the
+    /// condition [`Frame::call`] itself maps to a refusal rather than an
+    /// absent value. Propagate with `?`, as [`Frame::call`] does.
+    pub fn meter<R>(&self, run: impl FnOnce(&mut Meter) -> R) -> Result<R, Stop> {
+        let mut guard = self
+            .meter
+            .try_borrow_mut()
+            .map_err(|_| Stop::Refused(Refusal::CheckedInvariant))?;
+        Ok(run(&mut guard))
     }
 
     /// The [`ObjectEnvironment`] this call was made against.
@@ -889,7 +921,13 @@ impl<'a> Frame<'a> {
         self.objects
     }
 
-    /// This frame's re-entrant call depth: `0` at the root.
+    /// This frame's re-entrant call depth: the value of [`CheckedPackage`]'s
+    /// shared depth counter at the instant this frame was built. `0` only for
+    /// a program's actual first call into an otherwise-idle package; a root
+    /// [`Frame`] built by a direct, bypassing re-entry into
+    /// [`CheckedPackage::call`] or [`CheckedPackage::evaluate`] (from within
+    /// a running [`Body`] holding its own `Rc<CheckedPackage>`) reports the
+    /// depth already active on that package, which is non-zero.
     pub fn depth(&self) -> u64 {
         self.depth
     }

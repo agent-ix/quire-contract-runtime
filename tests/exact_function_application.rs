@@ -12,8 +12,8 @@ use quire_contract_runtime::exact::{
     IeeeItemRequirement, IeeeOperationKind, IeeeUnsupportedCause, IeeeWidth, InputRefusal, Integer,
     IntegerDivisionConsumer, IntegerDivisionDisposition, LimitKind, Location, Meter, NodeKey,
     ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin, Outcome,
-    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, TypeEnvironment, UniverseIdentity,
-    Value, ValueType, MAX_CALL_DEPTH,
+    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, Stop, TypeEnvironment,
+    UniverseIdentity, Value, ValueType, MAX_CALL_DEPTH,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -394,14 +394,20 @@ fn tc_194_function_call_precedes_the_body() {
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
             body: Box::new(|frame, _arguments| {
-                let charged = frame
-                    .meter(|meter| {
+                // `Frame::meter` returns `Result<R, Stop>`, not `Option<R>`:
+                // a refusal here (the shared `Meter` already mutably
+                // borrowed on this re-entrant chain) must propagate as a
+                // refused outcome via `?`, not silently collapse to
+                // `charged: false` and complete anyway.
+                let attempt: Result<Value, Stop> = (|| {
+                    let charged = frame.meter(|meter| {
                         meter
                             .admitted_charges()
                             .contains(&ChargePoint::FunctionCall)
-                    })
-                    .unwrap_or(false);
-                Outcome::Completed(Value::Boolean(charged))
+                    })?;
+                    Ok(Value::Boolean(charged))
+                })();
+                Outcome::from_stop(attempt)
             }),
         }],
     }
@@ -796,10 +802,143 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
         .contains(&ChargePoint::FunctionCall));
 }
 
+// ---- TC-194: a `CheckedPackage`'s identity survives being moved ----------
+
+/// `PackageDeclarations::check` returns `CheckedPackage` by value, so any
+/// move afterward (into an `Rc`, a `Box`, or simply up the stack) must not
+/// change whether the package's own, already-checked `CheckedExpression`
+/// still evaluates against it. An address-derived identity would fail this:
+/// `self as *const Self as usize` changes on every move, so the identity
+/// captured at `check_expression` time (before the move) would mismatch the
+/// moved package's new address at `evaluate` time, refusing the package's
+/// own expression as `ForeignExpression` — silently indistinguishable from a
+/// genuine invariant violation inside a body.
+///
+/// Trace: TC-194
+#[test]
+fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
+    let objects = ObjectEnvironment::default();
+
+    // Moved into an `Rc` after `check_expression`.
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: Vec::new(),
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let expression = package
+        .check_expression(
+            Vec::new(),
+            ValueType::Boolean,
+            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        )
+        .unwrap();
+    let package = Rc::new(package);
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(
+        matches!(evaluation.outcome, Outcome::Completed(Value::Boolean(true))),
+        "an `Rc`-moved package must still evaluate its own expression, got {:?}",
+        evaluation.outcome
+    );
+
+    // Moved into a `Box` after `check_expression`.
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: Vec::new(),
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let expression = package
+        .check_expression(
+            Vec::new(),
+            ValueType::Boolean,
+            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        )
+        .unwrap();
+    let package = Box::new(package);
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(
+        matches!(evaluation.outcome, Outcome::Completed(Value::Boolean(true))),
+        "a `Box`-moved package must still evaluate its own expression, got {:?}",
+        evaluation.outcome
+    );
+}
+
+/// The converse of the move case above: an expression checked against a
+/// package that has since been dropped must be refused by a *different*,
+/// later-built package, even when the allocator hands the later package the
+/// exact freed address the first one held. An address-derived identity would
+/// admit this: once the first package is dropped and its allocation reused,
+/// `self as *const Self as usize` for the second package equals the stored
+/// identity on the first package's expression, and a genuinely foreign
+/// expression would be accepted. Both packages are boxed identically (same
+/// fields, so the same size class) to make address reuse likely on this
+/// allocator; the monotonic id must refuse regardless of whether reuse
+/// actually happens.
+///
+/// Trace: TC-194
+#[test]
+fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
+    let objects = ObjectEnvironment::default();
+    let expression = {
+        let package = Box::new(
+            PackageDeclarations {
+                types: Default::default(),
+                functions: Vec::new(),
+            }
+            .check(CheckMode::Linked, CheckingLimits::default())
+            .unwrap(),
+        );
+        package
+            .check_expression(
+                Vec::new(),
+                ValueType::Boolean,
+                Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            )
+            .unwrap()
+        // `package` (the `Box`) is dropped here, freeing its allocation.
+    };
+    let second = Box::new(
+        PackageDeclarations {
+            types: Default::default(),
+            functions: Vec::new(),
+        }
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .unwrap(),
+    );
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = second
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Refused(Refusal::CheckedInvariant)
+    ));
+    assert!(meter.admitted_charges().is_empty());
+}
+
 /// A body reached through `Frame::call` (not `CheckedPackage::call` itself)
-/// records whether `function.call` was already admitted at the instant it
-/// started running, proving `Frame::call` also charges before invoking the
-/// callee's body.
+/// counts how many `function.call` charges were already admitted at the
+/// instant it started running, proving `Frame::call` also charges before
+/// invoking the callee's body.
+///
+/// The count, not a `contains` check, is what discriminates here: `observe`
+/// is reached from `root`, and `root`'s own `function.call` charge is already
+/// admitted by the time `root`'s body runs and calls `observe` — so a mere
+/// `contains(&ChargePoint::FunctionCall)` would read `true` at `observe`'s
+/// first instruction regardless of whether `Frame::call` charges before or
+/// after invoking `observe`'s body, since one prior charge (`root`'s) is
+/// already on the meter either way. Requiring the count to be exactly `2`
+/// (root's charge plus `Frame::call`'s own, for `observe`) is a witness of
+/// *this* charge's ordering relative to *this* body: an implementation that
+/// ran `observe`'s body before charging for it would leave the count at `1`
+/// when the body observed it.
 ///
 /// Trace: TC-194, FR-273-AC-2
 #[test]
@@ -824,14 +963,20 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
                 integer_division_consumers: Vec::new(),
                 measure_discharged: true,
                 body: Box::new(|frame, _arguments| {
-                    let charged = frame
-                        .meter(|meter| {
+                    // `Frame::meter` returns `Result<R, Stop>`; propagate a
+                    // refusal via `?` instead of collapsing it into a bogus
+                    // count.
+                    let attempt: Result<Value, Stop> = (|| {
+                        let count = frame.meter(|meter| {
                             meter
                                 .admitted_charges()
-                                .contains(&ChargePoint::FunctionCall)
-                        })
-                        .unwrap_or(false);
-                    Outcome::Completed(Value::Boolean(charged))
+                                .iter()
+                                .filter(|&&charge| charge == ChargePoint::FunctionCall)
+                                .count()
+                        })?;
+                        Ok(Value::Integer(Integer::from(count as i64)))
+                    })();
+                    Outcome::from_stop(attempt)
                 }),
             },
         ],
@@ -843,18 +988,12 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
     let evaluation = package
         .call("root", Vec::new(), &objects, &mut meter)
         .unwrap();
-    assert!(matches!(
-        evaluation.outcome,
-        Outcome::Completed(Value::Boolean(true))
-    ));
-    let charges = meter.admitted_charges();
-    assert_eq!(
-        charges
-            .iter()
-            .filter(|&&c| c == ChargePoint::FunctionCall)
-            .count(),
-        2
-    );
+    match &evaluation.outcome {
+        Outcome::Completed(Value::Integer(count)) => {
+            assert_eq!(*count, Integer::from(2i64));
+        }
+        other => panic!("expected Completed(Integer(2)), got {other:?}"),
+    }
 }
 
 /// `CheckingLimits::new` refuses a depth above `MAX_CALL_DEPTH`.
@@ -910,8 +1049,9 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
 }
 
 /// A body that re-enters its own [`Frame::meter`] from inside the closure
-/// [`Frame::meter`] already handed it refuses the inner access with `None`
-/// instead of panicking on the double `RefCell` borrow.
+/// [`Frame::meter`] already handed it refuses the inner access with
+/// `Err(Stop::Refused(Refusal::CheckedInvariant))` instead of panicking on
+/// the double `RefCell` borrow.
 ///
 /// Trace: TC-194, FR-273-AC-2
 #[test]
@@ -927,7 +1067,7 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
             measure_discharged: true,
             body: Box::new(|frame, _arguments| {
                 let outer = frame.meter(|_outer_meter| frame.meter(|_inner_meter| true));
-                let inner_refused = matches!(outer, Some(None));
+                let inner_refused = matches!(outer, Ok(Err(_)));
                 Outcome::Completed(Value::Boolean(inner_refused))
             }),
         }],
@@ -1121,15 +1261,15 @@ fn tc_195_negotiation_takes_no_meter_and_changes_no_counter() {
     // `negotiate_ieee`'s signature (`&[IeeeItemRequirement],
     // &IeeeBackendCapabilities`) takes no `Meter` at all: the type system is
     // already FR-273-AC-4's "before any application." The `Meter` below is
-    // constructed only so this test can additionally show a real runtime
-    // assertion of "without changing any Meter counter": negotiation runs
-    // against it in scope, and it is asserted untouched afterward.
+    // never passed to `negotiate_ieee` and so is unreachable from it by
+    // construction; its `admitted_charges`/`consumed` assertions below
+    // cannot be made false by any change to `negotiate_ieee`, so they are
+    // not runtime evidence of anything the call did — the signature and the
+    // `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) are
+    // the actual evidence for this AC.
     let dispositions = negotiate_ieee(&[requirement], &backend);
     assert_eq!(dispositions.len(), 1);
     let meter = Meter::new(UNLIMITED);
-    assert!(meter.admitted_charges().is_empty());
-    assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
-    let _ = negotiate_ieee(&[requirement], &backend);
     assert!(meter.admitted_charges().is_empty());
     assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
 }
