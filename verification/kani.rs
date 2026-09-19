@@ -1,3 +1,4 @@
+use crate::exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, ScalarLimits};
 use crate::{
     operators::{
         and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem,
@@ -6,6 +7,38 @@ use crate::{
     },
     ClauseId, ClauseKind, ClauseOutcome, ContractIdentity, ExecutionPoint, FailureDetail,
     FailureKind, Observation, RequirementId, RevisionId, Verdict, VerdictContext, VerdictKind,
+};
+
+// `quire-contract-codegen`'s generated exact-scalar oracles call
+// `quire_contract_runtime::exact` operators directly (`quire-contract-codegen`
+// `src/exact_scalar.rs:1370` `use quire_contract_runtime::exact as rt;`), `compare_ieee` among
+// them at `src/exact_scalar.rs:1677`. `exact::Integer` (the operand type behind
+// `evaluate_integer_arithmetic`, CG's other principal `rt::` call site) is an unbounded `BigInt`:
+// a harness that builds one from a symbolic operand — even an operand narrowed to `i8` by
+// `kani::assume` — makes every arithmetic and comparison step inside `num-bigint`'s digit-vector
+// representation symbolic too, and that did not discharge in the roughly ten minutes budgeted for
+// it here; it is rejected for that reason, not attempted with a larger budget. `compare_ieee`
+// reaches `src/exact/ieee.rs` (`decode`, `Class`, `total_order_key`) without ever constructing a
+// `BigInt`: `IeeeValue` is a plain `(IeeeWidth, u64)` bit pattern, and every metering charge below
+// it — `Integer`-typed inside `Meter`/`Charge` (`src/exact/accounting.rs`) — is built from
+// concrete, non-symbolic widths and counts, so no case-split reaches `num-bigint` at all.
+//
+// Every limit below is `u64::MAX`, so metering never refuses: harnesses built on
+// `EXACT_UNLIMITED` are scoped to an unbounded budget and discharge nothing about
+// `Stop::Refused` or any `LimitKind` boundary. Those paths are unproved. The struct literal
+// names every field with no `..Default::default()` so a new member breaks the build rather than
+// silently defaulting into scope.
+const EXACT_UNLIMITED: ScalarLimits = ScalarLimits {
+    integer_bits: u64::MAX,
+    decimal_digits: u64::MAX,
+    scale_expansion: u64::MAX,
+    text_input_bytes: u64::MAX,
+    text_scalars: u64::MAX,
+    normalized_scalars: u64::MAX,
+    unit_edges: u64::MAX,
+    value_occurrences: u64::MAX,
+    work_units: u64::MAX,
+    result_units: u64::MAX,
 };
 
 // Implements: TC-001
@@ -223,4 +256,37 @@ fn tc_003_campaign_accounting_saturates() {
 fn tc_003_option_helpers_preserve_definedness() {
     let value: Option<u8> = kani::any();
     assert_eq!(option_copied(option_ref(&value)), value);
+}
+
+// Reaches `crate::exact` (agent-ix/quire-contract-runtime#53): every declared harness before
+// this one imports only `crate::operators` and top-level model types, so the prover compiled
+// `src/exact/` without discharging a single obligation over it. `compare_ieee` is one of the
+// operators `quire-contract-codegen`'s generated oracles call (`src/exact_scalar.rs:1677`). The
+// proposition is IEEE 754's own definedness boundary for `numericEqual`: reflexive equality holds
+// for every bit pattern except NaN, which compares unequal to itself. `IeeeValue` is a bit
+// pattern, not a `BigInt`, so this stays cheap for the prover; see the wider module comment above
+// for the `Integer`/`BigInt` alternative this harness deliberately does not attempt. `unwind(8)`
+// bounds `exact::accounting::Meter::charge`'s own bookkeeping loop over its two-entry size vector;
+// CBMC discharges the loop's unwinding assertion at that bound with room to spare.
+// Implements: TC-003
+#[kani::proof]
+#[kani::unwind(8)]
+fn tc_003_exact_ieee_numeric_equal_matches_nan_unordered() {
+    let bits: u32 = kani::any();
+    let value = IeeeValue::binary32(bits);
+    // The binary32 NaN encoding read straight off the bit pattern: exponent field all ones with a
+    // nonzero trailing significand. The expectation is derived from `bits`, not from
+    // `IeeeValue::is_nan` — `is_nan` is `matches!(decode(self), Class::Nan { .. })`
+    // (`src/exact/ieee.rs:112`) and `compare_ieee`'s `NumericEqual` arm dispatches on the same
+    // `decode` (`src/exact/ieee.rs:613`), so an `is_nan`-based expectation moves with any
+    // misclassification inside `decode` and holds vacuously. Measured: with `is_nan` on both
+    // sides, a `decode` that classifies every NaN as `Class::Finite` still verifies SUCCESSFUL.
+    let is_nan = bits & 0x7f80_0000 == 0x7f80_0000 && bits & 0x007f_ffff != 0;
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    // `Ok`-ness is proved here, not assumed away: differing width is the only `IllTyped` cause
+    // `compare_ieee` raises, and one operand compared with itself cannot differ in width.
+    assert_eq!(
+        compare_ieee(IeeeComparison::NumericEqual, value, value, &mut meter).ok(),
+        Some(Outcome::Completed(!is_nan)),
+    );
 }

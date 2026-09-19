@@ -73,7 +73,7 @@ Backported from `agent-ix/ecaz`:
 
 ```
 src/lib.rs             # crate root
-verification/kani.rs   # seven proof harnesses, compiled only under cfg(kani)
+verification/kani.rs   # eight proof harnesses, compiled only under cfg(kani)
 measurement/footprint/ # the governed linked-footprint population
 tests/                 # integration, operator, proptest, release and assurance tests
 spec/                  # requirements, test cases, matrix, suite registry, assurance

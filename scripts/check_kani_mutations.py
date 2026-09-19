@@ -66,6 +66,20 @@ MUTATIONS = (
         "tc_003_campaign_accounting_saturates",
         "TC-003",
     ),
+    (
+        "src/exact/ieee.rs",
+        "            (Class::Nan { .. }, _) | (_, Class::Nan { .. }) => false,\n",
+        "            (Class::Nan { .. }, _) | (_, Class::Nan { .. }) => true,\n",
+        "tc_003_exact_ieee_numeric_equal_matches_nan_unordered",
+        "TC-003",
+    ),
+    (
+        "src/exact/ieee.rs",
+        "    if u64::from(biased) == format.exponent_ones() {\n        if fraction == 0 {\n",
+        "    if u64::from(biased) == format.exponent_ones() {\n        if fraction != 0 {\n",
+        "tc_003_exact_ieee_numeric_equal_matches_nan_unordered",
+        "TC-003",
+    ),
 )
 
 
