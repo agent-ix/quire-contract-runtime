@@ -50,8 +50,10 @@ type: TestMatrix
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | TC-033 | ✅ implemented |
-| FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6 | TC-194 | 🚧 planned, tracked by #34 |
-| FR-273 | FR-273-AC-4 | TC-195 | 🚧 planned, tracked by #34 |
+| FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented: AC-1's linked-only application is proved by `tc_194_kernel_check_is_refused_so_no_kernel_package_is_applicable` (a package `check` rejects under `CheckMode::Kernel` is never applicable — that is AC-6's inspection too) together with `tc_194_linked_package_applies_every_declared_function` and the rest of this corpus's `Linked`-application tests, which call only a package `check` admitted under `CheckMode::Linked`. AC-2/AC-3's "arity before any per-argument check, all before the `function.call` charge, before the body" ordering is covered for both `call` and `Frame::call` |
+| FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
+| FR-273 | FR-273-AC-5 | TC-194 | ✅ implemented: AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (`conformance/qsl-agreement/tests/tc_191_function_application.rs:98` and the matching lines in the other three vectors) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
+| FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `negotiate_ieee(&[IeeeItemRequirement], &IeeeBackendCapabilities)` receives no `Meter` at all, so no application-time charge is reachable from it by construction — the evidence is that signature plus the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) proving no conversion path from a disposition into `Outcome`/`InputRefusal` exists. `tc_195_negotiate_ieee_takes_no_meter_by_signature` inspects that signature and confirms negotiation still runs and reports one disposition per requirement; it carries no `Meter` assertion of its own, since a `Meter` never passed to `negotiate_ieee` cannot be evidence of anything the call did |
 
 ## Test Case Summary
 
@@ -87,8 +89,8 @@ type: TestMatrix
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | ✅ implemented |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
-| TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6 | 🚧 planned, tracked by #34 |
-| TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | 🚧 planned, tracked by #34 |
+| TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
+| TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | ✅ implemented |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
 retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
@@ -103,8 +105,32 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 
 ## Evidence Locations
 
-- TC-194, TC-195: planned `tests/exact_function_application.rs` (`--features exact`); no evidence
-  symbol exists yet, and none is claimed. Landing is scoped to agent-ix/quire-contract-runtime#34.
+- TC-194, TC-195: `tests/exact_function_application.rs` (`--features exact`), landed under
+  agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
+  `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.
+- FR-273-AC-5 (TC-194's shared-corpus row): `conformance/qsl-agreement/tests/tc_191_function_application.rs`,
+  pinned to the quire-spec-language `ea39f91` authority (`conformance/qsl-agreement/Cargo.toml`).
+  It agrees on the closed `InputRefusal` vocabulary (`UnknownFunction`, `Arity`, `WrongValueKind`,
+  `DanglingReference`) with its codes and causes, and the charge count of one admitted call (AP05).
+  It does **not** agree on check *ordering*: each of its five vectors (AP01 through AP05) triggers
+  exactly one refusal in isolation — no vector supplies a call violating two checks at once — so the
+  corpus cannot distinguish an implementation that checks arity, then per-argument kind and
+  reference, then charges `function.call`, from one that checks in some other order and happens to
+  agree on each single-violation vector's result. That ordering claim is instead backed only by the
+  runtime-only tests in `tests/exact_function_application.rs`
+  (`tc_194_arity_is_decided_before_any_per_argument_check`,
+  `tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference`,
+  `tc_194_function_call_precedes_the_body`,
+  `tc_194_frame_call_charges_function_call_before_the_body_it_invokes`), which construct vectors
+  that do carry two simultaneous violations specifically to discriminate check order. Nor does the
+  corpus agree on function-body semantics: AD-002 draws the runtime's boundary at typed values and
+  operators, so `Body` is an opaque Rust closure while the authority's function bodies are a typed
+  `Expression` AST an interpreter runs — there is no `Debug` rendering that could compare the two,
+  so no shared corpus exists for arithmetic, `let`, `if`, recursion or any other body form. Those
+  are covered by `tests/exact_function_application.rs` against the runtime alone. AC-5 quantifies
+  over shared-corpus function-application vectors only, so neither the check-ordering gap nor the
+  absent body-semantics corpus is a gap in AC-5 itself — the corpus agrees on every vector it
+  supplies, which is all AC-5 claims — and AC-5 is recorded as fully implemented.
 - TC-030: `tests/exact_negotiation.rs`; TC-032: `tests/exact_meter_state.rs` and the in-crate
   `src/exact/accounting_tests.rs` for the cumulative-counter boundary no public operator can
   reach;

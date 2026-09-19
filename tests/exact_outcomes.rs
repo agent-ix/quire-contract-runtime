@@ -11,14 +11,15 @@ use quire_contract_runtime::exact::{
     admit_text, compare_enum, compare_text, construct_collection, divide, evaluate_boolean,
     evaluate_decimal, evaluate_ieee, evaluate_integer_arithmetic, evaluate_quantity,
     evaluate_rational_arithmetic, modulo, order_numbers, BooleanConnective, BoundViolation,
-    CardinalityBound, ChargePoint, CollectionKind, CollectionType, ComparisonOperator,
-    CompositeDeclaration, CompositeShape, Decimal, DecimalOperation, DecimalType, Deferred,
-    DivisionProfile, EnumDeclaration, EqualityOperand, EqualityOperator, IeeeFlags, IeeeOperation,
-    IeeeValue, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerArithmetic,
-    IntegerDomain, IntegerInterval, LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator,
-    Outcome, Quantity, QuantityOperation, QuantityUnit, Rational, RationalArithmetic, Refusal,
-    RoundingMode, ScalarLimits, TextPayload, TextProfile, TextType, TypeEnvironment,
-    UnitDeclaration, UnitGraph, Value, ValueType,
+    CardinalityBound, ChargePoint, CheckMode, CheckingLimits, CollectionKind, CollectionType,
+    ComparisonOperator, CompositeDeclaration, CompositeShape, Decimal, DecimalOperation,
+    DecimalType, Deferred, DivisionProfile, EnumDeclaration, EqualityOperand, EqualityOperator,
+    FunctionDeclaration, IeeeFlags, IeeeOperation, IeeeValue, IllTyped, IllTypedCause, Incomplete,
+    InjectedDenial, Integer, IntegerArithmetic, IntegerDomain, IntegerInterval, LimitKind, Meter,
+    NodeKey, ObjectEnvironment, OrderedOperands, OrderingOperator, Outcome, PackageDeclarations,
+    Quantity, QuantityOperation, QuantityUnit, Rational, RationalArithmetic, Refusal, RoundingMode,
+    ScalarLimits, TextPayload, TextProfile, TextType, TypeEnvironment, UnitDeclaration, UnitGraph,
+    Value, ValueType,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -354,7 +355,7 @@ fn tc_016_exact_sources_have_no_host_float_std_panic_or_unsafe_path() {
         ));
     }
     sources.sort();
-    assert_eq!(sources.len(), 22);
+    assert_eq!(sources.len(), 23);
     let forbidden = [
         "f32",
         "f64",
@@ -449,7 +450,7 @@ fn tc_016_exact_surface_is_reexported_from_private_modules() {
             }
         }
     }
-    assert_eq!(declared.len(), 21);
+    assert_eq!(declared.len(), 22);
     assert_eq!(public, exported);
 }
 
@@ -551,6 +552,31 @@ fn drive_collection_membership(meter: &mut Meter) -> Incomplete {
         Box::new(|_meter: &mut Meter| Outcome::Completed(Value::Integer(int(2)))),
     ];
     expect_incomplete(construct_collection(&collection_type, elements, meter))
+}
+
+/// A checked package of one nullary function, called through
+/// `CheckedPackage::call`: the injected denial fires on the `function.call`
+/// charge itself, strictly before the body (which would complete instead of
+/// denying) ever runs.
+fn drive_function_call(meter: &mut Meter) -> Incomplete {
+    let package = PackageDeclarations {
+        types: TypeEnvironment::default(),
+        functions: vec![FunctionDeclaration {
+            name: "f".to_string(),
+            parameters: Vec::new(),
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        }],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let evaluation = package
+        .call("f", Vec::new(), &ObjectEnvironment::default(), meter)
+        .unwrap();
+    expect_incomplete(evaluation.outcome)
 }
 
 /// A one-position tuple construction reaches `composite.result-retain` once
@@ -698,30 +724,30 @@ type Driver = fn(&mut Meter) -> Incomplete;
 
 /// Trace: TC-031, FR-010-AC-1
 ///
-/// `function.call` and `collection.visit` are declared in `ChargePoint::ALL`
-/// (quire.value.accounting/v1) but no public `exact` operator charges them
-/// yet: both are ported ahead of the expression-machine and
-/// collection-traversal operators that will (agent-ix/quire-spec-language#119).
-/// They are therefore excluded from this AC-1 sweep as `unreachable`, not
-/// silently dropped: this is a gap between the declared `ChargePoint`
-/// vocabulary and what the runtime actually charges, not a gap in this test.
-/// Every other point FR-008 added — the `equality.*` occurrence-pair plan
-/// schedule and the `collection.*`/`composite.result-retain` family — is
-/// reachable through `CheckedEquality::evaluate`, `construct_collection` and
-/// `TypeEnvironment::evaluate_tuple`, and is driven below like any other.
+/// `collection.visit` is declared in `ChargePoint::ALL`
+/// (quire.value.accounting/v1) but no public `exact` operator charges it
+/// yet: it is ported ahead of the collection-traversal operator that will
+/// (agent-ix/quire-spec-language#119). It is therefore excluded from this
+/// AC-1 sweep as `unreachable`, not silently dropped: this is a gap between
+/// the declared `ChargePoint` vocabulary and what the runtime actually
+/// charges, not a gap in this test.
+/// Every other point FR-008 added — `function.call` (through
+/// `CheckedPackage::call`/`Frame::call`, FR-273), the `equality.*`
+/// occurrence-pair plan schedule and the `collection.*`/
+/// `composite.result-retain` family — is reachable through
+/// `CheckedPackage::call`, `CheckedEquality::evaluate`,
+/// `construct_collection` and `TypeEnvironment::evaluate_tuple`, and is
+/// driven below like any other.
 #[test]
 fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() {
     let unreachable = [
-        // `function.call`: ported ahead of the expression-machine operator
-        // that will charge it (agent-ix/quire-spec-language#119); no operator
-        // in this crate charges it yet.
-        ChargePoint::FunctionCall,
         // `collection.visit`: ported ahead of the collection-traversal
         // operator that will charge it (agent-ix/quire-spec-language#119); no
         // operator in this crate charges it yet.
         ChargePoint::CollectionVisit,
     ];
     let drivers: Vec<(ChargePoint, Driver)> = vec![
+        (ChargePoint::FunctionCall, drive_function_call),
         (
             ChargePoint::IntegerArithmeticOperands,
             drive_integer_arithmetic,

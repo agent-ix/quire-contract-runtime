@@ -588,6 +588,50 @@ pub mod qsl_side {
 
     shared_helpers!();
 
+    /// A checked package (quire-specification/FR-146) of `functions` over `types`, admitted
+    /// under unlimited [`CheckingLimits`]. `CheckMode` is moved, not added, between the two sides:
+    /// the authority threads a `CheckMode` through its own per-expression checking entry point (so
+    /// any one expression, including a standalone one, can be checked under either mode
+    /// independently), and its `PackageDeclarations::check`-equivalent for a named package function
+    /// takes none at all (a package function is always checked as a linked body). The runtime port
+    /// moves the parameter the other way: `CheckMode` is taken once, explicitly, at
+    /// `PackageDeclarations::check`'s package boundary, and the runtime's own
+    /// `CheckedPackage::check_expression` (for a standalone `CheckedExpression`) takes none,
+    /// inheriting `Linked` implicitly from the already-checked package. This helper is the
+    /// per-side seam that hides that shape difference so the shared vector body below stays
+    /// identical on both sides.
+    pub fn linked_package(
+        types: TypeEnvironment,
+        functions: Vec<FunctionDeclaration>,
+    ) -> CheckedPackage {
+        PackageDeclarations {
+            types,
+            functions,
+            ..Default::default()
+        }
+        .check(CheckingLimits::default())
+        .unwrap()
+    }
+
+    /// A named function of one parameter `x: parameter_type` whose body is exactly its argument
+    /// (`x`), declared to return `result_type`. Used only where `parameter_type == result_type`,
+    /// so a completed call always agrees on the returned value without depending on any body
+    /// computation this crate's Expression tree and the runtime's opaque Rust closure could
+    /// diverge on.
+    pub fn identity_function(
+        name: &str,
+        parameter_type: ValueType,
+        result_type: ValueType,
+    ) -> FunctionDeclaration {
+        FunctionDeclaration::new(
+            name,
+            vec![("x".to_string(), parameter_type)],
+            result_type,
+            None,
+            Expression::Name("x".to_string()),
+        )
+    }
+
     fn lock() -> &'static DefinitionLock {
         DefinitionLock::pinned().unwrap()
     }
@@ -776,6 +820,37 @@ pub mod rt_side {
     }
 
     shared_helpers!();
+
+    /// See the `qsl_side` twin of this function for why the `CheckMode` this
+    /// port's boundary takes at the package level (moved there from the
+    /// authority's per-expression checking entry point, not added) is
+    /// hidden here rather than in the shared vector body.
+    pub fn linked_package(
+        types: TypeEnvironment,
+        functions: Vec<FunctionDeclaration>,
+    ) -> CheckedPackage {
+        PackageDeclarations { types, functions }
+            .check(CheckMode::Linked, CheckingLimits::default())
+            .unwrap()
+    }
+
+    /// See the `qsl_side` twin: an identity function over one parameter,
+    /// built from an opaque Rust closure rather than an Expression tree.
+    pub fn identity_function(
+        name: &str,
+        parameter_type: ValueType,
+        result_type: ValueType,
+    ) -> FunctionDeclaration {
+        FunctionDeclaration {
+            name: name.to_string(),
+            parameters: vec![("x".to_string(), parameter_type)],
+            result: result_type,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+        }
+    }
 
     pub struct Fixture {
         pub graph: UnitGraph,

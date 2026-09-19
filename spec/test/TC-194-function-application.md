@@ -37,10 +37,17 @@ agent-ix/quire-contract-runtime#34.
    no application charges no `function.call`, and that an expression reaching two applications
    charges exactly two, each before its own function's body.
 8. For a shared-corpus function-application vector, check the outcome, refusal and charge sequence
-   against the quire-spec-language `68bdacb` authority.
+   against the quire-spec-language `ea39f91` authority.
 9. Inspect this requirement's corpus for `CheckMode::Kernel`: check that every applied package is
    checked under `CheckMode::Linked` and that no test applies a package checked only under
    `CheckMode::Kernel` (FR-273-AC-6).
+10. Recurse through `Frame::call` on a package checked with `CheckingLimits::depth` below
+    `MAX_CALL_DEPTH`, and separately recurse by direct, bypassing re-entry into
+    `CheckedPackage::call`/`CheckedPackage::evaluate` from within a running body holding its own
+    `Rc<CheckedPackage>`; on both paths, check that going one call beyond the checked package's
+    configured depth refuses `Refusal::CheckedInvariant` with no charge, and that the two entry paths
+    share one depth budget on a given `CheckedPackage` rather than each getting its own
+    (FR-273-AC-7).
 
 ## Expected Results
 
@@ -49,4 +56,7 @@ Every call against a package `check` admitted is either a well-formed `Evaluatio
 parameter order; the `function.call` charge precedes the function's body on every accepted call;
 `evaluate` agrees with `call` on argument validation and refuses identically, and charges
 `function.call` once per application the expression itself reaches and none for a root that reaches
-none; and no applied package is checked only under `CheckMode::Kernel`.
+none; no applied package is checked only under `CheckMode::Kernel`; and re-entry beyond a checked
+package's configured `CheckingLimits::depth`, through `Frame::call` or through a direct, bypassing
+re-entry into `CheckedPackage::call`/`evaluate`, refuses `Refusal::CheckedInvariant` before any charge
+against one budget shared by all three entry paths.

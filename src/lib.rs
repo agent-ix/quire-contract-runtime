@@ -51,7 +51,7 @@ extern crate alloc;
 
 // Implements: FR-004
 pub mod accounting;
-// Implements: FR-006, FR-007
+// Implements: FR-006, FR-007, FR-273
 #[cfg(feature = "exact")]
 pub mod exact;
 // Implements: FR-001

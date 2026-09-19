@@ -25,8 +25,10 @@ agent-ix/quire-contract-runtime#34.
 2. Negotiate a function whose declared requirements are all `Supported`, and one whose requirements
    are `RequiresBound` with every required bound present; check each negotiates that disposition and
    that neither is reported `Unsupported`.
-3. Check the negotiation takes no `Meter` and leaves every counter unchanged, and that no disposition
-   is convertible into an `Outcome` variant or an `InputRefusal`, as FR-009-AC-5 already requires for
+3. Inspect `negotiate_ieee`'s signature (`&[IeeeItemRequirement], &IeeeBackendCapabilities`) and
+   confirm it takes no `Meter` parameter, so no application-time charge is reachable from it by
+   construction; check the `compile_fail` doctest on `IeeeDisposition` proves no disposition is
+   convertible into an `Outcome` variant or an `InputRefusal`, as FR-009-AC-5 already requires for
    the bare operators.
 4. Apply a function whose requirements negotiate `Supported`; check the application completes
    normally and produces no disposition of its own.
