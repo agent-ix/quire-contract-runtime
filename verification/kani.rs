@@ -22,6 +22,12 @@ use crate::{
 // `BigInt`: `IeeeValue` is a plain `(IeeeWidth, u64)` bit pattern, and every metering charge below
 // it — `Integer`-typed inside `Meter`/`Charge` (`src/exact/accounting.rs`) — is built from
 // concrete, non-symbolic widths and counts, so no case-split reaches `num-bigint` at all.
+//
+// Every limit below is `u64::MAX`, so metering never refuses: harnesses built on
+// `EXACT_UNLIMITED` are scoped to an unbounded budget and discharge nothing about
+// `Stop::Refused` or any `LimitKind` boundary. Those paths are unproved. The struct literal
+// names every field with no `..Default::default()` so a new member breaks the build rather than
+// silently defaulting into scope.
 const EXACT_UNLIMITED: ScalarLimits = ScalarLimits {
     integer_bits: u64::MAX,
     decimal_digits: u64::MAX,
@@ -268,8 +274,19 @@ fn tc_003_option_helpers_preserve_definedness() {
 fn tc_003_exact_ieee_numeric_equal_matches_nan_unordered() {
     let bits: u32 = kani::any();
     let value = IeeeValue::binary32(bits);
+    // The binary32 NaN encoding read straight off the bit pattern: exponent field all ones with a
+    // nonzero trailing significand. The expectation is derived from `bits`, not from
+    // `IeeeValue::is_nan` — `is_nan` is `matches!(decode(self), Class::Nan { .. })`
+    // (`src/exact/ieee.rs:112`) and `compare_ieee`'s `NumericEqual` arm dispatches on the same
+    // `decode` (`src/exact/ieee.rs:613`), so an `is_nan`-based expectation moves with any
+    // misclassification inside `decode` and holds vacuously. Measured: with `is_nan` on both
+    // sides, a `decode` that classifies every NaN as `Class::Finite` still verifies SUCCESSFUL.
+    let is_nan = bits & 0x7f80_0000 == 0x7f80_0000 && bits & 0x007f_ffff != 0;
     let mut meter = Meter::new(EXACT_UNLIMITED);
-    let outcome = compare_ieee(IeeeComparison::NumericEqual, value, value, &mut meter)
-        .unwrap_or_else(|_| unreachable!("one operand compared with itself is never ill-typed"));
-    assert_eq!(outcome, Outcome::Completed(!value.is_nan()));
+    // `Ok`-ness is proved here, not assumed away: differing width is the only `IllTyped` cause
+    // `compare_ieee` raises, and one operand compared with itself cannot differ in width.
+    assert_eq!(
+        compare_ieee(IeeeComparison::NumericEqual, value, value, &mut meter).ok(),
+        Some(Outcome::Completed(!is_nan)),
+    );
 }
