@@ -387,9 +387,10 @@ fn tc_010_the_producers_report_failure_when_the_prover_does() {
         "the campaign reported a control as held while the prover accepted the defect"
     );
 
-    // A non-zero exit that never reached a verification failure is a broken run,
-    // not a rejection. Counting it as one is how a campaign starts passing
-    // because the compiler fell over.
+    // A non-zero exit that never reached a verification failure is inconclusive,
+    // not a rejection and not a hollow harness. Conflating it with either one
+    // misattributes the fact: a `fail` here would blame the harness for a build
+    // that never ran it.
     let verdict = producer_probe(
         "import json,sys; sys.path.insert(0,'scripts')\n\
          import check_kani_mutations as m\n\
@@ -401,8 +402,63 @@ fn tc_010_the_producers_report_failure_when_the_prover_does() {
          print(json.dumps(m.run_mutation(*m.MUTATIONS[0][:4])[0]))",
     );
     assert_eq!(
-        verdict, "\"fail\"",
-        "a run that never reached a proof failure was counted as a rejection"
+        verdict, "\"inconclusive\"",
+        "a run that never reached a proof failure was not reported as inconclusive"
+    );
+}
+
+/// Trace: TC-010, FR-005-AC-2, FR-005-AC-5
+#[test]
+fn tc_010_an_inconclusive_or_malformed_kani_mutation_row_fails_the_gate() {
+    // The previous test pins what token `run_mutation` reports. This one pins
+    // what that token does one level up, in `main`'s gate mode: an
+    // `inconclusive` row (a run that never happened) and a `malformed` row (a
+    // campaign that no longer describes this source) must both make
+    // `check_kani_mutations.py` exit non-zero, exactly as a `fail` row already
+    // does, and an `unavailable` row (the toolchain is absent) must too. `main`
+    // decides this from `row["outcome"] != "pass"`, and a mutation that
+    // narrows that predicate — to `== "fail"`, or to a whitelist that happens
+    // to include only some non-`pass` tokens — would let a row through as if
+    // the campaign were clean. Pinning all four non-`pass` tokens, not just the
+    // two this PR added, is what closes that second path rather than only the
+    // one this PR exercises.
+    let exit_code = |outcomes: &str| -> String {
+        producer_probe(&format!(
+            "import contextlib, io, sys; sys.path.insert(0,'scripts')\n\
+             import check_kani_mutations as m\n\
+             m.collect = lambda: {{'entries': [\n\
+             \x20   {{'symbol': f's{{i}}', 'outcome': outcome, 'detail': 'd'}}\n\
+             \x20   for i, outcome in enumerate({outcomes})\n\
+             ]}}\n\
+             with contextlib.redirect_stdout(io.StringIO()):\n\
+             \x20   code = m.main(['check_kani_mutations.py'])\n\
+             print(code)"
+        ))
+    };
+    assert_eq!(
+        exit_code("['pass', 'pass']"),
+        "0",
+        "an all-pass document did not exit the gate cleanly"
+    );
+    assert_eq!(
+        exit_code("['pass', 'fail']"),
+        "1",
+        "a document carrying a fail row did not fail the gate"
+    );
+    assert_eq!(
+        exit_code("['pass', 'inconclusive']"),
+        "1",
+        "a document carrying an inconclusive row did not fail the gate"
+    );
+    assert_eq!(
+        exit_code("['pass', 'malformed']"),
+        "1",
+        "a document carrying a malformed row did not fail the gate"
+    );
+    assert_eq!(
+        exit_code("['pass', 'unavailable']"),
+        "1",
+        "a document carrying an unavailable row did not fail the gate"
     );
 }
 

@@ -85,6 +85,7 @@ ENTRY_DOCUMENTS = (
 ROW_RESULTS = {
     "pass": "passed",
     "fail": "failed",
+    "inconclusive": "failed",
     "malformed": "failed",
     "unavailable": "unavailable",
     "not-computed": "not_computed",
