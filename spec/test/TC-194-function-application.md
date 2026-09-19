@@ -29,15 +29,24 @@ agent-ix/quire-contract-runtime#34.
    with no `Meter` counter changed.
 6. Call a function taking two or more arguments where a later argument's `Value::Reference` is
    dangling and an earlier argument alone would already refuse; check the earlier argument's
-   refusal is reported, confirming left-to-right validation order.
-7. Evaluate `CheckedPackage::evaluate` on a standalone `CheckedExpression` and check the same
-   argument-validation and `function.call` charge-ordering behavior as `call`.
+   refusal is reported, confirming parameter-order validation. Call the same function with an
+   argument count mismatch and a later dangling reference; expect `InputRefusal::Arity`, confirming
+   arity is decided before any per-argument check.
+7. Evaluate `CheckedPackage::evaluate` on a standalone `CheckedExpression` and check it shares
+   `call`'s argument validation and `InputRefusal` set; check that an expression root that reaches
+   no application charges no `function.call`, and that an expression reaching two applications
+   charges exactly two, each before its own function's body.
 8. For a shared-corpus function-application vector, check the outcome, refusal and charge sequence
    against the quire-spec-language `68bdacb` authority.
+9. Inspect this requirement's corpus for `CheckMode::Kernel`: check that every applied package is
+   checked under `CheckMode::Linked` and that no test applies a package checked only under
+   `CheckMode::Kernel` (FR-273-AC-6).
 
 ## Expected Results
 
 Every call against a package `check` admitted is either a well-formed `Evaluation` or a named
-`InputRefusal` decided before any charge; arguments are validated left to right; the `function.call`
-charge precedes the function's body on every accepted call; and `evaluate` agrees with `call` on
-argument validation and charge order.
+`InputRefusal` decided before any charge; arity is decided first and arguments are then validated in
+parameter order; the `function.call` charge precedes the function's body on every accepted call;
+`evaluate` agrees with `call` on argument validation and refuses identically, and charges
+`function.call` once per application the expression itself reaches and none for a root that reaches
+none; and no applied package is checked only under `CheckMode::Kernel`.

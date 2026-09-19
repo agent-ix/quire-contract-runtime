@@ -15,12 +15,12 @@ relationships:
 
 ## System Boundary
 
-FR-273 extends the `exact` feature's boundary to include `quire_spec_language::value::CheckedPackage`
-as the call surface for total pure functions. The runtime authors no execution engine of its own for
-function bodies: `PackageDeclarations::check` proves purity, termination and definedness once,
-statically, and `CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`, matching
-the shape FR-006 through FR-008 already establish for scalar, composite, collection and equality
-operators.
+FR-273 extends the `exact` feature's boundary to include `quire_contract_runtime::exact::CheckedPackage`
+as the call surface for total pure functions: a port of the quire-spec-language authority's own type,
+carrying its name and order, the shape FR-006 through FR-008 already establish for scalar, composite,
+collection and equality operators. The runtime is no second semantic authority for function bodies:
+`PackageDeclarations::check` proves purity, termination and definedness once, statically, and
+`CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`.
 
 ## Views
 
@@ -32,10 +32,12 @@ other exact operator is.
 ## Decisions
 
 Function application is total, never short-circuiting, so it is a separately visible path from the
-short-circuit Boolean connectives AD-001 already names. An undischargeable capability reached from
-inside a called function's body is reported as the same `unsupported` provider disposition FR-009
-defines for its own operators, not as a new disposition kind: one closed vocabulary for "no
-registered backend can discharge this," wherever in a call graph it is reached. `CheckMode::Kernel`
+short-circuit Boolean connectives AD-001 already names. A function whose declared operator
+requirements no registered backend can discharge is negotiated by FR-009's own negotiators, before
+any application, and reported as the `unsupported` provider disposition FR-009 already defines: one
+closed vocabulary for "no registered backend can discharge this," and one negotiation seam for it,
+whether the requirement is declared by a bare operator or by a function that reaches one. Provider
+dispositions stay outside the evaluation path, as AD-005 and FR-009 keep them. `CheckMode::Kernel`
 application stays out of scope, matching FR-008's own deferral of the unlinked evaluation path.
 
 ## Risks
@@ -44,5 +46,5 @@ The termination and definedness proof burden for every applied function lives en
 `PackageDeclarations::check`, outside this crate's own Kani proof surface; this crate's assurance
 depends on that upstream proof rather than reproducing it. The call surface is pinned to
 quire-spec-language by commit sha, so a later quire-spec-language release that changes
-`CheckedPackage`'s signature requires a coordinated re-pin, the same dependency FR-008 already
-carries for composite, collection and equality evaluation.
+`CheckedPackage`'s signature requires a coordinated re-pin and re-port, the same dependency FR-008
+already carries for composite, collection and equality evaluation.
