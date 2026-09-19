@@ -50,6 +50,14 @@ STORE = ROOT / "target" / "assurance-store"
 KANI_PROTOCOL = "runtime.kani-proof/v1"
 PRIMARY_PROOF = "PROOF-kani-proofs"
 
+# Two distinct sentinel revisions, so the receipts they appear in can never be
+# confused for one another in the report. STALE_REVISION is *requested* when a
+# receipt is produced, and is reported as a `candidate_revision_mismatch`
+# reason. TAMPERED_REVISION is written into an already-sealed receipt, and is
+# reported by refusing the document.
+STALE_REVISION = "0" * 40
+TAMPERED_REVISION = "1" * 40
+
 # Every proof obligation's retained result, and the media type its producer
 # declares. Stated rather than sniffed, because a producer's content type is
 # part of what it produced.
@@ -773,14 +781,67 @@ def run_chain(candidate_revision: str, workspace: Path) -> dict[str, Any]:
     )
 
     # -- 3. an edited receipt is refused -------------------------------------
+    #
+    # The edit must be seal-only: a field the digest covers but outcome/reason
+    # precedence does not. `candidate_revision` is that field.
+    #
+    # Setting `outcome` instead does not test what this scenario claims. The
+    # receipt is `incomplete` with `decision_missing` among its reasons, so
+    # `outcome = "valid"` contradicts the reasons it still carries, and the
+    # consistency validator refuses on precedence and short-circuits *before*
+    # the digest is recomputed. The scenario's declared purpose is that a
+    # tampered receipt no longer hashes to its own digest — a path that edit
+    # never reaches. A refusal arriving for an unrelated reason is not evidence
+    # for the seal.
     edited = json.loads(json.dumps(receipt))
-    edited["outcome"] = "valid"
+    edited["candidate_revision"] = TAMPERED_REVISION
+    # The tamper must change something, or the scenario proves nothing. It
+    # fails closed if it ever did not, but an unasserted precondition is how
+    # a scenario goes quietly vacuous.
+    assert edited != receipt, "the tampered revision equals the real one; pick another"
     edited_status, edited_detail = chain.verify_receipt(edited)
     scenario(
         "refuse-an-edited-receipt",
         "tampered",
         edited_status == 2,
         {"exit": edited_status, "message": edited_detail[:200]},
+    )
+    # Exit 2 alone does not say *why* the document was refused. Every document
+    # refusal shares it -- wrong shape, extra field, unordered reasons,
+    # precedence disagreement -- and they are all decided before the digest is
+    # recomputed. Asserting the exit code by itself would go green against a
+    # future Quoin that refuses this receipt for its shape while the digest
+    # check silently regressed: the same defect this scenario was rewritten to
+    # remove, one release later.
+    #
+    # So isolate the seal structurally, without asserting on prose. Ask for a
+    # receipt whose candidate revision really is the tampered value. It carries
+    # the same field, the same value and the same shape as `edited`, and
+    # differs in exactly one respect: it was sealed over its own bytes instead
+    # of edited after sealing. A correctly sealed receipt is never a document
+    # refusal -- a candidate mismatch is reported as a reason, not by refusing
+    # to read the document (scenario 5 below). So if `edited` is refused and
+    # `resealed` is not, the seal is the only thing that can account for it.
+    _, resealed = chain.receipt(
+        record_digest, selections, decisions, candidate_revision=TAMPERED_REVISION
+    )
+    resealed_status, resealed_detail = chain.verify_receipt(resealed)
+    try:
+        read_back: Any = json.loads(resealed_detail)
+    except json.JSONDecodeError:
+        read_back = None
+    # Asserted on "was the document read back", not on the exit code. A refused
+    # document yields a diagnostic; a read one yields the receipt, digest and
+    # all. That distinction is structural and survives quoin#543, which
+    # currently collapses the refusal codes -- an `exit != 2` control would be
+    # satisfied by every outcome while that regression stands, and so would
+    # prove nothing at the moment it is most needed.
+    resealed_was_read = isinstance(read_back, dict) and "digest" in read_back
+    control(
+        "the-same-revision-sealed-honestly-is-read-not-refused",
+        "refuse-an-edited-receipt",
+        resealed_was_read,
+        {"exit": resealed_status, "read_back": resealed_was_read},
     )
 
     # -- 4. retained bytes changed after sealing -----------------------------
@@ -799,7 +860,7 @@ def run_chain(candidate_revision: str, workspace: Path) -> dict[str, Any]:
 
     # -- 5. a stale candidate binding ----------------------------------------
     stale_status, stale_receipt = chain.receipt(
-        record_digest, selections, decisions, candidate_revision="0" * 40, audits=audits
+        record_digest, selections, decisions, candidate_revision=STALE_REVISION, audits=audits
     )
     stale_reasons = set(proof_rows(stale_receipt)[PRIMARY_PROOF]["reasons"])
     scenario(
