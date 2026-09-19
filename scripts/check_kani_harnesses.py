@@ -16,6 +16,7 @@ EXPECTED_KANI_HARNESSES = (
     "tc_002_boolean_truth_tables",
     "tc_003_campaign_accounting_saturates",
     "tc_003_checked_i8_arithmetic_matches_primitives",
+    "tc_003_exact_ieee_numeric_equal_matches_nan_unordered",
     "tc_003_i32_division_boundaries_are_undefined",
     "tc_003_option_helpers_preserve_definedness",
     "tc_003_slice_index_is_defined_exactly_in_bounds",
@@ -25,6 +26,7 @@ EXPECTED_KANI_CHECK_FLOORS = {
     "tc_002_boolean_truth_tables": 136,
     "tc_003_campaign_accounting_saturates": 264,
     "tc_003_checked_i8_arithmetic_matches_primitives": 59,
+    "tc_003_exact_ieee_numeric_equal_matches_nan_unordered": 2491,
     "tc_003_i32_division_boundaries_are_undefined": 43,
     "tc_003_option_helpers_preserve_definedness": 52,
     "tc_003_slice_index_is_defined_exactly_in_bounds": 24,
@@ -33,9 +35,19 @@ EXPECTED_KANI_VERSION = "Kani Rust Verifier 0.67.0 (cargo plugin)"
 KANI_HARNESS_START = re.compile(
     r"(?m)^Checking harness kani_proofs::([a-z0-9_]+)\.\.\.$"
 )
-KANI_CHECK_SUMMARY = re.compile(r"(?m)^ \*\* 0 of ([1-9][0-9]*) failed$")
+# `exact::accounting::Meter::charge`'s own bookkeeping walks a `Vec<(LimitKind, Integer)>`
+# (`src/exact/accounting.rs:594`), and Kani's coverage analysis marks the unwind-assertion checks
+# past a harness's declared `#[kani::unwind(N)]` bound as unreachable rather than omitting them,
+# so a harness that reaches `crate::exact` reports "** 0 of N failed (K unreachable)" instead of
+# the unreachable-free summary every harness above `operators`/top-level model types produces. The
+# obligation count parsed is still exactly what the harness discharged; a nonzero failure count
+# still fails this pattern.
+KANI_CHECK_SUMMARY = re.compile(
+    r"(?m)^ \*\* 0 of ([1-9][0-9]*) failed(?: \([0-9]+ unreachable\))?$"
+)
 PROOF_FUNCTION = re.compile(
-    r"(?m)^// Implements: (TC-\d{3})\n#\[kani::proof\]\nfn ([a-z0-9_]+)\(\)"
+    r"(?m)^// Implements: (TC-\d{3})\n#\[kani::proof\]\n"
+    r"(?:#\[kani::unwind\([0-9]+\)\]\n)?fn ([a-z0-9_]+)\(\)"
 )
 
 
