@@ -66,6 +66,13 @@ MUTATIONS = (
         "tc_003_campaign_accounting_saturates",
         "TC-003",
     ),
+    (
+        "src/exact/ieee.rs",
+        "            (Class::Nan { .. }, _) | (_, Class::Nan { .. }) => false,\n",
+        "            (Class::Nan { .. }, _) | (_, Class::Nan { .. }) => true,\n",
+        "tc_003_exact_ieee_numeric_equal_matches_nan_unordered",
+        "TC-003",
+    ),
 )
 
 
