@@ -843,8 +843,8 @@ impl CheckedPackage {
 /// or [`CheckedPackage::evaluate`] directly (obtainable in safe Rust) would
 /// bypass a per-`Frame` check entirely. The actual bound lives on
 /// [`CheckedPackage`] itself, as a [`Cell`] counter every entry path shares
-/// (see this module's own documentation and [`CheckedPackage::enter`]), so
-/// re-entering through any path is bounded alike.
+/// (see this module's own documentation and the private `enter`), so
+/// re-entry through a given checked package is bounded alike on every path.
 ///
 /// The [`Meter`] is reached through a [`RefCell`] because many `Frame`s
 /// across one call tree share it; `RefCell`, never `unsafe` or atomics.
