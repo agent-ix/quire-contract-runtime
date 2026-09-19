@@ -121,7 +121,9 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, 
             CARGO_TARGET_DIR=str(candidate / "target"),
         )
         completed = prove(
-            [str(cargo), "kani", "--harness", harness], candidate, environment
+            [str(cargo), "kani", "--harness", harness, "--features", "exact"],
+            candidate,
+            environment,
         )
     combined = completed.stdout + "\n" + completed.stderr
     if completed.returncode == 0:

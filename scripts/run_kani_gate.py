@@ -95,7 +95,7 @@ def run_kani(stream: bool) -> tuple[int, str]:
     """Execute `cargo kani` under the trusted toolchain and capture its transcript."""
     home, cargo, cargo_kani = trusted_paths()
     process = subprocess.Popen(
-        [str(cargo), "kani"],
+        [str(cargo), "kani", "--features", "exact"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
