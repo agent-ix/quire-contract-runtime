@@ -388,8 +388,9 @@ fn tc_010_the_producers_report_failure_when_the_prover_does() {
     );
 
     // A non-zero exit that never reached a verification failure is a broken run,
-    // not a rejection. Counting it as one is how a campaign starts passing
-    // because the compiler fell over.
+    // not a rejection and not a hollow harness. Conflating it with either one
+    // misattributes the fact: a `fail` here would blame the harness for a build
+    // that never ran it.
     let verdict = producer_probe(
         "import json,sys; sys.path.insert(0,'scripts')\n\
          import check_kani_mutations as m\n\
@@ -401,8 +402,8 @@ fn tc_010_the_producers_report_failure_when_the_prover_does() {
          print(json.dumps(m.run_mutation(*m.MUTATIONS[0][:4])[0]))",
     );
     assert_eq!(
-        verdict, "\"fail\"",
-        "a run that never reached a proof failure was counted as a rejection"
+        verdict, "\"broken\"",
+        "a run that never reached a proof failure was not reported as broken"
     );
 }
 

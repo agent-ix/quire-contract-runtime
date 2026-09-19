@@ -9,10 +9,12 @@ working tree — and the harness that owns it must reject it.
 The result is published as `runtime.kani-mutation/v1`. A row is `pass` when the
 proof rejected the defect, which is the outcome that means the control held.
 
-Four outcomes, kept apart:
+Five outcomes, kept apart:
 
   pass          the owning harness rejected the injected defect
   fail          the harness accepted it, so that harness proves less than it claims
+  broken        the run never reached a verification result, so nothing was proved
+                either way
   malformed     the mutation's anchor text is no longer in the source exactly once,
                 so the campaign no longer describes this repository
   unavailable   cargo-kani is not installed, so nothing was injected at all
@@ -147,9 +149,10 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, 
         or "VERIFICATION:- FAILED" not in combined
     ):
         # A non-zero exit that never reached a verification failure is a broken
-        # run, not a control that held. Counting it as a rejection is how a
-        # campaign starts passing because the compiler fell over.
-        return "fail", f"the mutation for {harness} did not reach a proof failure"
+        # run, not a control that held and not a harness that accepted the
+        # defect. Counting it as either is how a campaign starts passing (or
+        # blames the wrong harness) because the compiler fell over.
+        return "broken", f"the mutation for {harness} did not reach a proof failure"
     return "pass", None
 
 

@@ -68,8 +68,10 @@ a transcript:
   here.
 - `scripts/check_kani_mutations.py` publishes `runtime.kani-mutation/v1`. It injects three
   representative Boolean, arithmetic, and accounting defects into a scratch copy of the source — never
-  into the working tree — and requires the owning proof to reject each one. A non-zero exit that never
-  reached a verification failure is reported as a failure, not as a control that held.
+  into the working tree — and requires the owning proof to reject each one. A harness that verifies
+  the mutated source anyway is `fail` — the harness proves less than it claims. A run that never
+  reaches a verification result — the candidate copy did not compile, or Kani fell over first — is the
+  separate `broken`, so a broken build is never read as a hollow harness or as a control that held.
 - `scripts/measure_footprint.py` publishes `runtime.footprint/v1`. It links the footprint staticlib on
   the declared MSRV compiler for `thumbv7em-none-eabi` and then measures it through
   `scripts/check_linked_footprint.sh`, which owns `size` and `objdump` and emits the same document.
