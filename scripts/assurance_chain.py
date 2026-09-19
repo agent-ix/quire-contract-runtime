@@ -773,8 +773,20 @@ def run_chain(candidate_revision: str, workspace: Path) -> dict[str, Any]:
     )
 
     # -- 3. an edited receipt is refused -------------------------------------
+    #
+    # The edit must be seal-only: a field the digest covers but outcome/reason
+    # precedence does not. `candidate_revision` is that field.
+    #
+    # Setting `outcome` instead does not test what this scenario claims. The
+    # receipt is `incomplete` with `decision_missing` among its reasons, so
+    # `outcome = "valid"` contradicts the reasons it still carries, and the
+    # consistency validator refuses on precedence and short-circuits *before*
+    # the digest is recomputed. The scenario's declared purpose is that a
+    # tampered receipt no longer hashes to its own digest — a path that edit
+    # never reaches. A refusal arriving for an unrelated reason is not evidence
+    # for the seal.
     edited = json.loads(json.dumps(receipt))
-    edited["outcome"] = "valid"
+    edited["candidate_revision"] = "1" * 40
     edited_status, edited_detail = chain.verify_receipt(edited)
     scenario(
         "refuse-an-edited-receipt",
