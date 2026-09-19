@@ -589,11 +589,17 @@ pub mod qsl_side {
     shared_helpers!();
 
     /// A checked package (quire-specification/FR-146) of `functions` over `types`, admitted
-    /// under unlimited [`CheckingLimits`]. The authority's `PackageDeclarations::check` takes no
-    /// `CheckMode` (that only gates a standalone [`CheckedExpression`], never a named package
-    /// function, which is always checked as a linked body); the runtime port instead takes an
-    /// explicit `CheckMode` at the package boundary. This helper is the per-side seam that hides
-    /// that one shape difference so the shared vector body below stays identical on both sides.
+    /// under unlimited [`CheckingLimits`]. `CheckMode` is moved, not added, between the two sides:
+    /// the authority threads a `CheckMode` through its own per-expression checking entry point (so
+    /// any one expression, including a standalone one, can be checked under either mode
+    /// independently), and its `PackageDeclarations::check`-equivalent for a named package function
+    /// takes none at all (a package function is always checked as a linked body). The runtime port
+    /// moves the parameter the other way: `CheckMode` is taken once, explicitly, at
+    /// `PackageDeclarations::check`'s package boundary, and the runtime's own
+    /// `CheckedPackage::check_expression` (for a standalone `CheckedExpression`) takes none,
+    /// inheriting `Linked` implicitly from the already-checked package. This helper is the
+    /// per-side seam that hides that shape difference so the shared vector body below stays
+    /// identical on both sides.
     pub fn linked_package(
         types: TypeEnvironment,
         functions: Vec<FunctionDeclaration>,
@@ -816,8 +822,9 @@ pub mod rt_side {
     shared_helpers!();
 
     /// See the `qsl_side` twin of this function for why the `CheckMode` this
-    /// port's boundary adds at the package level is hidden here rather than
-    /// in the shared vector body.
+    /// port's boundary takes at the package level (moved there from the
+    /// authority's per-expression checking entry point, not added) is
+    /// hidden here rather than in the shared vector body.
     pub fn linked_package(
         types: TypeEnvironment,
         functions: Vec<FunctionDeclaration>,

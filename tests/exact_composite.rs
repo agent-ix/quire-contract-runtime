@@ -80,6 +80,9 @@ fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point(
     assert!(!meter
         .admitted_charges()
         .contains(&ChargePoint::CollectionVisit));
+    assert!(!meter
+        .admitted_charges()
+        .contains(&ChargePoint::FunctionCall));
 }
 
 /// Trace: TC-024, FR-008-AC-1

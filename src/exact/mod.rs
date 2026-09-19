@@ -118,9 +118,9 @@ pub use equality::{
 };
 pub use expression::{
     plan_call, plan_evaluation, Body, CallPlan, CheckCause, CheckMode, CheckRefusal,
-    CheckedExpression, CheckedPackage, CheckingLimits, DepthAboveMaximum, Evaluation, Frame,
-    FunctionDeclaration, InputRefusal, LocatedLoss, Location, Origin, PackageDeclarations,
-    ValueLoss, MAX_CALL_DEPTH,
+    CheckedExpression, CheckedPackage, CheckingLimits, DepthAboveMaximum, Evaluation,
+    EvaluationRefusal, Frame, FunctionDeclaration, InputRefusal, LocatedLoss, Location, Origin,
+    PackageDeclarations, ValueLoss, MAX_CALL_DEPTH,
 };
 pub use ieee::{
     compare_ieee, convert_ieee_width, evaluate_ieee, exact_to_ieee, ieee_intrinsic_identities,

@@ -50,9 +50,9 @@ type: TestMatrix
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | TC-033 | ✅ implemented |
-| FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented |
-| FR-273 | FR-273-AC-5 | TC-194 | 🟡 partially implemented: agrees on the closed `InputRefusal` vocabulary, the arity/kind/reference check order and the `function.call` charge count; body semantics have no shared corpus (see Evidence Locations) |
-| FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented |
+| FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented: AC-1's depth bound is enforced on every re-entrant path (`CheckedPackage::call`/`evaluate` and `Frame::call` alike, via a shared counter — not only `Frame::call`), including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it; AC-2/AC-3's "arity before any per-argument check, all before the `function.call` charge, before the body" ordering is covered for both `call` and `Frame::call` |
+| FR-273 | FR-273-AC-5 | TC-194 | 🟡 partially implemented: the shared corpus agrees on the closed `InputRefusal` vocabulary (with codes and causes) and the charge count of one admitted call; it does **not** exercise check *ordering* — every corpus vector isolates exactly one violation, so no vector can distinguish an implementation that checks in the right order from one that does not. That ordering claim is instead verified only by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations). Body semantics also have no shared corpus. |
+| FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `tc_195_negotiation_takes_no_meter_and_changes_no_counter` asserts a real `Meter` untouched (`admitted_charges` empty, every `consumed` counter zero) around the negotiation call, not only that `negotiate_ieee`'s signature takes none |
 
 ## Test Case Summary
 
@@ -110,9 +110,19 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
 - FR-273-AC-5 (TC-194's shared-corpus row): `conformance/qsl-agreement/tests/tc_191_function_application.rs`,
   pinned to the quire-spec-language `ea39f91` authority (`conformance/qsl-agreement/Cargo.toml`).
   It agrees on the closed `InputRefusal` vocabulary (`UnknownFunction`, `Arity`, `WrongValueKind`,
-  `DanglingReference`) with its codes and causes, the "arity, then per-argument kind and reference,
-  then the `function.call` charge" ordering, and the charge count of one admitted call. It does
-  **not** agree on function-body semantics: AD-002 draws the runtime's boundary at typed values and
+  `DanglingReference`) with its codes and causes, and the charge count of one admitted call (AP05).
+  It does **not** agree on check *ordering*: each of its five vectors (AP01 through AP05) triggers
+  exactly one refusal in isolation — no vector supplies a call violating two checks at once — so the
+  corpus cannot distinguish an implementation that checks arity, then per-argument kind and
+  reference, then charges `function.call`, from one that checks in some other order and happens to
+  agree on each single-violation vector's result. That ordering claim is instead backed only by the
+  runtime-only tests in `tests/exact_function_application.rs`
+  (`tc_194_arity_is_decided_before_any_per_argument_check`,
+  `tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference`,
+  `tc_194_function_call_precedes_the_body`,
+  `tc_194_frame_call_charges_function_call_before_the_body_it_invokes`), which construct vectors
+  that do carry two simultaneous violations specifically to discriminate check order. Nor does the
+  corpus agree on function-body semantics: AD-002 draws the runtime's boundary at typed values and
   operators, so `Body` is an opaque Rust closure while the authority's function bodies are a typed
   `Expression` AST an interpreter runs — there is no `Debug` rendering that could compare the two,
   so no shared corpus exists for arithmetic, `let`, `if`, recursion or any other body form. Those

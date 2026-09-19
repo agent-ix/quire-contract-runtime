@@ -2,17 +2,18 @@
 //! FR-273), through the public `exact` surface.
 #![cfg(feature = "exact")]
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
-    negotiate_ieee, negotiate_integer_division, ChargePoint, CheckCause, CheckMode, CheckRefusal,
-    CheckedPackage, CheckingLimits, DepthAboveMaximum, FunctionDeclaration,
-    IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement, IeeeOperationKind,
-    IeeeUnsupportedCause, IeeeWidth, InputRefusal, Integer, IntegerDivisionConsumer,
-    IntegerDivisionDisposition, Meter, NodeKey, ObjectEnvironment, ObjectIdentity, ObjectReference,
-    ObjectTypeDeclaration, Outcome, PackageDeclarations, RoundingMode, ScalarLimits,
-    TypeEnvironment, UniverseIdentity, Value, ValueType, MAX_CALL_DEPTH,
+    negotiate_ieee, negotiate_integer_division, plan_call, plan_evaluation, ChargePoint,
+    CheckCause, CheckMode, CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum,
+    EvaluationRefusal, FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition,
+    IeeeItemRequirement, IeeeOperationKind, IeeeUnsupportedCause, IeeeWidth, InputRefusal, Integer,
+    IntegerDivisionConsumer, IntegerDivisionDisposition, LimitKind, Location, Meter, NodeKey,
+    ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin, Outcome,
+    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, TypeEnvironment, UniverseIdentity,
+    Value, ValueType, MAX_CALL_DEPTH,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -213,18 +214,44 @@ fn tc_194_unknown_function_refuses_before_any_charge() {
     assert!(meter.admitted_charges().is_empty());
 }
 
-/// `plan_call` alone reproduces every `InputRefusal` with no `Meter` in
-/// scope at all: the refusal path never needs one.
+/// `plan_call` alone reproduces every one of the four `InputRefusal`
+/// variants with no `Meter` in scope at all: the refusal path never needs
+/// one, for any of them.
 ///
 /// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
 #[test]
 fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
-    let package = identity_package()
+    let identity = identity_package()
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap();
+    let two_param = PackageDeclarations {
+        types: object_type_environment(),
+        functions: vec![FunctionDeclaration {
+            name: "two".to_string(),
+            parameters: vec![
+                ("a".to_string(), ValueType::Boolean),
+                ("b".to_string(), ValueType::Reference(key(9))),
+            ],
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+        }],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
     let objects = ObjectEnvironment::default();
-    let refusal =
-        quire_contract_runtime::exact::plan_call(&package, "identity", &[], &objects).unwrap_err();
+
+    // UnknownFunction
+    let refusal = plan_call(&identity, "missing", &[], &objects).unwrap_err();
+    assert_eq!(
+        refusal,
+        InputRefusal::UnknownFunction("missing".to_string())
+    );
+
+    // Arity
+    let refusal = plan_call(&identity, "identity", &[], &objects).unwrap_err();
     assert_eq!(
         refusal,
         InputRefusal::Arity {
@@ -232,6 +259,26 @@ fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
             supplied: 0,
         }
     );
+
+    // WrongValueKind
+    let refusal = plan_call(
+        &identity,
+        "identity",
+        &[Value::Integer(Integer::from(1i64))],
+        &objects,
+    )
+    .unwrap_err();
+    assert_eq!(refusal, InputRefusal::WrongValueKind { parameter: 0 });
+
+    // DanglingReference
+    let refusal = plan_call(
+        &two_param,
+        "two",
+        &[Value::Boolean(true), Value::Reference(a_reference())],
+        &objects,
+    )
+    .unwrap_err();
+    assert_eq!(refusal, InputRefusal::DanglingReference { parameter: 1 });
 }
 
 /// Argument 0 is the wrong kind AND argument 1 (an unrelated later
@@ -274,27 +321,37 @@ fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
         )
         .unwrap_err();
     assert_eq!(refusal, InputRefusal::WrongValueKind { parameter: 0 });
+    assert!(meter.admitted_charges().is_empty());
+    assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
 }
 
-/// A one-argument-too-many call whose sole argument also carries a dangling
-/// reference: arity is decided before any per-argument check runs, so the
-/// refusal is `Arity`, never `DanglingReference`. A naive implementation
-/// that validated arguments before comparing counts would report the
-/// dangling reference instead.
+/// A one-argument-too-few call whose sole supplied argument would, at its
+/// declared position, be *both* the wrong kind and a dangling reference:
+/// arity is decided before any per-argument check runs, so the refusal is
+/// `Arity`, never `WrongValueKind` or `DanglingReference`. Declaring two
+/// parameters (`a: Boolean`, `b: Reference`) but supplying one dangling
+/// `Reference` is discriminating: an implementation that validated the
+/// supplied argument against parameter 0 (`Boolean`) before comparing counts
+/// would report `WrongValueKind { parameter: 0 }`; one that validated it
+/// against parameter 1 (`Reference`) would report `DanglingReference
+/// { parameter: 1 }`. Only comparing counts first reports `Arity`.
 ///
 /// Trace: TC-194, FR-273-AC-2
 #[test]
 fn tc_194_arity_is_decided_before_any_per_argument_check() {
     let package = PackageDeclarations {
-        types: Default::default(),
+        types: object_type_environment(),
         functions: vec![FunctionDeclaration {
-            name: "none".to_string(),
-            parameters: Vec::new(),
+            name: "two".to_string(),
+            parameters: vec![
+                ("a".to_string(), ValueType::Boolean),
+                ("b".to_string(), ValueType::Reference(key(9))),
+            ],
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -303,7 +360,7 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call(
-            "none",
+            "two",
             vec![Value::Reference(a_reference())],
             &objects,
             &mut meter,
@@ -312,10 +369,12 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
     assert_eq!(
         refusal,
         InputRefusal::Arity {
-            declared: 0,
+            declared: 2,
             supplied: 1,
         }
     );
+    assert!(meter.admitted_charges().is_empty());
+    assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
 }
 
 /// The body records whether `function.call` was already admitted at the
@@ -335,11 +394,13 @@ fn tc_194_function_call_precedes_the_body() {
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
             body: Box::new(|frame, _arguments| {
-                let charged = frame.meter(|meter| {
-                    meter
-                        .admitted_charges()
-                        .contains(&ChargePoint::FunctionCall)
-                });
+                let charged = frame
+                    .meter(|meter| {
+                        meter
+                            .admitted_charges()
+                            .contains(&ChargePoint::FunctionCall)
+                    })
+                    .unwrap_or(false);
                 Outcome::Completed(Value::Boolean(charged))
             }),
         }],
@@ -470,6 +531,332 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     assert!(!ran.get());
 }
 
+/// `CallPlan::call_events` predicts, before any charge, exactly the number
+/// of `function.call` charges the planned call or evaluation actually gets
+/// admitted once run: one for a named `call`, zero for `evaluate`'s own
+/// root.
+///
+/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[test]
+fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
+    let package = identity_package()
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .unwrap();
+    let objects = ObjectEnvironment::default();
+
+    let plan = plan_call(&package, "identity", &[Value::Boolean(true)], &objects).unwrap();
+    assert_eq!(*plan.call_events(), Integer::one());
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .call("identity", vec![Value::Boolean(true)], &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
+    let admitted_calls = meter
+        .admitted_charges()
+        .iter()
+        .filter(|&&point| point == ChargePoint::FunctionCall)
+        .count();
+    assert_eq!(Integer::from(admitted_calls as i64), *plan.call_events());
+
+    let expression = package
+        .check_expression(
+            Vec::new(),
+            ValueType::Boolean,
+            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        )
+        .unwrap();
+    let plan = plan_evaluation(&package, &expression, &[], &objects).unwrap();
+    assert_eq!(*plan.call_events(), Integer::zero());
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
+    let admitted_calls = meter
+        .admitted_charges()
+        .iter()
+        .filter(|&&point| point == ChargePoint::FunctionCall)
+        .count();
+    assert_eq!(Integer::from(admitted_calls as i64), *plan.call_events());
+}
+
+/// `plan_evaluation` alone reproduces every `EvaluationRefusal` with no
+/// `Meter` in scope at all: the same three `InputRefusal` variants
+/// `plan_call` shares (there is no `UnknownFunction` here — `evaluate` takes
+/// no function name to look up), plus the foreign-expression identity check
+/// `plan_call` does not need.
+///
+/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5
+#[test]
+fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
+    let two_param = PackageDeclarations {
+        types: object_type_environment(),
+        functions: Vec::new(),
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let objects = ObjectEnvironment::default();
+    let live_objects =
+        ObjectEnvironment::new(&object_type_environment(), [(a_reference(), Vec::new())]).unwrap();
+
+    let expression = two_param
+        .check_expression(
+            vec![
+                ("a".to_string(), ValueType::Boolean),
+                ("b".to_string(), ValueType::Reference(key(9))),
+            ],
+            ValueType::Boolean,
+            Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+        )
+        .unwrap();
+
+    // Success: no refusal at all.
+    assert!(plan_evaluation(
+        &two_param,
+        &expression,
+        &[Value::Boolean(true), Value::Reference(a_reference())],
+        &live_objects,
+    )
+    .is_ok());
+
+    // Arity
+    let refusal = plan_evaluation(&two_param, &expression, &[], &objects).unwrap_err();
+    assert_eq!(
+        refusal,
+        EvaluationRefusal::Input(InputRefusal::Arity {
+            declared: 2,
+            supplied: 0,
+        })
+    );
+
+    // WrongValueKind
+    let refusal = plan_evaluation(
+        &two_param,
+        &expression,
+        &[
+            Value::Integer(Integer::from(1i64)),
+            Value::Reference(a_reference()),
+        ],
+        &objects,
+    )
+    .unwrap_err();
+    assert_eq!(
+        refusal,
+        EvaluationRefusal::Input(InputRefusal::WrongValueKind { parameter: 0 })
+    );
+
+    // DanglingReference
+    let refusal = plan_evaluation(
+        &two_param,
+        &expression,
+        &[Value::Boolean(true), Value::Reference(a_reference())],
+        &objects,
+    )
+    .unwrap_err();
+    assert_eq!(
+        refusal,
+        EvaluationRefusal::Input(InputRefusal::DanglingReference { parameter: 1 })
+    );
+
+    // ForeignExpression: `expression` was checked against `two_param`, not
+    // `other`. Arguments are otherwise fully admitted, isolating the
+    // identity check.
+    let other = PackageDeclarations {
+        types: object_type_environment(),
+        functions: Vec::new(),
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let refusal = plan_evaluation(
+        &other,
+        &expression,
+        &[Value::Boolean(true), Value::Reference(a_reference())],
+        &live_objects,
+    )
+    .unwrap_err();
+    assert_eq!(refusal, EvaluationRefusal::ForeignExpression);
+}
+
+/// `CheckedPackage::evaluate` shares `plan_call`'s argument validation and
+/// `InputRefusal` set: every refusal `plan_evaluation` can produce surfaces
+/// correctly through `evaluate` itself, not only through `plan_evaluation`
+/// in isolation. A foreign expression (checked against a different package)
+/// is not an `InputRefusal` at all — `evaluate`'s signature cannot carry a
+/// fifth variant — so it surfaces as `Ok(Evaluation { outcome:
+/// Outcome::Refused(Refusal::CheckedInvariant), .. })` instead, decided at
+/// the plan boundary before any charge.
+///
+/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5
+#[test]
+fn tc_194_evaluate_shares_plan_call_argument_validation() {
+    let package = PackageDeclarations {
+        types: object_type_environment(),
+        functions: Vec::new(),
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let objects = ObjectEnvironment::default();
+    let live_objects =
+        ObjectEnvironment::new(&object_type_environment(), [(a_reference(), Vec::new())]).unwrap();
+    let expression = package
+        .check_expression(
+            vec![
+                ("a".to_string(), ValueType::Boolean),
+                ("b".to_string(), ValueType::Reference(key(9))),
+            ],
+            ValueType::Boolean,
+            Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+        )
+        .unwrap();
+
+    // Arity
+    let mut meter = Meter::new(UNLIMITED);
+    let refusal = package
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .unwrap_err();
+    assert_eq!(
+        refusal,
+        InputRefusal::Arity {
+            declared: 2,
+            supplied: 0,
+        }
+    );
+    assert!(meter.admitted_charges().is_empty());
+
+    // WrongValueKind
+    let mut meter = Meter::new(UNLIMITED);
+    let refusal = package
+        .evaluate(
+            &expression,
+            vec![
+                Value::Integer(Integer::from(1i64)),
+                Value::Reference(a_reference()),
+            ],
+            &objects,
+            &mut meter,
+        )
+        .unwrap_err();
+    assert_eq!(refusal, InputRefusal::WrongValueKind { parameter: 0 });
+    assert!(meter.admitted_charges().is_empty());
+
+    // DanglingReference
+    let mut meter = Meter::new(UNLIMITED);
+    let refusal = package
+        .evaluate(
+            &expression,
+            vec![Value::Boolean(true), Value::Reference(a_reference())],
+            &objects,
+            &mut meter,
+        )
+        .unwrap_err();
+    assert_eq!(refusal, InputRefusal::DanglingReference { parameter: 1 });
+    assert!(meter.admitted_charges().is_empty());
+
+    // ForeignExpression: checked against `package`, evaluated against
+    // `other`. Arguments are otherwise fully admitted, isolating the
+    // identity check.
+    let other = PackageDeclarations {
+        types: object_type_environment(),
+        functions: Vec::new(),
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = other
+        .evaluate(
+            &expression,
+            vec![Value::Boolean(true), Value::Reference(a_reference())],
+            &live_objects,
+            &mut meter,
+        )
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Refused(Refusal::CheckedInvariant)
+    ));
+    assert!(meter.admitted_charges().is_empty());
+
+    // The admitted case still applies totally, with no `function.call`
+    // charge for `evaluate`'s own root.
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .evaluate(
+            &expression,
+            vec![Value::Boolean(true), Value::Reference(a_reference())],
+            &live_objects,
+            &mut meter,
+        )
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+    assert!(!meter
+        .admitted_charges()
+        .contains(&ChargePoint::FunctionCall));
+}
+
+/// A body reached through `Frame::call` (not `CheckedPackage::call` itself)
+/// records whether `function.call` was already admitted at the instant it
+/// started running, proving `Frame::call` also charges before invoking the
+/// callee's body.
+///
+/// Trace: TC-194, FR-273-AC-2
+#[test]
+fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: vec![
+            FunctionDeclaration {
+                name: "root".to_string(),
+                parameters: Vec::new(),
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: Box::new(|frame, _arguments| frame.call("observe", &[])),
+            },
+            FunctionDeclaration {
+                name: "observe".to_string(),
+                parameters: Vec::new(),
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: Box::new(|frame, _arguments| {
+                    let charged = frame
+                        .meter(|meter| {
+                            meter
+                                .admitted_charges()
+                                .contains(&ChargePoint::FunctionCall)
+                        })
+                        .unwrap_or(false);
+                    Outcome::Completed(Value::Boolean(charged))
+                }),
+            },
+        ],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .call("root", Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+    let charges = meter.admitted_charges();
+    assert_eq!(
+        charges
+            .iter()
+            .filter(|&&c| c == ChargePoint::FunctionCall)
+            .count(),
+        2
+    );
+}
+
 /// `CheckingLimits::new` refuses a depth above `MAX_CALL_DEPTH`.
 ///
 /// Trace: TC-194, FR-273-AC-1
@@ -519,6 +906,132 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
     assert!(matches!(
         evaluation.outcome,
         Outcome::Refused(quire_contract_runtime::exact::Refusal::CheckedInvariant)
+    ));
+}
+
+/// A body that re-enters its own [`Frame::meter`] from inside the closure
+/// [`Frame::meter`] already handed it refuses the inner access with `None`
+/// instead of panicking on the double `RefCell` borrow.
+///
+/// Trace: TC-194, FR-273-AC-2
+#[test]
+fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: vec![FunctionDeclaration {
+            name: "reentrant_meter".to_string(),
+            parameters: Vec::new(),
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|frame, _arguments| {
+                let outer = frame.meter(|_outer_meter| frame.meter(|_inner_meter| true));
+                let inner_refused = matches!(outer, Some(None));
+                Outcome::Completed(Value::Boolean(inner_refused))
+            }),
+        }],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .call("reentrant_meter", Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+}
+
+/// A body that calls [`Frame::call`] from inside a [`Frame::meter`] closure
+/// re-enters the same frame's `Meter` `RefCell`: `Frame::run` refuses with
+/// [`Refusal::CheckedInvariant`] instead of panicking on the double borrow.
+///
+/// Trace: TC-194, FR-273-AC-2
+#[test]
+fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking() {
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: vec![FunctionDeclaration {
+            name: "reentrant_call".to_string(),
+            parameters: Vec::new(),
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|frame, _arguments| {
+                frame
+                    .meter(|_meter| frame.call("reentrant_call", &[]))
+                    .unwrap_or(Outcome::Refused(Refusal::CheckedInvariant))
+            }),
+        }],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .call("reentrant_call", Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Refused(Refusal::CheckedInvariant)
+    ));
+}
+
+/// The original attack this bounds: a running [`Body`](quire_contract_runtime::exact::Body)
+/// that holds its own `Rc<CheckedPackage>` (obtainable in safe Rust) and
+/// re-enters [`CheckedPackage::call`] directly, bypassing [`Frame::call`]'s
+/// depth check entirely — every fresh root `Frame` it builds looks identical
+/// to a program's first call, since depth was once threaded only by value.
+/// The shared `Cell<u64>` counter on `CheckedPackage` itself bounds this
+/// path exactly as it bounds `Frame::call`, refusing rather than recursing
+/// the host stack without limit.
+///
+/// Trace: TC-194, FR-273-AC-1
+#[test]
+fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
+    let limits = CheckingLimits::new(u64::MAX, 3).unwrap();
+    let holder: Rc<RefCell<Option<Rc<CheckedPackage>>>> = Rc::new(RefCell::new(None));
+    let body_holder = Rc::clone(&holder);
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: vec![FunctionDeclaration {
+            name: "loop".to_string(),
+            parameters: Vec::new(),
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(move |_frame, _arguments| {
+                let package = body_holder
+                    .borrow()
+                    .as_ref()
+                    .expect("holder populated before first call")
+                    .clone();
+                let objects = ObjectEnvironment::default();
+                let mut meter = Meter::new(UNLIMITED);
+                match package.call("loop", Vec::new(), &objects, &mut meter) {
+                    Ok(evaluation) => evaluation.outcome,
+                    Err(refusal) => panic!("unexpected InputRefusal: {refusal:?}"),
+                }
+            }),
+        }],
+    }
+    .check(CheckMode::Linked, limits)
+    .unwrap();
+    let package = Rc::new(package);
+    *holder.borrow_mut() = Some(Rc::clone(&package));
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .call("loop", Vec::new(), &objects, &mut meter)
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Refused(Refusal::CheckedInvariant)
     ));
 }
 
@@ -605,11 +1118,20 @@ fn tc_195_negotiation_takes_no_meter_and_changes_no_counter() {
         rounding: RoundingMode::NearestEven,
         requires_finite_proof: false,
     };
-    // No Meter is constructed anywhere in this test, and `negotiate_ieee`'s
-    // signature (`&[IeeeItemRequirement], &IeeeBackendCapabilities`) takes
-    // none: the type system, not a runtime assertion, is FR-273-AC-4's
-    // "before any application, without changing any Meter counter."
+    // `negotiate_ieee`'s signature (`&[IeeeItemRequirement],
+    // &IeeeBackendCapabilities`) takes no `Meter` at all: the type system is
+    // already FR-273-AC-4's "before any application." The `Meter` below is
+    // constructed only so this test can additionally show a real runtime
+    // assertion of "without changing any Meter counter": negotiation runs
+    // against it in scope, and it is asserted untouched afterward.
+    let dispositions = negotiate_ieee(&[requirement], &backend);
+    assert_eq!(dispositions.len(), 1);
+    let meter = Meter::new(UNLIMITED);
+    assert!(meter.admitted_charges().is_empty());
+    assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
     let _ = negotiate_ieee(&[requirement], &backend);
+    assert!(meter.admitted_charges().is_empty());
+    assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
 }
 
 // TC-195, FR-273-AC-4: `IeeeDisposition` has no conversion to `Outcome<Value>`
@@ -695,8 +1217,30 @@ fn tc_194_ambiguous_function_names_refuse_admission() {
     let refusals =
         expect_check_refusals(package.check(CheckMode::Linked, CheckingLimits::default()));
     assert_eq!(refusals.len(), 2);
+    let expected_loci = vec![
+        Location {
+            origin: Origin::Body {
+                function: "dup".to_string(),
+                index: 0,
+            },
+            path: Vec::new(),
+        },
+        Location {
+            origin: Origin::Body {
+                function: "dup".to_string(),
+                index: 1,
+            },
+            path: Vec::new(),
+        },
+    ];
     for refusal in &refusals {
-        assert!(matches!(refusal.cause, CheckCause::AmbiguousName { .. }));
+        match &refusal.cause {
+            CheckCause::AmbiguousName { name, loci } => {
+                assert_eq!(name, "dup");
+                assert_eq!(loci, &expected_loci);
+            }
+            other => panic!("expected CheckCause::AmbiguousName, got {other:?}"),
+        }
     }
 }
 

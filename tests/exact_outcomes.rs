@@ -554,8 +554,6 @@ fn drive_collection_membership(meter: &mut Meter) -> Incomplete {
     expect_incomplete(construct_collection(&collection_type, elements, meter))
 }
 
-/// A one-position tuple construction reaches `composite.result-retain` once
-/// its sole position completes.
 /// A checked package of one nullary function, called through
 /// `CheckedPackage::call`: the injected denial fires on the `function.call`
 /// charge itself, strictly before the body (which would complete instead of
@@ -581,6 +579,8 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
     expect_incomplete(evaluation.outcome)
 }
 
+/// A one-position tuple construction reaches `composite.result-retain` once
+/// its sole position completes.
 fn drive_composite(meter: &mut Meter) -> Incomplete {
     let declaration = CompositeDeclaration::new(
         NodeKey::from_bytes([7; 32]),
@@ -724,17 +724,20 @@ type Driver = fn(&mut Meter) -> Incomplete;
 
 /// Trace: TC-031, FR-010-AC-1
 ///
-/// `function.call` and `collection.visit` are declared in `ChargePoint::ALL`
-/// (quire.value.accounting/v1) but no public `exact` operator charges them
-/// yet: both are ported ahead of the expression-machine and
-/// collection-traversal operators that will (agent-ix/quire-spec-language#119).
-/// They are therefore excluded from this AC-1 sweep as `unreachable`, not
-/// silently dropped: this is a gap between the declared `ChargePoint`
-/// vocabulary and what the runtime actually charges, not a gap in this test.
-/// Every other point FR-008 added — the `equality.*` occurrence-pair plan
-/// schedule and the `collection.*`/`composite.result-retain` family — is
-/// reachable through `CheckedEquality::evaluate`, `construct_collection` and
-/// `TypeEnvironment::evaluate_tuple`, and is driven below like any other.
+/// `collection.visit` is declared in `ChargePoint::ALL`
+/// (quire.value.accounting/v1) but no public `exact` operator charges it
+/// yet: it is ported ahead of the collection-traversal operator that will
+/// (agent-ix/quire-spec-language#119). It is therefore excluded from this
+/// AC-1 sweep as `unreachable`, not silently dropped: this is a gap between
+/// the declared `ChargePoint` vocabulary and what the runtime actually
+/// charges, not a gap in this test.
+/// Every other point FR-008 added — `function.call` (through
+/// `CheckedPackage::call`/`Frame::call`, FR-273), the `equality.*`
+/// occurrence-pair plan schedule and the `collection.*`/
+/// `composite.result-retain` family — is reachable through
+/// `CheckedPackage::call`, `CheckedEquality::evaluate`,
+/// `construct_collection` and `TypeEnvironment::evaluate_tuple`, and is
+/// driven below like any other.
 #[test]
 fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() {
     let unreachable = [
