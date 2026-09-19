@@ -32,13 +32,7 @@ impl<T> Outcome<T> {
         }
     }
 
-    /// Fold a `Result<T, Stop>` (as [`super::expression::Frame::meter`]
-    /// returns) back into an `Outcome<T>`, exactly as a host [`Body`]
-    /// (outside this crate) must to keep returning its own declared
-    /// `Outcome<Value>` after propagating a [`Stop`] with `?`.
-    ///
-    /// [`Body`]: super::expression::Body
-    pub fn from_stop(result: Result<T, Stop>) -> Self {
+    pub(crate) fn from_stop(result: Result<T, Stop>) -> Self {
         match result {
             Ok(value) => Self::Completed(value),
             Err(Stop::Undefined(reason)) => Self::Undefined(reason),
@@ -200,21 +194,11 @@ impl BoundViolation {
     }
 }
 
-/// Early-exit carrier converted into [`Outcome`]: the non-`Completed` third
-/// of `Outcome`, used wherever a fallible step is more naturally written as
-/// `Result<T, Stop>` with `?` than matched against a four-variant `Outcome`
-/// at every step. Public because [`super::expression::Frame::meter`] returns
-/// `Result<R, Stop>` to its caller (a host [`super::expression::Body`]
-/// outside this crate): a refusal there must propagate, not silently
-/// collapse to a default value, so the caller needs a nameable type to
-/// propagate it with `?`.
+/// Internal early-exit carrier converted into [`Outcome`].
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Stop {
-    /// See [`Outcome::Undefined`].
+pub(crate) enum Stop {
     Undefined(Undefined),
-    /// See [`Outcome::Refused`].
     Refused(Refusal),
-    /// See [`Outcome::Incomplete`].
     Incomplete(Incomplete),
 }
 

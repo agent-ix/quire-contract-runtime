@@ -87,11 +87,19 @@ pub enum CheckMode {
 pub const MAX_CALL_DEPTH: u64 = 128;
 
 /// The source of [`CheckedPackage::id`]: a monotonic counter stamped once per
-/// [`PackageDeclarations::check`] call, never reused. `thumbv7em-none-eabi`
-/// has compare-and-swap, so `AtomicUsize` is available at this crate's MSRV
+/// [`PackageDeclarations::check`] call. `thumbv7em-none-eabi` has
+/// compare-and-swap, so `AtomicUsize` is available at this crate's MSRV
 /// (1.75) on the governed target; `Ordering::Relaxed` is enough because the
-/// only property this counter needs is "never returns the same value twice,"
-/// not any cross-thread happens-before relationship with other state.
+/// property this counter needs is "does not race across concurrent `check`
+/// calls," not any cross-thread happens-before relationship with other
+/// state. `fetch_add` wraps silently on overflow rather than panicking, and
+/// `usize` is 32 bits on that governed target, so this is not an unbounded
+/// identity: the 2^32-nd `check` call on a process's lifetime wraps back to
+/// `0` and would be indistinguishable from whichever still-live package was
+/// stamped `0` first. That ceiling is far beyond any real program's package
+/// count, and no test in this crate proves the wrapped case refuses, so the
+/// invariant this crate actually holds is "does not repeat within a
+/// realistic package count," not "never repeats."
 static NEXT_PACKAGE_ID: AtomicUsize = AtomicUsize::new(0);
 
 /// A checking budget: a node-count ceiling and a call-depth bound of at most
@@ -900,19 +908,21 @@ impl<'a> Frame<'a> {
     }
 
     /// Run `run` against the shared [`Meter`] this frame's whole call tree
-    /// charges through. `Err(Stop::Refused(Refusal::CheckedInvariant))` if
-    /// this frame's `Meter` is already mutably borrowed by an enclosing call
-    /// on the same re-entrant chain, rather than panicking on the double
-    /// borrow. Returning `Result` rather than `Option` matters here: a body
-    /// that needed to charge through this access and silently swallowed a
-    /// `None` would keep running unmetered with no signal, exactly the
-    /// condition [`Frame::call`] itself maps to a refusal rather than an
-    /// absent value. Propagate with `?`, as [`Frame::call`] does.
-    pub fn meter<R>(&self, run: impl FnOnce(&mut Meter) -> R) -> Result<R, Stop> {
+    /// charges through. `Err(Refusal::CheckedInvariant)` if this frame's
+    /// `Meter` is already mutably borrowed by an enclosing call on the same
+    /// re-entrant chain, rather than panicking on the double borrow.
+    /// Returning `Result` rather than `Option` matters here: a body that
+    /// needed to charge through this access and silently swallowed a `None`
+    /// would keep running unmetered with no signal, exactly the condition
+    /// [`Frame::call`] itself maps to a refusal rather than an absent value.
+    /// Propagate with `?`, then fold a returned `Err(r)` into
+    /// `Outcome::Refused(r)` to keep returning the body's own declared
+    /// `Outcome<Value>`.
+    pub fn meter<R>(&self, run: impl FnOnce(&mut Meter) -> R) -> Result<R, Refusal> {
         let mut guard = self
             .meter
             .try_borrow_mut()
-            .map_err(|_| Stop::Refused(Refusal::CheckedInvariant))?;
+            .map_err(|_| Refusal::CheckedInvariant)?;
         Ok(run(&mut guard))
     }
 

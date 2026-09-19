@@ -139,7 +139,7 @@ pub use numeric::{
     evaluate_rational_arithmetic, order_numbers, BooleanConnective, IntegerArithmetic,
     OrderedOperands, OrderingOperator, RationalArithmetic, ShortCircuitConnective,
 };
-pub use outcome::{BoundViolation, Outcome, Refusal, Stop, Undefined};
+pub use outcome::{BoundViolation, Outcome, Refusal, Undefined};
 pub use quantity::{
     compare_quantity, convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity,
     QuantityOperation, QuantityTarget, QuantityUnit,

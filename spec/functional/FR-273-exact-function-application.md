@@ -21,7 +21,7 @@ evaluate a checked standalone expression, through `quire_contract_runtime::exact
 and `CheckedPackage::evaluate` against a package a prior `PackageDeclarations::check` (`CheckMode::Linked`)
 has proved pure, total and definedness-safe on every reachable path, with outcomes, refusals and
 charges equal to the pinned quire-specification authority (`7d7943a`, FR-146) on every shared-corpus
-vector, and equal to the quire-spec-language authority (`68bdacb`) that carries it. As with FR-006
+vector, and equal to the quire-spec-language authority (`ea39f91`) that carries it. As with FR-006
 through FR-008, the runtime is an implementation of that definition, not a second semantic authority:
 `quire_spec_language::value` decides every application, refusal and charge question; every type,
 field and variant this requirement adds — `PackageDeclarations`, `CheckedPackage`,
@@ -73,6 +73,15 @@ which links this `#![no_std]` crate alone, calls the ported surface.
   name, an argument count or kind mismatch against the checked signature, or an argument
   `Value::Reference` the supplied `ObjectEnvironment` cannot resolve, each refuse call input with no
   `Meter` participation, exactly as `plan_equality`'s pre-charge refusals do for equality.
+- Unbounded host recursion through a checked package is silent stack corruption on the governed
+  `thumbv7em-none-eabi` target: re-entry into a checked package through `CheckedPackage::call`,
+  `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` (at most
+  `MAX_CALL_DEPTH`), by one budget shared across all three entry paths, and exceeding it refuses as
+  `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal: a
+  host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still
+  overflow the host stack — but so does a body that recurses without touching this crate's runtime at
+  all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern,
+  not this crate's.
 
 ## Acceptance Criteria
 
@@ -82,12 +91,13 @@ which links this `#![no_std]` crate alone, calls the ported surface.
 | FR-273-AC-2 | Declared arity is decided before any per-argument check, each argument's value kind and carried references are validated in parameter order, and all of that precedes the `function.call` charge, which itself precedes the function's body on every `call`. | Test (TC-194) |
 | FR-273-AC-3 | Arity, value-kind and dangling-reference input mismatches, and an unknown function name, each refuse as the matching `InputRefusal` variant before any charge; no `Meter` observes a refused call. | Test (TC-194) |
 | FR-273-AC-4 | A function whose declared operator requirements no registered backend can discharge negotiates `unsupported`, naming the required capability, before any application; the disposition is never an `Outcome` variant, never an `InputRefusal`, and takes no `Meter`. | Test (TC-195) |
-| FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language `68bdacb` authority on every shared-corpus function-application vector. | Test (TC-194) |
+| FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language `ea39f91` authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
+| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
 
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md); [FR-008](./FR-008-composite-collection-and-equality.md);
   [FR-009](./FR-009-i13-backend-negotiation.md);
   `ix://agent-ix/quire-specification` at `7d7943a` (FR-146, `expressions/FR-146-check-total-pure-functions.md`);
-  quire-spec-language at `68bdacb`.
+  quire-spec-language at `ea39f91`.

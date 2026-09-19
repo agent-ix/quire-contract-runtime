@@ -12,8 +12,8 @@ use quire_contract_runtime::exact::{
     IeeeItemRequirement, IeeeOperationKind, IeeeUnsupportedCause, IeeeWidth, InputRefusal, Integer,
     IntegerDivisionConsumer, IntegerDivisionDisposition, LimitKind, Location, Meter, NodeKey,
     ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin, Outcome,
-    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, Stop, TypeEnvironment,
-    UniverseIdentity, Value, ValueType, MAX_CALL_DEPTH,
+    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, TypeEnvironment, UniverseIdentity,
+    Value, ValueType, MAX_CALL_DEPTH,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -394,20 +394,19 @@ fn tc_194_function_call_precedes_the_body() {
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
             body: Box::new(|frame, _arguments| {
-                // `Frame::meter` returns `Result<R, Stop>`, not `Option<R>`:
-                // a refusal here (the shared `Meter` already mutably
-                // borrowed on this re-entrant chain) must propagate as a
-                // refused outcome via `?`, not silently collapse to
+                // `Frame::meter` returns `Result<R, Refusal>`, not
+                // `Option<R>`: a refusal here (the shared `Meter` already
+                // mutably borrowed on this re-entrant chain) must propagate
+                // as a refused outcome, not silently collapse to
                 // `charged: false` and complete anyway.
-                let attempt: Result<Value, Stop> = (|| {
-                    let charged = frame.meter(|meter| {
-                        meter
-                            .admitted_charges()
-                            .contains(&ChargePoint::FunctionCall)
-                    })?;
-                    Ok(Value::Boolean(charged))
-                })();
-                Outcome::from_stop(attempt)
+                match frame.meter(|meter| {
+                    meter
+                        .admitted_charges()
+                        .contains(&ChargePoint::FunctionCall)
+                }) {
+                    Ok(charged) => Outcome::Completed(Value::Boolean(charged)),
+                    Err(r) => Outcome::Refused(r),
+                }
             }),
         }],
     }
@@ -886,6 +885,7 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
 #[test]
 fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
     let objects = ObjectEnvironment::default();
+    let freed_address: usize;
     let expression = {
         let package = Box::new(
             PackageDeclarations {
@@ -895,6 +895,7 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
             .check(CheckMode::Linked, CheckingLimits::default())
             .unwrap(),
         );
+        freed_address = &*package as *const CheckedPackage as usize;
         package
             .check_expression(
                 Vec::new(),
@@ -911,6 +912,24 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
         }
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap(),
+    );
+    let second_address = &*second as *const CheckedPackage as usize;
+    // This test only discriminates the false negative it exists to catch
+    // (a freed address handed back to a *different* package, which
+    // address-derived identity would wrongly admit) when the allocator
+    // actually reuses `freed_address` here. On a hardened or governed
+    // allocator, or under Miri, `second` can land at a fresh address, and
+    // the test would then pass whether or not the monotonic-id fix is in
+    // place -- silently. Pin the premise instead of hoping for it: fail
+    // loudly, naming both addresses, the moment reuse does not happen, so a
+    // green run of this test is never mistaken for a green run of the
+    // defect check below it.
+    assert_eq!(
+        freed_address, second_address,
+        "expected the allocator to hand `second` the freed address of the dropped \
+         package (freed = {freed_address:#x}, second = {second_address:#x}); without \
+         that reuse this test does not exercise the false negative it exists to catch, \
+         so its pass below is not evidence of anything"
     );
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = second
@@ -963,20 +982,25 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
                 integer_division_consumers: Vec::new(),
                 measure_discharged: true,
                 body: Box::new(|frame, _arguments| {
-                    // `Frame::meter` returns `Result<R, Stop>`; propagate a
-                    // refusal via `?` instead of collapsing it into a bogus
-                    // count.
-                    let attempt: Result<Value, Stop> = (|| {
-                        let count = frame.meter(|meter| {
+                    // `Frame::meter` returns `Result<R, Refusal>`; propagate
+                    // a refusal instead of collapsing it into a bogus count.
+                    let attempt: Result<Value, Refusal> = frame
+                        .meter(|meter| {
                             meter
                                 .admitted_charges()
                                 .iter()
                                 .filter(|&&charge| charge == ChargePoint::FunctionCall)
                                 .count()
-                        })?;
-                        Ok(Value::Integer(Integer::from(count as i64)))
-                    })();
-                    Outcome::from_stop(attempt)
+                        })
+                        .map(|count| {
+                            let count = i64::try_from(count)
+                                .expect("admitted-charge count fits in i64 for this test");
+                            Value::Integer(Integer::from(count))
+                        });
+                    match attempt {
+                        Ok(value) => Outcome::Completed(value),
+                        Err(r) => Outcome::Refused(r),
+                    }
                 }),
             },
         ],
@@ -998,7 +1022,7 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
 
 /// `CheckingLimits::new` refuses a depth above `MAX_CALL_DEPTH`.
 ///
-/// Trace: TC-194, FR-273-AC-1
+/// Trace: TC-194, FR-273-AC-7
 #[test]
 fn tc_194_checking_limits_refuses_a_depth_above_the_maximum() {
     assert_eq!(
@@ -1013,7 +1037,7 @@ fn tc_194_checking_limits_refuses_a_depth_above_the_maximum() {
 /// Recursion through `Frame::call` beyond `CheckingLimits::depth` refuses
 /// with `Refusal::CheckedInvariant` rather than recursing without bound.
 ///
-/// Trace: TC-194, FR-273-AC-1
+/// Trace: TC-194, FR-273-AC-7
 #[test]
 fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
     let limits = CheckingLimits::new(u64::MAX, 3).unwrap();
@@ -1050,8 +1074,8 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
 
 /// A body that re-enters its own [`Frame::meter`] from inside the closure
 /// [`Frame::meter`] already handed it refuses the inner access with
-/// `Err(Stop::Refused(Refusal::CheckedInvariant))` instead of panicking on
-/// the double `RefCell` borrow.
+/// `Err(Refusal::CheckedInvariant)` instead of panicking on the double
+/// `RefCell` borrow.
 ///
 /// Trace: TC-194, FR-273-AC-2
 #[test]
@@ -1067,7 +1091,7 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
             measure_discharged: true,
             body: Box::new(|frame, _arguments| {
                 let outer = frame.meter(|_outer_meter| frame.meter(|_inner_meter| true));
-                let inner_refused = matches!(outer, Ok(Err(_)));
+                let inner_refused = matches!(outer, Ok(Err(Refusal::CheckedInvariant)));
                 Outcome::Completed(Value::Boolean(inner_refused))
             }),
         }],
@@ -1130,7 +1154,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
 /// path exactly as it bounds `Frame::call`, refusing rather than recursing
 /// the host stack without limit.
 ///
-/// Trace: TC-194, FR-273-AC-1
+/// Trace: TC-194, FR-273-AC-7
 #[test]
 fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
     let limits = CheckingLimits::new(u64::MAX, 3).unwrap();
@@ -1244,13 +1268,19 @@ fn tc_195_dischargeable_requirements_negotiate_supported_or_requires_bound() {
     );
 }
 
-/// Negotiation is a pure function of its inputs: it takes no `Meter` at all
-/// (so it cannot change any counter), and its result type has no path into
-/// `Outcome`/`InputRefusal` — proven at compile time below.
+/// Negotiation is a pure function of its inputs: `negotiate_ieee`'s signature
+/// (`&[IeeeItemRequirement], &IeeeBackendCapabilities`) takes no `Meter`
+/// parameter at all, so no application-time charge is reachable from it by
+/// construction — that is FR-273-AC-4's "before any application, with no
+/// `Meter` participation," and it is a compile-time property the signature
+/// itself proves, not one a runtime assertion on an unreachable local
+/// `Meter` could discriminate. Its result type having no path into
+/// `Outcome`/`InputRefusal` is proven separately, by the `compile_fail`
+/// doctest on `IeeeDisposition` (`src/exact/ieee.rs`).
 ///
 /// Trace: TC-195, FR-273-AC-4
 #[test]
-fn tc_195_negotiation_takes_no_meter_and_changes_no_counter() {
+fn tc_195_negotiate_ieee_takes_no_meter_by_signature() {
     let backend = IeeeBackendCapabilities::default();
     let requirement = IeeeItemRequirement {
         width: IeeeWidth::Binary64,
@@ -1258,20 +1288,11 @@ fn tc_195_negotiation_takes_no_meter_and_changes_no_counter() {
         rounding: RoundingMode::NearestEven,
         requires_finite_proof: false,
     };
-    // `negotiate_ieee`'s signature (`&[IeeeItemRequirement],
-    // &IeeeBackendCapabilities`) takes no `Meter` at all: the type system is
-    // already FR-273-AC-4's "before any application." The `Meter` below is
-    // never passed to `negotiate_ieee` and so is unreachable from it by
-    // construction; its `admitted_charges`/`consumed` assertions below
-    // cannot be made false by any change to `negotiate_ieee`, so they are
-    // not runtime evidence of anything the call did — the signature and the
-    // `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) are
-    // the actual evidence for this AC.
+    // The call itself is not the evidence for "no `Meter` participation" —
+    // the signature above is. This just confirms negotiation still runs and
+    // reports exactly one disposition for the one requirement supplied.
     let dispositions = negotiate_ieee(&[requirement], &backend);
     assert_eq!(dispositions.len(), 1);
-    let meter = Meter::new(UNLIMITED);
-    assert!(meter.admitted_charges().is_empty());
-    assert!(LimitKind::ALL.iter().all(|&kind| meter.consumed(kind) == 0));
 }
 
 // TC-195, FR-273-AC-4: `IeeeDisposition` has no conversion to `Outcome<Value>`
