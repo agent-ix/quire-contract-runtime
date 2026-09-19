@@ -13,7 +13,7 @@ Five outcomes, kept apart:
 
   pass          the owning harness rejected the injected defect
   fail          the harness accepted it, so that harness proves less than it claims
-  broken        the run never reached a verification result, so nothing was proved
+  inconclusive  the run never reached a verification result, so nothing was proved
                 either way
   malformed     the mutation's anchor text is no longer in the source exactly once,
                 so the campaign no longer describes this repository
@@ -148,11 +148,20 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, 
         f"Checking harness kani_proofs::{harness}..." not in combined
         or "VERIFICATION:- FAILED" not in combined
     ):
-        # A non-zero exit that never reached a verification failure is a broken
-        # run, not a control that held and not a harness that accepted the
-        # defect. Counting it as either is how a campaign starts passing (or
-        # blames the wrong harness) because the compiler fell over.
-        return "broken", f"the mutation for {harness} did not reach a proof failure"
+        # A non-zero exit that never reached a verification failure is an
+        # inconclusive run, not a control that held and not a harness that
+        # accepted the defect. Counting it as either is how a campaign starts
+        # passing (or blames the wrong harness) because the compiler fell over.
+        #
+        # The detail names what actually happened rather than describing it from
+        # the proof's point of view: the exit status, which distinguishes a
+        # compiler crash from a process `kill`, and a bounded tail of the
+        # captured output, which is usually where the compiler said why.
+        tail = " ".join(combined.split())[-200:]
+        return "inconclusive", (
+            f"cargo kani exited {completed.returncode} for {harness} without reaching a "
+            f"verification result; output tail: {tail!r}"
+        )
     return "pass", None
 
 

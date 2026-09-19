@@ -71,7 +71,8 @@ a transcript:
   into the working tree — and requires the owning proof to reject each one. A harness that verifies
   the mutated source anyway is `fail` — the harness proves less than it claims. A run that never
   reaches a verification result — the candidate copy did not compile, or Kani fell over first — is the
-  separate `broken`, so a broken build is never read as a hollow harness or as a control that held.
+  separate `inconclusive`, so a broken build is never read as a hollow harness or as a control that
+  held.
 - `scripts/measure_footprint.py` publishes `runtime.footprint/v1`. It links the footprint staticlib on
   the declared MSRV compiler for `thumbv7em-none-eabi` and then measures it through
   `scripts/check_linked_footprint.sh`, which owns `size` and `objdump` and emits the same document.
