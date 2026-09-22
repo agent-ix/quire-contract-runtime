@@ -6,7 +6,9 @@
 //! cumulative-counter overflow boundary of FR-011-AC-6 is reachable only from
 //! inside the crate.
 
-use super::{Charge, ChargePoint, Integer, LimitKind, Meter, ScalarLimits};
+use core::num::NonZeroU64;
+
+use super::{Charge, ChargePoint, InjectedDenial, Integer, LimitKind, Meter, ScalarLimits};
 
 const fn limits(work_units: u64, result_units: u64) -> ScalarLimits {
     ScalarLimits {
@@ -64,4 +66,93 @@ fn tc_032_cumulative_result_units_deny_at_the_limit_rather_than_wrapping() {
     assert_eq!(meter.consumed(LimitKind::ResultUnits), u64::MAX);
     // The denied charge is atomic: its own work unit was not written either.
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+}
+
+/// A charge at `point` that would move every non-cumulative counter, plus
+/// `work_units` and `result_units`, by a distinct nonzero amount derived from
+/// `seed` if it were ever admitted. Used to make an injected denial's
+/// check-before-mutate ordering observable: if any counter moved, this is how
+/// the test would see it.
+fn every_counter_charge(point: ChargePoint, seed: u64) -> Charge {
+    let mut charge = Charge::new(point).work(Integer::from(seed.saturating_add(1)));
+    for (offset, kind) in LimitKind::ALL.into_iter().enumerate() {
+        if !kind.is_cumulative() {
+            let offset = u64::try_from(offset).unwrap_or(u64::MAX);
+            charge = charge.size(kind, seed.saturating_add(offset).saturating_add(1));
+        }
+    }
+    charge.results(seed.saturating_add(1))
+}
+
+/// Trace: IR-44, TC-031, FR-010.
+///
+/// `check_injected` decides an injected denial, and `charge`/`charge_plan`
+/// return via `?` on it, strictly before either inspects or mutates any
+/// counter. A consumer that only holds the returned `Incomplete` cannot
+/// observe this ordering directly: `Incomplete.consumed` and any later
+/// `Meter::consumed` call read the same array slot through the same
+/// accessor with nothing mutating between them, so comparing
+/// `denied.consumed(kind)` against `incomplete.consumed` is `x == x`
+/// regardless of whether the seam is check-before-mutate or
+/// mutate-then-check. That comparison cannot distinguish the two orderings
+/// from outside the crate.
+///
+/// This test instead reads the meter's own counters directly, itself,
+/// immediately before making the call that will be injected-denied, and
+/// again immediately after — for every `LimitKind`, not only `work_units` —
+/// so it can actually tell the two orderings apart. It lives here, in-crate,
+/// because doing this requires `Charge`'s crate-private builders to move
+/// every counter at once (see this file's module doc comment).
+#[test]
+fn ir_044_injected_denial_never_mutates_any_counter_before_returning() {
+    let generous = limits(u64::MAX, u64::MAX);
+
+    for &point in ChargePoint::ALL.iter() {
+        for prior_count in 0_u64..3 {
+            let occurrence = prior_count.saturating_add(1);
+            let mut meter = Meter::new(generous).with_injected_denial(InjectedDenial {
+                point,
+                occurrence: NonZeroU64::new(occurrence).unwrap(),
+            });
+
+            // Admit `prior_count` charges at `point` first, each moving every
+            // counter, so the injected denial fires on exactly the
+            // `occurrence`th charge at `point`, with every counter already
+            // nonzero going into it.
+            for prior in 0..prior_count {
+                meter
+                    .charge(every_counter_charge(point, prior))
+                    .expect("generous limits admit every prior charge");
+            }
+            let admitted_before = meter.admitted_charges().len();
+
+            // The property under test, captured by the TEST ITSELF, by
+            // reading the meter's counters directly — not recovered from an
+            // `Incomplete` this call has not returned yet.
+            let before: [u64; 10] = LimitKind::ALL.map(|kind| meter.consumed(kind));
+            let work_before = meter.consumed(LimitKind::WorkUnits);
+
+            let denied = meter
+                .charge(every_counter_charge(point, 1_000))
+                .expect_err("the injected denial fires on this charge");
+            assert_eq!(denied.charge_point, point);
+            assert_eq!(denied.limit_kind, LimitKind::WorkUnits);
+            assert_eq!(denied.consumed, work_before);
+
+            for (kind, expected) in LimitKind::ALL.into_iter().zip(before) {
+                assert_eq!(
+                    meter.consumed(kind),
+                    expected,
+                    "counter {kind:?} moved across an injected denial at {point:?} \
+                     (occurrence {occurrence}); check_injected must return before any \
+                     counter is inspected or mutated"
+                );
+            }
+            assert_eq!(
+                meter.admitted_charges().len(),
+                admitted_before,
+                "an injected denial must not append to the admitted-charge log"
+            );
+        }
+    }
 }
