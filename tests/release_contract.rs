@@ -412,14 +412,21 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
 fn assert_non_exhaustive(source: &str, declaration: &str, enum_name: &str) -> usize {
     let declaration_at = source.find(declaration).expect("enum declaration exists");
     let attributes = &source[..declaration_at];
-    let nearest_non_exhaustive = attributes
-        .rfind("#[non_exhaustive]")
-        .expect("non-exhaustive attribute exists");
-    let intervening = &attributes[nearest_non_exhaustive..];
-    assert!(
-        !intervening.contains("pub enum"),
-        "{enum_name} is not the enum governed by the nearest non-exhaustive attribute"
-    );
+    let nearest_non_exhaustive = attributes.rfind("#[non_exhaustive]").unwrap_or_else(|| {
+        panic!("{enum_name} is missing #[non_exhaustive] (declared at byte {declaration_at})")
+    });
+    let intervening = &attributes[nearest_non_exhaustive + "#[non_exhaustive]".len()..];
+    // Not just "no other enum in between" -- no other *public item* at all. `#[non_exhaustive]`
+    // governs whatever item directly follows it; a public struct or fn declared between the
+    // attribute and this enum would mean it (not this enum) is what the attribute actually
+    // governs, even though a weaker "no `pub enum` in between" check would miss that.
+    for other_item in ["pub enum", "pub struct", "pub fn"] {
+        assert!(
+            !intervening.contains(other_item),
+            "{enum_name}: the nearest #[non_exhaustive] above it is separated by `{other_item}` \
+             -- it governs a different item, not this enum"
+        );
+    }
     declaration_at
 }
 
