@@ -551,6 +551,20 @@ impl Meter {
     /// on the fired arm is what makes the seam single-shot: no later call can
     /// match `Some(denial) if ...` once `self.denial` is `None`, regardless of
     /// how `denial_point_seen` moves afterward.
+    ///
+    /// This check runs, and this function returns, strictly before either
+    /// caller (`charge`, `charge_plan`) inspects or mutates any counter:
+    /// `charge`'s and `charge_plan`'s own `?` on the call below is the entire
+    /// ordering guarantee (IR-44). An injected denial's `Incomplete` therefore
+    /// always reports the meter's state as of immediately before the charge it
+    /// denies, for every counter, not only `work_units`.
+    ///
+    /// `limit_kind` on the returned record is unconditionally
+    /// [`LimitKind::WorkUnits`] here, regardless of which counter the calling
+    /// charge point actually meters (per FR-010's Outputs section, this is the
+    /// documented normative record shape, not an oversight local to this
+    /// function) — every injected denial reports `WorkUnits`, never the
+    /// counter a size-only charge point would otherwise have been denied on.
     fn check_injected(
         &mut self,
         point: ChargePoint,
@@ -564,6 +578,7 @@ impl Meter {
                 self.denial = None;
                 let consumed = self.consumed(LimitKind::WorkUnits);
                 Err(Incomplete {
+                    // Unconditionally `WorkUnits`; see this function's doc comment.
                     limit_kind: LimitKind::WorkUnits,
                     limit: consumed,
                     consumed,
