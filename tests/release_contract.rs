@@ -113,6 +113,18 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
     ] {
         assert_non_exhaustive(observations, declaration, enum_name);
     }
+
+    // NFR-002-AC-3 covers the WHOLE public enum surface, not only the
+    // pre-`exact` model checked above: `src/exact/` is the FR-006/FR-007
+    // complete-V1 exact-scalar oracle, and every public data enum there is
+    // expected to grow as complete-V1 lands and to be matched exhaustively by
+    // downstream generated oracles (IR-77). This reads every `pub enum`
+    // declared under `src/exact/` directly from source, the same way
+    // `tc_016_exact_surface_is_reexported_from_private_modules`
+    // (`tests/exact_outcomes.rs`) pins that module's public surface, so a
+    // future enum added to `src/exact/` without `#[non_exhaustive]` fails
+    // this test rather than silently escaping inspection.
+    assert_exact_public_enums_are_non_exhaustive();
     for forbidden in [
         "pub accepted:",
         "pub rejected:",
@@ -409,6 +421,82 @@ fn assert_non_exhaustive(source: &str, declaration: &str, enum_name: &str) -> us
         "{enum_name} is not the enum governed by the nearest non-exhaustive attribute"
     );
     declaration_at
+}
+
+/// `(file name under src/exact/, enum name)` pairs whose variant set is
+/// provably closed by the domain the enum models, not by this crate's own
+/// evolving complete-V1 vocabulary — so they deliberately stay exhaustive.
+/// Every other public enum declared under `src/exact/` must be
+/// `#[non_exhaustive]` (NFR-002-AC-3, IR-77).
+const EXACT_NON_EXHAUSTIVE_EXCEPTIONS: &[(&str, &str)] = &[
+    // `Presence` mirrors a grammar token's presence or absence (`f: T` vs.
+    // `f: T?`) on a field declaration: exactly two states, with no third
+    // spelling the grammar could ever admit.
+    ("composite.rs", "Presence"),
+    // `BoundViolation` names the side of an inclusive bound a formed count
+    // falls outside: below the minimum or above the maximum. An interval has
+    // no third side.
+    ("outcome.rs", "BoundViolation"),
+    // `NormalizationForm` is Unicode's own closed vocabulary (UAX #15): the
+    // 2x2 combination of {canonical, compatibility} x {decomposition,
+    // composition}, not this crate's evolving surface.
+    ("text.rs", "NormalizationForm"),
+];
+
+/// NFR-002-AC-3, TC-008 (IR-77): every public enum declared under
+/// `src/exact/` is `#[non_exhaustive]`, unless it is named in
+/// [`EXACT_NON_EXHAUSTIVE_EXCEPTIONS`]. The enum list itself is read from
+/// source, not hand-maintained here, so an enum added to `src/exact/` after
+/// this test was written is still inspected.
+fn assert_exact_public_enums_are_non_exhaustive() {
+    let exact_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/exact");
+    let mut entries = fs::read_dir(&exact_dir)
+        .expect("src/exact is readable")
+        .map(|entry| entry.expect("src/exact entry is readable"))
+        .collect::<Vec<_>>();
+    entries.sort_by_key(std::fs::DirEntry::path);
+
+    let mut checked = 0_usize;
+    for entry in entries {
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
+            continue;
+        }
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("exact source file has a UTF-8 name")
+            .to_owned();
+        let source =
+            fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        for line in source.lines() {
+            let Some(rest) = line.strip_prefix("pub enum ") else {
+                continue;
+            };
+            let enum_name: String = rest
+                .chars()
+                .take_while(|character| character.is_alphanumeric() || *character == '_')
+                .collect();
+            assert!(
+                !enum_name.is_empty(),
+                "{file_name}: could not read an enum name from {line:?}"
+            );
+            checked += 1;
+            if EXACT_NON_EXHAUSTIVE_EXCEPTIONS.contains(&(file_name.as_str(), enum_name.as_str())) {
+                continue;
+            }
+            assert_non_exhaustive(&source, line, &enum_name);
+        }
+    }
+    // Locks in that this walk actually reaches every enum `src/exact/`
+    // currently declares (63 non-exhaustive, 3 deliberate exceptions): a
+    // silent parsing miss here would be exactly the kind of inspection gap
+    // IR-77 fixed.
+    assert_eq!(
+        checked, 66,
+        "src/exact/ now declares a different number of public enums; update this count and \
+         EXACT_NON_EXHAUSTIVE_EXCEPTIONS deliberately"
+    );
 }
 
 #[derive(Debug, Eq, PartialEq)]

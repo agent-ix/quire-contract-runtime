@@ -15,6 +15,7 @@ use super::outcome::{Outcome, Refusal, Stop, Undefined};
 use super::rational::{Rational, RationalDomain};
 
 /// A numeric ordering operator. Equality has its own quire-specification/FR-149 schedule.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum OrderingOperator {
     /// `<`.
@@ -47,6 +48,7 @@ impl OrderingOperator {
 }
 
 /// The two operands of one numeric ordering, both of one exact kind.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum OrderedOperands<'a> {
     /// `Integer` or `Int[..]` operands.
@@ -216,6 +218,7 @@ pub(crate) fn rational_arithmetic_bits(operation: RationalArithmetic<'_>) -> Int
 }
 
 /// One `Integer` or `Int[..]` arithmetic operation.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum IntegerArithmetic<'a> {
     /// `a + b`.
@@ -277,6 +280,7 @@ fn integer_arithmetic(
 /// One `Rational[..]` arithmetic operation. An `Integer` or `Int[..]` `/`
 /// producing `Rational[..]` takes each operand `n` as `n/1`
 /// ([`Rational::from_integer`](super::Rational::from_integer)).
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum RationalArithmetic<'a> {
     /// `a/b + c/d`.
@@ -371,6 +375,7 @@ fn rational_arithmetic(
 }
 
 /// One Boolean connective over decided operands.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BooleanConnective {
     /// `a and b`.
@@ -398,6 +403,7 @@ pub fn evaluate_boolean(connective: BooleanConnective, meter: &mut Meter) -> Out
 ///
 /// Unlike [`BooleanConnective`], the right operand is evaluated lazily and may
 /// itself stop; see [`evaluate_boolean_short_circuit`].
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ShortCircuitConnective {
     /// `a and b`.

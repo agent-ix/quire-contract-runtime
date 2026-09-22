@@ -471,6 +471,8 @@ fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
         Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
         Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
         Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
+        // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3).
+        _ => panic!("expected Outcome::Incomplete, got an unrecognized outcome variant"),
     }
 }
 
@@ -1317,8 +1319,12 @@ fn tc_031_occurrence_field_is_nonzerou64_so_zero_cannot_be_constructed() {
 /// Trace: TC-016, FR-006-AC-6
 #[test]
 fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
-    // Exhaustive over `Refusal`: adding a variant without extending this match
-    // is a compile error, not a silently passing test.
+    // `Refusal` is `#[non_exhaustive]` (NFR-002-AC-3), so this match, compiled
+    // from `tests/` as a downstream crate, needs a wildcard arm. Rather than a
+    // silent `_ => None` (which would falsely claim a new variant carries no
+    // normative code), the wildcard panics: adding a variant without
+    // extending this match and the `variants` array below is a loud test
+    // failure, not a silently passing one.
     fn expected_code(refusal: &Refusal) -> Option<&'static str> {
         match refusal {
             Refusal::IeeeNanPayloadNotRepresentable => Some("ieee_nan_payload_not_representable"),
@@ -1334,6 +1340,10 @@ fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
             | Refusal::RationalOutOfDomain
             | Refusal::IeeeNotExact { .. }
             | Refusal::CheckedInvariant => None,
+            _ => panic!(
+                "Refusal gained a variant expected_code does not enumerate; extend this match \
+                 and the variants array below"
+            ),
         }
     }
 

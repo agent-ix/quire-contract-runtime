@@ -18,6 +18,7 @@ use super::unit::{CompoundUnit, Dimension, Unit, UnitEdge};
 
 /// The unit of a quantity: an admitted declared unit or a compound unit
 /// produced by multiplication, division or power.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum QuantityUnit {
     /// An admitted I04 declared unit.
@@ -101,6 +102,7 @@ impl Quantity {
 }
 
 /// A quantity operation.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum QuantityOperation<'a> {
     /// `a + b` in one common unit.
@@ -116,6 +118,7 @@ pub enum QuantityOperation<'a> {
 }
 
 /// The value representation of an explicit conversion target.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum QuantityTarget {
     /// An unbounded exact rational; conversion reports no loss.
@@ -133,6 +136,7 @@ pub enum QuantityTarget {
 }
 
 /// A converted value in its target representation.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConvertedValue {
     /// The exact converted rational.

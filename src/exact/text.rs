@@ -35,6 +35,7 @@ pub const UNICODE_VERSION: (u8, u8, u8) = (17, 0, 0);
 const _: [(); 1] = [(); matches!(unicode_normalization::UNICODE_VERSION, (17, 0, 0)) as usize];
 
 /// One quire-specification/FR-141 text profile.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TextProfile {
     /// Decoded scalar sequence without normalization.
@@ -120,6 +121,12 @@ impl TextProfile {
 }
 
 /// A Unicode normalization form.
+///
+/// Deliberately not `#[non_exhaustive]` (NFR-002-AC-3, IR-77): this is
+/// Unicode's own closed vocabulary (UAX #15), the 2x2 combination of
+/// {canonical, compatibility} x {decomposition, composition}, not this
+/// crate's own evolving surface. [`TextProfile`], which *is* this crate's
+/// evolving surface, wraps it.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum NormalizationForm {
     /// Canonical decomposition then canonical composition.
@@ -247,6 +254,7 @@ impl fmt::Display for InvalidTextLiteral {
 
 /// Where a payload came from. Provenance never participates in text value
 /// comparison.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TextProvenance {
     /// A source literal with its exact quoted spelling.

@@ -253,6 +253,10 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
             FieldValue::Absent => 0,
             FieldValue::Null => 1,
             FieldValue::Present(_) => 2,
+            // `FieldValue` is `#[non_exhaustive]` (NFR-002-AC-3); this rank
+            // table is exhaustive over the three known states on purpose, so a
+            // new state fails loudly instead of silently sorting somewhere.
+            _ => unreachable!("FieldValue gained a variant with no defined canonical rank"),
         }
     };
     let ranks_of = |elements: &[Value]| -> Vec<u8> { elements.iter().map(rank_of).collect() };

@@ -486,6 +486,7 @@ impl BoundedInteger {
 }
 
 /// The domain of an integer consumer.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IntegerDomain {
     /// Unbounded mathematical integers; evaluation has no overflow.

@@ -124,6 +124,7 @@ impl fmt::Display for ObjectEnvironmentRefusal {
 }
 
 /// The typed cause of an [`ObjectEnvironmentRefusal`].
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ObjectEnvironmentCause {
     /// Two objects share one identity triple.

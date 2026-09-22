@@ -133,6 +133,7 @@ impl Decimal {
 }
 
 /// A rounding spelling; an omitted spelling is strict [`RoundingMode::Exact`].
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum RoundingMode {
     /// Refuse any discarded nonzero digit.
@@ -430,6 +431,7 @@ pub(crate) fn compare_shifted(value: &Integer, shift: u64, bound: &Integer) -> O
 }
 
 /// One quire-specification/FR-140 decimal operation.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum DecimalOperation<'a> {
     /// `a + b`.

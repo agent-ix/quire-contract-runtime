@@ -10,6 +10,7 @@
 use core::fmt;
 
 /// The lock's closed `selection_refusal_codes`, in check order.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum SelectionRefusalCode {
     /// `selection_unknown_trigger`.
@@ -66,6 +67,7 @@ impl SelectionRefusalCode {
 }
 
 /// The I04 diagnostic code of a definition-closure refusal.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum PackageRefusalCode {
     /// `invalid_package`.
@@ -83,6 +85,7 @@ impl PackageRefusalCode {
 
 /// The subset of the closed I04 `cause_tag` vocabulary that definition-closure
 /// admission reports.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum PackageCause {
     /// `missing-member`: a required definition is not retained.

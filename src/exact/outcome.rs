@@ -10,6 +10,7 @@ use super::collection::{CardinalityBound, CollectionKind};
 use super::ieee::IeeeFlags;
 
 /// Exactly one of a completed value, undefined, refused or incomplete.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[must_use]
 pub enum Outcome<T> {
@@ -63,6 +64,7 @@ impl<T> From<T> for Outcome<T> {
 
 /// Why an operation is undefined.
 // Implements: FR-006
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Undefined {
     /// A divisor is (normalized) zero.
@@ -79,6 +81,7 @@ pub enum Undefined {
 }
 
 /// Why a defined result is refused. Refusals never carry the refused value.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Refusal {
     /// Strict `exact` rounding would discard a nonzero digit.
@@ -176,6 +179,11 @@ impl Refusal {
 }
 
 /// The side of a cardinality bound a formed collection violates.
+///
+/// Deliberately not `#[non_exhaustive]` (NFR-002-AC-3, IR-77): an inclusive
+/// bound has exactly two sides, below the minimum or above the maximum, so
+/// this is closed by the definition of "violates a bound," not by this
+/// crate's own evolving vocabulary.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BoundViolation {
     /// `below-minimum`.
