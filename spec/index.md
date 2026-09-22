@@ -38,6 +38,14 @@ without making a certification or accreditation claim.
 - Contract parsing, canonicalization, code generation, campaign orchestration, and integration into
   Quoin or Quire.
 - Project-specific validation, accreditation, certification, and human release approval.
+- Mutable state: `modifies`/`creates`/`deletes` frame-obligation semantics and any `negotiate_frame`
+  predicate beside `negotiate_ieee` and `negotiate_integer_division`. That construct is negotiated
+  at the code generator's arrow, not this runtime's, and is blocked on IR lowering the frame node
+  ([quire-contract-ir#109](https://github.com/agent-ix/quire-contract-ir/issues/109)).
+- Temporal semantics, protocol encodings admitted by a backend profile, and replay. The language
+  authority that defines them has not shipped
+  ([quire-spec-language#121](https://github.com/agent-ix/quire-spec-language/issues/121)), and this
+  runtime is an implementation of that definition, never a second semantic authority.
 
 ## System Overview
 
