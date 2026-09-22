@@ -195,9 +195,9 @@ impl fmt::Debug for Value {
     /// across every currently-open ancestor, not by the size of already-written text -- for a
     /// chain (each level has at most one child, as in the stack-depth tests below) that is O(open
     /// ancestors); for one wide collection or record with many elements/fields, `push_list`
-    /// (private, below) pushes every element's `Task` onto the worklist before any is popped and rendered,
-    /// so the worklist there is O(that level's element count), not O(depth). This is a
-    /// characteristic of the eager, all-siblings-at-once expansion this walk has used since it
+    /// (private, below) pushes every element's `Task` onto the worklist before any is popped
+    /// and rendered, so the worklist there is O(that level's element count), not O(depth). This
+    /// is a characteristic of the eager, all-siblings-at-once expansion this walk has used since it
     /// was made iterative (issue #29), unchanged by IR-55: IR-55 removed the *other* two costs
     /// this impl used to carry (a transient `Vec<Task>` fragment built and copied in per node, and
     /// the whole rendering buffered as one owned `String` before any of it reached `f`), neither
