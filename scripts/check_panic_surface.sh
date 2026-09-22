@@ -56,11 +56,11 @@ scan_tree() {
     excludes+=(--exclude="${file##*/}")
   done < <(find "$root" -type f -name '*_tests.rs' | sort)
 
+  assert_tests_suffix_files_are_cfg_test_modules "$root" ${tests[@]+"${tests[@]}"}
   scan "$root" "$runtime_pattern" ${excludes[@]+"${excludes[@]}"}
   for file in ${tests[@]+"${tests[@]}"}; do
     scan "$file" "$verification_pattern"
   done
-  assert_tests_suffix_files_are_cfg_test_modules "$root" ${tests[@]+"${tests[@]}"}
 }
 
 # The two lists above are derived from the `*_tests.rs` suffix alone, which makes it the sole,
@@ -85,16 +85,25 @@ assert_tests_suffix_files_are_cfg_test_modules() {
 
   while IFS= read -r file; do
     rust_files+=("$file")
-  done < <(find "$root" -type f -name '*.rs')
+  done < <(find "$root" -type f -name '*.rs' | sort)
 
   for file in "$@"; do
     basename="${file##*/}"
     stem="${basename%.rs}"
+    # Attachment, not proximity: `#[cfg(test)]` only gates the very next item, so a match only
+    # counts when the mod/path line is exactly one line after `#[cfg(test)]` (the implicit
+    # `mod <stem>;` form) or exactly one line after a `#[path]` line that was itself exactly one
+    # line after `#[cfg(test)]` (the explicit `#[path = "..."]` / `mod <name>;` form). A wider
+    # "within N lines" window would let an unrelated second `mod` declaration two lines below one
+    # real `#[cfg(test)]` inherit its neighbour's gate -- adjacent `mod` lines are a common layout,
+    # so this was measured, not a hypothetical: `#[cfg(test)]\nmod a_tests;\nmod b_tests;` let
+    # `b_tests` pass with no gate of its own.
     if ! awk -v stem="$stem" -v base="$basename" '
-      FNR == 1 { gate = -100 }
-      /#\[cfg\(test\)\]/ { gate = FNR }
-      $0 ~ ("mod[ \t]+" stem "[ \t]*;") && (FNR - gate) <= 2 { found = 1 }
-      $0 ~ ("#\\[path[ \t]*=[ \t]*\"[^\"]*" base "\"\\]") && (FNR - gate) <= 2 { found = 1 }
+      FNR == 1 { prev_cfg_test = 0; path_gated_at = 0 }
+      $0 ~ ("^[ \t]*mod[ \t]+" stem "[ \t]*;") && prev_cfg_test { found = 1 }
+      $0 ~ ("#\\[path[ \t]*=[ \t]*\"[^\"]*" base "\"\\]") && prev_cfg_test { path_gated_at = FNR }
+      $0 ~ ("^[ \t]*mod[ \t]+") && path_gated_at && (FNR - path_gated_at == 1) { found = 1 }
+      { prev_cfg_test = ($0 ~ /#\[cfg\(test\)\]/) }
       END { exit !found }
     ' "${rust_files[@]}"; then
       echo "no #[cfg(test)]-gated mod or #[path] declaration references $file" >&2
