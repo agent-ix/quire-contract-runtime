@@ -182,14 +182,28 @@ impl Value {
 }
 
 impl fmt::Debug for Value {
-    /// Renders the same output `#[derive(Debug)]` would have, but iteratively and in O(n) time
-    /// with O(1) *extra* heap: a depth-first, top-down walk over an explicit worklist writes each
-    /// byte of the output exactly once, directly into `f`, at the final indent depth its position
-    /// in the tree already determines — so no already-written text is ever re-scanned, re-copied
-    /// or buffered as an ancestor's rendering is composed, the way a bottom-up approach that
-    /// re-embeds each level's complete rendered text into a fresh string must, and unlike
-    /// buffering the whole rendering into one owned `String` before handing it to `f` in a single
-    /// `write_str` (which peaks at the size of the entire output, not the tree's depth).
+    /// Renders the same output `#[derive(Debug)]` would have, but iteratively and in O(n) time: a
+    /// depth-first, top-down walk over an explicit worklist writes each byte of the output
+    /// exactly once, directly into `f`, at the final indent depth its position in the tree
+    /// already determines — so no already-written text is ever re-scanned, re-copied or buffered
+    /// as an ancestor's rendering is composed, the way a bottom-up approach that re-embeds each
+    /// level's complete rendered text into a fresh string must, and unlike buffering the whole
+    /// rendering into one owned `String` before handing it to `f` in a single `write_str` (which
+    /// peaks at the size of the entire output).
+    ///
+    /// The worklist's own peak size is bounded by the total count of not-yet-rendered siblings
+    /// across every currently-open ancestor, not by the size of already-written text -- for a
+    /// chain (each level has at most one child, as in the stack-depth tests below) that is O(open
+    /// ancestors); for one wide collection or record with many elements/fields, [`push_list`]
+    /// pushes every element's `Task` onto the worklist before any of them is popped and rendered,
+    /// so the worklist there is O(that level's element count), not O(depth). This is a
+    /// characteristic of the eager, all-siblings-at-once expansion this walk has used since it
+    /// was made iterative (issue #29), unchanged by IR-55: IR-55 removed the *other* two costs
+    /// this impl used to carry (a transient `Vec<Task>` fragment built and copied in per node, and
+    /// the whole rendering buffered as one owned `String` before any of it reached `f`), neither
+    /// of which is this one. A lazy, one-sibling-at-a-time expansion (an iterator/cursor `Task`
+    /// variant rather than pre-pushing a whole slice) would close this remaining gap; not
+    /// attempted here.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         render_value(f, self)
     }
@@ -351,7 +365,6 @@ fn push_tuple1<'a>(
 /// struct here has, at `depth`, directly onto `stack` (see [`push_tuple1`] for the reverse-push
 /// discipline this follows). Each field's push closure receives the depth its own content sits at
 /// (`depth.saturating_add(1)`), computed once here rather than re-derived at each call site.
-#[allow(clippy::too_many_arguments)]
 fn push_struct3<'a, F0, F1, F2>(
     stack: &mut Vec<Task<'a>>,
     name: &'static str,
