@@ -38,6 +38,7 @@ use super::text::{Text, TextType};
 
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ValueType {
     /// `Boolean`.
@@ -131,6 +132,7 @@ impl ValueType {
 /// stack to format or to free, because on the governed `thumbv7em-none-eabi` target a stack
 /// overflow is silent memory corruption, not a panic (see the module-level invariant in
 /// `src/exact/mod.rs`).
+#[non_exhaustive]
 #[derive(Clone)]
 pub enum Value {
     /// A Boolean.
@@ -655,6 +657,11 @@ impl OptionValue {
 
 /// Whether a declared field admits only a present value (`f: T`) or also
 /// `absent` and explicit `null` (`f: T?`).
+///
+/// Deliberately not `#[non_exhaustive]` (NFR-002-AC-3, IR-77): a field
+/// declaration either carries the grammar's `?` or does not, so this is
+/// closed by the grammar rule itself, not by this crate's own evolving
+/// vocabulary.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Presence {
     /// A field declared without `?`.
@@ -664,6 +671,7 @@ pub enum Presence {
 }
 
 /// The state of one field slot.
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum FieldValue {
     /// A present value.
@@ -710,6 +718,7 @@ impl FieldDeclaration {
 
 /// The shape of a composite declaration. Complete V1 has no variant or sum
 /// declaration.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CompositeShape {
     /// A record with fields in declaration order.
@@ -818,6 +827,7 @@ impl InvalidDeclaration {
 }
 
 /// Which recursion-rule subgraph has a cycle.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum RecursionEdges {
     /// A cycle of edges that start at tuple positions.
@@ -827,6 +837,7 @@ pub enum RecursionEdges {
 }
 
 /// The typed cause of an [`InvalidDeclaration`].
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum DeclarationCause {
     /// Two declarations share one node key.
@@ -1298,6 +1309,7 @@ pub type Deferred<'a> = Box<dyn FnOnce(&mut Meter) -> Outcome<Value> + 'a>;
 
 /// A record field in a record value expression. Omitting a `?` field
 /// constructs `absent`.
+#[non_exhaustive]
 pub enum FieldExpression<'a> {
     /// `f: e`.
     Evaluate(Deferred<'a>),
@@ -1337,6 +1349,7 @@ pub(crate) fn retain_composite(value: Value, meter: &mut Meter) -> Result<Value,
 }
 
 /// Where a construction refusal originates.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Component {
     /// The composite value as a whole (its declaration or arity).
@@ -1352,6 +1365,7 @@ pub enum Component {
 }
 
 /// Why a construction is `refused { code: ill_typed }`.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ConstructionCause {
     /// The declaration is not a record or tuple of the environment, or has

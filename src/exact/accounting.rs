@@ -48,6 +48,7 @@ pub struct ScalarLimits {
 }
 
 /// One counter of [`ScalarLimits`].
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum LimitKind {
     /// `integer_bits`.
@@ -144,6 +145,7 @@ impl LimitKind {
 }
 
 /// A normative named charge point.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ChargePoint {
     /// `decimal.operands`.

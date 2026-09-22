@@ -91,6 +91,7 @@ impl fmt::Display for InvalidSemanticGraph {
 /// The vocabulary is closed and shared with the compiler. Preimage, owner and
 /// stale-key causes are raised only at compiler admission; the runtime raises
 /// the structural causes of the graphs it is handed.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum SemanticGraphCause {
     /// The preimage does not satisfy `node-identity-preimage.schema.json`.

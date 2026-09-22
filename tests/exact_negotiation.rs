@@ -442,25 +442,42 @@ fn tc_030_no_disposition_converts_into_an_outcome_variant() {
     }
     assert!(checked_any, "no source files were scanned");
 
-    // Both negotiators also stay exhaustive with no wildcard arm: an `Outcome`
-    // variant folded onto either enum, or an undeclared variant, is a compile
-    // error here rather than a silent pass.
+    // Both negotiators also stay checked against the closed set of dispositions
+    // this test knows about. `IntegerDivisionDisposition` and `IeeeDisposition`
+    // are `#[non_exhaustive]` (NFR-002-AC-3: downstream generated oracles must
+    // not exhaustively match them), so this crate's own `tests/` — a separate,
+    // downstream-compiled crate — can no longer enforce coverage with a plain
+    // exhaustive `match` and a compile error. `matches!` plus an explicit assertion is a
+    // weaker guard, not the same one moved to test-run time: it only catches a variant these
+    // fixtures actually cause `negotiate_integer_division`/`negotiate_ieee` to produce, where
+    // the old compile-time match caught a new variant unconditionally, whether or not any
+    // fixture here happened to reach it. That gap is inherent to matching a
+    // `#[non_exhaustive]` type from a downstream crate; this assertion still fails loudly for
+    // every disposition these fixtures do produce, rather than silently passing one through.
     let integer_items = [
         IntegerDivisionConsumer::Mathematical,
         IntegerDivisionConsumer::Finite(IntegerDivisionBounds::default()),
     ];
     for disposition in negotiate_integer_division(&integer_items) {
-        match disposition {
-            IntegerDivisionDisposition::Supported | IntegerDivisionDisposition::RequiresBound => {}
-        }
+        assert!(
+            matches!(
+                disposition,
+                IntegerDivisionDisposition::Supported | IntegerDivisionDisposition::RequiresBound
+            ),
+            "unexpected integer division disposition: {disposition:?}"
+        );
     }
 
     let ieee_items = [baseline_item()];
     for disposition in negotiate_ieee(&ieee_items, &capable_backend()) {
-        match disposition {
-            IeeeDisposition::Supported
-            | IeeeDisposition::Unsupported(_)
-            | IeeeDisposition::RequiresBound => {}
-        }
+        assert!(
+            matches!(
+                disposition,
+                IeeeDisposition::Supported
+                    | IeeeDisposition::Unsupported(_)
+                    | IeeeDisposition::RequiresBound
+            ),
+            "unexpected IEEE disposition: {disposition:?}"
+        );
     }
 }

@@ -32,6 +32,7 @@ use super::rational::Rational;
 use super::text::compare_text;
 
 /// The grammar's equality operators.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum EqualityOperator {
     /// `=`.
@@ -80,6 +81,7 @@ impl EqualityOperand {
 }
 
 /// The schedule quire-specification/FR-149 selects from the common type.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum EqualitySchedule {
     /// A top-level text pair: the quire-specification/FR-141 text schedule.

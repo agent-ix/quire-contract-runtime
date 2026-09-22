@@ -9,6 +9,7 @@ use core::cmp::Ordering;
 use core::fmt;
 
 /// A comparison request.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ComparisonOperator {
     /// `==`.
@@ -78,6 +79,7 @@ impl fmt::Display for IllTyped {
 }
 
 /// The typed reason for an [`IllTyped`] refusal.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IllTypedCause {
     /// The operands use different text profiles and no explicit common-profile

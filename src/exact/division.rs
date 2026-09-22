@@ -11,6 +11,7 @@ use super::integer::{Integer, IntegerDomain, IntegerInterval};
 use super::outcome::{Outcome, Refusal, Stop, Undefined};
 
 /// A selectable `div`/`rem` law.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DivisionProfile {
     /// `quire.value.integer-division.truncating/v1`.
@@ -194,6 +195,7 @@ impl IntegerDivisionBounds {
 }
 
 /// The consumer of one integer-division item at I13 negotiation.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IntegerDivisionConsumer {
     /// Unbounded mathematical integers; no bound is needed.
@@ -204,6 +206,7 @@ pub enum IntegerDivisionConsumer {
 
 /// The per-item I13 negotiation disposition. It is not an evaluator outcome:
 /// negotiation never evaluates and never narrows mathematical integers.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IntegerDivisionDisposition {
     /// The consumer can execute the item.

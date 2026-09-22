@@ -63,6 +63,7 @@ use super::reference::ObjectEnvironment;
 /// `CheckMode` parameter of its own at all, inheriting `Linked` implicitly
 /// from the package it is checked against. Only [`CheckMode::Linked`] ever
 /// admits a callable package (FR-273-AC-6; AD-002).
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum CheckMode {
     /// Every definedness obligation is discharged; the package is callable.
@@ -188,6 +189,7 @@ pub struct PackageDeclarations {
 
 /// Where a [`CheckRefusal`] or a non-completed [`Evaluation`] originates.
 /// Ported from the authority verbatim: variant names, fields and order.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Origin {
     /// The `index`-th declared function's own body.
@@ -255,6 +257,7 @@ fn location_at(origin: Origin) -> Location {
 /// an explicit `CheckMode`, once, at the package boundary (see
 /// [`CheckMode`]'s own documentation for the full seam). Treat this type as
 /// this port's own closed vocabulary, not as evidence of a verbatim port.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CheckCause {
     /// A declared parameter or result type is not admitted by the package's
@@ -418,6 +421,7 @@ pub struct CheckedExpression {
 /// Why a runtime input is refused, before any charge. Ported verbatim from
 /// the authority (variant names, fields and order), minus its `thiserror`
 /// derive: this crate is `no_std` and has no `std::error::Error`.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum InputRefusal {
     /// No function of this name is declared.
@@ -467,6 +471,7 @@ impl InputRefusal {
 
 /// What a completed application discarded. Ported verbatim from the
 /// authority: variant names and order.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ValueLoss {
     /// A rounded decimal operation or conversion (FR-140).
@@ -605,6 +610,7 @@ pub fn plan_call(
 /// at the plan boundary, before any charge — never by drifting into a
 /// `Refused(CheckedInvariant)` deep inside a body that silently ran against
 /// the wrong package's function table.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum EvaluationRefusal {
     /// Shared with [`plan_call`]: the same [`InputRefusal`] argument

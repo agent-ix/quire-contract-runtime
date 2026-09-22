@@ -401,6 +401,7 @@ impl fmt::Display for InvalidCompoundUnit {
 }
 
 /// The check that refused a compound unit.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum CompoundUnitCause {
     /// The preimage does not satisfy `value-compound-unit.schema.json`; raised

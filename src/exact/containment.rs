@@ -23,6 +23,7 @@ use super::node::NodeKey;
 pub struct GraphNodeId(pub u64);
 
 /// One slot of a graph node.
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum GraphSlot {
     /// An already completed value.
@@ -36,6 +37,7 @@ pub enum GraphSlot {
 }
 
 /// A constructor node.
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum GraphNode {
     /// A record of `declaration`.
@@ -93,6 +95,7 @@ impl fmt::Display for GraphRefusal {
 }
 
 /// The typed cause of a [`GraphRefusal`].
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum GraphCause {
     /// Two nodes share one name.

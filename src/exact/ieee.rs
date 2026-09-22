@@ -31,6 +31,7 @@ use super::rational::{Rational, RationalDomain};
 pub const IEEE_DEFINITION: &str = "quire.value.ieee754-2019-default/v1";
 
 /// An IEEE 754-2019 binary interchange width.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum IeeeWidth {
     /// `binary32` (`float32`).
@@ -137,6 +138,7 @@ impl IeeeValue {
 }
 
 /// One member of the closed IEEE exception flag vocabulary.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum IeeeFlag {
     /// `invalid`.
@@ -221,6 +223,7 @@ impl FromIterator<IeeeFlag> for IeeeFlags {
 
 /// An exact integer, rational or decimal scalar where IEEE values meet exact
 /// values: an explicit conversion source, or an operand type checking refuses.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum ExactScalar<'a> {
     /// An exact integer.
@@ -282,6 +285,7 @@ impl ExactScalar<'_> {
 
 /// An operand as written at an IEEE operation or comparison. Only
 /// [`IeeeOperand::Ieee`] operands of one width type-check.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum IeeeOperand<'a> {
     /// An IEEE value.
@@ -304,6 +308,7 @@ impl<'a> From<ExactScalar<'a>> for IeeeOperand<'a> {
 
 /// An arithmetic operation. Operands default to [`IeeeValue`]; any operand
 /// convertible to [`IeeeOperand`] is accepted and type-checked.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeOperation<O = IeeeValue> {
     /// `a + b`.
@@ -377,6 +382,7 @@ impl IeeeOperation {
 }
 
 /// A comparison intrinsic. The three are distinct selected operations.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum IeeeComparison {
     /// `quire::value::ieee::numericEqual`.
@@ -402,6 +408,7 @@ impl IeeeComparison {
 }
 
 /// Every IEEE operation a package item may require of a backend.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum IeeeOperationKind {
     /// Addition.
@@ -539,6 +546,7 @@ impl IeeeResult {
 }
 
 /// Information an IEEE-to-exact conversion discards.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeExactLoss {
     /// The source was `-0`, whose sign has no rational representation.
@@ -639,6 +647,7 @@ pub fn convert_ieee_width(
 }
 
 /// The type an explicit IEEE-to-exact conversion names.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IeeeExactTarget<'a> {
     /// A grammar-named `Rational[lo, hi; dmin, dmax]`, the only defined target.
@@ -777,6 +786,7 @@ pub struct IeeeItemRequirement {
 }
 
 /// What the backend lacks for an `unsupported` item.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeUnsupportedCause {
     /// The selected width.
@@ -805,6 +815,7 @@ pub enum IeeeUnsupportedCause {
 /// let disposition = IeeeDisposition::Unsupported(IeeeUnsupportedCause::Width(IeeeWidth::Binary64));
 /// let _: Outcome<Value> = disposition.into();
 /// ```
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeDisposition {
     /// The backend implements the item exactly.

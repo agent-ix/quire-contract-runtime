@@ -139,6 +139,11 @@ fn stop<T>(outcome: Outcome<T>) -> Outcome<()> {
         Outcome::Undefined(reason) => Outcome::Undefined(reason),
         Outcome::Refused(reason) => Outcome::Refused(reason),
         Outcome::Incomplete(record) => Outcome::Incomplete(record),
+        // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3). This helper's whole
+        // job is a per-variant identity transform, so an unrecognized variant
+        // has no correct mapping to fall back to: fail loudly rather than
+        // silently drop it.
+        _ => unreachable!("Outcome gained a variant `stop` does not know how to erase"),
     }
 }
 

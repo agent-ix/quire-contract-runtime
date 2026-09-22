@@ -471,6 +471,8 @@ fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
         Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
         Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
         Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
+        // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3).
+        _ => panic!("expected Outcome::Incomplete, got an unrecognized outcome variant"),
     }
 }
 
@@ -1314,11 +1316,61 @@ fn tc_031_occurrence_field_is_nonzerou64_so_zero_cannot_be_constructed() {
     );
 }
 
+/// Counts `Refusal`'s own declared variants directly from source (the same "read the crate's own
+/// declaration" pattern `tests/release_contract.rs`'s TC-008 extension uses for `src/exact/`'s
+/// enum census), so `tc_016` below can assert its `variants` array is complete against the real
+/// enum rather than only against itself. Without this, `expected_code`'s wildcard-panic guard
+/// only fires when a *constructed* value of an unenumerated variant is actually exercised through
+/// `variants` -- a variant added to the enum but never added to `variants` never gets constructed
+/// at all, so the panic never fires and the hand-maintained `13` stays correct by never being
+/// checked against anything. That is the same vacuous-gate shape IR-77 exists to close elsewhere.
+///
+/// Not a general Rust parser: detects a variant's start as an identifier line at brace/paren
+/// depth 1 (directly inside the enum body), which is exactly how `Refusal`'s mix of unit and
+/// struct-like variants are laid out today.
+fn refusal_variant_count(outcome_source: &str) -> usize {
+    let marker = "pub enum Refusal {";
+    let start = outcome_source
+        .find(marker)
+        .expect("Refusal enum not found in src/exact/outcome.rs");
+    let mut depth = 1i32;
+    let mut count = 0usize;
+    for line in outcome_source[start + marker.len()..].lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with('#') {
+            continue;
+        }
+        if depth == 1
+            && trimmed
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_uppercase)
+        {
+            count += 1;
+        }
+        for ch in trimmed.chars() {
+            match ch {
+                '{' | '(' => depth += 1,
+                '}' | ')' => depth -= 1,
+                _ => {}
+            }
+        }
+        if depth == 0 {
+            break;
+        }
+    }
+    count
+}
+
 /// Trace: TC-016, FR-006-AC-6
 #[test]
 fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
-    // Exhaustive over `Refusal`: adding a variant without extending this match
-    // is a compile error, not a silently passing test.
+    // `Refusal` is `#[non_exhaustive]` (NFR-002-AC-3), so this match, compiled
+    // from `tests/` as a downstream crate, needs a wildcard arm. Rather than a
+    // silent `_ => None` (which would falsely claim a new variant carries no
+    // normative code), the wildcard panics: adding a variant without
+    // extending this match and the `variants` array below is a loud test
+    // failure, not a silently passing one.
     fn expected_code(refusal: &Refusal) -> Option<&'static str> {
         match refusal {
             Refusal::IeeeNanPayloadNotRepresentable => Some("ieee_nan_payload_not_representable"),
@@ -1334,6 +1386,10 @@ fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
             | Refusal::RationalOutOfDomain
             | Refusal::IeeeNotExact { .. }
             | Refusal::CheckedInvariant => None,
+            _ => panic!(
+                "Refusal gained a variant expected_code does not enumerate; extend this match \
+                 and the variants array below"
+            ),
         }
     }
 
@@ -1362,9 +1418,16 @@ fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
         },
         Refusal::CheckedInvariant,
     ];
-    // Thirteen variants total: guards against silently dropping a variant from
-    // the enumeration above while `expected_code` stays exhaustive.
-    assert_eq!(variants.len(), 13, "enumerate every Refusal variant here");
+    // Checked against the enum declaration itself, not just against this array's own length:
+    // a variant added to `Refusal` but never added here would otherwise never be constructed,
+    // so `expected_code`'s wildcard-panic guard would never fire and this count would stay
+    // "correct" by never being compared to anything real.
+    let declared = refusal_variant_count(include_str!("../src/exact/outcome.rs"));
+    assert_eq!(
+        variants.len(),
+        declared,
+        "enumerate every Refusal variant here; src/exact/outcome.rs declares {declared}"
+    );
 
     let some_count = variants
         .iter()

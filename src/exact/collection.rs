@@ -30,6 +30,7 @@ use super::key::compare_keys;
 use super::outcome::{BoundViolation, Outcome, Refusal, Stop};
 
 /// A collection kind.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum CollectionKind {
     /// Ordered, duplicates retained.
