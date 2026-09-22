@@ -748,7 +748,7 @@ def run_chain(candidate_revision: str, workspace: Path) -> dict[str, Any]:
 
     # -- 2. the receipt, and re-verifying it ---------------------------------
     status, receipt = chain.receipt(record_digest, selections, decisions)
-    verified_status, _ = chain.verify_receipt(receipt)
+    verified_status, verified_detail = chain.verify_receipt(receipt)
     # No ix-flow decision exists, so an `incomplete` receipt is the correct
     # answer, and the reason it gives must be the missing decision specifically.
     # Asserting only "not valid" would be satisfied by a receipt that was invalid
@@ -774,11 +774,24 @@ def run_chain(candidate_revision: str, workspace: Path) -> dict[str, Any]:
         verified_status == status,
         {"verify_exit": verified_status, "receipt_exit": status},
     )
+    try:
+        verified_read_back: Any = json.loads(verified_detail)
+    except json.JSONDecodeError:
+        verified_read_back = None
+    # Asserted on "was the receipt read back and accepted", not on the exit
+    # code. A refused receipt yields a diagnostic; an accepted one yields the
+    # receipt, digest and all. That distinction is structural and survives
+    # quoin#543, which currently collapses the refusal codes -- this receipt
+    # is itself `incomplete` with `decision_missing`, so it also exits 1, and
+    # an `exit != 2` control would be satisfied whether the receipt was
+    # accepted or refused while that regression stands, proving nothing at
+    # the moment it is most needed.
+    verified_was_read = isinstance(verified_read_back, dict) and "digest" in verified_read_back
     control(
         "verify-accepts-an-unedited-receipt",
         "refuse-an-edited-receipt",
-        verified_status != 2,
-        {"exit": verified_status},
+        verified_was_read,
+        {"exit": verified_status, "read_back": verified_was_read},
     )
 
     # -- 3. an edited receipt is refused -------------------------------------
