@@ -105,7 +105,7 @@ impl Decimal {
     ///
     /// Signs decide first; equal signs compare the magnitudes aligned to the
     /// larger scale without materializing a power of ten larger than the
-    /// operands (see [`compare_shifted`]).
+    /// operands (see `compare_shifted`, a private helper below).
     pub fn compare(&self, other: &Self) -> Ordering {
         let (left, right) = (&self.normalized, &other.normalized);
         let (left_scale, right_scale) = (u64::from(left.scale), u64::from(right.scale));
