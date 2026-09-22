@@ -56,13 +56,19 @@ name and order; and no operator here decides anything the authority does not.
   `composite.result-retain` with the exact `occ` of the completed value before exposing it.
 - `construct_collection` charges `collection.element` and then runs the deferred element; the first
   element that does not complete becomes the outcome and no later element runs. `form_collection`
-  refuses an occurrence outside the declared element type before any charge. Formation then charges
-  one `collection.member-walk` and one `collection.member-test` per membership comparison against
-  the members retained so far, in retention order, stopping at the first equal member; charges
-  `collection.bound` before the uncharged bound violation check; and charges
-  `collection.result-retain` with the exact `occ` of the retained value. A set or bag stores its
-  members in ascending canonical-key order, a bag listing each occurrence, which is both its
-  canonical representation and its visiting order.
+  refuses an occurrence outside the declared element type before any charge. Formation of a set, bag
+  or ordered set then charges one `collection.member-walk` and one `collection.member-test` per
+  membership comparison against the members retained so far, in retention order, stopping at the
+  first equal member; formation of a sequence retains every occurrence and charges neither point.
+  Formation of every kind then charges `collection.bound` before the uncharged bound violation check
+  — over the retained member count for a set or ordered set and over the occurrence count for a
+  sequence or bag — and charges `collection.result-retain` with the exact `occ` of the retained
+  value.
+- Each kind's retained order is both its canonical representation and its visiting order. A sequence
+  retains every occurrence in the order supplied. An ordered set retains the first occurrence of
+  each distinct member, in first-occurrence order. A set retains one occurrence of each distinct
+  member, in ascending canonical-key order. A bag retains every occurrence in ascending
+  canonical-key order, so equal occurrences are adjacent.
 - Every type that admits `=` has a total, type-owned canonical key: two values of that type have
   equal keys exactly when they are FR-149 equal. The key fixes set and bag canonical and visiting
   order; it is not a general ordering operator and is not exposed for any type that does not admit
@@ -139,6 +145,9 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-1 | A `TypeEnvironment` admits a closed set of record, tuple and object-type declarations only after member-type and both recursion-rule checks succeed, and refuses at the originating declaration with a typed `DeclarationCause` otherwise; `record`, `tuple`, `evaluate_record` and `evaluate_tuple` construct in declaration order under the first-stopped rule and charge `composite.result-retain` with the exact retained `occ`. | Test (TC-024) |
 | FR-008-AC-2 | `TypeEnvironment::build` constructs a finite value bottom-up from a `ValueGraph`, sharing a node reached from more than one slot as one immutable value with no object identity created, and refuses the first containment cycle as `ContainmentCycle` at the node that closes it. | Test (TC-024) |
 | FR-008-AC-3 | `construct_collection` charges `collection.element` before running each deferred element and stops at the first non-completing element with no later element run; `form_collection` refuses a type-mismatched occurrence before any charge; formation charges membership comparisons, `collection.bound` and `collection.result-retain` in that order, and a set or bag is stored in ascending canonical-key order. | Test (TC-025) |
+| FR-008-AC-10 | When formation coalesces occurrences, the runtime charges one `collection.member-walk` and one `collection.member-test` per membership comparison for a set, bag or ordered set, and charges neither point for a sequence. | Test (TC-025) |
+| FR-008-AC-11 | When a collection is retained, the runtime stores a sequence in supplied occurrence order, an ordered set as the first occurrence of each distinct member in first-occurrence order, a set as one occurrence of each distinct member in ascending canonical-key order, and a bag as every occurrence in ascending canonical-key order. | Test (TC-025) |
+| FR-008-AC-12 | When a retained collection is visited by equality planning or by a further formation, the runtime visits its elements in the order it stored them, for every one of the four kinds. | Test (TC-025) |
 | FR-008-AC-4 | The type-owned canonical key totally orders every keyed type, ranks `Absent < Null < Present`, fixes set and bag canonical and visiting order, and is evaluated iteratively at a depth that would overflow a recursive host-stack walk. | Test (TC-025) |
 | FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge and refuses a cross-universe reference pair as `ForeignReference`; `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order. | Test (TC-026) |
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
