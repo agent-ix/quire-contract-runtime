@@ -187,8 +187,7 @@ impl fmt::Debug for Value {
     /// exactly once, directly into the result buffer, at the final indent depth its position in
     /// the tree already determines — so no already-written text is ever re-scanned or re-copied
     /// as an ancestor's rendering is composed, the way a bottom-up approach that re-embeds each
-    /// level's complete rendered text into a fresh string must. See `render_value`, a private
-    /// helper below.
+    /// level's complete rendered text into a fresh string must.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&render_value(self, f.alternate()))
     }
