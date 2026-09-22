@@ -60,6 +60,47 @@ scan_tree() {
   for file in ${tests[@]+"${tests[@]}"}; do
     scan "$file" "$verification_pattern"
   done
+  assert_tests_suffix_files_are_cfg_test_modules "$root" ${tests[@]+"${tests[@]}"}
+}
+
+# The two lists above are derived from the `*_tests.rs` suffix alone, which makes it the sole,
+# implicit key that excludes a file from runtime_pattern: nothing else has to change for a file
+# wearing that suffix to be held out of the stricter scan. A production module named
+# `src/slice_tests.rs` containing real `split_at`/`copy_from_slice`/... calls would go unaudited
+# under runtime_pattern, checked only against verification_pattern's narrower set -- an exemption
+# that used to require a visible edit to this script's exclude list and now requires none (IR-41).
+#
+# This asserts every discovered `*_tests.rs` file is referenced by a #[cfg(test)]-gated `mod
+# <stem>;` (the implicit-path form) or `#[path = "...<basename>"]` (the explicit-path form)
+# declaration somewhere in the same tree -- so a file cannot wear the suffix for free; it must
+# actually be compiled as a #[cfg(test)] module by something. This does not fully close the gap
+# (a file could still be a *_tests.rs module that is itself real production code mistakenly
+# behind #[cfg(test)]), but it converts "any file with this suffix" into "a file this tree
+# actually treats as a test", which a stray production module would not be.
+assert_tests_suffix_files_are_cfg_test_modules() {
+  local root="$1"
+  shift
+  local rust_files=()
+  local file stem basename
+
+  while IFS= read -r file; do
+    rust_files+=("$file")
+  done < <(find "$root" -type f -name '*.rs')
+
+  for file in "$@"; do
+    basename="${file##*/}"
+    stem="${basename%.rs}"
+    if ! awk -v stem="$stem" -v base="$basename" '
+      FNR == 1 { gate = -100 }
+      /#\[cfg\(test\)\]/ { gate = FNR }
+      $0 ~ ("mod[ \t]+" stem "[ \t]*;") && (FNR - gate) <= 2 { found = 1 }
+      $0 ~ ("#\\[path[ \t]*=[ \t]*\"[^\"]*" base "\"\\]") && (FNR - gate) <= 2 { found = 1 }
+      END { exit !found }
+    ' "${rust_files[@]}"; then
+      echo "no #[cfg(test)]-gated mod or #[path] declaration references $file" >&2
+      exit 1
+    fi
+  done
 }
 
 scan_tree src
