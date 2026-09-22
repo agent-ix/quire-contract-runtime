@@ -56,9 +56,59 @@ scan_tree() {
     excludes+=(--exclude="${file##*/}")
   done < <(find "$root" -type f -name '*_tests.rs' | sort)
 
+  assert_tests_suffix_files_are_cfg_test_modules "$root" ${tests[@]+"${tests[@]}"}
   scan "$root" "$runtime_pattern" ${excludes[@]+"${excludes[@]}"}
   for file in ${tests[@]+"${tests[@]}"}; do
     scan "$file" "$verification_pattern"
+  done
+}
+
+# The two lists above are derived from the `*_tests.rs` suffix alone, which makes it the sole,
+# implicit key that excludes a file from runtime_pattern: nothing else has to change for a file
+# wearing that suffix to be held out of the stricter scan. A production module named
+# `src/slice_tests.rs` containing real `split_at`/`copy_from_slice`/... calls would go unaudited
+# under runtime_pattern, checked only against verification_pattern's narrower set -- an exemption
+# that used to require a visible edit to this script's exclude list and now requires none (IR-41).
+#
+# This asserts every discovered `*_tests.rs` file is referenced by a #[cfg(test)]-gated `mod
+# <stem>;` (the implicit-path form) or `#[path = "...<basename>"]` (the explicit-path form)
+# declaration somewhere in the same tree -- so a file cannot wear the suffix for free; it must
+# actually be compiled as a #[cfg(test)] module by something. This does not fully close the gap
+# (a file could still be a *_tests.rs module that is itself real production code mistakenly
+# behind #[cfg(test)]), but it converts "any file with this suffix" into "a file this tree
+# actually treats as a test", which a stray production module would not be.
+assert_tests_suffix_files_are_cfg_test_modules() {
+  local root="$1"
+  shift
+  local rust_files=()
+  local file stem basename
+
+  while IFS= read -r file; do
+    rust_files+=("$file")
+  done < <(find "$root" -type f -name '*.rs' | sort)
+
+  for file in "$@"; do
+    basename="${file##*/}"
+    stem="${basename%.rs}"
+    # Attachment, not proximity: `#[cfg(test)]` only gates the very next item, so a match only
+    # counts when the mod/path line is exactly one line after `#[cfg(test)]` (the implicit
+    # `mod <stem>;` form) or exactly one line after a `#[path]` line that was itself exactly one
+    # line after `#[cfg(test)]` (the explicit `#[path = "..."]` / `mod <name>;` form). A wider
+    # "within N lines" window would let an unrelated second `mod` declaration two lines below one
+    # real `#[cfg(test)]` inherit its neighbour's gate -- adjacent `mod` lines are a common layout,
+    # so this was measured, not a hypothetical: `#[cfg(test)]\nmod a_tests;\nmod b_tests;` let
+    # `b_tests` pass with no gate of its own.
+    if ! awk -v stem="$stem" -v base="$basename" '
+      FNR == 1 { prev_cfg_test = 0; path_gated_at = 0 }
+      $0 ~ ("^[ \t]*mod[ \t]+" stem "[ \t]*;") && prev_cfg_test { found = 1 }
+      $0 ~ ("#\\[path[ \t]*=[ \t]*\"[^\"]*" base "\"\\]") && prev_cfg_test { path_gated_at = FNR }
+      $0 ~ ("^[ \t]*mod[ \t]+") && path_gated_at && (FNR - path_gated_at == 1) { found = 1 }
+      { prev_cfg_test = ($0 ~ /#\[cfg\(test\)\]/) }
+      END { exit !found }
+    ' "${rust_files[@]}"; then
+      echo "no #[cfg(test)]-gated mod or #[path] declaration references $file" >&2
+      exit 1
+    fi
   done
 }
 
