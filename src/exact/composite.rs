@@ -14,12 +14,12 @@
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
-use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
+use core::fmt::Write as _;
 use core::mem;
 
 use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
@@ -182,25 +182,16 @@ impl Value {
 }
 
 impl fmt::Debug for Value {
-    /// Renders the same output `#[derive(Debug)]` would have, but iteratively and in O(n): a
-    /// depth-first, top-down walk over an explicit worklist writes each byte of the output
-    /// exactly once, directly into the result buffer, at the final indent depth its position in
-    /// the tree already determines — so no already-written text is ever re-scanned or re-copied
-    /// as an ancestor's rendering is composed, the way a bottom-up approach that re-embeds each
-    /// level's complete rendered text into a fresh string must.
+    /// Renders the same output `#[derive(Debug)]` would have, but iteratively and in O(n) time
+    /// with O(1) *extra* heap: a depth-first, top-down walk over an explicit worklist writes each
+    /// byte of the output exactly once, directly into `f`, at the final indent depth its position
+    /// in the tree already determines — so no already-written text is ever re-scanned, re-copied
+    /// or buffered as an ancestor's rendering is composed, the way a bottom-up approach that
+    /// re-embeds each level's complete rendered text into a fresh string must, and unlike
+    /// buffering the whole rendering into one owned `String` before handing it to `f` in a single
+    /// `write_str` (which peaks at the size of the entire output, not the tree's depth).
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&render_value(self, f.alternate()))
-    }
-}
-
-/// One value's already-computed `Debug` text (via its own, depth-independent `Debug` impl),
-/// paired with the indent depth its position in the tree places it at. Never re-formatted: only
-/// spliced into the output once, reindenting embedded newlines (alternate mode only) as it goes.
-fn debug_text(value: &impl fmt::Debug, alternate: bool) -> String {
-    if alternate {
-        format!("{value:#?}")
-    } else {
-        format!("{value:?}")
+        render_value(f, self)
     }
 }
 
@@ -213,74 +204,110 @@ enum BlockKind {
     TupleOrList,
 }
 
-/// Accumulates one `Value`'s complete `Debug` text into a single buffer, one write per byte.
-struct Writer {
-    out: String,
+/// Writes one `Value`'s complete `Debug` text straight through to `out` — the caller's
+/// `fmt::Formatter`, or any other `fmt::Write` sink — one write per byte, with no owned buffer of
+/// its own standing in for any part of the rendering.
+struct Writer<'w> {
+    out: &'w mut dyn fmt::Write,
     alternate: bool,
 }
 
-impl Writer {
-    fn newline_indent(&mut self, depth: usize) {
-        self.out.push('\n');
+impl Writer<'_> {
+    fn newline_indent(&mut self, depth: usize) -> fmt::Result {
+        self.out.write_char('\n')?;
         for _ in 0..depth {
-            self.out.push_str("    ");
+            self.out.write_str("    ")?;
         }
+        Ok(())
     }
 
     /// Written right after an opening bracket/brace/paren, before the first item, at the items'
     /// own `depth` (one deeper than the block's own).
-    fn open(&mut self, kind: BlockKind, depth: usize) {
+    fn open(&mut self, kind: BlockKind, depth: usize) -> fmt::Result {
         if self.alternate {
-            self.newline_indent(depth);
+            self.newline_indent(depth)
         } else if matches!(kind, BlockKind::Struct) {
-            self.out.push(' ');
+            self.out.write_char(' ')
+        } else {
+            Ok(())
         }
     }
 
     /// Written between two items, at the items' own `depth`.
-    fn between(&mut self, depth: usize) {
+    fn between(&mut self, depth: usize) -> fmt::Result {
         if self.alternate {
-            self.out.push(',');
-            self.newline_indent(depth);
+            self.out.write_char(',')?;
+            self.newline_indent(depth)
         } else {
-            self.out.push_str(", ");
+            self.out.write_str(", ")
         }
     }
 
     /// Written after the last item, before the closing bracket/brace/paren, at the block's own
     /// (one shallower) `depth`.
-    fn close(&mut self, kind: BlockKind, depth: usize) {
+    fn close(&mut self, kind: BlockKind, depth: usize) -> fmt::Result {
         if self.alternate {
-            self.out.push(',');
-            self.newline_indent(depth);
+            self.out.write_char(',')?;
+            self.newline_indent(depth)
         } else if matches!(kind, BlockKind::Struct) {
-            self.out.push(' ');
+            self.out.write_char(' ')
+        } else {
+            Ok(())
         }
     }
 
-    fn raw(&mut self, text: &str) {
-        self.out.push_str(text);
+    fn raw(&mut self, text: &str) -> fmt::Result {
+        self.out.write_str(text)
     }
 
-    /// Splices in `text` — one value's own, already fully-formatted `Debug` output, which may
-    /// itself span multiple lines — as this value's rendering at `depth`. In alternate mode every
-    /// embedded newline is reindented to `depth`, exactly once: the cost is proportional to this
-    /// one value's own text, never repeated as ancestors compose around it, which is what keeps
-    /// the whole walk O(n) instead of the O(n²) a bottom-up re-embedding approach pays (each
+    /// Writes one value's own `Debug` rendering directly, as this value's rendering at `depth`,
+    /// through `value`'s own `Debug` impl — never pre-rendered to an owned `String` first. In
+    /// compact mode this is a plain `write!`. In alternate mode every newline `value`'s own
+    /// `Debug` impl emits must be reindented to `depth`, so the write is routed through
+    /// [`Reindent`], a `fmt::Write` adaptor that performs that reindenting as each chunk streams
+    /// through it, without ever buffering `value`'s rendering as a whole: the cost is proportional
+    /// to this one value's own text, never repeated as ancestors compose around it, which is what
+    /// keeps the whole walk O(n) instead of the O(n²) a bottom-up re-embedding approach pays (each
     /// ancestor on the path to the root re-scanning and re-copying the same descendant text).
-    fn leaf(&mut self, text: &str, depth: usize) {
-        if !self.alternate {
-            self.out.push_str(text);
-            return;
+    fn leaf_debug(&mut self, value: &dyn fmt::Debug, depth: usize) -> fmt::Result {
+        if self.alternate {
+            write!(
+                Reindent {
+                    inner: &mut *self.out,
+                    depth,
+                },
+                "{value:#?}"
+            )
+        } else {
+            write!(self.out, "{value:?}")
         }
-        let mut lines = text.split('\n');
-        if let Some(first) = lines.next() {
-            self.out.push_str(first);
+    }
+}
+
+/// A `fmt::Write` adaptor that reindents every newline written through it to `depth`, as each
+/// chunk arrives, so a value's own (possibly multi-line) `Debug` rendering can be streamed
+/// straight to the real output with no intermediate buffer: only the *number* of newlines already
+/// written determines the reindenting, which is the same regardless of how the upstream `Debug`
+/// impl happens to split its output across `write_str` calls.
+struct Reindent<'w> {
+    inner: &'w mut dyn fmt::Write,
+    depth: usize,
+}
+
+impl fmt::Write for Reindent<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let mut segments = s.split('\n');
+        if let Some(first) = segments.next() {
+            self.inner.write_str(first)?;
         }
-        for line in lines {
-            self.newline_indent(depth);
-            self.out.push_str(line);
+        for segment in segments {
+            self.inner.write_char('\n')?;
+            for _ in 0..self.depth {
+                self.inner.write_str("    ")?;
+            }
+            self.inner.write_str(segment)?;
         }
+        Ok(())
     }
 }
 
@@ -288,255 +315,228 @@ impl Writer {
 /// or an `Option<&Value>` payload slot) is expanded into further `Task`s the moment it is popped,
 /// never before — so the worklist only ever holds pending work proportional to how many ancestors
 /// are still open, not the whole rendered text of any subtree, and each `Value` node is visited
-/// exactly once.
+/// exactly once. `Leaf` borrows the leaf's own value rather than owning its rendered text: nothing
+/// is rendered until the task is popped, and then it is written straight through, never copied
+/// into the worklist first.
 enum Task<'a> {
     Value(&'a Value, usize),
     FieldSlot(&'a FieldValue, usize),
     Raw(&'static str),
-    Leaf(String, usize),
+    Leaf(&'a dyn fmt::Debug, usize),
     Open(BlockKind, usize),
     Between(usize),
     Close(BlockKind, usize),
 }
 
-/// A already-sequenced but not yet applied fragment of [`Task`]s, in the order they must be
-/// popped (first task first). Building one costs only the fragment's own direct length; nothing
-/// in it is a rendered `String` standing in for a whole subtree, so nesting fragments inside each
-/// other (a field's fragment inside its struct's fragment inside its tuple wrapper's fragment)
-/// never re-copies a descendant's text — that text is written, once, only when its own `Leaf`
-/// task is eventually popped.
-type Frag<'a> = Vec<Task<'a>>;
-
-/// `Name(<inner>)`, single-field tuple-variant shape, at `depth`; `inner`'s own content sits at
-/// `depth.saturating_add(1)`.
-fn tuple1<'a>(name: &'static str, depth: usize, inner: Frag<'a>) -> Frag<'a> {
-    let mut seq = vec![
-        Task::Raw(name),
-        Task::Raw("("),
-        Task::Open(BlockKind::TupleOrList, depth.saturating_add(1)),
-    ];
-    seq.extend(inner);
-    seq.push(Task::Close(BlockKind::TupleOrList, depth));
-    seq.push(Task::Raw(")"));
-    seq
-}
-
-/// `Name { f0: v0, f1: v1, f2: v2 }`, exactly the three-field struct shape every `*Value` struct
-/// here has, at `depth`; each field's own content sits at `depth.saturating_add(1)`.
-fn struct3<'a>(
+/// Pushes `Name(<inner>)`, single-field tuple-variant shape, at `depth`, directly onto `stack` —
+/// no intermediate `Vec<Task>` fragment is built and copied in: `push_inner` pushes the inner
+/// content's own tasks straight onto `stack` too, and every push below happens in the reverse of
+/// the order the tasks must eventually pop in, so that popping `stack` afterwards replays them
+/// name, `(`, inner content (at `depth.saturating_add(1)`), `)`, forward, in order.
+fn push_tuple1<'a>(
+    stack: &mut Vec<Task<'a>>,
     name: &'static str,
     depth: usize,
-    fields: [(&'static str, Frag<'a>); 3],
-) -> Frag<'a> {
-    let [f0, f1, f2] = fields;
-    let mut seq = vec![
-        Task::Raw(name),
-        Task::Raw(" {"),
-        Task::Open(BlockKind::Struct, depth.saturating_add(1)),
-    ];
-    seq.push(Task::Raw(f0.0));
-    seq.push(Task::Raw(": "));
-    seq.extend(f0.1);
-    seq.push(Task::Between(depth.saturating_add(1)));
-    seq.push(Task::Raw(f1.0));
-    seq.push(Task::Raw(": "));
-    seq.extend(f1.1);
-    seq.push(Task::Between(depth.saturating_add(1)));
-    seq.push(Task::Raw(f2.0));
-    seq.push(Task::Raw(": "));
-    seq.extend(f2.1);
-    seq.push(Task::Close(BlockKind::Struct, depth));
-    seq.push(Task::Raw("}"));
-    seq
+    push_inner: impl FnOnce(&mut Vec<Task<'a>>),
+) {
+    stack.push(Task::Raw(")"));
+    stack.push(Task::Close(BlockKind::TupleOrList, depth));
+    push_inner(stack);
+    stack.push(Task::Open(BlockKind::TupleOrList, depth.saturating_add(1)));
+    stack.push(Task::Raw("("));
+    stack.push(Task::Raw(name));
 }
 
-/// `[i0, i1, ..]`, at `depth`; each item's own content sits at `depth.saturating_add(1)`. `[]` for no items, in
+/// Pushes `Name { f0: v0, f1: v1, f2: v2 }`, exactly the three-field struct shape every `*Value`
+/// struct here has, at `depth`, directly onto `stack` (see [`push_tuple1`] for the reverse-push
+/// discipline this follows). Each field's push closure receives the depth its own content sits at
+/// (`depth.saturating_add(1)`), computed once here rather than re-derived at each call site.
+#[allow(clippy::too_many_arguments)]
+fn push_struct3<'a, F0, F1, F2>(
+    stack: &mut Vec<Task<'a>>,
+    name: &'static str,
+    depth: usize,
+    f0: (&'static str, F0),
+    f1: (&'static str, F1),
+    f2: (&'static str, F2),
+) where
+    F0: FnOnce(&mut Vec<Task<'a>>, usize),
+    F1: FnOnce(&mut Vec<Task<'a>>, usize),
+    F2: FnOnce(&mut Vec<Task<'a>>, usize),
+{
+    let field_depth = depth.saturating_add(1);
+    stack.push(Task::Raw("}"));
+    stack.push(Task::Close(BlockKind::Struct, depth));
+    (f2.1)(stack, field_depth);
+    stack.push(Task::Raw(": "));
+    stack.push(Task::Raw(f2.0));
+    stack.push(Task::Between(field_depth));
+    (f1.1)(stack, field_depth);
+    stack.push(Task::Raw(": "));
+    stack.push(Task::Raw(f1.0));
+    stack.push(Task::Between(field_depth));
+    (f0.1)(stack, field_depth);
+    stack.push(Task::Raw(": "));
+    stack.push(Task::Raw(f0.0));
+    stack.push(Task::Open(BlockKind::Struct, field_depth));
+    stack.push(Task::Raw(" {"));
+    stack.push(Task::Raw(name));
+}
+
+/// Pushes `[i0, i1, ..]`, at `depth`, directly onto `stack` (see [`push_tuple1`]); each item's own
+/// content sits at `depth.saturating_add(1)` and is pushed by `push_item`. `[]` for no items, in
 /// both modes — the same "nothing to put on its own line" shape a zero-field struct or tuple
 /// would take, had this crate's `Value`-nesting types ever produced one.
-fn list<'a>(depth: usize, items: Vec<Frag<'a>>) -> Frag<'a> {
+fn push_list<'a, T>(
+    stack: &mut Vec<Task<'a>>,
+    depth: usize,
+    items: &'a [T],
+    push_item: impl Fn(&mut Vec<Task<'a>>, &'a T, usize),
+) {
     if items.is_empty() {
-        return vec![Task::Raw("[]")];
+        stack.push(Task::Raw("[]"));
+        return;
     }
-    let mut seq = vec![
-        Task::Raw("["),
-        Task::Open(BlockKind::TupleOrList, depth.saturating_add(1)),
-    ];
-    let last = items.len().saturating_sub(1);
-    for (index, item) in items.into_iter().enumerate() {
-        seq.extend(item);
-        if index != last {
-            seq.push(Task::Between(depth.saturating_add(1)));
+    let item_depth = depth.saturating_add(1);
+    stack.push(Task::Raw("]"));
+    stack.push(Task::Close(BlockKind::TupleOrList, depth));
+    for (index, item) in items.iter().enumerate().rev() {
+        push_item(stack, item, item_depth);
+        if index != 0 {
+            stack.push(Task::Between(item_depth));
         }
     }
-    seq.push(Task::Close(BlockKind::TupleOrList, depth));
-    seq.push(Task::Raw("]"));
-    seq
+    stack.push(Task::Open(BlockKind::TupleOrList, item_depth));
+    stack.push(Task::Raw("["));
 }
 
-fn leaf<'a>(depth: usize, text: String) -> Frag<'a> {
-    vec![Task::Leaf(text, depth)]
-}
-
-/// A single non-nesting scalar variant: `Name(<value's own Debug text>)`.
-fn scalar<'a>(
+/// A single non-nesting scalar variant: `Name(<value's own Debug rendering>)`, pushed directly
+/// onto `stack`.
+fn push_scalar<'a>(
+    stack: &mut Vec<Task<'a>>,
     name: &'static str,
     depth: usize,
-    value: &impl fmt::Debug,
-    alternate: bool,
-) -> Frag<'a> {
-    tuple1(
-        name,
-        depth,
-        leaf(depth.saturating_add(1), debug_text(value, alternate)),
-    )
+    value: &'a dyn fmt::Debug,
+) {
+    push_tuple1(stack, name, depth, |stack| {
+        stack.push(Task::Leaf(value, depth.saturating_add(1)));
+    });
 }
 
 /// Renders `root`'s `Debug` output as a single top-down, depth-first pass over an explicit
-/// worklist: every `Value`, `FieldValue` and `Option` payload slot is matched exhaustively here,
-/// with no catch-all arm standing in for "cannot happen" and no fallback text a bookkeeping bug
-/// could silently reach for instead of panicking — this crate's governed target treats a stack
-/// overflow as silent corruption, so nothing in `src/exact` may carry a panic path, and nothing
-/// here needs to reach for one in the first place: every task this walk ever pushes is one this
-/// match already knows how to pop.
-fn render_value(root: &Value, alternate: bool) -> String {
-    let mut writer = Writer {
-        out: String::new(),
-        alternate,
-    };
+/// worklist, writing straight through to `f`: every `Value`, `FieldValue` and `Option` payload
+/// slot is matched exhaustively here, with no catch-all arm standing in for "cannot happen" and no
+/// fallback text a bookkeeping bug could silently reach for instead of panicking — this crate's
+/// governed target treats a stack overflow as silent corruption, so nothing in `src/exact` may
+/// carry a panic path, and nothing here needs to reach for one in the first place: every task this
+/// walk ever pushes is one this match already knows how to pop.
+fn render_value(f: &mut fmt::Formatter<'_>, root: &Value) -> fmt::Result {
+    let alternate = f.alternate();
+    let mut writer = Writer { out: f, alternate };
     let mut stack: Vec<Task<'_>> = vec![Task::Value(root, 0)];
     while let Some(task) = stack.pop() {
         match task {
-            Task::Raw(text) => writer.raw(text),
-            Task::Leaf(text, depth) => writer.leaf(&text, depth),
-            Task::Open(kind, depth) => writer.open(kind, depth),
-            Task::Between(depth) => writer.between(depth),
-            Task::Close(kind, depth) => writer.close(kind, depth),
+            Task::Raw(text) => writer.raw(text)?,
+            Task::Leaf(value, depth) => writer.leaf_debug(value, depth)?,
+            Task::Open(kind, depth) => writer.open(kind, depth)?,
+            Task::Between(depth) => writer.between(depth)?,
+            Task::Close(kind, depth) => writer.close(kind, depth)?,
 
-            Task::Value(Value::Boolean(v), depth) => {
-                stack.extend(scalar("Boolean", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Integer(v), depth) => {
-                stack.extend(scalar("Integer", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Rational(v), depth) => {
-                stack.extend(scalar("Rational", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Decimal(v), depth) => {
-                stack.extend(scalar("Decimal", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Float(v), depth) => {
-                stack.extend(scalar("Float", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Quantity(v), depth) => {
-                stack.extend(scalar("Quantity", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Text(v), depth) => {
-                stack.extend(scalar("Text", depth, v, alternate).into_iter().rev());
-            }
-            Task::Value(Value::Enum(v), depth) => {
-                stack.extend(scalar("Enum", depth, v, alternate).into_iter().rev());
-            }
+            Task::Value(Value::Boolean(v), depth) => push_scalar(&mut stack, "Boolean", depth, v),
+            Task::Value(Value::Integer(v), depth) => push_scalar(&mut stack, "Integer", depth, v),
+            Task::Value(Value::Rational(v), depth) => push_scalar(&mut stack, "Rational", depth, v),
+            Task::Value(Value::Decimal(v), depth) => push_scalar(&mut stack, "Decimal", depth, v),
+            Task::Value(Value::Float(v), depth) => push_scalar(&mut stack, "Float", depth, v),
+            Task::Value(Value::Quantity(v), depth) => push_scalar(&mut stack, "Quantity", depth, v),
+            Task::Value(Value::Text(v), depth) => push_scalar(&mut stack, "Text", depth, v),
+            Task::Value(Value::Enum(v), depth) => push_scalar(&mut stack, "Enum", depth, v),
             Task::Value(Value::Reference(v), depth) => {
-                stack.extend(scalar("Reference", depth, v, alternate).into_iter().rev());
+                push_scalar(&mut stack, "Reference", depth, v)
             }
+
             Task::Value(Value::Option(rc), depth) => {
                 let option = &**rc;
-                let payload: Frag<'_> = match option.payload.as_ref() {
-                    None => vec![Task::Raw("None")],
-                    Some(v) => tuple1(
-                        "Some",
-                        depth.saturating_add(2),
-                        vec![Task::Value(v, depth.saturating_add(3))],
-                    ),
-                };
-                let fields = [
-                    (
-                        "payload_type",
-                        leaf(
-                            depth.saturating_add(2),
-                            debug_text(&option.payload_type, alternate),
+                push_tuple1(&mut stack, "Option", depth, |stack| {
+                    push_struct3(
+                        stack,
+                        "OptionValue",
+                        depth.saturating_add(1),
+                        ("payload_type", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            stack.push(Task::Leaf(&option.payload_type, fd));
+                        }),
+                        (
+                            "payload",
+                            |stack: &mut Vec<Task<'_>>, fd: usize| match option.payload.as_ref() {
+                                None => stack.push(Task::Raw("None")),
+                                Some(v) => push_tuple1(stack, "Some", fd, |stack| {
+                                    stack.push(Task::Value(v, fd.saturating_add(1)));
+                                }),
+                            },
                         ),
-                    ),
-                    ("payload", payload),
-                    (
-                        "occ",
-                        leaf(depth.saturating_add(2), debug_text(&option.occ, alternate)),
-                    ),
-                ];
-                let body = struct3("OptionValue", depth.saturating_add(1), fields);
-                stack.extend(tuple1("Option", depth, body).into_iter().rev());
+                        ("occ", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            stack.push(Task::Leaf(&option.occ, fd));
+                        }),
+                    );
+                });
             }
             Task::Value(Value::Composite(rc), depth) => {
                 let composite = &**rc;
-                let slots: Vec<Frag<'_>> = composite
-                    .slots
-                    .iter()
-                    .map(|slot| vec![Task::FieldSlot(slot, depth.saturating_add(3))])
-                    .collect();
-                let fields = [
-                    (
-                        "declaration",
-                        leaf(
-                            depth.saturating_add(2),
-                            debug_text(&composite.declaration, alternate),
-                        ),
-                    ),
-                    ("slots", list(depth.saturating_add(2), slots)),
-                    (
-                        "occ",
-                        leaf(
-                            depth.saturating_add(2),
-                            debug_text(&composite.occ, alternate),
-                        ),
-                    ),
-                ];
-                let body = struct3("CompositeValue", depth.saturating_add(1), fields);
-                stack.extend(tuple1("Composite", depth, body).into_iter().rev());
+                push_tuple1(&mut stack, "Composite", depth, |stack| {
+                    push_struct3(
+                        stack,
+                        "CompositeValue",
+                        depth.saturating_add(1),
+                        ("declaration", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            stack.push(Task::Leaf(&composite.declaration, fd));
+                        }),
+                        ("slots", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            push_list(stack, fd, &composite.slots, |stack, slot, item_depth| {
+                                stack.push(Task::FieldSlot(slot, item_depth));
+                            });
+                        }),
+                        ("occ", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            stack.push(Task::Leaf(&composite.occ, fd));
+                        }),
+                    );
+                });
             }
             Task::Value(Value::Collection(rc), depth) => {
                 let collection = &**rc;
-                let elements: Vec<Frag<'_>> = collection
-                    .elements()
-                    .iter()
-                    .map(|element| vec![Task::Value(element, depth.saturating_add(3))])
-                    .collect();
-                let fields = [
-                    (
-                        "collection_type",
-                        leaf(
-                            depth.saturating_add(2),
-                            debug_text(collection.collection_type(), alternate),
-                        ),
-                    ),
-                    ("elements", list(depth.saturating_add(2), elements)),
-                    (
-                        "occ",
-                        leaf(
-                            depth.saturating_add(2),
-                            debug_text(collection.occ(), alternate),
-                        ),
-                    ),
-                ];
-                let body = struct3("CollectionValue", depth.saturating_add(1), fields);
-                stack.extend(tuple1("Collection", depth, body).into_iter().rev());
+                push_tuple1(&mut stack, "Collection", depth, |stack| {
+                    push_struct3(
+                        stack,
+                        "CollectionValue",
+                        depth.saturating_add(1),
+                        ("collection_type", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            stack.push(Task::Leaf(collection.collection_type(), fd));
+                        }),
+                        ("elements", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            push_list(
+                                stack,
+                                fd,
+                                collection.elements(),
+                                |stack, element, item_depth| {
+                                    stack.push(Task::Value(element, item_depth));
+                                },
+                            );
+                        }),
+                        ("occ", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                            stack.push(Task::Leaf(collection.occ(), fd));
+                        }),
+                    );
+                });
             }
 
             Task::FieldSlot(FieldValue::Present(v), depth) => {
-                stack.extend(
-                    tuple1(
-                        "Present",
-                        depth,
-                        vec![Task::Value(v, depth.saturating_add(1))],
-                    )
-                    .into_iter()
-                    .rev(),
-                );
+                push_tuple1(&mut stack, "Present", depth, |stack| {
+                    stack.push(Task::Value(v, depth.saturating_add(1)));
+                });
             }
-            Task::FieldSlot(FieldValue::Absent, _) => writer.raw("Absent"),
-            Task::FieldSlot(FieldValue::Null, _) => writer.raw("Null"),
+            Task::FieldSlot(FieldValue::Absent, _) => writer.raw("Absent")?,
+            Task::FieldSlot(FieldValue::Null, _) => writer.raw("Null")?,
         }
     }
-    writer.out
+    Ok(())
 }
 
 impl Drop for Value {
