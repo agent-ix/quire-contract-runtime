@@ -133,10 +133,13 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   absent body-semantics corpus is a gap in AC-5 itself — the corpus agrees on every vector it
   supplies, which is all AC-5 claims — and AC-5 is recorded as fully implemented.
 - TC-030: `tests/exact_negotiation.rs`; TC-032: `tests/exact_meter_state.rs` and the in-crate
-  `src/exact/accounting_tests.rs` for the cumulative-counter boundary no public operator can
+  `src/exact_accounting_tests.rs` for the cumulative-counter boundary no public operator can
   reach;
   TC-033: `tests/exact_vocabulary.rs`; TC-034: `tests/exact_semantics.rs`.
-- TC-016, TC-017, TC-031: `tests/exact_outcomes.rs`; TC-023: `tests/exact_arithmetic.rs`; allocation bounds for
+- TC-016, TC-017, TC-031: `tests/exact_outcomes.rs` and, for TC-031's check-before-mutate ordering
+  across every counter, the in-crate `src/exact_accounting_tests.rs` (needs `Charge`'s
+  crate-private builders to construct a charge that moves every counter at once, so is reachable
+  only from inside the crate); TC-023: `tests/exact_arithmetic.rs`; allocation bounds for
   TC-016, TC-018, TC-019 and TC-023: `tests/exact_allocation.rs`. All run with
   `--features exact`. FR-010-AC-6's evidence is a `compile_fail` doctest on `InjectedDenial`
   (`src/exact/accounting.rs`): `occurrence: 0` does not compile, so the malformed request cannot be
