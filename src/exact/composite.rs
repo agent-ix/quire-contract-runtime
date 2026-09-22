@@ -194,8 +194,8 @@ impl fmt::Debug for Value {
     /// The worklist's own peak size is bounded by the total count of not-yet-rendered siblings
     /// across every currently-open ancestor, not by the size of already-written text -- for a
     /// chain (each level has at most one child, as in the stack-depth tests below) that is O(open
-    /// ancestors); for one wide collection or record with many elements/fields, [`push_list`]
-    /// pushes every element's `Task` onto the worklist before any of them is popped and rendered,
+    /// ancestors); for one wide collection or record with many elements/fields, `push_list`
+    /// (private, below) pushes every element's `Task` onto the worklist before any is popped and rendered,
     /// so the worklist there is O(that level's element count), not O(depth). This is a
     /// characteristic of the eager, all-siblings-at-once expansion this walk has used since it
     /// was made iterative (issue #29), unchanged by IR-55: IR-55 removed the *other* two costs
