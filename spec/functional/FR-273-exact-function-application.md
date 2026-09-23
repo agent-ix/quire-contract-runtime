@@ -23,11 +23,14 @@ has proved pure, total and definedness-safe on every reachable path, with outcom
 charges equal to the pinned quire-specification authority (`7d7943a`, FR-146) on every shared-corpus
 vector, and equal to the quire-spec-language authority (`ea39f91`) that carries it. As with FR-006
 through FR-008, the runtime is an implementation of that definition, not a second semantic authority:
-`quire_spec_language::value` decides every application, refusal and charge question; every type,
-field and variant this requirement adds — `PackageDeclarations`, `CheckedPackage`,
-`CheckedExpression`, `CheckMode`, `Evaluation`, `LocatedLoss` and `InputRefusal` — is ported into
-`quire_contract_runtime::exact` under the authority's own name and order, and the generated oracle,
-which links this `#![no_std]` crate alone, calls the ported surface.
+`quire_spec_language::value` decides every application, refusal and charge question. This
+requirement ports the call surface only — admission of an already-checked package, argument
+validation, `function.call` accounting and the `Evaluation` envelope — into
+`quire_contract_runtime::exact` under the authority's own names and order. It does not port
+`PackageDeclarations::check` or the authority's typer, fact derivation, termination prover, task
+machine or expression IR: function bodies are host callables the generated oracle supplies, already
+lowered to Rust by the code generator, and the generated oracle, which links this `#![no_std]` crate
+alone, calls the ported surface.
 
 ## Inputs
 
@@ -47,9 +50,11 @@ which links this `#![no_std]` crate alone, calls the ported surface.
 ## Behavior
 
 - Purity, termination (by the function's `decreases` measure) and every definedness obligation on
-  every reachable path are proved once, statically, by `PackageDeclarations::check`, before any
-  package is callable and before any charge. `call` and `evaluate` never re-derive these proofs and
-  never accept a package `check` rejected: there is no approximate or unchecked application path.
+  every reachable path are proved once, statically, by the authority's `PackageDeclarations::check`,
+  before any package is callable and before any charge. That proof lives outside this crate and
+  outside its own Kani proof surface (AD-002, Risks): this crate depends on it rather than
+  reproducing it. `call` and `evaluate` never re-derive these proofs and never accept a package
+  `check` rejected: there is no approximate or unchecked application path.
   `CheckMode::Kernel` (typing only, no definedness proof) stays out of scope, as it does for every
   earlier exact requirement.
 - Application is total, never short-circuiting: every supplied argument is validated — its value kind
