@@ -5,16 +5,20 @@ type: MeasurementPlan
 status: proposed
 owner: runtime-maintainers
 metric: runtime_conformance_and_footprint
-definition_version: quire-contract-runtime.measurement-v1
+definition_version: quire-contract-runtime.measurement-v2
 stage: gate
+objective:
+  direction: zero
 statistical_design:
   population: every supported feature set and public semantic boundary in the source candidate
   sampling: exhaustive truth tables plus boundary and property-generated integer cases
   repetitions: 1
-  estimator: exact pass/fail counts and compiled artifact bytes
+  estimator: count
   error_model: toolchain configuration and bounded proof exploration
   uncertainty: retain skipped unavailable and inconclusive tool states
-  decision_rule: escalate any failed gate missing identity or unresolved material gap
+  decision_rule:
+    comparator: le
+    threshold: 0
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AP-001
     type: measures
