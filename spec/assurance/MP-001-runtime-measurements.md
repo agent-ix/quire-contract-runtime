@@ -30,6 +30,25 @@ relationships:
 The measurements inform the human v0.1 source-release decision; they do not approve release or confer
 validation or accreditation.
 
+## Decision Rule
+
+The estimate is a `count` of escalation items in one collection over the source candidate. Each of
+the following is one item:
+
+- a failed gate: a producer row whose outcome is anything other than `pass` (`fail`, `vacuous`,
+  `not-computed`, `unavailable`, or `inconclusive`), since each producer's gate fails on exactly
+  those rows; this includes the linked footprint falling outside its 500-byte floor and 4 KiB
+  ceiling or retaining a panic-path reference;
+- a missing identity: a source, toolchain, or producer identity that the assurance chain requires
+  and could not bind; and
+- an unresolved material gap: an open finding against this candidate that is neither closed nor
+  explicitly deferred in this plan.
+
+The rule `{ comparator: le, threshold: 0 }` holds only when that count is zero, which is the
+`objective.direction: zero` reading: any non-zero count escalates to the human release decision.
+The linked footprint's byte count is a producer output that the footprint gate judges; it is not the
+estimate, and the byte count itself is never compared with the threshold.
+
 ## Population
 
 The population is the exact source revision across core, alloc, std, and proptest features; all
