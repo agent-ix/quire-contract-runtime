@@ -5,8 +5,9 @@ type: MeasurementPlan
 status: proposed
 owner: runtime-maintainers
 metric: runtime_conformance_and_footprint
-definition_version: quire-contract-runtime.measurement-v2
+definition_version: quire-contract-runtime.measurement-v3
 stage: gate
+ground_truth_kind: mechanical
 objective:
   direction: zero
 statistical_design:
@@ -19,6 +20,40 @@ statistical_design:
   decision_rule:
     comparator: le
     threshold: 0
+protected_apparatus:
+  - Makefile
+  - scripts/run_feature_matrix.py
+  - scripts/run_kani_gate.py
+  - scripts/check_kani_mutations.py
+  - scripts/check_kani_harnesses.py
+  - scripts/measure_footprint.py
+  - scripts/check_linked_footprint.sh
+  - scripts/assurance_chain.py
+  - assurance/change-assurance.json
+  - verification/kani.rs
+  - measurement/footprint/**
+negative_controls:
+  - kind: suppressed-observation
+    description: >-
+      each producer publishes a full declared row set -- nine feature-matrix
+      rows, seven Kani harnesses plus their census row, three mutation-
+      injection rows, and the linked-footprint measurement -- and the chain
+      reads every attested outcome from those bytes, so a producer that runs
+      fewer rows or drops one silently is a visible gap rather than a lower
+      escalation count.
+  - kind: apparatus-edit
+    description: >-
+      the four producer scripts, the harness source they check, the footprint
+      population, the Makefile recipe that runs them, the chain driver, and
+      the change declaration are protected, so editing one alongside a change
+      it grades changes the recorded digests.
+  - kind: stale-evidence
+    description: >-
+      scripts/assurance_chain.py binds the source, toolchain, and producer
+      identity into the sealed record for the exact candidate revision, so a
+      result collected against an earlier revision or apparatus cannot be
+      presented as current -- an unbindable identity is itself one of the
+      three escalation classes the decision rule counts.
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AP-001
     type: measures
