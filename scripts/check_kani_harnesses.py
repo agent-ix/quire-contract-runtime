@@ -123,13 +123,8 @@ def main() -> int:
         print("KANI_CENSUS_FAILED: proof check floors do not match harness census", file=sys.stderr)
         return 1
     for trace_id, name in found:
-        expected_trace = (
-            "TC-001"
-            if name.startswith("tc_001_")
-            else "TC-002"
-            if name.startswith("tc_002_")
-            else "TC-003"
-        )
+        prefix = re.match(r"tc_(\d{3})_", name)
+        expected_trace = f"TC-{prefix.group(1)}" if prefix else None
         if trace_id != expected_trace:
             print(
                 f"KANI_CENSUS_FAILED: {name} traces {trace_id}, expected {expected_trace}",

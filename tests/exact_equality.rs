@@ -4,14 +4,15 @@
 
 use std::num::NonZeroU64;
 
+use proptest::prelude::*;
 use quire_contract_runtime::exact::{
     admit_text, CardinalityBound, ChargePoint, CollectionKind, CollectionType, Component,
     CompositeDeclaration, CompositeShape, ConstructionCause, ConstructionRefusal, DecimalType,
     EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule, FieldDeclaration,
     FieldValue, IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer,
     IntegerInterval, LimitKind, Meter, NodeKey, ObjectIdentity, ObjectReference,
-    ObjectTypeDeclaration, Outcome, Presence, Quantity, QuantityUnit, Rational, Refusal,
-    RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType, TypeEnvironment,
+    ObjectTypeDeclaration, OptionValue, Outcome, Presence, Quantity, QuantityUnit, Rational,
+    Refusal, RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType, TypeEnvironment,
     UnitDeclaration, UnitGraph, UniverseIdentity, Value, ValueType,
 };
 
@@ -569,5 +570,357 @@ fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
             "at {point:?}"
         );
         assert_eq!(consumed(&meter), expected_consumed, "at {point:?}");
+    }
+}
+
+// The plan/evaluate agreement property (agent-ix/quire-contract-runtime IR-31): over generated
+// composite values, `plan_equality`'s uncharged pair count and the number of `equality.pair`
+// charges `CheckedEquality::evaluate` actually admits must agree. A Kani proof of this property is
+// tracked as agent-ix/quire-contract-runtime IR-241 (Linear). `tc_026_p3` and `tc_026_p5` above
+// additionally exercise `equality.pair` charging on fixed, hand-picked cases; this property test
+// widens that coverage over generated shapes and also checks the predicted count against an
+// independent, test-side count (never calling into `equality.rs`) rather than only against the
+// admitted charges.
+//
+// `Spec` describes a shape only (`Boolean`, `Integer`, `Option<T>`, a bounded `Sequence<T>`, or a
+// two-field tuple record), never a value. `annotate` assigns each `Pair` node a fresh `NodeKey`
+// deterministically (a plain pre-order counter, not randomness), producing `Keyed`: the same
+// shape, now with the keys `build_type` and `materialize` both read to agree on which composite
+// declaration a tuple value belongs to.
+#[derive(Clone, Debug)]
+enum Spec {
+    Bool,
+    Int,
+    Opt(Box<Spec>),
+    List(Box<Spec>),
+    Pair(Box<Spec>, Box<Spec>),
+}
+
+#[derive(Clone, Debug)]
+enum Keyed {
+    Bool,
+    Int,
+    Opt(Box<Keyed>),
+    List(Box<Keyed>),
+    Pair(NodeKey, Box<Keyed>, Box<Keyed>),
+}
+
+/// The list element type's declared cardinality bound, shared between
+/// `build_type` and `materialize` so both sides always build the same
+/// `CollectionType`.
+fn list_bound() -> CardinalityBound {
+    CardinalityBound::new(0, 4).unwrap()
+}
+
+fn spec_strategy() -> impl Strategy<Value = Spec> {
+    let leaf = prop_oneof![Just(Spec::Bool), Just(Spec::Int)];
+    leaf.prop_recursive(3, 15, 3, |inner| {
+        prop_oneof![
+            inner.clone().prop_map(|s| Spec::Opt(Box::new(s))),
+            inner.clone().prop_map(|s| Spec::List(Box::new(s))),
+            (inner.clone(), inner).prop_map(|(l, r)| Spec::Pair(Box::new(l), Box::new(r))),
+        ]
+    })
+}
+
+/// Assign a fresh key to every `Pair` node, in a pre-order walk of `spec`.
+fn annotate(spec: &Spec, next: &mut u8) -> Keyed {
+    match spec {
+        Spec::Bool => Keyed::Bool,
+        Spec::Int => Keyed::Int,
+        Spec::Opt(inner) => Keyed::Opt(Box::new(annotate(inner, next))),
+        Spec::List(inner) => Keyed::List(Box::new(annotate(inner, next))),
+        Spec::Pair(left, right) => {
+            let node_key = key(*next);
+            *next += 1;
+            let left = annotate(left, next);
+            let right = annotate(right, next);
+            Keyed::Pair(node_key, Box::new(left), Box::new(right))
+        }
+    }
+}
+
+/// The `ValueType` of `spec`, appending every nested tuple declaration it
+/// names to `decls` in the same pre-order. Calling this again on a subtree
+/// already covered by an earlier top-level call (as `materialize` does, to
+/// recover one node's own `ValueType`) reproduces the identical `ValueType`
+/// -- same keys, same structure -- and simply discards the redundant decls.
+fn build_type(spec: &Keyed, decls: &mut Vec<CompositeDeclaration>) -> ValueType {
+    match spec {
+        Keyed::Bool => ValueType::Boolean,
+        Keyed::Int => ValueType::Integer,
+        Keyed::Opt(inner) => ValueType::option(build_type(inner, decls)),
+        Keyed::List(inner) => {
+            let element = build_type(inner, decls);
+            ValueType::collection(CollectionType::new(
+                CollectionKind::Sequence,
+                element,
+                list_bound(),
+            ))
+        }
+        Keyed::Pair(key, left, right) => {
+            let left_type = build_type(left, decls);
+            let right_type = build_type(right, decls);
+            decls.push(CompositeDeclaration::new(
+                *key,
+                "Pair",
+                CompositeShape::Tuple(vec![left_type, right_type]),
+            ));
+            ValueType::Composite(*key)
+        }
+    }
+}
+
+/// One generated content tree, structurally parallel to a `Keyed` spec but
+/// carrying no type or key information of its own.
+#[derive(Clone, Debug)]
+enum RawValue {
+    Bool(bool),
+    Int(i64),
+    Opt(Option<Box<RawValue>>),
+    List(Vec<RawValue>),
+    Pair(Box<RawValue>, Box<RawValue>),
+}
+
+fn raw_strategy(spec: &Keyed) -> BoxedStrategy<RawValue> {
+    match spec {
+        Keyed::Bool => any::<bool>().prop_map(RawValue::Bool).boxed(),
+        Keyed::Int => (-1000_i64..=1000_i64).prop_map(RawValue::Int).boxed(),
+        Keyed::Opt(inner) => proptest::option::of(raw_strategy(inner))
+            .prop_map(|payload| RawValue::Opt(payload.map(Box::new)))
+            .boxed(),
+        Keyed::List(inner) => proptest::collection::vec(raw_strategy(inner), 0..=4)
+            .prop_map(RawValue::List)
+            .boxed(),
+        Keyed::Pair(_, left, right) => (raw_strategy(left), raw_strategy(right))
+            .prop_map(|(l, r)| RawValue::Pair(Box::new(l), Box::new(r)))
+            .boxed(),
+    }
+}
+
+/// Build `spec`'s `Value` from `raw`, constructing every nested tuple through
+/// `env` by the key `spec` itself carries.
+fn materialize(spec: &Keyed, raw: &RawValue, env: &TypeEnvironment) -> Value {
+    match (spec, raw) {
+        (Keyed::Bool, RawValue::Bool(b)) => Value::Boolean(*b),
+        (Keyed::Int, RawValue::Int(n)) => Value::Integer(Integer::from(*n)),
+        (Keyed::Opt(inner), RawValue::Opt(payload)) => {
+            let payload_type = build_type(inner, &mut Vec::new());
+            match payload {
+                Some(raw_payload) => {
+                    let payload = materialize(inner, raw_payload, env);
+                    OptionValue::present(payload_type, payload)
+                        .expect("payload was built against the same declared payload type")
+                }
+                None => OptionValue::none(payload_type),
+            }
+        }
+        (Keyed::List(inner), RawValue::List(elements)) => {
+            let element_type = build_type(inner, &mut Vec::new());
+            let collection_type =
+                CollectionType::new(CollectionKind::Sequence, element_type, list_bound());
+            let elements: Vec<Value> = elements
+                .iter()
+                .map(|element| materialize(inner, element, env))
+                .collect();
+            let mut scratch = Meter::new(UNLIMITED);
+            quire_contract_runtime::exact::form_collection(&collection_type, elements, &mut scratch)
+                .expect("every element was built against the declared element type")
+                .completed()
+                .expect("an unlimited meter and a bound of 4 never blocks formation")
+        }
+        (Keyed::Pair(key, left_spec, right_spec), RawValue::Pair(left, right)) => {
+            let left = materialize(left_spec, left, env);
+            let right = materialize(right_spec, right, env);
+            env.tuple(*key, vec![left, right])
+                .expect("both positions were built against the declared tuple type")
+        }
+        _ => unreachable!("a RawValue is always generated from the Keyed spec it is paired with"),
+    }
+}
+
+/// One test case: a shared shape and two value trees of that shape. The right side is, with equal
+/// probability, generated fully independently of the left, an exact clone of the left, or a clone
+/// of the left with exactly one leaf changed -- so equal-length lists, `Some`/`Some` options and an
+/// overall `true` result (which an independently generated pair reaches only rarely, since the two
+/// sides diverge at the root in the majority of cases) are all well exercised, alongside the
+/// fully-independent pairs that exercise early divergence.
+fn equality_case_strategy() -> impl Strategy<Value = (Keyed, RawValue, RawValue)> {
+    spec_strategy().prop_flat_map(|spec| {
+        let mut counter = 0_u8;
+        let keyed = annotate(&spec, &mut counter);
+        let left = raw_strategy(&keyed);
+        (Just(keyed), left).prop_flat_map(|(keyed, left)| {
+            let independent_right = raw_strategy(&keyed);
+            let cloned_right = Just(left.clone());
+            let perturbed_right = perturb_one_leaf_strategy(left.clone());
+            let right = prop_oneof![independent_right, cloned_right, perturbed_right];
+            (Just(keyed), Just(left), right)
+        })
+    })
+}
+
+/// The occurrence-pair count computed purely from the generated shape and values -- never calling
+/// into `src/exact/equality.rs` -- so the property below has an oracle independent of
+/// `plan_pairs`, not just a second caller of it. Mirrors FR-008's Behavior section: a leaf pair
+/// (`Boolean`/`Integer`) is 1; an `Option` pair is `1 + inner` when both sides are present,
+/// otherwise 1; a `Sequence` pair is 1 when the two sides' lengths differ, otherwise `1 + the sum
+/// of its element pairs`; and a tuple/record `Pair` is always `1 + the sum of its field pairs`.
+fn independent_pair_count(spec: &Keyed, left: &RawValue, right: &RawValue) -> u64 {
+    match (spec, left, right) {
+        (Keyed::Bool, RawValue::Bool(_), RawValue::Bool(_))
+        | (Keyed::Int, RawValue::Int(_), RawValue::Int(_)) => 1,
+        (Keyed::Opt(inner), RawValue::Opt(left), RawValue::Opt(right)) => match (left, right) {
+            (Some(left), Some(right)) => 1 + independent_pair_count(inner, left, right),
+            _ => 1,
+        },
+        (Keyed::List(inner), RawValue::List(left), RawValue::List(right)) => {
+            if left.len() != right.len() {
+                1
+            } else {
+                1 + left
+                    .iter()
+                    .zip(right)
+                    .map(|(left, right)| independent_pair_count(inner, left, right))
+                    .sum::<u64>()
+            }
+        }
+        (Keyed::Pair(_, left_spec, right_spec), RawValue::Pair(ll, lr), RawValue::Pair(rl, rr)) => {
+            1 + independent_pair_count(left_spec, ll, rl)
+                + independent_pair_count(right_spec, lr, rr)
+        }
+        _ => unreachable!("a RawValue is always generated from the Keyed spec it is paired with"),
+    }
+}
+
+/// One leaf of `raw`, in the same pre-order `perturb_at` walks, changed to a different value of
+/// its own type; every other leaf is left untouched. `None` is a no-op count: an `Option::None`
+/// payload and an empty `Sequence` contribute no leaf to perturb.
+fn count_leaves(raw: &RawValue) -> usize {
+    match raw {
+        RawValue::Bool(_) | RawValue::Int(_) => 1,
+        RawValue::Opt(None) => 0,
+        RawValue::Opt(Some(inner)) => count_leaves(inner),
+        RawValue::List(elements) => elements.iter().map(count_leaves).sum(),
+        RawValue::Pair(left, right) => count_leaves(left) + count_leaves(right),
+    }
+}
+
+/// Change the `target`-th leaf (0-based, pre-order) of `raw` to a different value of the same
+/// type; `usize::MAX` is the "already consumed" sentinel carried after that leaf is found, so every
+/// later leaf passes through unchanged.
+fn perturb_at(raw: &RawValue, target: usize) -> (RawValue, usize) {
+    if target == usize::MAX {
+        return (raw.clone(), usize::MAX);
+    }
+    match raw {
+        RawValue::Bool(b) => {
+            if target == 0 {
+                (RawValue::Bool(!b), usize::MAX)
+            } else {
+                (raw.clone(), target - 1)
+            }
+        }
+        RawValue::Int(n) => {
+            if target == 0 {
+                let bumped = if *n == 1000 { n - 1 } else { n + 1 };
+                (RawValue::Int(bumped), usize::MAX)
+            } else {
+                (raw.clone(), target - 1)
+            }
+        }
+        RawValue::Opt(None) => (RawValue::Opt(None), target),
+        RawValue::Opt(Some(inner)) => {
+            let (inner, remaining) = perturb_at(inner, target);
+            (RawValue::Opt(Some(Box::new(inner))), remaining)
+        }
+        RawValue::List(elements) => {
+            let mut perturbed = Vec::with_capacity(elements.len());
+            let mut remaining = target;
+            for element in elements {
+                let (element, next_remaining) = perturb_at(element, remaining);
+                perturbed.push(element);
+                remaining = next_remaining;
+            }
+            (RawValue::List(perturbed), remaining)
+        }
+        RawValue::Pair(left, right) => {
+            let (left, remaining) = perturb_at(left, target);
+            let (right, remaining) = perturb_at(right, remaining);
+            (RawValue::Pair(Box::new(left), Box::new(right)), remaining)
+        }
+    }
+}
+
+/// `left` with one generated leaf index (chosen uniformly over its leaf count) perturbed; a
+/// no-op when `left` has no leaf to perturb (an all-`None`/all-empty tree).
+fn perturb_one_leaf_strategy(left: RawValue) -> impl Strategy<Value = RawValue> {
+    let leaves = count_leaves(&left).max(1);
+    (0..leaves).prop_map(move |index| perturb_at(&left, index).0)
+}
+
+proptest! {
+    /// `plan_equality`'s occurrence-pair count and the number of `equality.pair` charges
+    /// `CheckedEquality::evaluate` admits must always agree, over generated `Boolean`, `Integer`,
+    /// `Option`, bounded `Sequence` and tuple-record composite values, run under an unlimited meter
+    /// so every evaluation completes. This is the "otherwise" schedule FR-008's Behavior section
+    /// describes (`equality.plan-form`, `equality.plan`, one `equality.pair` per planned pair,
+    /// `equality.result-retain`); FR-008-AC-5 is what traces this test to that requirement. Both
+    /// the planned count and the admitted-charge count are also checked against
+    /// `independent_pair_count`, computed from the generated shape and values alone, so a counting
+    /// bug shared by `plan_equality` and `evaluate`'s own planning (both call `plan_pairs`) cannot
+    /// pass by agreeing with itself.
+    ///
+    /// Trace: TC-026, FR-008-AC-5
+    #[test]
+    fn tc_026_evaluate_admits_exactly_the_pairs_plan_equality_predicts(
+        (spec, raw_left, raw_right) in equality_case_strategy()
+    ) {
+        let mut decls = Vec::new();
+        let value_type = build_type(&spec, &mut decls);
+        let env = TypeEnvironment::new(decls, Vec::new())
+            .expect("freshly keyed, acyclic tuple declarations always admit");
+
+        let left = materialize(&spec, &raw_left, &env);
+        let right = materialize(&spec, &raw_right, &env);
+
+        let plan = quire_contract_runtime::exact::plan_equality(&left, &right)
+            .expect("no Value::Reference appears in this generator, so ForeignReference cannot fire");
+        let predicted_pairs = plan
+            .pair_events()
+            .to_u64()
+            .expect("a depth-3, width-4-bounded tree never plans more than u64::MAX pairs");
+
+        let independent_pairs = independent_pair_count(&spec, &raw_left, &raw_right);
+        prop_assert_eq!(
+            predicted_pairs, independent_pairs,
+            "plan_equality's predicted pair count disagreed with the independent count"
+        );
+
+        let checked = env
+            .check_equality(
+                EqualityOperator::Equal,
+                EqualityOperand::typed(value_type.clone()),
+                EqualityOperand::typed(value_type),
+            )
+            .expect("two operands of the same type always admit an equality schedule");
+        prop_assert_eq!(checked.schedule(), EqualitySchedule::Plan);
+
+        let mut meter = Meter::new(UNLIMITED);
+        let outcome = checked.evaluate(&left, &right, &mut meter);
+        prop_assert!(matches!(outcome, Outcome::Completed(_)), "unlimited meter, got {outcome:?}");
+        prop_assert!(
+            !meter.charge_log_truncated(),
+            "the charge log capacity assumption below (every admitted equality.pair charge is \
+             actually in admitted_charges) does not hold for this case"
+        );
+
+        let admitted_pairs = meter
+            .admitted_charges()
+            .iter()
+            .filter(|point| **point == ChargePoint::EqualityPair)
+            .count() as u64;
+
+        prop_assert_eq!(admitted_pairs, predicted_pairs);
     }
 }

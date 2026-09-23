@@ -11,7 +11,8 @@ relationships:
 ## Description
 
 Check `check_equality`, `plan_equality`, `CheckedEquality::evaluate` and terminal `Reference<T>`
-identity. Evidence: `tests/exact_equality.rs` (`--features exact`).
+identity. Evidence: `tests/exact_equality.rs` (`--features exact`). A Kani proof of the
+plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked as IR-241 (Linear).
 
 ## Test Procedure
 
@@ -34,10 +35,15 @@ identity. Evidence: `tests/exact_equality.rs` (`--features exact`).
    reference.
 5. Inject a denial at each of `equality.plan-form`, `equality.plan`, `equality.pair` and
    `equality.result-retain`; check each `Incomplete` record and that no counter changed.
+6. For generated `Boolean`, `Integer`, `Option`, bounded `Sequence` and tuple-record composite
+   operands, check that the planned pair count equals an independently computed occurrence-pair
+   count and the number of admitted `equality.pair` charges.
 
 ## Expected Results
 
 Every equality refusal is decided before any charge; the selected schedule and its conversions are
 charged in the declared order; a cross-universe reference pair refuses by name, never by silent
 inequality; references carry no inspected state; every injected denial fires with no partial result,
-and `CheckedInvariant` is unreachable from every vector in this test's corpus.
+and `CheckedInvariant` is unreachable from every vector in this test's corpus. Over generated
+composite values, `plan_equality`'s predicted pair count, an independently computed occurrence-pair
+count, and the number of `equality.pair` charges `CheckedEquality::evaluate` admits always agree.
