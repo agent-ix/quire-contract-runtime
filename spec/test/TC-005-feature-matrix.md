@@ -5,6 +5,8 @@ type: TC
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/NFR-001
     type: verifies
+  - target: ix://agent-ix/quire-contract-runtime/interface-001
+    type: verifies
 ---
 # TC-005: Resolve and build the feature matrix
 
@@ -23,6 +25,10 @@ Also execute isolated `--no-default-features --features snapshot-json` tests and
 then compile that exact library profile for `thumbv7em-none-eabi` on Rust 1.75.0. Check
 default dependency resolution separately. All-features includes std and does not prove
 the codec's no_std independence; neither alloc nor std alone exposes the codec API.
+
+Also compile `--no-default-features --features exact` for `thumbv7em-none-eabi` at the Rust
+version `compatibility.msrv` declares, verifying interface-001-AC-13's no_std/MSRV build of the
+`exact` module.
 
 ## Expected Results
 
