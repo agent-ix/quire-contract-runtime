@@ -5,8 +5,9 @@ type: MeasurementPlan
 status: proposed
 owner: runtime-maintainers
 metric: runtime_conformance_and_footprint
-definition_version: quire-contract-runtime.measurement-v2
+definition_version: quire-contract-runtime.measurement-v3
 stage: gate
+ground_truth_kind: mechanical
 objective:
   direction: zero
 statistical_design:
@@ -19,6 +20,48 @@ statistical_design:
   decision_rule:
     comparator: le
     threshold: 0
+protected_apparatus:
+  - Makefile
+  - Cargo.toml
+  - rust-toolchain.toml
+  - scripts/run_feature_matrix.py
+  - scripts/run_kani_gate.py
+  - scripts/check_kani_mutations.py
+  - scripts/check_kani_harnesses.py
+  - scripts/measure_footprint.py
+  - scripts/check_linked_footprint.sh
+  - scripts/assurance_chain.py
+  - assurance/change-assurance.json
+  - verification/kani.rs
+  - measurement/footprint/**
+negative_controls:
+  - kind: suppressed-observation
+    description: >-
+      each producer emits one row for every item in its own declared table
+      (FEATURE_SETS and NO_STD_BUILDS, EXPECTED_KANI_HARNESSES plus a
+      suite-census row, MUTATIONS) whether or not the item ran -- an absent
+      tool is `unavailable`, a harness missing from the transcript is
+      `not-computed`, a mutation that never reached a verdict is
+      `inconclusive` -- and the chain refuses an empty document and any
+      unnamed outcome, so an item left out is an escalation rather than a
+      lower count; shrinking a declared table edits a protected file.
+  - kind: apparatus-edit
+    description: >-
+      the four producer scripts and the census module that declares the Kani
+      harnesses and floors, the harness source, the footprint population, the
+      workspace manifest and toolchain file that set the release profile,
+      features and compiler, the Makefile recipe that runs the producers, the
+      chain driver, and the change declaration are protected, so editing one
+      alongside a change it grades changes the recorded digests.
+  - kind: stale-evidence
+    description: >-
+      scripts/assurance_chain.py seals the declared source digests, each
+      proof's configuration digest, and the observed tool versions against
+      the exact candidate revision, and Quoin reports a receipt requested for
+      any other revision as `candidate_revision_mismatch` -- so a result
+      collected against an earlier revision or apparatus cannot be presented
+      as current, and an identity the chain cannot bind is itself one of the
+      three escalation classes the decision rule counts.
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AP-001
     type: measures
@@ -73,9 +116,10 @@ declared command that is not the executed command would be a lie in a sealed att
 Four producers belong to this repository and each publishes a declared structured result rather than
 a transcript:
 
-- `scripts/run_feature_matrix.py` publishes `runtime.feature-matrix/v1`. It runs nine rows — four
-  feature sets over the crate's own test targets, their four doc-test lanes, and the footprint
-  package — and decides each row from two structured channels: cargo's own
+- `scripts/run_feature_matrix.py` publishes `runtime.feature-matrix/v1`. It runs fourteen rows —
+  five feature sets (core, alloc, std, snapshot-json, all features) over the crate's own test
+  targets, their five doc-test lanes, the footprint package, the `exact` oracle tests, and two
+  no_std MSRV library builds (snapshot-json and exact) — and decides each row from two structured channels: cargo's own
   `--message-format=json` `compiler-message` level for the build phase, and libtest's process exit
   status for the test phase. Build failure and test failure are different facts and are reported
   separately. Per-test granularity would require libtest's unstable JSON formatter and therefore a
@@ -89,8 +133,8 @@ a transcript:
   the transcript never mentions is `not-computed`, and an absent `cargo-kani` makes every row
   `unavailable`. `make kani` exits non-zero on any of those, so a green local run means the proofs ran
   here.
-- `scripts/check_kani_mutations.py` publishes `runtime.kani-mutation/v1`. It injects three
-  representative Boolean, arithmetic, and accounting defects into a scratch copy of the source — never
+- `scripts/check_kani_mutations.py` publishes `runtime.kani-mutation/v1`. It injects five
+  representative defects — Boolean, arithmetic, accounting, and two in the exact IEEE comparison — into a scratch copy of the source — never
   into the working tree — and requires the owning proof to reject each one. A harness that verifies
   the mutated source anyway is `fail` — the harness proves less than it claims. A run that never
   reaches a verification result — the candidate copy did not compile, or Kani fell over first — is the
@@ -112,11 +156,12 @@ a lowered floor becomes a two-file edit rather than a one-line one.
 | `tc_002_boolean_truth_tables` | 136 | 136 |
 | `tc_003_campaign_accounting_saturates` | 264 | 264 |
 | `tc_003_checked_i8_arithmetic_matches_primitives` | 59 | 59 |
+| `tc_003_exact_ieee_numeric_equal_matches_nan_unordered` | 2417 | 2417 |
 | `tc_003_i32_division_boundaries_are_undefined` | 43 | 43 |
 | `tc_003_option_helpers_preserve_definedness` | 52 | 52 |
 | `tc_003_slice_index_is_defined_exactly_in_bounds` | 24 | 24 |
 
-`scripts/check_kani_harnesses.py` remains the cheap static half of the proof gate: it makes the seven
+`scripts/check_kani_harnesses.py` remains the cheap static half of the proof gate: it makes the eight
 proof names and their TC-001/TC-002/TC-003 ownership an executable census, so a deleted, renamed, or
 `cfg`-ed-out harness is caught without needing the model checker at all. It also reads each harness's
 trace binding out of the harness source, so the published result document carries a binding that
@@ -162,7 +207,7 @@ measurement, which is the linked `.text` plus `.rodata` figure above, is unchang
 floor, ceiling, target, and compiler. Removing an observation is recorded here rather than left to be
 noticed in a diff.
 
-The seven Kani harnesses are bounded verification controls, not a whole-crate proof. Public-model
+The eight Kani harnesses are bounded verification controls, not a whole-crate proof. Public-model
 provenance and Boolean assertions gate constructors and dispatch, while i8 checked arithmetic uses
 independent i16 widening oracles. Division/remainder uses symbolic invalid inputs, index
 definedness quantifies over full `usize`, and campaign accounting drives the public record/discard
