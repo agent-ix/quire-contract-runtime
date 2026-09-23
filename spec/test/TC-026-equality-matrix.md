@@ -11,7 +11,14 @@ relationships:
 ## Description
 
 Check `check_equality`, `plan_equality`, `CheckedEquality::evaluate` and terminal `Reference<T>`
-identity. Evidence: `tests/exact_equality.rs` (`--features exact`).
+identity. Evidence: `tests/exact_equality.rs` (`--features exact`). The agreement between
+`plan_equality`'s predicted occurrence-pair count and the number of `equality.pair` charges
+`CheckedEquality::evaluate` actually admits is additionally checked by a property test,
+`tc_026_evaluate_admits_exactly_the_pairs_plan_equality_predicts`, over generated `Boolean`,
+`Integer`, `Option`, bounded `Sequence` and tuple-record composite values under an unlimited
+meter. A Kani proof of this property was attempted and abandoned as intractable (every attempt
+exceeded 8-16 GB in CBMC, through `evaluate`'s `Value` clone path); it is tracked separately as
+agent-ix/quire-contract-runtime IR-241.
 
 ## Test Procedure
 
