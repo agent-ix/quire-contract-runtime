@@ -81,19 +81,25 @@ impl EnumDeclaration {
             .iter()
             .position(|declared| declared == case)
             .ok_or(refuse(SemanticGraphCause::UndeclaredCase))?;
-        Ok(EnumValue {
+        Ok(EnumValue(Box::new(EnumValueFields {
             declaration: self.key,
             member,
             ordered: self.ordered,
             position,
             case: Box::from(case),
-        })
+        })))
     }
 }
 
 /// An enumeration value: (declaration identity, member identity).
-#[derive(Clone, Debug)]
-pub struct EnumValue {
+// Fields behind one `Box` (IR-286): `Value` carries this type inline, and
+// CBMC's cost for moving a `Value` through any enum grows with the combined
+// size of every inline variant payload.
+#[derive(Clone)]
+pub struct EnumValue(Box<EnumValueFields>);
+
+#[derive(Clone)]
+struct EnumValueFields {
     declaration: NodeKey,
     member: NodeKey,
     ordered: bool,
@@ -101,30 +107,43 @@ pub struct EnumValue {
     case: Box<str>,
 }
 
+impl core::fmt::Debug for EnumValue {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("EnumValue")
+            .field("declaration", &self.0.declaration)
+            .field("member", &self.0.member)
+            .field("ordered", &self.0.ordered)
+            .field("position", &self.0.position)
+            .field("case", &self.0.case)
+            .finish()
+    }
+}
+
 impl EnumValue {
     /// Declaration node key.
     pub fn declaration(&self) -> NodeKey {
-        self.declaration
+        self.0.declaration
     }
 
     /// Member node key.
     pub fn member(&self) -> NodeKey {
-        self.member
+        self.0.member
     }
 
     /// Zero-based declaration position of the member.
     pub(crate) fn position(&self) -> usize {
-        self.position
+        self.0.position
     }
 
     /// Whether the declaration is an `ordered enum`.
     pub fn is_ordered(&self) -> bool {
-        self.ordered
+        self.0.ordered
     }
 
     /// The case identifier.
     pub fn case(&self) -> &str {
-        &self.case
+        &self.0.case
     }
 }
 
@@ -136,12 +155,12 @@ pub fn compare_enum(
     right: &EnumValue,
     meter: &mut Meter,
 ) -> Result<Outcome<bool>, IllTyped> {
-    if left.declaration != right.declaration {
+    if left.0.declaration != right.0.declaration {
         return Err(IllTyped {
             cause: IllTypedCause::DistinctEnumDeclarations,
         });
     }
-    if operator.is_ordering() && !left.ordered {
+    if operator.is_ordering() && !left.0.ordered {
         return Err(IllTyped {
             cause: IllTypedCause::UnorderedEnumOrdering,
         });
@@ -161,9 +180,9 @@ fn compare(
         )?;
     }
     let ordering = if operator.is_ordering() {
-        left.position.cmp(&right.position)
+        left.0.position.cmp(&right.0.position)
     } else {
-        left.member.cmp(&right.member)
+        left.0.member.cmp(&right.0.member)
     };
     meter.charge(Charge::new(ChargePoint::EnumResultRetain).results(1))?;
     Ok(operator.holds(ordering))

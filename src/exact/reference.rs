@@ -70,37 +70,54 @@ impl ObjectIdentity {
 }
 
 /// A `Reference<T>` value: its identity triple.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ObjectReference {
+// Fields behind one `Box` (IR-286): `Value` carries this type inline, and
+// CBMC's cost for moving a `Value` through any enum grows with the combined
+// size of every inline variant payload.
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ObjectReference(Box<ObjectReferenceFields>);
+
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct ObjectReferenceFields {
     universe: UniverseIdentity,
     object_type: NodeKey,
     identity: ObjectIdentity,
+}
+
+impl core::fmt::Debug for ObjectReference {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("ObjectReference")
+            .field("universe", &self.0.universe)
+            .field("object_type", &self.0.object_type)
+            .field("identity", &self.0.identity)
+            .finish()
+    }
 }
 
 impl ObjectReference {
     /// The reference `(universe, object_type, identity)` supplied by a bound
     /// model snapshot.
     pub fn new(universe: UniverseIdentity, object_type: NodeKey, identity: ObjectIdentity) -> Self {
-        Self {
+        Self(Box::new(ObjectReferenceFields {
             universe,
             object_type,
             identity,
-        }
+        }))
     }
 
     /// The universe identity.
     pub fn universe(&self) -> &UniverseIdentity {
-        &self.universe
+        &self.0.universe
     }
 
     /// The object-type declaration identity.
     pub fn object_type(&self) -> NodeKey {
-        self.object_type
+        self.0.object_type
     }
 
     /// The declared object identity.
     pub fn identity(&self) -> &ObjectIdentity {
-        &self.identity
+        &self.0.identity
     }
 }
 
@@ -157,7 +174,7 @@ impl ObjectEnvironment {
                 object: reference.clone(),
                 cause,
             };
-            let Some(declaration) = types.object_type(reference.object_type) else {
+            let Some(declaration) = types.object_type(reference.0.object_type) else {
                 return Err(refuse(ObjectEnvironmentCause::UnknownObjectType));
             };
             let slots = fill_slots(declaration.attributes(), attributes)
@@ -186,7 +203,7 @@ impl ObjectEnvironment {
         reference: &ObjectReference,
         name: &str,
     ) -> Option<&FieldValue> {
-        let declaration: &ObjectTypeDeclaration = types.object_type(reference.object_type)?;
+        let declaration: &ObjectTypeDeclaration = types.object_type(reference.0.object_type)?;
         let position = declaration
             .attributes()
             .iter()

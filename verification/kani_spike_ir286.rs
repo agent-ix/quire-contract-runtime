@@ -437,12 +437,13 @@ fn ir286_diag_control_dyn_lookup_call() {
         name: "f".to_string(),
         body: Box::new(|x| x.wrapping_add(1)),
     }];
-    let root: Box<dyn Fn(&[D1], u8) -> u8> = Box::new(|table, x| {
-        match table.iter().find(|entry| entry.name == "f") {
-            Some(entry) => (entry.body)(x),
-            None => 0,
-        }
-    });
+    let root: Box<dyn Fn(&[D1], u8) -> u8> =
+        Box::new(
+            |table, x| match table.iter().find(|entry| entry.name == "f") {
+                Some(entry) => (entry.body)(x),
+                None => 0,
+            },
+        );
     let x: u8 = kani::any();
     kani::assume(x < 10);
     assert!(root(&table, x) == x + 1);
@@ -463,12 +464,13 @@ fn ir286_diag_control_dyn_same_signature() {
         body: Box::new(|args| args[0].wrapping_add(1)),
     }];
     let table_ref = &table;
-    let root: Box<dyn Fn(&[u8]) -> u8 + '_> = Box::new(move |args| {
-        match table_ref.iter().find(|entry| entry.name == "f") {
-            Some(entry) => (entry.body)(args),
-            None => 0,
-        }
-    });
+    let root: Box<dyn Fn(&[u8]) -> u8 + '_> =
+        Box::new(
+            move |args| match table_ref.iter().find(|entry| entry.name == "f") {
+                Some(entry) => (entry.body)(args),
+                None => 0,
+            },
+        );
     let x: u8 = kani::any();
     kani::assume(x < 10);
     assert!(root(&[x]) == x + 1);
@@ -552,4 +554,424 @@ fn ir286_diag_evaluate_identity_root() {
         )
         .expect("admitted");
     assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
+}
+
+// ---- Spike 3: body-invocation bisection.
+
+/// `Value::Integer(5)` on the stack, dropped (runs `Value`'s manual `Drop`).
+#[kani::proof]
+fn ir286_diag3_value_stack_drop() {
+    core::mem::drop(Value::Integer(Integer::from(5i64)));
+}
+
+/// `vec![Value::Integer(5)]`, dropped.
+#[kani::proof]
+fn ir286_diag3_value_vec_drop() {
+    let values: Vec<Value> = alloc::vec![Value::Integer(Integer::from(5i64))];
+    core::mem::drop(values);
+}
+
+/// A `Value` cloned out of a heap slice, then both dropped.
+#[kani::proof]
+fn ir286_diag3_value_clone_from_slice() {
+    let values: Vec<Value> = alloc::vec![Value::Integer(Integer::from(5i64))];
+    let copy = values[0].clone();
+    assert!(matches!(copy, Value::Integer(_)));
+}
+
+/// `Outcome<Value>` built and dropped.
+#[kani::proof]
+fn ir286_diag3_outcome_value_drop() {
+    let outcome: Outcome<Value> = Outcome::Completed(Value::Integer(Integer::from(5i64)));
+    assert!(matches!(outcome, Outcome::Completed(_)));
+}
+
+fn checked_add_one() -> CheckedPackage {
+    add_one_package()
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .expect("checks")
+}
+
+/// `evaluate`: no parameters, no arguments, root returns a constant.
+#[kani::proof]
+fn ir286_diag3_evaluate_constant_no_args() {
+    let checked = checked_add_one();
+    let expression = checked
+        .check_expression(
+            Vec::new(),
+            ValueType::Boolean,
+            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        )
+        .expect("checks");
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .expect("admitted");
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+}
+
+/// `evaluate`: one `Int[0,9]` argument the root ignores; returns a constant.
+#[kani::proof]
+fn ir286_diag3_evaluate_constant_one_arg() {
+    let checked = checked_add_one();
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    let expression = checked
+        .check_expression(
+            alloc::vec![("x".to_string(), ValueType::Int(domain))],
+            ValueType::Boolean,
+            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        )
+        .expect("checks");
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![Value::Integer(Integer::from(5i64))],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+}
+
+/// `Outcome<Value>` -> `Result<Value, Stop>` -> `Outcome<Value>`.
+#[kani::proof]
+fn ir286_diag3_outcome_round_trip() {
+    let outcome: Outcome<Value> = Outcome::Completed(Value::Boolean(true));
+    let back = Outcome::from_stop(outcome.into_stop());
+    assert!(matches!(back, Outcome::Completed(Value::Boolean(true))));
+}
+
+/// A `Box<dyn Fn>` returning `Outcome<Value>`, called once.
+#[kani::proof]
+fn ir286_diag3_dyn_returning_outcome() {
+    let root: Box<dyn Fn(&[Value]) -> Outcome<Value>> =
+        Box::new(|_arguments| Outcome::Completed(Value::Boolean(true)));
+    let outcome = root(&[]);
+    assert!(matches!(outcome, Outcome::Completed(Value::Boolean(true))));
+}
+
+/// Round trip with a `bool` payload.
+#[kani::proof]
+fn ir286_diag3_outcome_round_trip_bool() {
+    let outcome: Outcome<bool> = Outcome::Completed(true);
+    let back = Outcome::from_stop(outcome.into_stop());
+    assert!(matches!(back, Outcome::Completed(true)));
+}
+
+/// Round trip with an `Integer` payload.
+#[kani::proof]
+fn ir286_diag3_outcome_round_trip_integer() {
+    let outcome: Outcome<Integer> = Outcome::Completed(Integer::from(5i64));
+    let back = Outcome::from_stop(outcome.into_stop());
+    assert!(matches!(back, Outcome::Completed(_)));
+}
+
+/// Round trip of `Value`, result forgotten (no drop).
+#[kani::proof]
+fn ir286_diag3_outcome_round_trip_forget() {
+    let outcome: Outcome<Value> = Outcome::Completed(Value::Boolean(true));
+    let back = Outcome::from_stop(outcome.into_stop());
+    assert!(matches!(back, Outcome::Completed(Value::Boolean(true))));
+    core::mem::forget(back);
+}
+
+/// `Value::Boolean(true)` built and forgotten.
+#[kani::proof]
+fn ir286_diag3_value_forget() {
+    let value = Value::Boolean(true);
+    assert!(matches!(value, Value::Boolean(true)));
+    core::mem::forget(value);
+}
+
+/// `Value::Boolean(true)` built and dropped.
+#[kani::proof]
+fn ir286_diag3_value_boolean_drop() {
+    core::mem::drop(Value::Boolean(true));
+}
+
+#[inline(never)]
+fn pass_value(value: Value) -> Value {
+    value
+}
+
+/// Two by-value passes of a `Value` through a function, then forgotten.
+#[kani::proof]
+fn ir286_diag3_value_pass_twice_forget() {
+    let value = pass_value(pass_value(Value::Boolean(true)));
+    assert!(matches!(value, Value::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[inline(never)]
+fn wrap_ok(value: Value) -> Result<Value, u8> {
+    Ok(value)
+}
+
+/// `Value` into `Result<Value, u8>` and back out, then forgotten.
+#[kani::proof]
+fn ir286_diag3_value_result_wrap_forget() {
+    let value = match wrap_ok(Value::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => Value::Boolean(false),
+    };
+    assert!(matches!(value, Value::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum Lv1 {
+    Boolean(bool),
+    Integer(Integer),
+    Rational(crate::exact::Rational),
+    Decimal(crate::exact::Decimal),
+    Float(crate::exact::IeeeValue),
+    Quantity(crate::exact::Quantity),
+    Text(crate::exact::Text),
+    Enum(crate::exact::EnumValue),
+    Reference(crate::exact::ObjectReference),
+}
+
+#[allow(dead_code)]
+enum Lv2 {
+    Boolean(bool),
+    Integer(Integer),
+    Rational(Box<crate::exact::Rational>),
+    Decimal(Box<crate::exact::Decimal>),
+    Float(crate::exact::IeeeValue),
+    Quantity(Box<crate::exact::Quantity>),
+    Text(Box<crate::exact::Text>),
+    Enum(Box<crate::exact::EnumValue>),
+    Reference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_lv1(value: Lv1) -> Result<Lv1, u8> {
+    Ok(value)
+}
+
+#[inline(never)]
+fn wrap_lv2(value: Lv2) -> Result<Lv2, u8> {
+    Ok(value)
+}
+
+/// Inline payloads, as `Value` has them.
+#[kani::proof]
+fn ir286_diag3_lv1_inline_wrap() {
+    let value = match wrap_lv1(Lv1::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => Lv1::Boolean(false),
+    };
+    assert!(matches!(value, Lv1::Boolean(true)));
+    core::mem::forget(value);
+}
+
+/// Large payloads boxed.
+#[kani::proof]
+fn ir286_diag3_lv2_boxed_wrap() {
+    let value = match wrap_lv2(Lv2::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => Lv2::Boolean(false),
+    };
+    assert!(matches!(value, Lv2::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum OnlyRational {
+    Boolean(bool),
+    Integer(Integer),
+    VRational(crate::exact::Rational),
+    VDecimal(Box<crate::exact::Decimal>),
+    VQuantity(Box<crate::exact::Quantity>),
+    VText(Box<crate::exact::Text>),
+    VEnumValue(Box<crate::exact::EnumValue>),
+    VObjectReference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_only_rational(value: OnlyRational) -> Result<OnlyRational, u8> {
+    Ok(value)
+}
+
+#[kani::proof]
+fn ir286_diag3_only_rational_inline_wrap() {
+    let value = match wrap_only_rational(OnlyRational::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => OnlyRational::Boolean(false),
+    };
+    assert!(matches!(value, OnlyRational::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum OnlyDecimal {
+    Boolean(bool),
+    Integer(Integer),
+    VRational(Box<crate::exact::Rational>),
+    VDecimal(crate::exact::Decimal),
+    VQuantity(Box<crate::exact::Quantity>),
+    VText(Box<crate::exact::Text>),
+    VEnumValue(Box<crate::exact::EnumValue>),
+    VObjectReference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_only_decimal(value: OnlyDecimal) -> Result<OnlyDecimal, u8> {
+    Ok(value)
+}
+
+#[kani::proof]
+fn ir286_diag3_only_decimal_inline_wrap() {
+    let value = match wrap_only_decimal(OnlyDecimal::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => OnlyDecimal::Boolean(false),
+    };
+    assert!(matches!(value, OnlyDecimal::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum OnlyQuantity {
+    Boolean(bool),
+    Integer(Integer),
+    VRational(Box<crate::exact::Rational>),
+    VDecimal(Box<crate::exact::Decimal>),
+    VQuantity(crate::exact::Quantity),
+    VText(Box<crate::exact::Text>),
+    VEnumValue(Box<crate::exact::EnumValue>),
+    VObjectReference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_only_quantity(value: OnlyQuantity) -> Result<OnlyQuantity, u8> {
+    Ok(value)
+}
+
+#[kani::proof]
+fn ir286_diag3_only_quantity_inline_wrap() {
+    let value = match wrap_only_quantity(OnlyQuantity::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => OnlyQuantity::Boolean(false),
+    };
+    assert!(matches!(value, OnlyQuantity::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum OnlyText {
+    Boolean(bool),
+    Integer(Integer),
+    VRational(Box<crate::exact::Rational>),
+    VDecimal(Box<crate::exact::Decimal>),
+    VQuantity(Box<crate::exact::Quantity>),
+    VText(crate::exact::Text),
+    VEnumValue(Box<crate::exact::EnumValue>),
+    VObjectReference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_only_text(value: OnlyText) -> Result<OnlyText, u8> {
+    Ok(value)
+}
+
+#[kani::proof]
+fn ir286_diag3_only_text_inline_wrap() {
+    let value = match wrap_only_text(OnlyText::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => OnlyText::Boolean(false),
+    };
+    assert!(matches!(value, OnlyText::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum OnlyEnumValue {
+    Boolean(bool),
+    Integer(Integer),
+    VRational(Box<crate::exact::Rational>),
+    VDecimal(Box<crate::exact::Decimal>),
+    VQuantity(Box<crate::exact::Quantity>),
+    VText(Box<crate::exact::Text>),
+    VEnumValue(crate::exact::EnumValue),
+    VObjectReference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_only_enumvalue(value: OnlyEnumValue) -> Result<OnlyEnumValue, u8> {
+    Ok(value)
+}
+
+#[kani::proof]
+fn ir286_diag3_only_enumvalue_inline_wrap() {
+    let value = match wrap_only_enumvalue(OnlyEnumValue::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => OnlyEnumValue::Boolean(false),
+    };
+    assert!(matches!(value, OnlyEnumValue::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum OnlyObjectReference {
+    Boolean(bool),
+    Integer(Integer),
+    VRational(Box<crate::exact::Rational>),
+    VDecimal(Box<crate::exact::Decimal>),
+    VQuantity(Box<crate::exact::Quantity>),
+    VText(Box<crate::exact::Text>),
+    VEnumValue(Box<crate::exact::EnumValue>),
+    VObjectReference(crate::exact::ObjectReference),
+}
+
+#[inline(never)]
+fn wrap_only_objectreference(value: OnlyObjectReference) -> Result<OnlyObjectReference, u8> {
+    Ok(value)
+}
+
+#[kani::proof]
+fn ir286_diag3_only_objectreference_inline_wrap() {
+    let value = match wrap_only_objectreference(OnlyObjectReference::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => OnlyObjectReference::Boolean(false),
+    };
+    assert!(matches!(value, OnlyObjectReference::Boolean(true)));
+    core::mem::forget(value);
+}
+
+#[allow(dead_code)]
+enum Lv3 {
+    Boolean(bool),
+    Integer(Integer),
+    Rational(crate::exact::Rational),
+    Decimal(crate::exact::Decimal),
+    Float(crate::exact::IeeeValue),
+    Quantity(Box<crate::exact::Quantity>),
+    Text(Box<crate::exact::Text>),
+    Enum(Box<crate::exact::EnumValue>),
+    Reference(Box<crate::exact::ObjectReference>),
+}
+
+#[inline(never)]
+fn wrap_lv3(value: Lv3) -> Result<Lv3, u8> {
+    Ok(value)
+}
+
+/// `Rational` and `Decimal` inline, the other four boxed.
+#[kani::proof]
+fn ir286_diag3_lv3_numeric_inline_wrap() {
+    let value = match wrap_lv3(Lv3::Boolean(true)) {
+        Ok(value) => value,
+        Err(_) => Lv3::Boolean(false),
+    };
+    assert!(matches!(value, Lv3::Boolean(true)));
+    core::mem::forget(value);
 }
