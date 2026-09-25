@@ -651,6 +651,8 @@ enum W11 {
 #[kani::proof]
 fn ir286_diag5_t8_vec_w11_integer() {
     let values = alloc::vec![W11::B(Integer::from(5i64))];
-    let W11::B(x) = &values[0] else { panic!("not B") };
+    let W11::B(x) = &values[0] else {
+        panic!("not B")
+    };
     assert!(Integer::zero() <= *x);
 }
