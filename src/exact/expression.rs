@@ -366,19 +366,25 @@ impl PackageDeclarations {
             return Err(refusals);
         }
 
-        Ok(CheckedPackage {
+        Ok(CheckedPackage(Box::new(CheckedPackageFields {
             types: self.types,
             functions: self.functions,
             limits,
             depth: Cell::new(0),
             id: NEXT_PACKAGE_ID.fetch_add(1, Ordering::Relaxed),
-        })
+        })))
     }
 }
 
 /// A package admitted by [`PackageDeclarations::check`]: every declared
 /// function is callable by name.
-pub struct CheckedPackage {
+pub struct CheckedPackage(Box<CheckedPackageFields>);
+
+/// [`CheckedPackage`]'s fields, behind one `Box` (IR-286): `check` returns
+/// `Result<CheckedPackage, Vec<CheckRefusal>>`, and a boxed `Ok` puts that
+/// `Result`'s niche in a non-null pointer CBMC can fold, rather than in
+/// padding it fills with nondeterministic bytes.
+struct CheckedPackageFields {
     types: TypeEnvironment,
     functions: Vec<FunctionDeclaration>,
     limits: CheckingLimits,
@@ -682,7 +688,10 @@ impl Drop for DepthGuard<'_> {
 
 impl CheckedPackage {
     fn function(&self, name: &str) -> Option<&FunctionDeclaration> {
-        self.functions.iter().find(|function| function.name == name)
+        self.0
+            .functions
+            .iter()
+            .find(|function| function.name == name)
     }
 
     /// This package's own identity: a monotonic id stamped once at
@@ -691,7 +700,7 @@ impl CheckedPackage {
     /// [`CheckedPackage::id`]'s and [`CheckedExpression`]'s own documentation
     /// for why this is not derived from the package's address.
     fn identity(&self) -> usize {
-        self.id
+        self.0.id
     }
 
     /// Claim one more level of this package's shared re-entrant call depth,
@@ -705,13 +714,13 @@ impl CheckedPackage {
     /// rather than `Result<_, Stop>`, whose niche sits in `Stop`'s own tag
     /// where CBMC cannot fold it back (IR-286).
     fn enter(&self) -> Option<DepthGuard<'_>> {
-        let own_depth = self.depth.get();
-        if own_depth >= self.limits.depth() {
+        let own_depth = self.0.depth.get();
+        if own_depth >= self.0.limits.depth() {
             return None;
         }
-        self.depth.set(own_depth.saturating_add(1));
+        self.0.depth.set(own_depth.saturating_add(1));
         Some(DepthGuard {
-            depth: &self.depth,
+            depth: &self.0.depth,
             own_depth,
         })
     }
@@ -729,11 +738,11 @@ impl CheckedPackage {
             cause,
         };
         for (_, value_type) in &parameters {
-            if let Err(IllTyped { cause }) = self.types.check_type(value_type) {
+            if let Err(IllTyped { cause }) = self.0.types.check_type(value_type) {
                 return Err(refuse(CheckCause::IllTyped(cause)));
             }
         }
-        if let Err(IllTyped { cause }) = self.types.check_type(&result) {
+        if let Err(IllTyped { cause }) = self.0.types.check_type(&result) {
             return Err(refuse(CheckCause::IllTyped(cause)));
         }
         Ok(CheckedExpression {
