@@ -126,7 +126,7 @@ name and order; and no operator here decides anything the authority does not.
   to 52. `ScalarLimitsV1` is unchanged; composite and collection construction bill
   `value_occurrences`, `work_units` and `result_units` only, exactly as FR-006's charge-before-work
   and high-water/cumulative rules already require.
-- The expression machine and total pure functions (`Expression`, `FunctionDeclaration`,
+- The expression machine and total pure functions (`FunctionDeclaration`,
   `PackageDeclarations::check`, `CheckedPackage::{check_expression, call, evaluate}`,
   `CheckingLimits`, `CheckRefusal`, `Evaluation`), and object environments and attribute dereference
   (`ObjectEnvironment`, `ObjectEnvironmentCause`, `ObjectEnvironmentRefusal`), are outside this

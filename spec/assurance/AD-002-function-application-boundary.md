@@ -19,7 +19,7 @@ FR-273 extends the `exact` feature's boundary to include `quire_contract_runtime
 as the call surface for total pure functions: a port of the quire-spec-language authority's own type,
 carrying its name and order, the shape FR-006 through FR-008 already establish for scalar, composite,
 collection and equality operators. The runtime is no second semantic authority for function bodies:
-`PackageDeclarations::check` proves purity, termination and definedness once, statically, and
+the authority's `PackageDeclarations::check` proves purity, termination and definedness once, statically, and
 `CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`.
 
 ## Views
