@@ -331,3 +331,119 @@ fn ir286_diag3_plan_call_checked() {
     let arguments = alloc::vec![Value::Integer(Integer::from(5i64))];
     assert!(crate::exact::plan_call(&checked, "f", &arguments, &objects).is_ok());
 }
+
+/// `function()`'s lookup alone, reached through the public
+/// `ieee_requirements` accessor.
+#[kani::proof]
+fn ir286_diag4_function_lookup() {
+    let checked = checked_add_one();
+    assert!(checked.ieee_requirements("f").is_some());
+}
+
+/// The declared `Int[0,9]` read back out of a *checked* package, `admits`.
+#[kani::proof]
+fn ir286_diag4_checked_declaration_admits() {
+    let checked = checked_add_one();
+    let value = Value::Integer(Integer::from(5i64));
+    assert!(checked.kani_parameter_type(0, 0).admits(&value));
+}
+
+/// Control: the same read from the *unchecked* package.
+#[kani::proof]
+fn ir286_diag4_unchecked_declaration_admits() {
+    let package = add_one_package();
+    let value = Value::Integer(Integer::from(5i64));
+    assert!(package.functions[0].parameters[0].1.admits(&value));
+}
+
+/// `Int[0,9].admits(5)` with everything on the stack.
+#[kani::proof]
+fn ir286_diag4_stack_admits() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    let declared = ValueType::Int(domain);
+    let value = Value::Integer(Integer::from(5i64));
+    assert!(declared.admits(&value));
+}
+
+/// `IntegerInterval::contains` with everything on the stack.
+#[kani::proof]
+fn ir286_diag4_stack_contains() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    assert!(domain.contains(&Integer::from(5i64)));
+}
+
+/// Stack interval; the value read out of `Value::Integer`.
+#[kani::proof]
+fn ir286_diag4_value_side_contains() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    let value = Value::Integer(Integer::from(5i64));
+    let Value::Integer(integer) = &value else {
+        panic!("not an integer");
+    };
+    assert!(domain.contains(integer));
+}
+
+/// Interval read out of `ValueType::Int`; stack value.
+#[kani::proof]
+fn ir286_diag4_type_side_contains() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    let declared = ValueType::Int(domain);
+    let ValueType::Int(interval) = &declared else {
+        panic!("not Int");
+    };
+    assert!(interval.contains(&Integer::from(5i64)));
+}
+
+#[allow(dead_code)]
+#[repr(u8)]
+enum W1 {
+    A(bool),
+    B(i64),
+}
+
+/// One enum level around a bare `i64`.
+#[kani::proof]
+fn ir286_diag4_w1_i64_in_enum() {
+    let w = W1::B(5);
+    let W1::B(x) = &w else { panic!("not B") };
+    assert!(*x >= 0 && *x <= 9);
+}
+
+#[allow(dead_code)]
+#[repr(u8)]
+enum W2 {
+    A(bool),
+    B(Integer),
+}
+
+/// One enum level around an `Integer` (itself an enum).
+#[kani::proof]
+fn ir286_diag4_w2_integer_in_enum() {
+    let w = W2::B(Integer::from(5i64));
+    let W2::B(x) = &w else { panic!("not B") };
+    assert!(*x >= Integer::zero() && *x <= Integer::from(9i64));
+}
+
+#[allow(dead_code)]
+struct S3 {
+    small: i64,
+    big: Option<Box<num_bigint::BigInt>>,
+}
+
+#[allow(dead_code)]
+#[repr(u8)]
+enum W3 {
+    A(bool),
+    B(S3),
+}
+
+/// One enum level around a struct `{ i64, Option<Box<BigInt>> }`.
+#[kani::proof]
+fn ir286_diag4_w3_struct_integer_in_enum() {
+    let w = W3::B(S3 {
+        small: 5,
+        big: None,
+    });
+    let W3::B(x) = &w else { panic!("not B") };
+    assert!(x.big.is_none() && x.small >= 0 && x.small <= 9);
+}
