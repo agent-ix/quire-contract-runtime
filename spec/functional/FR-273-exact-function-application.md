@@ -18,8 +18,9 @@ relationships:
 
 When the `exact` feature is enabled, the runtime shall apply a checked package's named function, and
 evaluate a checked standalone expression, through `quire_contract_runtime::exact::CheckedPackage::call`
-and `CheckedPackage::evaluate` against a package a prior `PackageDeclarations::check` (`CheckMode::Linked`)
-has proved pure, total and definedness-safe on every reachable path, with outcomes, refusals and
+and `CheckedPackage::evaluate` against a package this crate's `PackageDeclarations::check` (`CheckMode::Linked`) admitted, a
+package whose functions the authority's `PackageDeclarations::check` proved pure, total and
+definedness-safe on every reachable path, with outcomes, refusals and
 charges equal to the pinned quire-specification authority (`7d7943a`, FR-146) on every shared-corpus
 vector, and equal to the quire-spec-language authority (`ea39f91`) that carries it. As with FR-006
 through FR-008, the runtime is an implementation of that definition, not a second semantic authority:
@@ -55,11 +56,15 @@ calls the ported surface.
 
 - Purity, termination (by the function's `decreases` measure) and every definedness obligation on
   every reachable path are proved once, statically, by the authority's own
-  `PackageDeclarations::check` in quire-spec-language, before any package is callable and before
-  any charge. That proof lives outside this crate and outside its own Kani proof surface (AD-002,
-  Risks): this crate depends on it rather than reproducing it. `call` and `evaluate` never re-derive
-  these proofs and never accept a package this crate's own `PackageDeclarations::check` refused:
-  there is no approximate or unchecked application path.
+  `PackageDeclarations::check` in quire-spec-language. That proof lives outside this crate and
+  outside its own Kani proof surface (AD-002, Risks): this crate depends on it rather than
+  reproducing it. It is a precondition on the producer and code generator: the runtime trusts its
+  producer to admit only bodies the authority proved. This crate's own `PackageDeclarations::check`
+  enforces only: every declared parameter and result type is well typed in the package's type
+  environment, function names are unique, each function's `measure_discharged` flag is set, and
+  `CheckMode::Kernel` is refused. Nothing links a runtime `CheckedPackage` to an authority proof,
+  and a body is arbitrary host Rust. `call` and `evaluate` never re-derive these proofs and never
+  accept a package this crate's `PackageDeclarations::check` refused.
   `CheckMode::Kernel` (typing only, no definedness proof) stays out of scope, as it does for every
   earlier exact requirement.
 - Application is total, never short-circuiting: every supplied argument is validated — its value kind
@@ -73,7 +78,12 @@ calls the ported surface.
   (`ChargePoint::FunctionCall`, `"function.call"`); this requirement is the first to charge it during
   a live call rather than carrying it unexercised. `call` charges one `function.call` for the called
   function's own body; `evaluate` runs a standalone `CheckedExpression` root, so it charges
-  `function.call` once for each application the expression itself reaches.
+  `function.call` once for each `Frame::call` the root makes; the runtime counts only `Frame::call`
+  invocations, so the code generator must lower every source-level application in an expression
+  to a `Frame::call` (a code-generator obligation, like the proof precondition above).
+- `evaluate` on an expression checked against a different package returns
+  `Ok(Evaluation { outcome: Refused(CheckedInvariant), .. })` before any charge, and
+  `check_expression` checks parameter and result types only.
 - A function whose declared operator requirements no registered backend can discharge settles
   `unsupported` with a warning naming the required capability. FR-009's negotiators decide that
   disposition over the function's declared requirements, before any application and with no `Meter`
@@ -86,7 +96,7 @@ calls the ported surface.
 - Unbounded host recursion through a checked package is silent stack corruption on the governed
   `thumbv7em-none-eabi` target: re-entry into a checked package through `CheckedPackage::call`,
   `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own
-`CheckingLimits::depth`, not an authority checker limit (at most
+  `CheckingLimits::depth`, not an authority checker limit (at most
   `MAX_CALL_DEPTH`), by one budget shared across all three entry paths, and exceeding it refuses as
   `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal: a
   host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still
@@ -98,14 +108,13 @@ calls the ported surface.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-273-AC-1 | `CheckedPackage::call` and `CheckedPackage::evaluate` are called only against a package `PackageDeclarations::check` admitted under `CheckMode::Linked`; a package `check` rejects is never applied. | Test (TC-194) |
+| FR-273-AC-1 | `CheckedPackage::call` and `CheckedPackage::evaluate` are called only against a package `PackageDeclarations::check` admitted under `CheckMode::Linked`; a package this crate's `PackageDeclarations::check` rejects is never applied. | Test (TC-194) |
 | FR-273-AC-2 | Declared arity is decided before any per-argument check, each argument's value kind and carried references are validated in parameter order, and all of that precedes the `function.call` charge, which itself precedes the function's body on every `call`. | Test (TC-194) |
 | FR-273-AC-3 | Arity, value-kind and dangling-reference input mismatches, and an unknown function name, each refuse as the matching `InputRefusal` variant before any charge; no `Meter` observes a refused call. | Test (TC-194) |
 | FR-273-AC-4 | A function whose declared operator requirements no registered backend can discharge negotiates `unsupported`, naming the required capability, before any application; the disposition is never an `Outcome` variant, never an `InputRefusal`, and takes no `Meter`. | Test (TC-195) |
 | FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language `ea39f91` authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
-| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own
-`CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
+| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own `CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
 
 ## Dependencies
 

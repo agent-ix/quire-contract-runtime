@@ -34,8 +34,10 @@ agent-ix/quire-contract-runtime#34.
    arity is decided before any per-argument check.
 7. Evaluate `CheckedPackage::evaluate` on a standalone `CheckedExpression` and check it shares
    `call`'s argument validation and `InputRefusal` set; check that an expression root that reaches
-   no application charges no `function.call`, and that an expression reaching two applications
-   charges exactly two, each before its own function's body.
+   no `Frame::call` charges no `function.call`, and that an expression root making two `Frame::call`
+   invocations charges exactly two, each before its own function's body. Check `evaluate` on an
+   expression checked against another package returns `Ok(Evaluation)` with
+   `Refused(CheckedInvariant)`.
 8. For a shared-corpus function-application vector, check the outcome, refusal and charge sequence
    against the quire-spec-language `ea39f91` authority.
 9. Inspect this requirement's corpus for `CheckMode::Kernel`: check that every applied package is
@@ -55,8 +57,7 @@ Every call against a package `check` admitted is either a well-formed `Evaluatio
 `InputRefusal` decided before any charge; arity is decided first and arguments are then validated in
 parameter order; the `function.call` charge precedes the function's body on every accepted call;
 `evaluate` agrees with `call` on argument validation and refuses identically, and charges
-`function.call` once per application the expression itself reaches and none for a root that reaches
-none; no applied package is checked only under `CheckMode::Kernel`; and re-entry beyond a checked
+`function.call` once per `Frame::call` the root makes and none for a root that makes none; no applied package is checked only under `CheckMode::Kernel`; and re-entry beyond a checked
 package's configured `CheckingLimits::depth`, through `Frame::call` or through a direct, bypassing
 re-entry into `CheckedPackage::call`/`evaluate`, refuses `Refusal::CheckedInvariant` before any charge
 against one budget shared by all three entry paths.
