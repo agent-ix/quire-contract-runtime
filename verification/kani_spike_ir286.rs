@@ -226,9 +226,8 @@ fn ir286_diag_parameters_drop() {
 /// Only a `Body` (`Box<dyn Fn>`), built and dropped.
 #[kani::proof]
 fn ir286_diag_body_drop() {
-    let body: crate::exact::Body = Box::new(|_frame, _arguments| {
-        Outcome::Refused(Refusal::CheckedInvariant)
-    });
+    let body: crate::exact::Body =
+        Box::new(|_frame, _arguments| Outcome::Refused(Refusal::CheckedInvariant));
     core::mem::drop(body);
 }
 
