@@ -70,6 +70,13 @@ pub mod verdict;
 #[path = "../verification/kani.rs"]
 mod kani_proofs;
 
+// IR-286 spike: kept separate from `kani_proofs` so
+// `scripts/check_kani_harnesses.py`'s declared census (which reads only
+// `verification/kani.rs`) is untouched. Not part of `make kani`.
+#[cfg(kani)]
+#[path = "../verification/kani_spike_ir286.rs"]
+mod kani_spike_ir286;
+
 #[cfg(feature = "snapshot-json")]
 pub use accounting::{
     decode_campaign_snapshot, encode_campaign_snapshot, DecodedCampaignSnapshot, SnapshotError,
