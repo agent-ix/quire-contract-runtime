@@ -422,3 +422,134 @@ fn ir286_diag_m8_small_box_drop() {
 fn ir286_diag_value_type_size() {
     assert!(core::mem::size_of::<ValueType>() <= 64);
 }
+
+#[allow(dead_code)]
+struct D1 {
+    name: alloc::string::String,
+    body: Box<dyn Fn(u8) -> u8>,
+}
+
+/// Control: a named `Box<dyn Fn>` looked up by name in a heap `Vec`, called
+/// from inside another `Box<dyn Fn>` of a different signature.
+#[kani::proof]
+fn ir286_diag_control_dyn_lookup_call() {
+    let table: Vec<D1> = alloc::vec![D1 {
+        name: "f".to_string(),
+        body: Box::new(|x| x.wrapping_add(1)),
+    }];
+    let root: Box<dyn Fn(&[D1], u8) -> u8> = Box::new(|table, x| {
+        match table.iter().find(|entry| entry.name == "f") {
+            Some(entry) => (entry.body)(x),
+            None => 0,
+        }
+    });
+    let x: u8 = kani::any();
+    kani::assume(x < 10);
+    assert!(root(&table, x) == x + 1);
+}
+
+#[allow(dead_code)]
+struct D2 {
+    name: alloc::string::String,
+    body: Box<dyn Fn(&[u8]) -> u8>,
+}
+
+/// Control: as above, but the root and the looked-up body share one
+/// signature, as `Body` and the root expression do.
+#[kani::proof]
+fn ir286_diag_control_dyn_same_signature() {
+    let table: Vec<D2> = alloc::vec![D2 {
+        name: "f".to_string(),
+        body: Box::new(|args| args[0].wrapping_add(1)),
+    }];
+    let table_ref = &table;
+    let root: Box<dyn Fn(&[u8]) -> u8 + '_> = Box::new(move |args| {
+        match table_ref.iter().find(|entry| entry.name == "f") {
+            Some(entry) => (entry.body)(args),
+            None => 0,
+        }
+    });
+    let x: u8 = kani::any();
+    kani::assume(x < 10);
+    assert!(root(&[x]) == x + 1);
+}
+
+/// The real add-one path with a concrete `x = 5`: isolates whether the
+/// symbolic argument's path split is what defeats dispatch resolution.
+#[kani::proof]
+fn ir286_diag_add_one_concrete() {
+    let checked = add_one_package()
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .expect("add_one_package checks under CheckMode::Linked");
+    let expression = call_f_through_frame(&checked);
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![Value::Integer(Integer::from(5i64))],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    let Outcome::Completed(Value::Integer(ref result)) = evaluation.outcome else {
+        panic!("f(5) did not complete with an Integer");
+    };
+    assert!(*result == Integer::from(6i64));
+}
+
+/// Check, then `check_expression`, then drop: no evaluation.
+#[kani::proof]
+fn ir286_diag_check_expression_drop() {
+    let checked = add_one_package()
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .expect("checks");
+    let expression = call_f_through_frame(&checked);
+    core::mem::drop(expression);
+}
+
+/// `CheckedPackage::call("f", [5])` directly: one dyn dispatch, no root.
+#[kani::proof]
+fn ir286_diag_direct_call_concrete() {
+    let checked = add_one_package()
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .expect("checks");
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .call(
+            "f",
+            alloc::vec![Value::Integer(Integer::from(5i64))],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
+}
+
+/// `evaluate` with a root that returns its argument, never calling `f`.
+#[kani::proof]
+fn ir286_diag_evaluate_identity_root() {
+    let checked = add_one_package()
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .expect("checks");
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    let expression = checked
+        .check_expression(
+            alloc::vec![("x".to_string(), ValueType::Int(domain))],
+            ValueType::Integer,
+            Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+        )
+        .expect("checks");
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![Value::Integer(Integer::from(5i64))],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
+}
