@@ -180,3 +180,246 @@ fn ir286_package_check_and_drop_only() {
         .check(CheckMode::Linked, CheckingLimits::default())
         .expect("add_one_package checks under CheckMode::Linked");
 }
+
+// ---- Spike 2 bisection diagnostics (IR-286 follow-up). Each isolates one
+// ingredient of `ir286_package_check_and_drop_only`, so the report can
+// attribute cost to a representation rather than to the whole path.
+
+/// Only an empty `TypeEnvironment`, built and dropped.
+#[kani::proof]
+fn ir286_diag_type_environment_default_drop() {
+    let environment = crate::exact::TypeEnvironment::default();
+    core::mem::drop(environment);
+}
+
+/// Only one concrete `Integer` (a `BigInt`), built and dropped.
+#[kani::proof]
+fn ir286_diag_integer_from_drop() {
+    let value = Integer::from(9i64);
+    core::mem::drop(value);
+}
+
+/// Only `IntegerInterval::new(0, 9)`: two `Integer`s and one comparison.
+#[kani::proof]
+fn ir286_diag_interval_new() {
+    let interval = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64));
+    assert!(interval.is_ok());
+}
+
+/// `add_one_package()` built and dropped, never checked.
+#[kani::proof]
+fn ir286_diag_package_build_drop() {
+    let package = add_one_package();
+    core::mem::drop(package);
+}
+
+/// Only the parameter list: `vec![("x", Int[0,9])]`, built and dropped.
+#[kani::proof]
+fn ir286_diag_parameters_drop() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64))
+        .expect("0..=9 is a nonempty interval");
+    let parameters: Vec<(alloc::string::String, ValueType)> =
+        alloc::vec![("x".to_string(), ValueType::Int(domain))];
+    core::mem::drop(parameters);
+}
+
+/// Only a `Body` (`Box<dyn Fn>`), built and dropped.
+#[kani::proof]
+fn ir286_diag_body_drop() {
+    let body: crate::exact::Body = Box::new(|_frame, _arguments| {
+        Outcome::Refused(Refusal::CheckedInvariant)
+    });
+    core::mem::drop(body);
+}
+
+/// `ValueType::Int(0..=9)` on the stack, dropped.
+#[kani::proof]
+fn ir286_diag_value_type_int_stack_drop() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64))
+        .expect("0..=9 is a nonempty interval");
+    core::mem::drop(ValueType::Int(domain));
+}
+
+/// `vec![ValueType::Integer]`, dropped: a heap slot, no BigInt payload.
+#[kani::proof]
+fn ir286_diag_value_type_unit_vec_drop() {
+    let types: Vec<ValueType> = alloc::vec![ValueType::Integer];
+    core::mem::drop(types);
+}
+
+/// `vec![ValueType::Int(0..=9)]`, dropped: a heap slot with a BigInt payload.
+#[kani::proof]
+fn ir286_diag_value_type_int_vec_drop() {
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64))
+        .expect("0..=9 is a nonempty interval");
+    let types: Vec<ValueType> = alloc::vec![ValueType::Int(domain)];
+    core::mem::drop(types);
+}
+
+/// Control: a local two-variant recursive enum in a `Vec`, dropped.
+#[allow(dead_code)]
+enum Recursive {
+    Leaf,
+    Node(Box<Recursive>),
+}
+
+#[kani::proof]
+fn ir286_diag_control_recursive_vec_drop() {
+    let values: Vec<Recursive> = alloc::vec![Recursive::Leaf];
+    core::mem::drop(values);
+}
+
+/// `ValueType::Integer` pushed into a `Vec::with_capacity(1)`, dropped.
+#[kani::proof]
+fn ir286_diag_value_type_unit_push_drop() {
+    let mut types: Vec<ValueType> = Vec::with_capacity(1);
+    types.push(ValueType::Integer);
+    core::mem::drop(types);
+}
+
+/// `ValueType::Integer` in a `Box`, dropped.
+#[kani::proof]
+fn ir286_diag_value_type_unit_box_drop() {
+    let boxed: Box<ValueType> = Box::new(ValueType::Integer);
+    core::mem::drop(boxed);
+}
+
+#[allow(dead_code)]
+enum M1 {
+    Leaf,
+    Coll(Box<C1>),
+}
+#[allow(dead_code)]
+struct C1 {
+    element: M1,
+    bound: u64,
+}
+#[kani::proof]
+fn ir286_diag_m1_struct_recursion_box_drop() {
+    core::mem::drop(Box::new(M1::Leaf));
+}
+
+#[allow(dead_code)]
+enum M2 {
+    Leaf,
+    Big(Integer),
+    Coll(Box<C2>),
+}
+#[allow(dead_code)]
+struct C2 {
+    element: M2,
+    bound: u64,
+}
+#[kani::proof]
+fn ir286_diag_m2_bigint_variant_box_drop() {
+    core::mem::drop(Box::new(M2::Leaf));
+}
+
+#[allow(dead_code)]
+enum M3 {
+    Leaf,
+    Big(Integer),
+    Opt(Box<M3>),
+    Coll(Box<C3>),
+}
+#[allow(dead_code)]
+struct C3 {
+    element: M3,
+    bound: u64,
+}
+#[kani::proof]
+fn ir286_diag_m3_two_recursions_box_drop() {
+    core::mem::drop(Box::new(M3::Leaf));
+}
+
+#[allow(dead_code)]
+#[repr(u8)]
+enum M4 {
+    Leaf,
+    Big(Integer),
+    Coll(Box<C4>),
+}
+#[allow(dead_code)]
+struct C4 {
+    element: M4,
+    bound: u64,
+}
+#[kani::proof]
+fn ir286_diag_m4_repr_u8_box_drop() {
+    core::mem::drop(Box::new(M4::Leaf));
+}
+
+#[allow(dead_code)]
+enum M5 {
+    Leaf,
+    Big(Vec<u64>),
+    Coll(Box<C5>),
+}
+#[allow(dead_code)]
+struct C5 {
+    element: M5,
+    bound: u64,
+}
+#[kani::proof]
+fn ir286_diag_m5_vec_variant_box_drop() {
+    core::mem::drop(Box::new(M5::Leaf));
+}
+
+#[allow(dead_code)]
+enum M6 {
+    Leaf,
+    Big(Integer),
+    Coll(Box<C6>),
+}
+#[allow(dead_code)]
+struct C6 {
+    element: M6,
+    bound: u64,
+}
+/// Same shape as M2, but the value lives on the stack.
+#[kani::proof]
+fn ir286_diag_m6_bigint_variant_stack_drop() {
+    core::mem::drop(M6::Leaf);
+}
+
+#[allow(dead_code)]
+#[repr(u8)]
+enum M7 {
+    Leaf,
+    Big([u64; 10]),
+    Coll(Box<C7>),
+}
+#[allow(dead_code)]
+struct C7 {
+    element: M7,
+    bound: u64,
+}
+/// 88-byte repr(u8) recursive enum on the heap.
+#[kani::proof]
+fn ir286_diag_m7_large_box_drop() {
+    core::mem::drop(Box::new(M7::Leaf));
+}
+
+#[allow(dead_code)]
+#[repr(u8)]
+enum M8 {
+    Leaf,
+    Big([u64; 6]),
+    Coll(Box<C8>),
+}
+#[allow(dead_code)]
+struct C8 {
+    element: M8,
+    bound: u64,
+}
+/// 56-byte repr(u8) recursive enum on the heap.
+#[kani::proof]
+fn ir286_diag_m8_small_box_drop() {
+    core::mem::drop(Box::new(M8::Leaf));
+}
+
+/// Prints nothing; only here so `size_of::<ValueType>()` is checkable.
+#[kani::proof]
+fn ir286_diag_value_type_size() {
+    assert!(core::mem::size_of::<ValueType>() <= 64);
+}
