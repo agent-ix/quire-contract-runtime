@@ -425,6 +425,7 @@ fn ir286_diag4_w2_integer_in_enum() {
 }
 
 #[allow(dead_code)]
+#[derive(Clone)]
 struct S3 {
     small: i64,
     big: Option<Box<num_bigint::BigInt>>,
@@ -446,4 +447,210 @@ fn ir286_diag4_w3_struct_integer_in_enum() {
     });
     let W3::B(x) = &w else { panic!("not B") };
     assert!(x.big.is_none() && x.small >= 0 && x.small <= 9);
+}
+
+// ---- Spike 5 diagnostics: struct `Integer` read back from the heap.
+
+/// `Integer` inside a `Value` inside a heap `Vec<Value>`, compared.
+#[kani::proof]
+fn ir286_diag5_vec_value_integer_cmp() {
+    let values = alloc::vec![Value::Integer(Integer::from(5i64))];
+    let Value::Integer(integer) = &values[0] else {
+        panic!("not an integer");
+    };
+    assert!(Integer::zero() <= *integer);
+}
+
+/// `Integer` in a heap `Vec<Integer>`, compared.
+#[kani::proof]
+fn ir286_diag5_vec_integer_cmp() {
+    let values = alloc::vec![Integer::from(5i64)];
+    assert!(Integer::zero() <= values[0]);
+}
+
+/// `Integer` in a `Box<Value>`, compared.
+#[kani::proof]
+fn ir286_diag5_box_value_integer_cmp() {
+    let value = Box::new(Value::Integer(Integer::from(5i64)));
+    let Value::Integer(integer) = &*value else {
+        panic!("not an integer");
+    };
+    assert!(Integer::zero() <= *integer);
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+struct S4 {
+    small: i64,
+    big: num_bigint::BigInt,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+#[repr(u8)]
+enum W4 {
+    A(bool),
+    B(S4),
+    C(Box<i128>),
+}
+
+/// Model: `{ i64, BigInt }` in a tagged enum in a `Box`, read, cloned, dropped.
+#[kani::proof]
+fn ir286_diag5_w4_box_struct_bigint() {
+    let w = Box::new(W4::B(S4 {
+        small: 5,
+        big: num_bigint::BigInt::ZERO,
+    }));
+    let copy = (*w).clone();
+    let W4::B(x) = &copy else { panic!("not B") };
+    assert!(x.big.sign() == num_bigint::Sign::NoSign && x.small >= 0 && x.small <= 9);
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+#[repr(u8)]
+enum W5 {
+    A(bool),
+    B(S3),
+    C(Box<i128>),
+}
+
+/// Control: `{ i64, Option<Box<BigInt>> }` in the same shape (expected unfolded).
+#[kani::proof]
+fn ir286_diag5_w5_box_struct_option_box() {
+    let w = Box::new(W5::B(S3 {
+        small: 5,
+        big: None,
+    }));
+    let W5::B(x) = &*w else { panic!("not B") };
+    assert!(x.big.is_none() && x.small >= 0 && x.small <= 9);
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+struct S6 {
+    small: i64,
+    big: Vec<num_bigint::BigInt>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+#[repr(u8)]
+enum W6 {
+    A(bool),
+    B(S6),
+    C(Box<i128>),
+}
+
+/// Model: `{ i64, Vec<BigInt> }` (empty when small) in a tagged enum in a
+/// `Box`: read, cloned, dropped.
+#[kani::proof]
+fn ir286_diag5_w6_box_struct_vec() {
+    let w = Box::new(W6::B(S6 {
+        small: 5,
+        big: Vec::new(),
+    }));
+    let copy = (*w).clone();
+    let W6::B(x) = &copy else { panic!("not B") };
+    assert!(x.big.is_empty() && x.small >= 0 && x.small <= 9);
+}
+
+/// Matrix: `Box<W1>`, read the `i64`.
+#[kani::proof]
+fn ir286_diag5_t1_box_w1() {
+    let w = Box::new(W1::B(5));
+    let W1::B(x) = &*w else { panic!("not B") };
+    assert!(*x >= 0 && *x <= 9);
+}
+
+/// Matrix: `Box<W5>`, read `small` only.
+#[kani::proof]
+fn ir286_diag5_t2_box_w5_small() {
+    let w = Box::new(W5::B(S3 {
+        small: 5,
+        big: None,
+    }));
+    let W5::B(x) = &*w else { panic!("not B") };
+    assert!(x.small >= 0 && x.small <= 9);
+}
+
+/// Matrix: `Box<W6>`, read `is_empty` only.
+#[kani::proof]
+fn ir286_diag5_t3_box_w6_is_empty() {
+    let w = Box::new(W6::B(S6 {
+        small: 5,
+        big: Vec::new(),
+    }));
+    let W6::B(x) = &*w else { panic!("not B") };
+    assert!(x.big.is_empty());
+}
+
+/// Matrix: `Box<S6>` (no enum), cloned.
+#[kani::proof]
+fn ir286_diag5_t4_box_s6_clone() {
+    let w = Box::new(S6 {
+        small: 5,
+        big: Vec::new(),
+    });
+    let copy = (*w).clone();
+    assert!(copy.big.is_empty());
+}
+
+/// Matrix: `Box<S3>` (no enum), `is_none`.
+#[kani::proof]
+fn ir286_diag5_t5_box_s3_is_none() {
+    let w = Box::new(S3 {
+        small: 5,
+        big: None,
+    });
+    assert!(w.big.is_none());
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum W9 {
+    A(bool),
+    B(i64),
+}
+
+/// Matrix: `Box<W9>` (u64 tag: payload at the union's offset 0, and `B`
+/// covers the whole union), read the `i64`.
+#[kani::proof]
+fn ir286_diag5_t6_box_w9_u64_tag() {
+    let w = Box::new(W9::B(5));
+    let W9::B(x) = &*w else { panic!("not B") };
+    assert!(*x >= 0 && *x <= 9);
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum W10 {
+    A(bool),
+    B(i64),
+    C(i64, i64),
+}
+
+/// Matrix: `Box<W10>` (u64 tag; `B` does not cover the union), read the `i64`.
+#[kani::proof]
+fn ir286_diag5_t7_box_w10_partial_cover() {
+    let w = Box::new(W10::B(5));
+    let W10::B(x) = &*w else { panic!("not B") };
+    assert!(*x >= 0 && *x <= 9);
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum W11 {
+    A(bool),
+    B(Integer),
+    C(Box<i128>),
+    D(u8, u64),
+}
+
+/// Matrix: `Integer` covering a `u64`-tagged union, in a heap `Vec`, compared.
+#[kani::proof]
+fn ir286_diag5_t8_vec_w11_integer() {
+    let values = alloc::vec![W11::B(Integer::from(5i64))];
+    let W11::B(x) = &values[0] else { panic!("not B") };
+    assert!(Integer::zero() <= *x);
 }
