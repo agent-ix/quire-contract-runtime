@@ -975,3 +975,59 @@ fn ir286_diag3_lv3_numeric_inline_wrap() {
     assert!(matches!(value, Lv3::Boolean(true)));
     core::mem::forget(value);
 }
+
+/// An `Evaluation` built directly, matched, dropped.
+#[kani::proof]
+fn ir286_diag3_evaluation_drop() {
+    let evaluation = crate::exact::Evaluation {
+        outcome: Outcome::Completed(Value::Boolean(true)),
+        location: None,
+        losses: Vec::new(),
+    };
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+}
+
+/// Constant-root `evaluate`, result forgotten rather than dropped.
+#[kani::proof]
+fn ir286_diag3_evaluate_constant_forget() {
+    let checked = checked_add_one();
+    let expression = checked
+        .check_expression(
+            Vec::new(),
+            ValueType::Boolean,
+            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        )
+        .expect("checks");
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(&expression, Vec::new(), &objects, &mut meter)
+        .expect("admitted");
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+    core::mem::forget(evaluation);
+}
+
+#[inline(never)]
+fn evaluation_ok() -> Result<crate::exact::Evaluation, crate::exact::InputRefusal> {
+    Ok(crate::exact::Evaluation {
+        outcome: Outcome::Completed(Value::Boolean(true)),
+        location: None,
+        losses: Vec::new(),
+    })
+}
+
+/// `Result<Evaluation, InputRefusal>` unwrapped with `expect`, then dropped.
+#[kani::proof]
+fn ir286_diag3_evaluation_result_expect_drop() {
+    let evaluation = evaluation_ok().expect("ok");
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Completed(Value::Boolean(true))
+    ));
+}

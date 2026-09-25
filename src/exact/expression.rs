@@ -701,14 +701,16 @@ impl CheckedPackage {
     /// [`Refusal::CheckedInvariant`] at [`CheckingLimits::depth`] before any
     /// charge: `check` admits no recursion without a discharged termination
     /// measure, so reaching the bound means a checked-program invariant was
-    /// violated.
-    fn enter(&self) -> Result<DepthGuard<'_>, Stop> {
+    /// violated. `None` is that refusal: an `Option` (a null-pointer niche)
+    /// rather than `Result<_, Stop>`, whose niche sits in `Stop`'s own tag
+    /// where CBMC cannot fold it back (IR-286).
+    fn enter(&self) -> Option<DepthGuard<'_>> {
         let own_depth = self.depth.get();
         if own_depth >= self.limits.depth() {
-            return Err(Stop::Refused(Refusal::CheckedInvariant));
+            return None;
         }
         self.depth.set(own_depth.saturating_add(1));
-        Ok(DepthGuard {
+        Some(DepthGuard {
             depth: &self.depth,
             own_depth,
         })
@@ -771,9 +773,8 @@ impl CheckedPackage {
         objects: &ObjectEnvironment,
         meter: &mut Meter,
     ) -> Outcome<Value> {
-        let guard = match self.enter() {
-            Ok(guard) => guard,
-            Err(stop) => return Outcome::from_stop(Err(stop)),
+        let Some(guard) = self.enter() else {
+            return Outcome::Refused(Refusal::CheckedInvariant);
         };
         if let Err(stop) = charge_call(meter) {
             return Outcome::from_stop(Err(stop));
@@ -828,9 +829,8 @@ impl CheckedPackage {
         objects: &ObjectEnvironment,
         meter: &mut Meter,
     ) -> Outcome<Value> {
-        let guard = match self.enter() {
-            Ok(guard) => guard,
-            Err(stop) => return Outcome::from_stop(Err(stop)),
+        let Some(guard) = self.enter() else {
+            return Outcome::Refused(Refusal::CheckedInvariant);
         };
         let cell = RefCell::new(meter);
         let frame = Frame {
@@ -896,9 +896,8 @@ impl<'a> Frame<'a> {
     /// shared [`Meter`] is already mutably borrowed by an enclosing call on
     /// the same re-entrant chain.
     pub fn call(&self, function: &str, arguments: &[Value]) -> Outcome<Value> {
-        let guard = match self.package.enter() {
-            Ok(guard) => guard,
-            Err(stop) => return Outcome::from_stop(Err(stop)),
+        let Some(guard) = self.package.enter() else {
+            return Outcome::Refused(Refusal::CheckedInvariant);
         };
         let Some(declaration) = self.package.function(function) else {
             return Outcome::Refused(Refusal::CheckedInvariant);
