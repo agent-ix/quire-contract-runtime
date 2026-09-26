@@ -7,6 +7,7 @@
 //! [`BoundedInteger`] or refuses.
 
 use alloc::borrow::Cow;
+use alloc::boxed::Box;
 use core::cmp::Ordering;
 use core::fmt;
 use core::num::NonZeroU32;
@@ -18,43 +19,69 @@ use num_traits::{One, Signed, Zero};
 
 /// An exact, arbitrary-precision mathematical integer.
 ///
-/// Held inline as an `i64` whenever it fits and promoted to a `BigInt` only
-/// when it does not: the representation is canonical, so equality, hashing
-/// and ordering are those of the mathematical value, and no operation here
-/// narrows, wraps or saturates. An inline value keeps the common case free
-/// of the digit vector whose data-dependent length CBMC cannot bound.
+/// Held inline as an `i64` whenever it fits and promoted to a boxed `BigInt`
+/// only when it does not: the representation is canonical (`big` is `Some`
+/// exactly when the value does not fit, and `small` is then zero), so
+/// equality, hashing and ordering are those of the mathematical value, and no
+/// operation here narrows, wraps or saturates. A plain struct, not an enum:
+/// CBMC cannot fold a union nested in the union of an enclosing `Value` or
+/// `ValueType`, but it folds a struct field there.
 #[derive(Clone, Eq, Hash, PartialEq)]
-pub struct Integer(Repr);
+pub struct Integer {
+    small: i64,
+    big: Option<Box<BigInt>>,
+}
 
-/// Canonical: `Big` never holds a value that fits in `i64`. An explicit tag
-/// rather than a niche in `BigInt`'s capacity, so CBMC can fold it when read
-/// back from the heap.
-#[derive(Clone, Eq, Hash, PartialEq)]
-#[repr(u8)]
-enum Repr {
-    Small(i64),
-    Big(BigInt),
+/// A borrowed view of an [`Integer`]'s canonical form, built on the stack.
+#[derive(Clone, Copy)]
+enum Repr<'a> {
+    Small(&'a i64),
+    Big(&'a BigInt),
+}
+
+impl Integer {
+    fn small(value: i64) -> Self {
+        Self {
+            small: value,
+            big: None,
+        }
+    }
+
+    /// `value` must not fit in `i64` (the canonical form's invariant).
+    fn big(value: BigInt) -> Self {
+        Self {
+            small: 0,
+            big: Some(Box::new(value)),
+        }
+    }
+
+    fn repr(&self) -> Repr<'_> {
+        match &self.big {
+            None => Repr::Small(&self.small),
+            Some(big) => Repr::Big(big),
+        }
+    }
 }
 
 impl Integer {
     /// The integer zero.
     pub fn zero() -> Self {
-        Self(Repr::Small(0))
+        Self::small(0)
     }
 
     /// The integer one.
     pub fn one() -> Self {
-        Self(Repr::Small(1))
+        Self::small(1)
     }
 
     /// Whether this integer is zero.
     pub fn is_zero(&self) -> bool {
-        matches!(self.0, Repr::Small(0))
+        self.big.is_none() && self.small == 0
     }
 
     /// Whether this integer is strictly negative.
     pub fn is_negative(&self) -> bool {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => *value < 0,
             Repr::Big(value) => value.is_negative(),
         }
@@ -63,7 +90,7 @@ impl Integer {
     /// `bits(x)` from `quire.value.accounting/v1`: the magnitude bit length,
     /// where zero has length one.
     pub fn magnitude_bits(&self) -> u64 {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => u64::from(
                 value
                     .unsigned_abs()
@@ -104,7 +131,7 @@ impl Integer {
 
     /// The value as a `u64`, if it is one.
     pub fn to_u64(&self) -> Option<u64> {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => u64::try_from(*value).ok(),
             Repr::Big(value) => u64::try_from(value).ok(),
         }
@@ -112,9 +139,9 @@ impl Integer {
 
     /// The magnitude `|self|`.
     pub(crate) fn abs(&self) -> Self {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => match value.checked_abs() {
-                Some(magnitude) => Self(Repr::Small(magnitude)),
+                Some(magnitude) => Self::small(magnitude),
                 None => Self::from_big(BigInt::from(*value).abs()),
             },
             Repr::Big(value) => Self::from_big(value.abs()),
@@ -150,43 +177,43 @@ impl Integer {
 
     /// Whether this integer is even.
     pub fn is_even(&self) -> bool {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => value % 2 == 0,
             Repr::Big(value) => value.is_even(),
         }
     }
 
     pub(crate) fn add(&self, other: &Self) -> Self {
-        if let (Repr::Small(left), Repr::Small(right)) = (&self.0, &other.0) {
+        if let (Repr::Small(left), Repr::Small(right)) = (self.repr(), other.repr()) {
             if let Some(sum) = left.checked_add(*right) {
-                return Self(Repr::Small(sum));
+                return Self::small(sum);
             }
         }
         Self::from_big(&*self.as_big() + &*other.as_big())
     }
 
     pub(crate) fn sub(&self, other: &Self) -> Self {
-        if let (Repr::Small(left), Repr::Small(right)) = (&self.0, &other.0) {
+        if let (Repr::Small(left), Repr::Small(right)) = (self.repr(), other.repr()) {
             if let Some(difference) = left.checked_sub(*right) {
-                return Self(Repr::Small(difference));
+                return Self::small(difference);
             }
         }
         Self::from_big(&*self.as_big() - &*other.as_big())
     }
 
     pub(crate) fn mul(&self, other: &Self) -> Self {
-        if let (Repr::Small(left), Repr::Small(right)) = (&self.0, &other.0) {
+        if let (Repr::Small(left), Repr::Small(right)) = (self.repr(), other.repr()) {
             if let Some(product) = left.checked_mul(*right) {
-                return Self(Repr::Small(product));
+                return Self::small(product);
             }
         }
         Self::from_big(&*self.as_big() * &*other.as_big())
     }
 
     pub(crate) fn neg(&self) -> Self {
-        if let Repr::Small(value) = &self.0 {
+        if let Repr::Small(value) = self.repr() {
             if let Some(negated) = value.checked_neg() {
-                return Self(Repr::Small(negated));
+                return Self::small(negated);
             }
         }
         Self::from_big(-&*self.as_big())
@@ -402,15 +429,15 @@ fn bracket(
 
 impl From<i64> for Integer {
     fn from(value: i64) -> Self {
-        Self(Repr::Small(value))
+        Self::small(value)
     }
 }
 
 impl From<i128> for Integer {
     fn from(value: i128) -> Self {
         match i64::try_from(value) {
-            Ok(small) => Self(Repr::Small(small)),
-            Err(_) => Self(Repr::Big(BigInt::from(value))),
+            Ok(small) => Self::small(small),
+            Err(_) => Self::big(BigInt::from(value)),
         }
     }
 }
@@ -418,8 +445,8 @@ impl From<i128> for Integer {
 impl From<u64> for Integer {
     fn from(value: u64) -> Self {
         match i64::try_from(value) {
-            Ok(small) => Self(Repr::Small(small)),
-            Err(_) => Self(Repr::Big(BigInt::from(value))),
+            Ok(small) => Self::small(small),
+            Err(_) => Self::big(BigInt::from(value)),
         }
     }
 }
@@ -432,7 +459,7 @@ impl Default for Integer {
 
 impl Ord for Integer {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (&self.0, &other.0) {
+        match (self.repr(), other.repr()) {
             (Repr::Small(left), Repr::Small(right)) => left.cmp(right),
             _ => self.as_big().cmp(&other.as_big()),
         }
@@ -458,7 +485,7 @@ impl fmt::Debug for Integer {
 
 impl fmt::Display for Integer {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => fmt::Display::fmt(value, formatter),
             Repr::Big(value) => fmt::Display::fmt(value, formatter),
         }
@@ -618,14 +645,14 @@ impl Integer {
     /// `i64` (the representation's canonical form).
     pub(crate) fn from_big(value: BigInt) -> Self {
         match i64::try_from(&value) {
-            Ok(small) => Self(Repr::Small(small)),
-            Err(_) => Self(Repr::Big(value)),
+            Ok(small) => Self::small(small),
+            Err(_) => Self::big(value),
         }
     }
 
     /// The arbitrary-precision integer, borrowed when already promoted.
     pub(crate) fn as_big(&self) -> Cow<'_, BigInt> {
-        match &self.0 {
+        match self.repr() {
             Repr::Small(value) => Cow::Owned(BigInt::from(*value)),
             Repr::Big(value) => Cow::Borrowed(value),
         }
