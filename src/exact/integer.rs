@@ -39,6 +39,14 @@ enum Repr<'a> {
     Big(&'a BigInt),
 }
 
+/// `bits(|value|)` for an unpromoted `i64`, zero having length one.
+fn small_magnitude_bits(value: i64) -> u32 {
+    value
+        .unsigned_abs()
+        .checked_ilog2()
+        .map_or(1, |log| log.saturating_add(1))
+}
+
 impl Integer {
     fn small(value: i64) -> Self {
         Self {
@@ -96,12 +104,7 @@ impl Integer {
     /// where zero has length one.
     pub fn magnitude_bits(&self) -> u64 {
         match self.repr() {
-            Repr::Small(value) => u64::from(
-                value
-                    .unsigned_abs()
-                    .checked_ilog2()
-                    .map_or(1, |log| log.saturating_add(1)),
-            ),
+            Repr::Small(value) => u64::from(small_magnitude_bits(*value)),
             Repr::Big(value) => value.bits().max(1),
         }
     }
@@ -111,12 +114,7 @@ impl Integer {
     /// (CBMC cannot prove that test's promoting branch unreachable).
     pub(crate) fn magnitude_bits_integer(&self) -> Self {
         match self.repr() {
-            Repr::Small(value) => Self::small(i64::from(
-                value
-                    .unsigned_abs()
-                    .checked_ilog2()
-                    .map_or(1, |log| log.saturating_add(1)),
-            )),
+            Repr::Small(value) => Self::small(i64::from(small_magnitude_bits(*value))),
             Repr::Big(value) => Self::from(value.bits().max(1)),
         }
     }
