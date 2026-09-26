@@ -200,7 +200,7 @@ kani-census:
 
 .PHONY: kani
 kani: kani-census
-	$(PYTHON) scripts/run_kani_gate.py
+	bash -c 'ulimit -s unlimited && $(PYTHON) scripts/run_kani_gate.py'
 
 .PHONY: kani-mutations
 kani-mutations:
