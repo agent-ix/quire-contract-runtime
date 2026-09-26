@@ -55,19 +55,6 @@ impl Integer {
         }
     }
 
-    /// `value` must not fit in `i64` (the canonical form's invariant).
-    fn big(value: BigInt) -> Self {
-        debug_assert!(
-            i64::try_from(&value).is_err(),
-            "Integer::big called with a value that fits in i64; every other \
-             method assumes big is Some only when the value does not fit"
-        );
-        Self {
-            small: 0,
-            big: Some(Box::new(value)),
-        }
-    }
-
     fn repr(&self) -> Repr<'_> {
         match &self.big {
             None => Repr::Small(&self.small),
@@ -452,7 +439,7 @@ impl From<i128> for Integer {
     fn from(value: i128) -> Self {
         match i64::try_from(value) {
             Ok(small) => Self::small(small),
-            Err(_) => Self::big(big_from_i128(value)),
+            Err(_) => Self::from_big(big_from_i128(value)),
         }
     }
 }
@@ -472,7 +459,7 @@ impl From<u64> for Integer {
     fn from(value: u64) -> Self {
         match i64::try_from(value) {
             Ok(small) => Self::small(small),
-            Err(_) => Self::big(BigInt::from(value)),
+            Err(_) => Self::from_big(BigInt::from(value)),
         }
     }
 }
@@ -685,11 +672,17 @@ impl IntegerDomain {
 
 impl Integer {
     /// Wrap an arbitrary-precision integer, held inline when it fits in
-    /// `i64` (the representation's canonical form).
+    /// `i64` (the representation's canonical form). The only place `big`
+    /// is ever set to `Some`, so the canonical invariant (`big` is `Some`
+    /// only when the value does not fit in `i64`) cannot be broken by a
+    /// caller skipping a check: there is no other constructor to skip it in.
     pub(crate) fn from_big(value: BigInt) -> Self {
         match i64::try_from(&value) {
             Ok(small) => Self::small(small),
-            Err(_) => Self::big(value),
+            Err(_) => Self {
+                small: 0,
+                big: Some(Box::new(value)),
+            },
         }
     }
 

@@ -38,9 +38,10 @@ use super::text::{Text, TextType};
 
 /// Fails to compile when `CONDITION` is `false`: only `ConstAssert<true>` has
 /// an associated `HOLDS` item, so instantiating this with a `false` condition
-/// is a missing-associated-item error at compile time. `assert!` and `panic!`
-/// are excluded from this module's exact sources, so a layout check needs a
-/// way to fail the build that uses neither.
+/// is a missing-associated-item error at compile time. Rust's own assertion
+/// and panicking macros are excluded from this module's exact sources, so a
+/// layout check needs a way to fail the build without reaching for either
+/// family.
 struct ConstAssert<const CONDITION: bool>;
 
 impl ConstAssert<true> {
