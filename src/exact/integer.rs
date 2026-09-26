@@ -698,3 +698,7 @@ impl Integer {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "../exact_integer_tests.rs"]
+mod tests;
