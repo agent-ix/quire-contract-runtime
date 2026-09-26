@@ -40,6 +40,11 @@ use super::text::{Text, TextType};
 /// they are equal, collection bounds included.
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
+// An explicit tag rather than a niche encoding: CBMC cannot constant-fold a
+// niche-encoded discriminant read back from the heap, so a `ValueType` in a
+// `Vec` or `Box` sends Kani down this type's recursive drop glue without
+// bound. Layout only; no behaviour depends on it.
+#[repr(u8)]
 pub enum ValueType {
     /// `Boolean`.
     Boolean,
