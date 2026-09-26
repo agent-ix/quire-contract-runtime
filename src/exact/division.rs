@@ -197,6 +197,9 @@ impl IntegerDivisionBounds {
 /// The consumer of one integer-division item at I13 negotiation.
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
+// Six inline `Integer`s: boxing `Finite` would change the public variant's
+// payload type for a declaration-time value that is never hot.
+#[allow(clippy::large_enum_variant)]
 pub enum IntegerDivisionConsumer {
     /// Unbounded mathematical integers; no bound is needed.
     Mathematical,
