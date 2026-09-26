@@ -13,7 +13,7 @@ use core::fmt;
 use core::num::NonZeroU32;
 use core::str::FromStr;
 
-use num_bigint::{BigInt, BigUint};
+use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer as _;
 use num_traits::{One, Signed, Zero};
 
@@ -101,6 +101,21 @@ impl Integer {
         }
     }
 
+    /// [`Integer::magnitude_bits`] as an `Integer`. An unpromoted value has at
+    /// most 64 bits, so its length is built unpromoted without a range test
+    /// (CBMC cannot prove that test's promoting branch unreachable).
+    pub(crate) fn magnitude_bits_integer(&self) -> Self {
+        match self.repr() {
+            Repr::Small(value) => Self::small(i64::from(
+                value
+                    .unsigned_abs()
+                    .checked_ilog2()
+                    .map_or(1, |log| log.saturating_add(1)),
+            )),
+            Repr::Big(value) => Self::from(value.bits().max(1)),
+        }
+    }
+
     /// `digits(x)` from `quire.value.accounting/v1`: the base-ten magnitude
     /// digit count, where zero has one digit.
     ///
@@ -183,38 +198,35 @@ impl Integer {
         }
     }
 
+    // The `+`, `-` or `*` of two `i64` operands (and `-` of one) always fits
+    // in `i128`, so the `wrapping_*` forms below never wrap and are exact, and
+    // the small path never reaches `BigInt` arithmetic (CBMC cannot bound
+    // `BigInt`'s digit loops on the overflow branch it cannot prove
+    // unreachable).
     pub(crate) fn add(&self, other: &Self) -> Self {
         if let (Repr::Small(left), Repr::Small(right)) = (self.repr(), other.repr()) {
-            if let Some(sum) = left.checked_add(*right) {
-                return Self::small(sum);
-            }
+            return Self::from(i128::from(*left).wrapping_add(i128::from(*right)));
         }
         Self::from_big(&*self.as_big() + &*other.as_big())
     }
 
     pub(crate) fn sub(&self, other: &Self) -> Self {
         if let (Repr::Small(left), Repr::Small(right)) = (self.repr(), other.repr()) {
-            if let Some(difference) = left.checked_sub(*right) {
-                return Self::small(difference);
-            }
+            return Self::from(i128::from(*left).wrapping_sub(i128::from(*right)));
         }
         Self::from_big(&*self.as_big() - &*other.as_big())
     }
 
     pub(crate) fn mul(&self, other: &Self) -> Self {
         if let (Repr::Small(left), Repr::Small(right)) = (self.repr(), other.repr()) {
-            if let Some(product) = left.checked_mul(*right) {
-                return Self::small(product);
-            }
+            return Self::from(i128::from(*left).wrapping_mul(i128::from(*right)));
         }
         Self::from_big(&*self.as_big() * &*other.as_big())
     }
 
     pub(crate) fn neg(&self) -> Self {
         if let Repr::Small(value) = self.repr() {
-            if let Some(negated) = value.checked_neg() {
-                return Self::small(negated);
-            }
+            return Self::from(i128::from(*value).wrapping_neg());
         }
         Self::from_big(-&*self.as_big())
     }
@@ -437,9 +449,20 @@ impl From<i128> for Integer {
     fn from(value: i128) -> Self {
         match i64::try_from(value) {
             Ok(small) => Self::small(small),
-            Err(_) => Self::big(BigInt::from(value)),
+            Err(_) => Self::big(big_from_i128(value)),
         }
     }
+}
+
+/// `BigInt::from(value)` over four fixed 32-bit digits:
+/// `BigUint::from(u128)` loops while the remaining value is nonzero, and CBMC
+/// cannot bound that loop for a symbolic `value` on a promoting branch it
+/// cannot prove unreachable.
+fn big_from_i128(value: i128) -> BigInt {
+    let magnitude = value.unsigned_abs();
+    let digits = [0_u32, 32, 64, 96].map(|shift| (magnitude >> shift) as u32);
+    let sign = if value < 0 { Sign::Minus } else { Sign::Plus };
+    BigInt::from_biguint(sign, BigUint::from_slice(&digits))
 }
 
 impl From<u64> for Integer {
@@ -459,9 +482,26 @@ impl Default for Integer {
 
 impl Ord for Integer {
     fn cmp(&self, other: &Self) -> Ordering {
+        // The form is canonical, so a promoted value lies outside `i64` and its
+        // sign alone orders it against an unpromoted one: no digit comparison
+        // is needed.
         match (self.repr(), other.repr()) {
             (Repr::Small(left), Repr::Small(right)) => left.cmp(right),
-            _ => self.as_big().cmp(&other.as_big()),
+            (Repr::Small(_), Repr::Big(right)) => {
+                if right.is_negative() {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            }
+            (Repr::Big(left), Repr::Small(_)) => {
+                if left.is_negative() {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            }
+            (Repr::Big(left), Repr::Big(right)) => left.cmp(right),
         }
     }
 }

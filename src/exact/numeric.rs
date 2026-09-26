@@ -161,7 +161,7 @@ fn order(
 
 /// `bits(n)` as an unbounded amount.
 fn bits(value: &Integer) -> Integer {
-    Integer::from(value.magnitude_bits())
+    value.magnitude_bits_integer()
 }
 
 /// The `integer_bits` amount of `ordering.arithmetic` for integers.
