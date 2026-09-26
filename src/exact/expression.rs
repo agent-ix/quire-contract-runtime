@@ -687,13 +687,6 @@ impl Drop for DepthGuard<'_> {
 }
 
 impl CheckedPackage {
-    /// Diagnostic read of a checked declaration's parameter type (IR-286
-    /// spike harnesses only; compiled only under Kani).
-    #[cfg(kani)]
-    pub(crate) fn kani_parameter_type(&self, function: usize, parameter: usize) -> &ValueType {
-        &self.0.functions[function].parameters[parameter].1
-    }
-
     fn function(&self, name: &str) -> Option<&FunctionDeclaration> {
         self.0
             .functions

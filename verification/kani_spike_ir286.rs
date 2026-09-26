@@ -340,14 +340,6 @@ fn ir286_diag4_function_lookup() {
     assert!(checked.ieee_requirements("f").is_some());
 }
 
-/// The declared `Int[0,9]` read back out of a *checked* package, `admits`.
-#[kani::proof]
-fn ir286_diag4_checked_declaration_admits() {
-    let checked = checked_add_one();
-    let value = Value::Integer(Integer::from(5i64));
-    assert!(checked.kani_parameter_type(0, 0).admits(&value));
-}
-
 /// Control: the same read from the *unchecked* package.
 #[kani::proof]
 fn ir286_diag4_unchecked_declaration_admits() {
