@@ -958,3 +958,48 @@ fn ir286_diag7_m5_concrete_control() {
     };
     assert!(*x == Integer::from(5i64));
 }
+
+// ---- Spike 8: does a symbolic `Completed`/`Refused` merge in an
+// `Outcome<Value>` alone defeat the result read?
+
+#[inline(never)]
+fn add_one_or_refuse(x: i64) -> Outcome<Value> {
+    match x.checked_add(1) {
+        Some(sum) => Outcome::Completed(Value::Integer(Integer::from(sum))),
+        None => Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain)),
+    }
+}
+
+/// Model: `Outcome<Value>` chosen on a symbolic overflow condition, matched
+/// without `expect`, result checked, then dropped.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag8_m6_outcome_merge() {
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    let outcome = add_one_or_refuse(x);
+    match outcome {
+        Outcome::Completed(Value::Integer(ref result)) => {
+            assert!(*result >= Integer::one() && *result <= Integer::from(10i64));
+        }
+        Outcome::Completed(_) => panic!("not an integer"),
+        _ => panic!("refused"),
+    }
+}
+
+/// Model: the same, mutated (`result <= 9` is false for `x = 9`): must give
+/// a counterexample.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag8_m7_outcome_merge_mutated() {
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    let outcome = add_one_or_refuse(x);
+    match outcome {
+        Outcome::Completed(Value::Integer(ref result)) => {
+            assert!(*result <= Integer::from(9i64));
+        }
+        Outcome::Completed(_) => panic!("not an integer"),
+        _ => panic!("refused"),
+    }
+}
