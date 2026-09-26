@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! In-crate `Integer` representation tests for behaviour no public operator
-//! exercises directly: `abs` and the private big-form constructor are
-//! `pub(crate)`, reachable only from inside the crate.
+//! exercises directly: `abs` is `pub(crate)`, reachable only from inside the
+//! crate.
 
 use super::Integer;
 
