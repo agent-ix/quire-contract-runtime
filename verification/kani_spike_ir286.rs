@@ -1126,3 +1126,83 @@ fn ir286_diag9_m11_value_like_mutated() {
         _ => panic!("not a completed integer"),
     }
 }
+
+// ---- Spike 9 fix models. m10 (read then forget) proves and m11 (derived
+// drop, no `Rc` variants) proves, so the loss is `Value`'s drop walk on the
+// merged value: `Completed(Value)` and `Refused(Box<Refusal>)` both start at
+// offset 8, so the merged `Value` tag is `ite(c, Integer, <Box address>)`,
+// and the drop explores every container arm over garbage.
+
+/// `Refused`'s payload with a constant first word equal to `Value::Boolean`'s
+/// tag (0), so a merged `Value` tag can only be `Integer` or `Boolean`.
+#[allow(dead_code)]
+#[repr(C)]
+struct MarkedRefusal {
+    marker: u64,
+    refusal: Box<Refusal>,
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum OutcomeLike {
+    Completed(Value),
+    Refused(MarkedRefusal),
+}
+
+#[inline(never)]
+fn m12_marked(x: i64) -> OutcomeLike {
+    match x.checked_add(1) {
+        Some(sum) => OutcomeLike::Completed(Value::Integer(Integer::from(sum))),
+        None => OutcomeLike::Refused(MarkedRefusal {
+            marker: 0,
+            refusal: Box::new(Refusal::IntegerOutOfDomain),
+        }),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m12_marked_refusal() {
+    match m12_marked(symbolic_small()) {
+        OutcomeLike::Completed(Value::Integer(ref r)) => {
+            assert!(*r >= Integer::one() && *r <= Integer::from(10i64))
+        }
+        _ => panic!("not a completed integer"),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m12_marked_refusal_mutated() {
+    match m12_marked(symbolic_small()) {
+        OutcomeLike::Completed(Value::Integer(ref r)) => assert!(*r <= Integer::from(9i64)),
+        _ => panic!("not a completed integer"),
+    }
+}
+
+/// Control for m12: the same local enum with an unmarked `Box<Refusal>`.
+#[allow(dead_code)]
+#[repr(u64)]
+enum OutcomeLikeUnmarked {
+    Completed(Value),
+    Refused(Box<Refusal>),
+}
+
+#[inline(never)]
+fn m13_unmarked(x: i64) -> OutcomeLikeUnmarked {
+    match x.checked_add(1) {
+        Some(sum) => OutcomeLikeUnmarked::Completed(Value::Integer(Integer::from(sum))),
+        None => OutcomeLikeUnmarked::Refused(Box::new(Refusal::IntegerOutOfDomain)),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m13_unmarked_control() {
+    match m13_unmarked(symbolic_small()) {
+        OutcomeLikeUnmarked::Completed(Value::Integer(ref r)) => {
+            assert!(*r >= Integer::one() && *r <= Integer::from(10i64))
+        }
+        _ => panic!("not a completed integer"),
+    }
+}
