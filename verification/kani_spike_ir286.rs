@@ -1255,3 +1255,33 @@ fn ir286_diag9_m14_full_refusal_mutated() {
         _ => panic!("not a completed integer"),
     }
 }
+
+/// Control: a symbolic `Value::Integer`, no merge, read then dropped.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m15_value_no_merge_drop() {
+    let value = Value::Integer(Integer::from(symbolic_small() + 1));
+    let Value::Integer(ref r) = value else {
+        panic!("not an integer")
+    };
+    assert!(*r >= Integer::one() && *r <= Integer::from(10i64));
+}
+
+#[inline(never)]
+fn m16_value_merge(x: i64) -> Value {
+    match x.checked_add(1) {
+        Some(sum) => Value::Integer(Integer::from(sum)),
+        None => Value::Boolean(false),
+    }
+}
+
+/// A `Value` merged between `Integer` and `Boolean` (no `Outcome`), dropped.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m16_value_merge_drop() {
+    let value = m16_value_merge(symbolic_small());
+    let Value::Integer(ref r) = value else {
+        panic!("not an integer")
+    };
+    assert!(*r >= Integer::one() && *r <= Integer::from(10i64));
+}
