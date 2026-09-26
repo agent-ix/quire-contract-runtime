@@ -888,3 +888,62 @@ fn ir286_diag6_m2_unmerged() {
     };
     assert!(*x == Integer::from(5i64));
 }
+
+// ---- Spike 7: refusal layouts under a symbolic merge (models of diag6_m1).
+
+#[inline(never)]
+fn admitted_or_boxed(admitted: bool) -> Result<Outcome<Value>, Box<crate::exact::InputRefusal>> {
+    if !admitted {
+        return Err(Box::new(crate::exact::InputRefusal::WrongValueKind {
+            parameter: 0,
+        }));
+    }
+    Ok(Outcome::Completed(Value::Integer(Integer::from(5i64))))
+}
+
+/// Model: `Err` payload behind a `Box`.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag7_m3_boxed_refusal() {
+    let admitted: bool = kani::any();
+    let outcome = admitted_or_boxed(admitted).expect("admitted");
+    let Outcome::Completed(Value::Integer(ref x)) = outcome else {
+        panic!("not an integer");
+    };
+    assert!(*x == Integer::from(5i64));
+}
+
+/// One fixed, fully initialised shape for every refusal: no padding, no niche.
+#[allow(dead_code)]
+#[derive(Debug)]
+struct FixedRefusal {
+    kind: u64,
+    first: u64,
+    second: u64,
+    name: Option<Box<alloc::string::String>>,
+}
+
+#[inline(never)]
+fn admitted_or_fixed(admitted: bool) -> Result<Outcome<Value>, FixedRefusal> {
+    if !admitted {
+        return Err(FixedRefusal {
+            kind: 2,
+            first: 0,
+            second: 0,
+            name: None,
+        });
+    }
+    Ok(Outcome::Completed(Value::Integer(Integer::from(5i64))))
+}
+
+/// Model: one fixed shape for every refusal.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag7_m4_fixed_refusal() {
+    let admitted: bool = kani::any();
+    let outcome = admitted_or_fixed(admitted).expect("admitted");
+    let Outcome::Completed(Value::Integer(ref x)) = outcome else {
+        panic!("not an integer");
+    };
+    assert!(*x == Integer::from(5i64));
+}
