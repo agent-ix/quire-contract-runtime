@@ -947,3 +947,14 @@ fn ir286_diag7_m4_fixed_refusal() {
     };
     assert!(*x == Integer::from(5i64));
 }
+
+/// Control: `admitted_or_not(true)`, no symbolic branch at all.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag7_m5_concrete_control() {
+    let outcome = admitted_or_not(true).expect("admitted");
+    let Outcome::Completed(Value::Integer(ref x)) = outcome else {
+        panic!("not an integer");
+    };
+    assert!(*x == Integer::from(5i64));
+}
