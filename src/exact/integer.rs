@@ -49,6 +49,11 @@ impl Integer {
 
     /// `value` must not fit in `i64` (the canonical form's invariant).
     fn big(value: BigInt) -> Self {
+        debug_assert!(
+            i64::try_from(&value).is_err(),
+            "Integer::big called with a value that fits in i64; every other \
+             method assumes big is Some only when the value does not fit"
+        );
         Self {
             small: 0,
             big: Some(Box::new(value)),
