@@ -1003,3 +1003,126 @@ fn ir286_diag8_m7_outcome_merge_mutated() {
         _ => panic!("refused"),
     }
 }
+
+// ---- Spike 9: which part of the payload makes a symbolic Outcome merge
+// unreadable. Each pair: symbolic `x` in [0, 9], `Completed(x + 1)` or
+// `Refused` on overflow, a correct twin (`1 <= r <= 10`) and a mutated twin
+// (`r <= 9`, false at `x = 9`).
+
+fn symbolic_small() -> i64 {
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    x
+}
+
+#[inline(never)]
+fn m8_i64(x: i64) -> Outcome<i64> {
+    match x.checked_add(1) {
+        Some(sum) => Outcome::Completed(sum),
+        None => Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain)),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m8_i64() {
+    match m8_i64(symbolic_small()) {
+        Outcome::Completed(r) => assert!((1..=10).contains(&r)),
+        _ => panic!("refused"),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m8_i64_mutated() {
+    match m8_i64(symbolic_small()) {
+        Outcome::Completed(r) => assert!(r <= 9),
+        _ => panic!("refused"),
+    }
+}
+
+#[inline(never)]
+fn m9_integer(x: i64) -> Outcome<Integer> {
+    match x.checked_add(1) {
+        Some(sum) => Outcome::Completed(Integer::from(sum)),
+        None => Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain)),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m9_integer() {
+    match m9_integer(symbolic_small()) {
+        Outcome::Completed(ref r) => assert!(*r >= Integer::one() && *r <= Integer::from(10i64)),
+        _ => panic!("refused"),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m9_integer_mutated() {
+    match m9_integer(symbolic_small()) {
+        Outcome::Completed(ref r) => assert!(*r <= Integer::from(9i64)),
+        _ => panic!("refused"),
+    }
+}
+
+/// `Outcome<Value>` (the spike 8 model's function), read then forgotten.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m10_value_forget() {
+    let outcome = add_one_or_refuse(symbolic_small());
+    match &outcome {
+        Outcome::Completed(Value::Integer(r)) => {
+            assert!(*r >= Integer::one() && *r <= Integer::from(10i64))
+        }
+        _ => panic!("not a completed integer"),
+    }
+    core::mem::forget(outcome);
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m10_value_forget_mutated() {
+    let outcome = add_one_or_refuse(symbolic_small());
+    match &outcome {
+        Outcome::Completed(Value::Integer(r)) => assert!(*r <= Integer::from(9i64)),
+        _ => panic!("not a completed integer"),
+    }
+    core::mem::forget(outcome);
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum ValueLike {
+    Int(Integer),
+    Text(alloc::string::String),
+}
+
+#[inline(never)]
+fn m11_value_like(x: i64) -> Outcome<ValueLike> {
+    match x.checked_add(1) {
+        Some(sum) => Outcome::Completed(ValueLike::Int(Integer::from(sum))),
+        None => Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain)),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m11_value_like() {
+    match m11_value_like(symbolic_small()) {
+        Outcome::Completed(ValueLike::Int(ref r)) => {
+            assert!(*r >= Integer::one() && *r <= Integer::from(10i64))
+        }
+        _ => panic!("not a completed integer"),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m11_value_like_mutated() {
+    match m11_value_like(symbolic_small()) {
+        Outcome::Completed(ValueLike::Int(ref r)) => assert!(*r <= Integer::from(9i64)),
+        _ => panic!("not a completed integer"),
+    }
+}
