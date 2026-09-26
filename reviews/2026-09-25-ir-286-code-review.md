@@ -188,3 +188,12 @@ fewer checks fit the removal of the `debug_assert!`, which Kani compiled as asse
 
 **Verdict after round 2: APPROVE with non-blocking findings.** Every finding from the review pass and
 from round 1 is fixed. The two new findings are low.
+
+### Dispositions, round 3
+
+Disposition pass 2026-09-26 at `1b514c1aac5400d3f6b756672223906b14ef871e`.
+
+| FND | Outcome | sha/reason |
+|-----|---------|------------|
+| FND-012 | fixed | 667c016. `src/exact_integer_tests.rs`'s module doc no longer names a `pub(crate)` big-form constructor; it now describes the file's actual purpose (in-crate tests for `abs`, `pub(crate)`-only behaviour) |
+| FND-013 | fixed | 56e57fc. `ConstAssert` and its `HOLDS` associated constant each carry a targeted `#[allow(dead_code)]` with a one-line reason. `make msrv` prints no `dead_code` warnings |

@@ -112,3 +112,12 @@ Disposition pass 2026-09-26 at `272af361cd9f69076bf69b9c8db2b2ed91160a5f`.
 
 **Verdict after round 2: CONDITIONAL, low findings only.** FND-001, FND-002 and FND-004 are fixed.
 FND-003 stays deferred as pre-existing. FND-005 and FND-006 are low.
+
+### Dispositions, round 3
+
+Disposition pass 2026-09-26 at `1b514c1aac5400d3f6b756672223906b14ef871e`.
+
+| FND | Outcome | sha/reason |
+|-----|---------|------------|
+| FND-005 | fixed | 2f8ea3a. The source check now strips comment lines and bans any `Result<` type spelled in `evaluate_integer_arithmetic`'s body, not only the literal `Outcome::from_stop` call. The reviewer's `let staged: Result<Integer, Stop> = Ok(result); match staged { .. }` mutant now fails the test; reverting it passes again |
+| FND-006 | fixed | 2f8ea3a, ee0de40. The test is retagged `Trace: TC-036, FR-007-AC-14`, a new test case and acceptance criterion added to `spec/test/TC-036-integer-arithmetic-outcome-construction.md` and `spec/functional/FR-007-exact-scalar-families.md`. AD-002's Risks section now cites `tests/exact_arithmetic.rs` (the file the test actually lives in) and `TC-036`. `quire coverage --scope . --json` no longer lists the test under `untracked_symbols` |
