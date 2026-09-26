@@ -854,3 +854,37 @@ fn ir286_diag6_symbolic_direct_call() {
     };
     assert!(*result >= Integer::one() && *result <= Integer::from(10i64));
 }
+
+#[inline(never)]
+fn admitted_or_not(admitted: bool) -> Result<Outcome<Value>, crate::exact::InputRefusal> {
+    if !admitted {
+        return Err(crate::exact::InputRefusal::WrongValueKind { parameter: 0 });
+    }
+    Ok(Outcome::Completed(Value::Integer(Integer::from(5i64))))
+}
+
+/// Model: a `Result<Outcome<Value>, InputRefusal>` whose `Err` arm is taken
+/// on a symbolic condition, `expect`ed, then read and dropped.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag6_m1_merged_result_expect() {
+    let admitted: bool = kani::any();
+    let outcome = admitted_or_not(admitted).expect("admitted");
+    let Outcome::Completed(Value::Integer(ref x)) = outcome else {
+        panic!("not an integer");
+    };
+    assert!(*x == Integer::from(5i64));
+}
+
+/// Model: the same with the refusal decided before the call, so no merge.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag6_m2_unmerged() {
+    let admitted: bool = kani::any();
+    kani::assume(admitted);
+    let outcome = admitted_or_not(admitted).expect("admitted");
+    let Outcome::Completed(Value::Integer(ref x)) = outcome else {
+        panic!("not an integer");
+    };
+    assert!(*x == Integer::from(5i64));
+}
