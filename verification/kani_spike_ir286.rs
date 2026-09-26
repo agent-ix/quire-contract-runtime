@@ -1335,3 +1335,105 @@ fn ir286_frame_call_add_one_bounded_forget_mutated() {
     }
     core::mem::forget(evaluation);
 }
+
+// ---- Spike 10: derived drop glue on a Value-like enum, iterative teardown
+// inside each container's own `Drop`.
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum ValueM17 {
+    Boolean(bool),
+    Integer(Integer),
+    Option(alloc::rc::Rc<OptionM17>),
+    Composite(alloc::rc::Rc<CompositeM17>),
+    Collection(alloc::rc::Rc<CollectionM17>),
+}
+
+struct OptionM17 {
+    payload: Option<ValueM17>,
+}
+
+struct CompositeM17 {
+    slots: Vec<ValueM17>,
+}
+
+struct CollectionM17 {
+    elements: Vec<ValueM17>,
+}
+
+/// Moves `value`'s directly owned children onto `worklist` when `value` is
+/// the sole owner of its container (as `drain_children` does today).
+fn drain_m17(value: &mut ValueM17, worklist: &mut Vec<ValueM17>) {
+    match value {
+        ValueM17::Option(rc) => {
+            if let Some(inner) = alloc::rc::Rc::get_mut(rc) {
+                if let Some(payload) = inner.payload.take() {
+                    worklist.push(payload);
+                }
+            }
+        }
+        ValueM17::Composite(rc) => {
+            if let Some(inner) = alloc::rc::Rc::get_mut(rc) {
+                worklist.append(&mut inner.slots);
+            }
+        }
+        ValueM17::Collection(rc) => {
+            if let Some(inner) = alloc::rc::Rc::get_mut(rc) {
+                worklist.append(&mut inner.elements);
+            }
+        }
+        ValueM17::Boolean(_) | ValueM17::Integer(_) => {}
+    }
+}
+
+fn teardown_m17(mut worklist: Vec<ValueM17>) {
+    while let Some(mut next) = worklist.pop() {
+        drain_m17(&mut next, &mut worklist);
+    }
+}
+
+impl Drop for OptionM17 {
+    fn drop(&mut self) {
+        teardown_m17(self.payload.take().into_iter().collect());
+    }
+}
+
+impl Drop for CompositeM17 {
+    fn drop(&mut self) {
+        teardown_m17(core::mem::take(&mut self.slots));
+    }
+}
+
+impl Drop for CollectionM17 {
+    fn drop(&mut self) {
+        teardown_m17(core::mem::take(&mut self.elements));
+    }
+}
+
+#[inline(never)]
+fn m17_merge(x: i64) -> ValueM17 {
+    match x.checked_add(1) {
+        Some(sum) => ValueM17::Integer(Integer::from(sum)),
+        None => ValueM17::Boolean(false),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag10_m17_container_drop() {
+    let value = m17_merge(symbolic_small());
+    let ValueM17::Integer(ref r) = value else {
+        panic!("not an integer")
+    };
+    assert!(*r >= Integer::one() && *r <= Integer::from(10i64));
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag10_m17_container_drop_mutated() {
+    let value = m17_merge(symbolic_small());
+    let ValueM17::Integer(ref r) = value else {
+        panic!("not an integer")
+    };
+    assert!(*r <= Integer::from(9i64));
+}
