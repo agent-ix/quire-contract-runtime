@@ -656,3 +656,50 @@ fn ir286_diag5_t8_vec_w11_integer() {
     };
     assert!(Integer::zero() <= *x);
 }
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum W14 {
+    A(bool),
+    B(W11),
+    C(i64, i64, i64, i64, i64),
+}
+
+/// Matrix: a covering `u64`-tagged enum (`W11`) inside a `u64`-tagged enum
+/// it does not cover, on the stack; read the inner tag and payload.
+#[kani::proof]
+fn ir286_diag5_t9_stack_nested_partial() {
+    let w = W14::B(W11::B(Integer::from(5i64)));
+    let W14::B(W11::B(x)) = &w else {
+        panic!("not B")
+    };
+    assert!(Integer::zero() <= *x);
+}
+
+/// Matrix: `Outcome<Value>` holding `Value::Integer`, on the stack.
+#[kani::proof]
+fn ir286_diag5_t10_stack_outcome_value() {
+    let outcome = Outcome::Completed(Value::Integer(Integer::from(5i64)));
+    let Outcome::Completed(Value::Integer(x)) = &outcome else {
+        panic!("not an integer")
+    };
+    assert!(Integer::zero() <= *x);
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum W15 {
+    A(bool),
+    B(W11),
+}
+
+/// Matrix: a covering `u64`-tagged enum (`W11`) inside a `u64`-tagged enum it
+/// also covers, on the stack.
+#[kani::proof]
+fn ir286_diag5_t11_stack_nested_covering() {
+    let w = W15::B(W11::B(Integer::from(5i64)));
+    let W15::B(W11::B(x)) = &w else {
+        panic!("not B")
+    };
+    assert!(Integer::zero() <= *x);
+}
