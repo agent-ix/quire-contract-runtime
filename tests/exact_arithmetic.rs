@@ -1109,14 +1109,17 @@ fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
 
 /// `evaluate_integer_arithmetic` builds its `Outcome` directly rather than
 /// through an inner `Result<Integer, Stop>` round-trip -- a Kani-provability
-/// rule with no owning FR or NFR (see AD-002's Risks section). A regression
-/// back to a `Result`-returning helper wrapped in `Outcome::from_stop` would
-/// behave identically and compile cleanly, so this is a source check rather
-/// than a behavioural one.
+/// rule with no owning FR or NFR of its own (see AD-002's Risks section). No
+/// type signature distinguishes a direct build from an equivalent
+/// `Result`-round-trip rewrite that reaches the same `Outcome` values, so
+/// this is a source check rather than a behavioural one: it bans any
+/// `Result<` type spelled in the function's body, not only the literal
+/// `Outcome::from_stop` call, so a `Result` staged through a local binding
+/// and a `match` (rather than passed straight to `from_stop`) is caught too.
 ///
-/// Trace: AD-002
+/// Trace: TC-036, FR-007-AC-14
 #[test]
-fn tc_kani_layout_integer_arithmetic_builds_outcome_directly() {
+fn tc_036_integer_arithmetic_builds_outcome_directly() {
     let source = include_str!("../src/exact/numeric.rs");
     let start = source
         .find("pub fn evaluate_integer_arithmetic(")
@@ -1130,12 +1133,18 @@ fn tc_kani_layout_integer_arithmetic_builds_outcome_directly() {
         .expect("evaluate_integer_arithmetic has a closing brace")
         + "\n}".len();
     let function = &after_signature[..end];
+    let code: String = function
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(
-        !function.contains("Outcome::from_stop"),
-        "evaluate_integer_arithmetic wraps a Result in Outcome::from_stop again"
+        !code.contains("Result<"),
+        "evaluate_integer_arithmetic spells a Result<..> type again, whether \
+         staged through Outcome::from_stop or a local match"
     );
     assert!(
-        function.contains("Outcome::Completed(result)"),
+        code.contains("Outcome::Completed(result)"),
         "evaluate_integer_arithmetic no longer builds its Outcome directly"
     );
 }
