@@ -47,4 +47,7 @@ The termination and definedness proof burden for every applied function lives en
 depends on that upstream proof rather than reproducing it. The call surface is pinned to
 quire-spec-language by commit sha, so a later quire-spec-language release that changes
 `CheckedPackage`'s signature requires a coordinated re-pin and re-port, the same dependency FR-008
-already carries for composite, collection and equality evaluation.
+already carries for composite, collection and equality evaluation. `Value` and `ValueType`'s layout
+on this crate's own Kani proof surface (an explicit tag, and no inline payload wider than `Integer`
+or `IntegerInterval`) is guarded by compile-time assertions in `src/exact/composite.rs`, not by
+construction discipline alone.

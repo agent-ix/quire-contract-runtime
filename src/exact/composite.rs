@@ -76,6 +76,19 @@ pub enum ValueType {
     Reference(NodeKey),
 }
 
+// The Kani-provability layout this enum's tag and inline-payload comments
+// describe, checked at compile time rather than left to hold by
+// construction discipline alone: no inline payload wider than
+// `IntegerInterval`'s 32 bytes, and the whole enum at its measured size.
+const _: () = assert!(mem::size_of::<ValueType>() == 40);
+const _: () = assert!(mem::size_of::<RationalDomain>() <= mem::size_of::<IntegerInterval>());
+const _: () = assert!(mem::size_of::<DecimalType>() <= mem::size_of::<IntegerInterval>());
+const _: () = assert!(mem::size_of::<QuantityUnit>() <= mem::size_of::<IntegerInterval>());
+const _: () = assert!(mem::size_of::<TextType>() <= mem::size_of::<IntegerInterval>());
+const _: () = assert!(mem::size_of::<NodeKey>() <= mem::size_of::<IntegerInterval>());
+const _: () = assert!(mem::size_of::<Box<ValueType>>() <= mem::size_of::<IntegerInterval>());
+const _: () = assert!(mem::size_of::<Box<CollectionType>>() <= mem::size_of::<IntegerInterval>());
+
 impl ValueType {
     /// `K<element>[bound]`.
     pub fn collection(collection_type: CollectionType) -> Self {
@@ -174,6 +187,23 @@ pub enum Value {
     /// A terminal object reference.
     Reference(ObjectReference),
 }
+
+// The Kani-provability layout this enum's tag and inline-payload comments
+// describe, checked at compile time rather than left to hold by
+// construction discipline alone: no inline payload wider than `Integer`'s 16
+// bytes, and the whole enum at its measured size.
+const _: () = assert!(mem::size_of::<Value>() == 24);
+const _: () = assert!(mem::size_of::<Integer>() == 16);
+const _: () = assert!(mem::size_of::<Rational>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<Decimal>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<IeeeValue>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<Quantity>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<Text>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<EnumValue>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<Rc<OptionValue>>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<Rc<CompositeValue>>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<Rc<CollectionValue>>() <= mem::size_of::<Integer>());
+const _: () = assert!(mem::size_of::<ObjectReference>() <= mem::size_of::<Integer>());
 
 impl Value {
     /// `occ(v)` of `quire.value.accounting/v1`: one for the value itself plus
