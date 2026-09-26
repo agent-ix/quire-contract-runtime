@@ -51,3 +51,11 @@ already carries for composite, collection and equality evaluation. `Value` and `
 on this crate's own Kani proof surface (an explicit tag, and no inline payload wider than `Integer`
 or `IntegerInterval`) is guarded by compile-time assertions in `src/exact/composite.rs`, not by
 construction discipline alone.
+
+Two more representation rules on this crate's Kani proof surface have no owning FR or NFR of their
+own, same as the layout rules above: `CheckedPackage::enter` returns `Option<DepthGuard>` rather than
+`Result<DepthGuard, Stop>`, because `Stop`'s niche is where CBMC cannot fold a written discriminant
+back (`src/exact/expression.rs`); a signature check next to `enter` pins its exact return type.
+`evaluate_integer_arithmetic` builds its `Outcome<Integer>` directly rather than through an inner
+`Result<Integer, Stop>` round-trip, for the same reason (`src/exact/numeric.rs`); a source-inspection
+test (`tests/exact_outcomes.rs`) pins that its body never reintroduces one.

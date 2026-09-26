@@ -725,6 +725,16 @@ impl CheckedPackage {
         })
     }
 
+    // Pins enter's exact return type: this compiles only when it is
+    // Option<DepthGuard<'_>>, the shape CBMC folds, and not
+    // Result<DepthGuard<'_>, Stop>, whose niche it cannot fold back. Never
+    // called: it exists only for the compiler to check the signature, so
+    // dead_code is allowed deliberately rather than satisfied by a caller.
+    #[allow(dead_code)]
+    fn enter_signature_is_option(package: &Self) -> Option<DepthGuard<'_>> {
+        Self::enter(package)
+    }
+
     /// Check a standalone expression's parameters and result type against
     /// this package's [`TypeEnvironment`].
     pub fn check_expression(

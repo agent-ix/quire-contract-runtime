@@ -1106,3 +1106,36 @@ fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
         .is_some());
     assert!(!fresh.charge_log_truncated());
 }
+
+/// `evaluate_integer_arithmetic` builds its `Outcome` directly rather than
+/// through an inner `Result<Integer, Stop>` round-trip -- a Kani-provability
+/// rule with no owning FR or NFR (see AD-002's Risks section). A regression
+/// back to a `Result`-returning helper wrapped in `Outcome::from_stop` would
+/// behave identically and compile cleanly, so this is a source check rather
+/// than a behavioural one.
+///
+/// Trace: AD-002
+#[test]
+fn tc_kani_layout_integer_arithmetic_builds_outcome_directly() {
+    let source = include_str!("../src/exact/numeric.rs");
+    let start = source
+        .find("pub fn evaluate_integer_arithmetic(")
+        .expect("evaluate_integer_arithmetic exists in src/exact/numeric.rs");
+    let after_signature = &source[start..];
+    // The function's own closing brace is unindented; every brace inside its
+    // body (match arms, if-let blocks) is indented, so this is the first
+    // unindented one after the signature.
+    let end = after_signature
+        .find("\n}\n")
+        .expect("evaluate_integer_arithmetic has a closing brace")
+        + "\n}".len();
+    let function = &after_signature[..end];
+    assert!(
+        !function.contains("Outcome::from_stop"),
+        "evaluate_integer_arithmetic wraps a Result in Outcome::from_stop again"
+    );
+    assert!(
+        function.contains("Outcome::Completed(result)"),
+        "evaluate_integer_arithmetic no longer builds its Outcome directly"
+    );
+}
