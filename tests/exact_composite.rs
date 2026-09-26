@@ -652,7 +652,7 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
         next_charge: Integer::one(),
         charge_point: ChargePoint::CompositeResultRetain,
     };
-    assert_eq!(record, expected);
+    assert_eq!(record, Box::new(expected));
     assert_eq!(consumed(&meter), before);
 }
 

@@ -610,10 +610,13 @@ impl Meter {
         // in field order.
         charge.sizes.sort_by_key(|(kind, _)| kind.index());
         let mut sizes = Vec::with_capacity(charge.sizes.len());
-        for (kind, amount) in charge.sizes {
+        // By reference, not `into_iter` (IR-286): an early return from a
+        // consuming loop drops the iterator's remainder, whose length CBMC
+        // cannot bound.
+        for (kind, amount) in &charge.sizes {
             match amount.to_u64() {
-                Some(amount) if amount <= kind.limit(&self.limits) => sizes.push((kind, amount)),
-                _ => return Err(self.incomplete(kind, amount, point)),
+                Some(value) if value <= kind.limit(&self.limits) => sizes.push((*kind, value)),
+                _ => return Err(self.incomplete(*kind, amount.clone(), point)),
             }
         }
         let cumulative = |kind: LimitKind, amount: Integer| {

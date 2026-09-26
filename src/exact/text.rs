@@ -312,33 +312,50 @@ impl TextPayload {
 }
 
 /// A completed text value of one [`TextType`].
-#[derive(Clone, Debug)]
-pub struct Text {
+// Fields behind one `Box` (IR-286): `Value` carries this type inline, and
+// CBMC's cost for moving a `Value` through any enum grows with the combined
+// size of every inline variant payload.
+#[derive(Clone)]
+pub struct Text(Box<TextFields>);
+
+#[derive(Clone)]
+struct TextFields {
     text_type: TextType,
     payload: TextPayload,
     retained: Box<str>,
 }
 
+impl core::fmt::Debug for Text {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("Text")
+            .field("text_type", &self.0.text_type)
+            .field("payload", &self.0.payload)
+            .field("retained", &self.0.retained)
+            .finish()
+    }
+}
+
 impl Text {
     /// The declared type.
     pub fn text_type(&self) -> &TextType {
-        &self.text_type
+        &self.0.text_type
     }
 
     /// The original admitted payload and its provenance.
     pub fn payload(&self) -> &TextPayload {
-        &self.payload
+        &self.0.payload
     }
 
     /// The retained sequence: normalized under a normalizing profile, the
     /// payload otherwise.
     pub fn retained(&self) -> &str {
-        &self.retained
+        &self.0.retained
     }
 
     /// Profile length of the retained sequence.
     pub fn length(&self) -> u64 {
-        self.text_type.profile.length(&self.retained)
+        self.0.text_type.profile.length(&self.0.retained)
     }
 }
 
@@ -355,8 +372,8 @@ pub fn compare_text(
     right: &Text,
     meter: &mut Meter,
 ) -> Result<Outcome<bool>, IllTyped> {
-    let profile = left.text_type.profile;
-    if profile != right.text_type.profile {
+    let profile = left.0.text_type.profile;
+    if profile != right.0.text_type.profile {
         return Err(IllTyped {
             cause: IllTypedCause::DistinctTextProfiles,
         });
@@ -364,7 +381,7 @@ pub fn compare_text(
     Ok(Outcome::from_stop(compare(
         operator,
         profile,
-        [&left.payload, &right.payload],
+        [&left.0.payload, &right.0.payload],
         meter,
     )))
 }
@@ -372,11 +389,11 @@ pub fn compare_text(
 fn admit(payload: &TextPayload, text_type: &TextType, meter: &mut Meter) -> Result<Text, Stop> {
     let [retained] = prepare(text_type.profile, [payload], Some(text_type), meter)?;
     meter.charge(Charge::new(ChargePoint::TextResultRetain).results(1))?;
-    Ok(Text {
+    Ok(Text(Box::new(TextFields {
         text_type: *text_type,
         payload: payload.clone(),
         retained: retained.into(),
-    })
+    })))
 }
 
 fn compare(

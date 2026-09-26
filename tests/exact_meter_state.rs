@@ -90,7 +90,10 @@ fn tc_032_ac1_refused_result_retains_arithmetic_not_result_unit() {
         integer_bound(&domain),
         &mut meter,
     );
-    assert_eq!(outcome, Outcome::Refused(Refusal::IntegerOutOfDomain));
+    assert_eq!(
+        outcome,
+        Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain))
+    );
     assert_eq!(
         meter.admitted_charges(),
         [
@@ -207,14 +210,14 @@ fn tc_032_ac3_evaluate_boolean_retains_exactly_once() {
 fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
     let stops = [
         Outcome::Undefined(Undefined::DivisionByZero),
-        Outcome::Refused(Refusal::InexactDecimal),
-        Outcome::Incomplete(Incomplete {
+        Outcome::Refused(Box::new(Refusal::InexactDecimal)),
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::WorkUnits,
             limit: 0,
             consumed: 0,
             next_charge: int(1),
             charge_point: ChargePoint::BooleanResultRetain,
-        }),
+        })),
     ];
 
     // The right operand decides nothing: it is skipped entirely, and no stop it could have
@@ -308,13 +311,13 @@ fn tc_032_ac4_second_scanned_counter_short_writes_nothing() {
     // counter in field order.
     assert_eq!(
         outcome,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::DecimalDigits,
             limit: 5,
             consumed: 1,
             next_charge: int(6),
             charge_point: ChargePoint::OrderingArithmetic,
-        })
+        }))
     );
     assert_eq!(meter.admitted_charges(), [ChargePoint::OrderingOperands]);
     // The passing integer_bits amount (18) is never committed: the whole
@@ -343,13 +346,13 @@ fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     );
     assert_eq!(
         ascending,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 0,
             consumed: 0,
             next_charge: int(3),
             charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
+        }))
     );
 
     let unit = QuantityUnit::Compound(CompoundUnit::dimensionless());
@@ -362,13 +365,13 @@ fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     .unwrap();
     assert_eq!(
         reversed,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 0,
             consumed: 0,
             next_charge: int(3),
             charge_point: ChargePoint::UnitIdentityRead,
-        })
+        }))
     );
 }
 
@@ -383,10 +386,13 @@ fn tc_032_ac4_denied_charge_leaves_occurrence_counter_unchanged() {
             evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);
         assert!(matches!(
             outcome,
-            Outcome::Incomplete(Incomplete {
-                limit_kind: LimitKind::IntegerBits,
-                ..
-            })
+            Outcome::Incomplete(ref record) if matches!(
+                **record,
+                Incomplete {
+                    limit_kind: LimitKind::IntegerBits,
+                    ..
+                }
+            )
         ));
     }
     assert!(meter.admitted_charges().is_empty());
@@ -404,13 +410,13 @@ fn tc_032_ac4_denied_charge_leaves_occurrence_counter_unchanged() {
         evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);
     assert_eq!(
         outcome,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::WorkUnits,
             limit: 0,
             consumed: 0,
             next_charge: int(1),
             charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
+        }))
     );
 }
 
@@ -462,13 +468,13 @@ fn tc_032_ac5_limits_still_enforced_past_the_cap() {
     let last = evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter);
     assert_eq!(
         last,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::WorkUnits,
             limit: total_charges - 1,
             consumed: total_charges - 1,
             next_charge: int(1),
             charge_point: ChargePoint::IntegerArithmeticResultRetain,
-        })
+        }))
     );
     assert_eq!(meter.consumed(LimitKind::WorkUnits), total_charges - 1);
     assert_eq!(meter.admitted_charges().len(), CHARGE_LOG_CAPACITY);

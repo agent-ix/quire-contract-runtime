@@ -148,7 +148,7 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
 fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {
     use quire_contract_runtime::exact::{Outcome, Refusal};
 
-    let stop: Outcome<bool> = Outcome::Refused(Refusal::InexactDecimal);
+    let stop: Outcome<bool> = Outcome::Refused(Box::new(Refusal::InexactDecimal));
 
     // The right operand decides the result and stops: the stop returns unchanged.
     assert_eq!(and_short_circuit(true, || stop.clone()), stop);

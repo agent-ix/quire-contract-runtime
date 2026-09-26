@@ -6,6 +6,7 @@
 //! Every size amount is derived before the value it measures is retained; no
 //! power of ten is allocated to measure an aligned decimal coefficient.
 
+use alloc::boxed::Box;
 use core::cmp::Ordering;
 
 use super::accounting::{Charge, ChargePoint, Incomplete, LimitKind, Meter};
@@ -161,7 +162,7 @@ fn order(
 
 /// `bits(n)` as an unbounded amount.
 fn bits(value: &Integer) -> Integer {
-    Integer::from(value.magnitude_bits())
+    value.magnitude_bits_integer()
 }
 
 /// The `integer_bits` amount of `ordering.arithmetic` for integers.
@@ -239,14 +240,9 @@ pub fn evaluate_integer_arithmetic(
     bound: Option<&IntegerInterval>,
     meter: &mut Meter,
 ) -> Outcome<Integer> {
-    Outcome::from_stop(integer_arithmetic(operation, bound, meter))
-}
-
-fn integer_arithmetic(
-    operation: IntegerArithmetic<'_>,
-    bound: Option<&IntegerInterval>,
-    meter: &mut Meter,
-) -> Result<Integer, Stop> {
+    // Builds the `Outcome` directly rather than through `Result<Integer,
+    // Stop>` (IR-286): that `Result`'s discriminant is a niche inside `Stop`,
+    // and Kani writes `Ok` with nondet bytes over it, so CBMC cannot fold it.
     let (bits, count) = match operation {
         IntegerArithmetic::Add(left, right)
         | IntegerArithmetic::Subtract(left, right)
@@ -255,15 +251,19 @@ fn integer_arithmetic(
         }
         IntegerArithmetic::Negate(operand) => (operand.magnitude_bits(), 1),
     };
-    meter.charge(
+    if let Err(record) = meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticOperands)
             .size(LimitKind::IntegerBits, bits)
             .size(LimitKind::ValueOccurrences, count),
-    )?;
-    meter.charge(
+    ) {
+        return Outcome::Incomplete(Box::new(record));
+    }
+    if let Err(record) = meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticArithmetic)
             .exact_size(LimitKind::IntegerBits, integer_arithmetic_bits(operation)),
-    )?;
+    ) {
+        return Outcome::Incomplete(Box::new(record));
+    }
     let result = match operation {
         IntegerArithmetic::Add(left, right) => left.add(right),
         IntegerArithmetic::Subtract(left, right) => left.sub(right),
@@ -271,10 +271,14 @@ fn integer_arithmetic(
         IntegerArithmetic::Multiply(left, right) => left.mul(right),
     };
     if bound.is_some_and(|bound| !bound.contains(&result)) {
-        return Err(Stop::Refused(Refusal::IntegerOutOfDomain));
+        return Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain));
     }
-    meter.charge(Charge::new(ChargePoint::IntegerArithmeticResultRetain).results(1))?;
-    Ok(result)
+    if let Err(record) =
+        meter.charge(Charge::new(ChargePoint::IntegerArithmeticResultRetain).results(1))
+    {
+        return Outcome::Incomplete(Box::new(record));
+    }
+    Outcome::Completed(result)
 }
 
 /// One `Rational[..]` arithmetic operation. An `Integer` or `Int[..]` `/`

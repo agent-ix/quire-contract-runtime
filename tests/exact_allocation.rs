@@ -123,13 +123,13 @@ fn power_of_two() -> Integer {
 }
 
 fn bits_denied(limit: u64, consumed: u64, next: u64, point: ChargePoint) -> Outcome<()> {
-    Outcome::Incomplete(Incomplete {
+    Outcome::Incomplete(Box::new(Incomplete {
         limit_kind: LimitKind::IntegerBits,
         limit,
         consumed,
         next_charge: Integer::from(next),
         charge_point: point,
-    })
+    }))
 }
 
 /// `outcome` with its completed value dropped, for comparing stops.
@@ -366,13 +366,13 @@ fn tc_019_decimal_upscale_is_denied_before_the_power_of_ten() {
     });
     assert_eq!(
         stop(outcome),
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::DecimalDigits,
             limit: scale,
             consumed: 2,
             next_charge: Integer::from(scale + 1),
             charge_point: ChargePoint::DecimalResultRetain,
-        })
+        }))
     );
     assert!(peak < 4096, "peak request {peak} bytes");
 }

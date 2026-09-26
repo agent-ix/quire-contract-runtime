@@ -99,7 +99,7 @@ fn assert_named_denials<T: std::fmt::Debug + PartialEq>(run: impl Fn(&mut Meter)
         let work = u64::try_from(index).unwrap();
         assert_eq!(
             run(&mut denied),
-            Outcome::Incomplete(work_denied(work, *point))
+            Outcome::Incomplete(Box::new(work_denied(work, *point)))
         );
         assert_eq!(denied.consumed(LimitKind::ResultUnits), 0);
     }
@@ -176,7 +176,7 @@ fn tc_023_p11_integer_atoms_order_and_subtract_with_exact_amounts() {
     let mut short = Meter::new(work(14));
     assert_eq!(
         down(&mut short),
-        Outcome::Incomplete(work_denied(14, ChargePoint::OrderingResultRetain))
+        Outcome::Incomplete(Box::new(work_denied(14, ChargePoint::OrderingResultRetain)))
     );
 }
 
@@ -204,7 +204,10 @@ fn tc_023_p11_integer_division_to_rational_and_q11_fold_steps() {
     assert_eq!(consumed(&meter), [3, 0, 0, 0, 0, 0, 0, 2, 4, 1]);
     assert_eq!(
         run(&mut Meter::new(work(3))),
-        Outcome::Incomplete(work_denied(3, ChargePoint::RationalArithmeticResultRetain))
+        Outcome::Incomplete(Box::new(work_denied(
+            3,
+            ChargePoint::RationalArithmeticResultRetain
+        )))
     );
     assert_named_denials(run);
 
@@ -269,14 +272,14 @@ fn tc_023_p11_implies_short_circuits_and_charges_boolean_retention() {
     let denied = evaluate_boolean(BooleanConnective::And(true, right), &mut meter);
     assert_eq!(
         denied,
-        Outcome::Incomplete(work_denied(3, ChargePoint::BooleanResultRetain))
+        Outcome::Incomplete(Box::new(work_denied(3, ChargePoint::BooleanResultRetain)))
     );
     // ...and a stopped right operand is returned unchanged, with no retention.
     let mut meter = Meter::new(work(2));
     let stopped = gt0(2)(&mut meter);
     assert_eq!(
         stopped,
-        Outcome::Incomplete(work_denied(2, ChargePoint::OrderingResultRetain))
+        Outcome::Incomplete(Box::new(work_denied(2, ChargePoint::OrderingResultRetain)))
     );
     assert!(!meter
         .admitted_charges()
@@ -341,7 +344,7 @@ fn tc_023_connective_truth_tables() {
     assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
     assert_eq!(
         evaluate_boolean(BooleanConnective::Not(true), &mut Meter::new(work(0))),
-        Outcome::Incomplete(work_denied(0, ChargePoint::BooleanResultRetain))
+        Outcome::Incomplete(Box::new(work_denied(0, ChargePoint::BooleanResultRetain)))
     );
 }
 
@@ -363,13 +366,13 @@ fn tc_023_rational_amounts_zero_divisors_and_domains() {
             None,
             &mut Meter::new(limits(tuple))
         ),
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 3,
             consumed: 2,
             next_charge: int(4),
             charge_point: ChargePoint::RationalArithmeticArithmetic,
-        })
+        }))
     );
 
     // A zero divisor is undefined after `rational-arithmetic.operands` only.
@@ -407,7 +410,7 @@ fn tc_023_rational_amounts_zero_divisors_and_domains() {
             Some(&domain),
             &mut meter
         ),
-        Outcome::Refused(Refusal::RationalOutOfDomain)
+        Outcome::Refused(Box::new(Refusal::RationalOutOfDomain))
     );
     assert_eq!(meter.admitted_charges(), &RATIONAL[..3]);
     assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
@@ -485,13 +488,13 @@ fn tc_023_ordering_amounts_for_rationals_and_retained_decimals() {
             OrderedOperands::Decimals(&a, &b),
             &mut Meter::new(limits(tuple))
         ),
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::DecimalDigits,
             limit: 64,
             consumed: 1,
             next_charge: int(4_294_967_296),
             charge_point: ChargePoint::OrderingArithmetic,
-        })
+        }))
     );
     let (a, b) = (Decimal::new(int(-125), 2), Decimal::new(int(3), 0));
     assert_named_denials(|meter| {
@@ -563,7 +566,10 @@ fn tc_023_generated_integer_and_ordering_against_an_i128_oracle() {
                 if in_range {
                     assert_eq!(outcome, Outcome::Completed(int(expected)));
                 } else {
-                    assert_eq!(outcome, Outcome::Refused(Refusal::IntegerOutOfDomain));
+                    assert_eq!(
+                        outcome,
+                        Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain))
+                    );
                     assert_eq!(meter.admitted_charges(), &INTEGER[..2]);
                 }
                 assert_named_denials(|meter| evaluate_integer_arithmetic(operation, None, meter));
@@ -754,7 +760,7 @@ fn assert_exact_and_one_under<T: std::fmt::Debug + PartialEq>(
     assert_eq!(meter.consumed(LimitKind::IntegerBits), exact);
     assert_eq!(
         run(&mut Meter::new(bits_under(exact - 1))),
-        Outcome::Incomplete(denied)
+        Outcome::Incomplete(Box::new(denied))
     );
 }
 
@@ -768,7 +774,7 @@ fn assert_work_exact_and_one_under<T: std::fmt::Debug + PartialEq>(
         let before = u64::try_from(index).unwrap();
         assert_eq!(
             run(&mut Meter::new(work(before))),
-            Outcome::Incomplete(work_denied(before, *point))
+            Outcome::Incomplete(Box::new(work_denied(before, *point)))
         );
         let mut meter = Meter::new(work(before + 1));
         let outcome = run(&mut meter);
@@ -1090,7 +1096,10 @@ fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
     }
     assert_eq!(
         evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Incomplete(work_denied(total - 1, ChargePoint::BooleanResultRetain))
+        Outcome::Incomplete(Box::new(work_denied(
+            total - 1,
+            ChargePoint::BooleanResultRetain
+        )))
     );
     let mut fresh = Meter::new(UNLIMITED);
     assert!(!fresh.charge_log_truncated());

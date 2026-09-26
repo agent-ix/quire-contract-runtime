@@ -40,6 +40,14 @@ use super::text::{Text, TextType};
 /// they are equal, collection bounds included.
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
+// An explicit tag rather than a niche in a payload's `Vec` capacity (IR-286):
+// CBMC cannot constant-fold a niche-encoded discriminant read back from the
+// heap, so a `ValueType` in a `Vec` or `Box` sends Kani down this type's
+// recursive drop glue without bound. Layout only; no behaviour depends on it.
+// A `u64` tag, and no inline payload larger than `IntegerInterval`, for the
+// reason `Value` gives: an `Int` domain read back from the heap folds only when
+// it starts at the payload union's offset 0 and fills the whole union.
+#[repr(u64)]
 pub enum ValueType {
     /// `Boolean`.
     Boolean,
@@ -134,6 +142,13 @@ impl ValueType {
 /// `src/exact/mod.rs`).
 #[non_exhaustive]
 #[derive(Clone)]
+// An explicit tag, for the reason `ValueType` carries one (IR-286): a niche
+// discriminant read back from a `Vec<Value>` is not constant-foldable by CBMC.
+// A `u64` tag, not `u8`: CBMC folds a payload read back from the heap only when
+// it starts at the payload union's offset 0 and fills the whole union, so every
+// inline payload is at most `size_of::<Integer>()` (`Rational`, `Decimal` and
+// four other types keep their fields behind a `Box` for this reason).
+#[repr(u64)]
 pub enum Value {
     /// A Boolean.
     Boolean(bool),

@@ -366,19 +366,25 @@ impl PackageDeclarations {
             return Err(refusals);
         }
 
-        Ok(CheckedPackage {
+        Ok(CheckedPackage(Box::new(CheckedPackageFields {
             types: self.types,
             functions: self.functions,
             limits,
             depth: Cell::new(0),
             id: NEXT_PACKAGE_ID.fetch_add(1, Ordering::Relaxed),
-        })
+        })))
     }
 }
 
 /// A package admitted by [`PackageDeclarations::check`]: every declared
 /// function is callable by name.
-pub struct CheckedPackage {
+pub struct CheckedPackage(Box<CheckedPackageFields>);
+
+/// [`CheckedPackage`]'s fields, behind one `Box` (IR-286): `check` returns
+/// `Result<CheckedPackage, Vec<CheckRefusal>>`, and a boxed `Ok` puts that
+/// `Result`'s niche in a non-null pointer CBMC can fold, rather than in
+/// padding it fills with nondeterministic bytes.
+struct CheckedPackageFields {
     types: TypeEnvironment,
     functions: Vec<FunctionDeclaration>,
     limits: CheckingLimits,
@@ -682,7 +688,10 @@ impl Drop for DepthGuard<'_> {
 
 impl CheckedPackage {
     fn function(&self, name: &str) -> Option<&FunctionDeclaration> {
-        self.functions.iter().find(|function| function.name == name)
+        self.0
+            .functions
+            .iter()
+            .find(|function| function.name == name)
     }
 
     /// This package's own identity: a monotonic id stamped once at
@@ -691,7 +700,7 @@ impl CheckedPackage {
     /// [`CheckedPackage::id`]'s and [`CheckedExpression`]'s own documentation
     /// for why this is not derived from the package's address.
     fn identity(&self) -> usize {
-        self.id
+        self.0.id
     }
 
     /// Claim one more level of this package's shared re-entrant call depth,
@@ -701,15 +710,17 @@ impl CheckedPackage {
     /// [`Refusal::CheckedInvariant`] at [`CheckingLimits::depth`] before any
     /// charge: `check` admits no recursion without a discharged termination
     /// measure, so reaching the bound means a checked-program invariant was
-    /// violated.
-    fn enter(&self) -> Result<DepthGuard<'_>, Stop> {
-        let own_depth = self.depth.get();
-        if own_depth >= self.limits.depth() {
-            return Err(Stop::Refused(Refusal::CheckedInvariant));
+    /// violated. `None` is that refusal: an `Option` (a null-pointer niche)
+    /// rather than `Result<_, Stop>`, whose niche sits in `Stop`'s own tag
+    /// where CBMC cannot fold it back (IR-286).
+    fn enter(&self) -> Option<DepthGuard<'_>> {
+        let own_depth = self.0.depth.get();
+        if own_depth >= self.0.limits.depth() {
+            return None;
         }
-        self.depth.set(own_depth.saturating_add(1));
-        Ok(DepthGuard {
-            depth: &self.depth,
+        self.0.depth.set(own_depth.saturating_add(1));
+        Some(DepthGuard {
+            depth: &self.0.depth,
             own_depth,
         })
     }
@@ -727,11 +738,11 @@ impl CheckedPackage {
             cause,
         };
         for (_, value_type) in &parameters {
-            if let Err(IllTyped { cause }) = self.types.check_type(value_type) {
+            if let Err(IllTyped { cause }) = self.0.types.check_type(value_type) {
                 return Err(refuse(CheckCause::IllTyped(cause)));
             }
         }
-        if let Err(IllTyped { cause }) = self.types.check_type(&result) {
+        if let Err(IllTyped { cause }) = self.0.types.check_type(&result) {
             return Err(refuse(CheckCause::IllTyped(cause)));
         }
         Ok(CheckedExpression {
@@ -753,7 +764,7 @@ impl CheckedPackage {
         meter: &mut Meter,
     ) -> Result<Evaluation, InputRefusal> {
         plan_call(self, function, &arguments, objects)?;
-        let outcome = Outcome::from_stop(self.run_call(function, &arguments, objects, meter));
+        let outcome = self.run_call(function, &arguments, objects, meter);
         Ok(Evaluation {
             outcome,
             location: None,
@@ -761,17 +772,24 @@ impl CheckedPackage {
         })
     }
 
+    /// Returns the body's own [`Outcome`] as is, never round-tripping it
+    /// through `Result<Value, Stop>` (IR-286: each wrap of a `Value` in
+    /// another enum is a byte-level union update CBMC cannot afford).
     fn run_call(
         &self,
         function: &str,
         arguments: &[Value],
         objects: &ObjectEnvironment,
         meter: &mut Meter,
-    ) -> Result<Value, Stop> {
-        let guard = self.enter()?;
-        charge_call(meter)?;
+    ) -> Outcome<Value> {
+        let Some(guard) = self.enter() else {
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
+        };
+        if let Err(stop) = charge_call(meter) {
+            return Outcome::from_stop(Err(stop));
+        }
         let Some(declaration) = self.function(function) else {
-            return Err(Stop::Refused(Refusal::CheckedInvariant));
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         let cell = RefCell::new(meter);
         let frame = Frame {
@@ -780,7 +798,7 @@ impl CheckedPackage {
             meter: cell,
             depth: guard.own_depth(),
         };
-        (declaration.body)(&frame, arguments).into_stop()
+        (declaration.body)(&frame, arguments)
     }
 
     /// Evaluate a [`CheckedExpression`] against this package: validate (no
@@ -799,13 +817,13 @@ impl CheckedPackage {
             Err(EvaluationRefusal::Input(refusal)) => return Err(refusal),
             Err(EvaluationRefusal::ForeignExpression) => {
                 return Ok(Evaluation {
-                    outcome: Outcome::Refused(Refusal::CheckedInvariant),
+                    outcome: Outcome::Refused(Box::new(Refusal::CheckedInvariant)),
                     location: None,
                     losses: Vec::new(),
                 });
             }
         }
-        let outcome = Outcome::from_stop(self.run_evaluate(expression, &arguments, objects, meter));
+        let outcome = self.run_evaluate(expression, &arguments, objects, meter);
         Ok(Evaluation {
             outcome,
             location: None,
@@ -819,8 +837,10 @@ impl CheckedPackage {
         arguments: &[Value],
         objects: &ObjectEnvironment,
         meter: &mut Meter,
-    ) -> Result<Value, Stop> {
-        let guard = self.enter()?;
+    ) -> Outcome<Value> {
+        let Some(guard) = self.enter() else {
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
+        };
         let cell = RefCell::new(meter);
         let frame = Frame {
             package: self,
@@ -828,7 +848,7 @@ impl CheckedPackage {
             meter: cell,
             depth: guard.own_depth(),
         };
-        (expression.root)(&frame, arguments).into_stop()
+        (expression.root)(&frame, arguments)
     }
 
     /// The IEEE item requirements the named function's body discharges
@@ -885,32 +905,30 @@ impl<'a> Frame<'a> {
     /// shared [`Meter`] is already mutably borrowed by an enclosing call on
     /// the same re-entrant chain.
     pub fn call(&self, function: &str, arguments: &[Value]) -> Outcome<Value> {
-        Outcome::from_stop(self.run(function, arguments))
-    }
-
-    fn run(&self, function: &str, arguments: &[Value]) -> Result<Value, Stop> {
-        let guard = self.package.enter()?;
+        let Some(guard) = self.package.enter() else {
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
+        };
         let Some(declaration) = self.package.function(function) else {
-            return Err(Stop::Refused(Refusal::CheckedInvariant));
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         {
-            let mut meter = self
-                .meter
-                .try_borrow_mut()
-                .map_err(|_| Stop::Refused(Refusal::CheckedInvariant))?;
-            charge_call(&mut meter)?;
+            let Ok(mut meter) = self.meter.try_borrow_mut() else {
+                return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
+            };
+            if let Err(stop) = charge_call(&mut meter) {
+                return Outcome::from_stop(Err(stop));
+            }
         }
-        let mut meter = self
-            .meter
-            .try_borrow_mut()
-            .map_err(|_| Stop::Refused(Refusal::CheckedInvariant))?;
+        let Ok(mut meter) = self.meter.try_borrow_mut() else {
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
+        };
         let child = Frame {
             package: self.package,
             objects: self.objects,
             meter: RefCell::new(&mut meter),
             depth: guard.own_depth(),
         };
-        (declaration.body)(&child, arguments).into_stop()
+        (declaration.body)(&child, arguments)
     }
 
     /// Run `run` against the shared [`Meter`] this frame's whole call tree

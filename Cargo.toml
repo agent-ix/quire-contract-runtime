@@ -46,3 +46,10 @@ panic = "abort"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
+
+# IR-286: CBMC tracks heap objects field-by-field only up to 64 bytes by
+# default; `ValueType`, `Value` and `FunctionDeclaration` are larger, and a
+# non-field-sensitive read of them cannot be constant-folded.
+[package.metadata.kani]
+unstable = { unstable-options = true }
+flags = { cbmc-args = ["--max-field-sensitivity-array-size", "1024"] }

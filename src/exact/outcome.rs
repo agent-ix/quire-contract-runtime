@@ -5,6 +5,8 @@
 //! `unsupported` are per-item I13 provider dispositions, not evaluator outcomes,
 //! so they have no variant here.
 
+use alloc::boxed::Box;
+
 use super::accounting::Incomplete;
 use super::collection::{CardinalityBound, CollectionKind};
 use super::ieee::IeeeFlags;
@@ -13,15 +15,23 @@ use super::ieee::IeeeFlags;
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[must_use]
+// An explicit tag (IR-286): otherwise the discriminant is a niche in
+// `Incomplete`, which Kani overwrites with nondet padding when it writes
+// `Completed`, so neither this enum's variant nor the `Ok`/`Err` of a
+// `Result<Outcome<T>, _>` built around it is constant-foldable by CBMC.
+// `Refused` and `Incomplete` hold their payloads behind a `Box` for the same
+// reason: CBMC folds a `Completed(Value)` read only when the `Value` fills the
+// whole payload union, so no other payload may be larger than a pointer.
+#[repr(u64)]
 pub enum Outcome<T> {
     /// A completed value with its provenance and any typed loss.
     Completed(T),
     /// The operation has no mathematical value.
     Undefined(Undefined),
     /// The operation is defined but its result is not admitted.
-    Refused(Refusal),
+    Refused(Box<Refusal>),
     /// A named charge was unavailable; no partial value exists.
-    Incomplete(Incomplete),
+    Incomplete(Box<Incomplete>),
 }
 
 impl<T> Outcome<T> {
@@ -37,8 +47,8 @@ impl<T> Outcome<T> {
         match result {
             Ok(value) => Self::Completed(value),
             Err(Stop::Undefined(reason)) => Self::Undefined(reason),
-            Err(Stop::Refused(reason)) => Self::Refused(reason),
-            Err(Stop::Incomplete(record)) => Self::Incomplete(record),
+            Err(Stop::Refused(reason)) => Self::Refused(Box::new(reason)),
+            Err(Stop::Incomplete(record)) => Self::Incomplete(Box::new(record)),
         }
     }
 
@@ -46,8 +56,8 @@ impl<T> Outcome<T> {
         match self {
             Self::Completed(value) => Ok(value),
             Self::Undefined(reason) => Err(Stop::Undefined(reason)),
-            Self::Refused(reason) => Err(Stop::Refused(reason)),
-            Self::Incomplete(record) => Err(Stop::Incomplete(record)),
+            Self::Refused(reason) => Err(Stop::Refused(*reason)),
+            Self::Incomplete(record) => Err(Stop::Incomplete(*record)),
         }
     }
 }
