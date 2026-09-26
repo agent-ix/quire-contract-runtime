@@ -139,6 +139,9 @@ impl ValueType {
 /// `src/exact/mod.rs`).
 #[non_exhaustive]
 #[derive(Clone)]
+// An explicit tag, for the reason `ValueType` carries one: a niche
+// discriminant read back from a `Vec<Value>` is not constant-foldable by CBMC.
+#[repr(u8)]
 pub enum Value {
     /// A Boolean.
     Boolean(bool),
