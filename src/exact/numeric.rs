@@ -239,14 +239,9 @@ pub fn evaluate_integer_arithmetic(
     bound: Option<&IntegerInterval>,
     meter: &mut Meter,
 ) -> Outcome<Integer> {
-    Outcome::from_stop(integer_arithmetic(operation, bound, meter))
-}
-
-fn integer_arithmetic(
-    operation: IntegerArithmetic<'_>,
-    bound: Option<&IntegerInterval>,
-    meter: &mut Meter,
-) -> Result<Integer, Stop> {
+    // Builds the `Outcome` directly rather than through `Result<Integer,
+    // Stop>`: that `Result`'s discriminant is a niche inside `Stop`, and Kani
+    // writes `Ok` with nondet bytes over it, so CBMC cannot fold it.
     let (bits, count) = match operation {
         IntegerArithmetic::Add(left, right)
         | IntegerArithmetic::Subtract(left, right)
@@ -255,15 +250,19 @@ fn integer_arithmetic(
         }
         IntegerArithmetic::Negate(operand) => (operand.magnitude_bits(), 1),
     };
-    meter.charge(
+    if let Err(record) = meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticOperands)
             .size(LimitKind::IntegerBits, bits)
             .size(LimitKind::ValueOccurrences, count),
-    )?;
-    meter.charge(
+    ) {
+        return Outcome::Incomplete(record);
+    }
+    if let Err(record) = meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticArithmetic)
             .exact_size(LimitKind::IntegerBits, integer_arithmetic_bits(operation)),
-    )?;
+    ) {
+        return Outcome::Incomplete(record);
+    }
     let result = match operation {
         IntegerArithmetic::Add(left, right) => left.add(right),
         IntegerArithmetic::Subtract(left, right) => left.sub(right),
@@ -271,10 +270,14 @@ fn integer_arithmetic(
         IntegerArithmetic::Multiply(left, right) => left.mul(right),
     };
     if bound.is_some_and(|bound| !bound.contains(&result)) {
-        return Err(Stop::Refused(Refusal::IntegerOutOfDomain));
+        return Outcome::Refused(Refusal::IntegerOutOfDomain);
     }
-    meter.charge(Charge::new(ChargePoint::IntegerArithmeticResultRetain).results(1))?;
-    Ok(result)
+    if let Err(record) =
+        meter.charge(Charge::new(ChargePoint::IntegerArithmeticResultRetain).results(1))
+    {
+        return Outcome::Incomplete(record);
+    }
+    Outcome::Completed(result)
 }
 
 /// One `Rational[..]` arithmetic operation. An `Integer` or `Int[..]` `/`

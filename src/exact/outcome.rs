@@ -13,6 +13,11 @@ use super::ieee::IeeeFlags;
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[must_use]
+// An explicit tag: otherwise the discriminant is a niche in `Incomplete`,
+// which Kani overwrites with nondet padding when it writes `Completed`, so
+// neither this enum's variant nor the `Ok`/`Err` of a `Result<Outcome<T>, _>`
+// built around it is constant-foldable by CBMC.
+#[repr(u64)]
 pub enum Outcome<T> {
     /// A completed value with its provenance and any typed loss.
     Completed(T),
