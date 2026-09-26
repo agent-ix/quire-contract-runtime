@@ -1,11 +1,12 @@
 //! Debug-rendering regression pins for the nine value/type structs whose
-//! `Debug` impl became hand-written when their fields moved behind one `Box`
-//! (IR-286). FR-007-AC-6's own oracle -- equal Debug renderings against the
-//! pinned authority -- lives in `conformance/qsl-agreement`, which does not
-//! compile on this tree or on `origin/main` (E0004, unrelated to this PR).
-//! This is not that oracle: it only pins each type's own rendering against a
-//! fixed string, so a field added to a `*Fields` struct but not to its
-//! `Debug` impl is caught here even while the conformance crate is red.
+//! `Debug` impl is hand-written because their fields sit behind one `Box`.
+//! FR-007-AC-6's own oracle -- equal Debug renderings against the pinned
+//! authority -- lives in `conformance/qsl-agreement`, which does not compile
+//! on this tree or on `origin/main` (E0004, unrelated to this PR). This is
+//! not that oracle (FR-007-AC-13, TC-035): it only pins each type's own
+//! rendering against a fixed string, so a field added to a `*Fields` struct
+//! but not to its `Debug` impl is caught here even while the conformance
+//! crate is red.
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{
@@ -30,9 +31,9 @@ fn unlimited() -> ScalarLimits {
     }
 }
 
-/// Trace: FR-007-AC-6 (regression pin, not the conformance oracle)
+/// Trace: TC-035, FR-007-AC-13
 #[test]
-fn tc_debug_parity_rational_and_rational_domain() {
+fn tc_035_debug_parity_rational_and_rational_domain() {
     let rational = Rational::new(Integer::from(1_i64), Integer::from(2_i64)).unwrap();
     assert_eq!(
         format!("{rational:?}"),
@@ -51,9 +52,9 @@ fn tc_debug_parity_rational_and_rational_domain() {
     );
 }
 
-/// Trace: FR-007-AC-6 (regression pin, not the conformance oracle)
+/// Trace: TC-035, FR-007-AC-13
 #[test]
-fn tc_debug_parity_decimal_and_decimal_type() {
+fn tc_035_debug_parity_decimal_and_decimal_type() {
     let decimal = Decimal::new(Integer::from(123_i64), 2);
     assert_eq!(
         format!("{decimal:?}"),
@@ -76,9 +77,9 @@ fn tc_debug_parity_decimal_and_decimal_type() {
     );
 }
 
-/// Trace: FR-007-AC-6 (regression pin, not the conformance oracle)
+/// Trace: TC-035, FR-007-AC-13
 #[test]
-fn tc_debug_parity_quantity_and_compound_unit() {
+fn tc_035_debug_parity_quantity_and_compound_unit() {
     let quantity = Quantity::new(
         Rational::new(Integer::from(3_i64), Integer::from(1_i64)).unwrap(),
         QuantityUnit::Compound(CompoundUnit::dimensionless()),
@@ -96,9 +97,9 @@ fn tc_debug_parity_quantity_and_compound_unit() {
     );
 }
 
-/// Trace: FR-007-AC-6 (regression pin, not the conformance oracle)
+/// Trace: TC-035, FR-007-AC-13
 #[test]
-fn tc_debug_parity_text() {
+fn tc_035_debug_parity_text() {
     let text_type = TextType::new(0, 10, TextProfile::UnicodeScalars).unwrap();
     let payload = TextPayload::from_utf8(b"hi").unwrap();
     let mut meter = Meter::new(unlimited());
@@ -112,9 +113,9 @@ fn tc_debug_parity_text() {
     );
 }
 
-/// Trace: FR-007-AC-6 (regression pin, not the conformance oracle)
+/// Trace: TC-035, FR-007-AC-13
 #[test]
-fn tc_debug_parity_enum_value_and_object_reference() {
+fn tc_035_debug_parity_enum_value_and_object_reference() {
     let declaration =
         EnumDeclaration::new(NodeKey::from_bytes([1_u8; 32]), true, &["A", "B"]).unwrap();
     let member = declaration
