@@ -67,7 +67,7 @@ fn add_one_package() -> PackageDeclarations {
             measure_discharged: true,
             body: Box::new(|frame, arguments| {
                 let Value::Integer(operand) = &arguments[0] else {
-                    return Outcome::Refused(Refusal::CheckedInvariant);
+                    return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
                 };
                 let one = Integer::one();
                 let charged = frame.meter(|meter| {
@@ -78,7 +78,7 @@ fn add_one_package() -> PackageDeclarations {
                     Ok(Outcome::Undefined(reason)) => Outcome::Undefined(reason),
                     Ok(Outcome::Refused(reason)) => Outcome::Refused(reason),
                     Ok(Outcome::Incomplete(record)) => Outcome::Incomplete(record),
-                    Err(refusal) => Outcome::Refused(refusal),
+                    Err(refusal) => Outcome::Refused(Box::new(refusal)),
                 }
             }),
         }],
@@ -103,6 +103,10 @@ fn call_f_through_frame(checked: &CheckedPackage) -> crate::exact::CheckedExpres
 /// The real path: `x` symbolic in `[0,9]`, applied through `Frame::call`,
 /// asserting the specification's own result bound, `[1,10]`.
 #[kani::proof]
+// Sound: unwinding assertions stay on. 3 is the least bound `Meter::charge`
+// (two sizes) needs; it cuts num-bigint loops on promotion branches CBMC
+// cannot prove unreachable.
+#[kani::unwind(3)]
 fn ir286_frame_call_add_one_bounded() {
     let checked = add_one_package()
         .check(CheckMode::Linked, CheckingLimits::default())
@@ -136,6 +140,10 @@ fn ir286_frame_call_add_one_bounded() {
 /// witness the spike asked for — this one must report a counterexample, not
 /// SUCCESSFUL, or the harness above is vacuous.
 #[kani::proof]
+// Sound: unwinding assertions stay on. 3 is the least bound `Meter::charge`
+// (two sizes) needs; it cuts num-bigint loops on promotion branches CBMC
+// cannot prove unreachable.
+#[kani::unwind(3)]
 fn ir286_frame_call_add_one_bounded_mutated() {
     let checked = add_one_package()
         .check(CheckMode::Linked, CheckingLimits::default())

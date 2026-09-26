@@ -560,13 +560,13 @@ fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
         let expected_limit = expected_consumed[LimitKind::WorkUnits as usize];
         assert_eq!(
             record,
-            Incomplete {
+            Box::new(Incomplete {
                 limit_kind: LimitKind::WorkUnits,
                 limit: expected_limit,
                 consumed: expected_limit,
                 next_charge,
                 charge_point: point,
-            },
+            }),
             "at {point:?}"
         );
         assert_eq!(consumed(&meter), expected_consumed, "at {point:?}");

@@ -783,13 +783,13 @@ impl CheckedPackage {
         meter: &mut Meter,
     ) -> Outcome<Value> {
         let Some(guard) = self.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         if let Err(stop) = charge_call(meter) {
             return Outcome::from_stop(Err(stop));
         }
         let Some(declaration) = self.function(function) else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         let cell = RefCell::new(meter);
         let frame = Frame {
@@ -817,7 +817,7 @@ impl CheckedPackage {
             Err(EvaluationRefusal::Input(refusal)) => return Err(refusal),
             Err(EvaluationRefusal::ForeignExpression) => {
                 return Ok(Evaluation {
-                    outcome: Outcome::Refused(Refusal::CheckedInvariant),
+                    outcome: Outcome::Refused(Box::new(Refusal::CheckedInvariant)),
                     location: None,
                     losses: Vec::new(),
                 });
@@ -839,7 +839,7 @@ impl CheckedPackage {
         meter: &mut Meter,
     ) -> Outcome<Value> {
         let Some(guard) = self.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         let cell = RefCell::new(meter);
         let frame = Frame {
@@ -906,21 +906,21 @@ impl<'a> Frame<'a> {
     /// the same re-entrant chain.
     pub fn call(&self, function: &str, arguments: &[Value]) -> Outcome<Value> {
         let Some(guard) = self.package.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         let Some(declaration) = self.package.function(function) else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         {
             let Ok(mut meter) = self.meter.try_borrow_mut() else {
-                return Outcome::Refused(Refusal::CheckedInvariant);
+                return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
             };
             if let Err(stop) = charge_call(&mut meter) {
                 return Outcome::from_stop(Err(stop));
             }
         }
         let Ok(mut meter) = self.meter.try_borrow_mut() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Box::new(Refusal::CheckedInvariant));
         };
         let child = Frame {
             package: self.package,

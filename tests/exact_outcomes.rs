@@ -64,8 +64,8 @@ fn tc_016_outcomes_are_four_distinct_dispositions_and_false_is_a_value() {
         Outcome::Completed(false),
         Outcome::Completed(true),
         Outcome::Undefined(quire_contract_runtime::exact::Undefined::DivisionByZero),
-        Outcome::Refused(Refusal::IntegerOutOfDomain),
-        Outcome::Incomplete(incomplete.clone()),
+        Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain)),
+        Outcome::Incomplete(Box::new(incomplete.clone())),
     ];
     let completed: Vec<Option<bool>> = outcomes.iter().cloned().map(Outcome::completed).collect();
     assert_eq!(completed, [Some(false), Some(true), None, None, None]);
@@ -217,14 +217,14 @@ fn tc_017_charges_precede_work_and_a_denied_charge_consumes_nothing() {
     );
     assert_eq!(
         outcome,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 128,
             consumed: 65,
             // `bits(2^64) + bits(2^64) = 130`, never the square's 129.
             next_charge: int(130),
             charge_point: ChargePoint::IntegerArithmeticArithmetic,
-        })
+        }))
     );
     assert_eq!(
         meter.admitted_charges(),
@@ -257,13 +257,13 @@ fn tc_017_first_short_counter_in_field_order_and_domain_refusal_before_retention
     );
     assert_eq!(
         outcome,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 7,
             consumed: 0,
             next_charge: int(8),
             charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
+        }))
     );
 
     let bound = IntegerInterval::new(int(0), int(10)).unwrap();
@@ -273,7 +273,10 @@ fn tc_017_first_short_counter_in_field_order_and_domain_refusal_before_retention
         Some(&bound),
         &mut meter,
     );
-    assert_eq!(refused, Outcome::Refused(Refusal::IntegerOutOfDomain));
+    assert_eq!(
+        refused,
+        Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain))
+    );
     assert_eq!(
         meter.admitted_charges(),
         [
@@ -301,13 +304,13 @@ fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
             evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(-9)), None, &mut meter);
         assert_eq!(
             outcome,
-            Outcome::Incomplete(Incomplete {
+            Outcome::Incomplete(Box::new(Incomplete {
                 limit_kind: LimitKind::WorkUnits,
                 limit: work,
                 consumed: work,
                 next_charge: int(1),
                 charge_point: point,
-            })
+            }))
         );
         assert_eq!(meter.consumed(LimitKind::WorkUnits), work);
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
@@ -467,7 +470,7 @@ fn limits_with_work(work_units: u64) -> ScalarLimits {
 /// dispositions, which are `Debug` regardless of `T`, are ever formatted.
 fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
     match outcome {
-        Outcome::Incomplete(record) => record,
+        Outcome::Incomplete(record) => *record,
         Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
         Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
         Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
@@ -962,13 +965,13 @@ fn tc_031_injected_denial_takes_precedence_over_a_genuinely_short_counter() {
     );
     assert_eq!(
         real,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 1,
             consumed: 0,
             next_charge: int(4),
             charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
+        }))
     );
 
     // With the injection at that same point and occurrence, the injected
@@ -1017,13 +1020,13 @@ fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
     let oversized = int(1_i128 << 19);
     assert_eq!(
         evaluate_integer_arithmetic(IntegerArithmetic::Negate(&oversized), None, &mut meter),
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::IntegerBits,
             limit: 10,
             consumed: 0,
             next_charge: int(20),
             charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
+        }))
     );
 
     // The first ADMITTED charge at the injected point: occurrence one, not
@@ -1077,13 +1080,13 @@ fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
     let fired = evaluate_boolean(BooleanConnective::Not(false), &mut meter);
     assert_eq!(
         fired,
-        Outcome::Incomplete(Incomplete {
+        Outcome::Incomplete(Box::new(Incomplete {
             limit_kind: LimitKind::WorkUnits,
             limit: 0,
             consumed: 0,
             next_charge: int(1),
             charge_point: ChargePoint::BooleanResultRetain,
-        })
+        }))
     );
 
     // A further charge at the SAME point, under the same generous limits,

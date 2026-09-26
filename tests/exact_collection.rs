@@ -177,7 +177,7 @@ fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     };
     assert_eq!(refusal.code(), Some("cardinality_out_of_bound"));
     assert_eq!(refusal.cause(), Some("below-minimum"));
-    match refusal {
+    match *refusal {
         Refusal::CardinalityOutOfBound {
             violation,
             kind,
@@ -205,7 +205,7 @@ fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     };
     assert_eq!(refusal.code(), Some("cardinality_out_of_bound"));
     assert_eq!(refusal.cause(), Some("above-maximum"));
-    match refusal {
+    match *refusal {
         Refusal::CardinalityOutOfBound {
             violation, count, ..
         } => {
@@ -400,7 +400,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
         next_charge: Integer::one(),
         charge_point: ChargePoint::CollectionElement,
     };
-    assert_eq!(record, expected);
+    assert_eq!(record, Box::new(expected));
     assert_eq!(consumed(&meter), before);
 
     // Over occurrences `[1, 2]` (a Set), exactly one membership comparison

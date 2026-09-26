@@ -82,7 +82,7 @@ fn tc_034_decimal_rounding_ties_all_six_modes_both_signs() {
                     assert_eq!(result.value().representation().coefficient(), &int(value));
                     assert_eq!(result.value().representation().scale(), 0);
                 }
-                None => assert_eq!(outcome, Outcome::Refused(Refusal::InexactDecimal)),
+                None => assert_eq!(outcome, Outcome::Refused(Box::new(Refusal::InexactDecimal))),
             }
         }
     }
@@ -101,7 +101,7 @@ fn tc_034_decimal_default_rounding_is_exact_and_refuses_a_discarded_digit() {
         &target,
         &mut Meter::new(UNLIMITED),
     );
-    assert_eq!(outcome, Outcome::Refused(Refusal::InexactDecimal));
+    assert_eq!(outcome, Outcome::Refused(Box::new(Refusal::InexactDecimal)));
 }
 
 /// Trace: TC-034, FR-007-AC-8
@@ -233,7 +233,7 @@ fn tc_034_ieee_nan_payload_too_wide_for_target_is_refused_not_truncated() {
         );
         assert_eq!(
             outcome,
-            Outcome::Refused(Refusal::IeeeNanPayloadNotRepresentable)
+            Outcome::Refused(Box::new(Refusal::IeeeNanPayloadNotRepresentable))
         );
     }
 }
@@ -328,7 +328,10 @@ fn tc_034_rational_domain_excludes_one_third_by_denominator_interval() {
         Some(&domain),
         &mut Meter::new(UNLIMITED),
     );
-    assert_eq!(refused, Outcome::Refused(Refusal::RationalOutOfDomain));
+    assert_eq!(
+        refused,
+        Outcome::Refused(Box::new(Refusal::RationalOutOfDomain))
+    );
 
     // The identical operation with no result domain performs no membership
     // decision at all and retains the result.
@@ -486,10 +489,10 @@ fn tc_034_division_pair_refused_names_admitted_members_per_combination() {
         );
         assert_eq!(
             outcome,
-            Outcome::Refused(Refusal::DivisionPairOutOfDomain {
+            Outcome::Refused(Box::new(Refusal::DivisionPairOutOfDomain {
                 quotient_admitted,
                 remainder_admitted,
-            })
+            }))
         );
         // Neither member is exposed: no result is retained.
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);

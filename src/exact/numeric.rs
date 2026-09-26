@@ -6,6 +6,7 @@
 //! Every size amount is derived before the value it measures is retained; no
 //! power of ten is allocated to measure an aligned decimal coefficient.
 
+use alloc::boxed::Box;
 use core::cmp::Ordering;
 
 use super::accounting::{Charge, ChargePoint, Incomplete, LimitKind, Meter};
@@ -255,13 +256,13 @@ pub fn evaluate_integer_arithmetic(
             .size(LimitKind::IntegerBits, bits)
             .size(LimitKind::ValueOccurrences, count),
     ) {
-        return Outcome::Incomplete(record);
+        return Outcome::Incomplete(Box::new(record));
     }
     if let Err(record) = meter.charge(
         Charge::new(ChargePoint::IntegerArithmeticArithmetic)
             .exact_size(LimitKind::IntegerBits, integer_arithmetic_bits(operation)),
     ) {
-        return Outcome::Incomplete(record);
+        return Outcome::Incomplete(Box::new(record));
     }
     let result = match operation {
         IntegerArithmetic::Add(left, right) => left.add(right),
@@ -270,12 +271,12 @@ pub fn evaluate_integer_arithmetic(
         IntegerArithmetic::Multiply(left, right) => left.mul(right),
     };
     if bound.is_some_and(|bound| !bound.contains(&result)) {
-        return Outcome::Refused(Refusal::IntegerOutOfDomain);
+        return Outcome::Refused(Box::new(Refusal::IntegerOutOfDomain));
     }
     if let Err(record) =
         meter.charge(Charge::new(ChargePoint::IntegerArithmeticResultRetain).results(1))
     {
-        return Outcome::Incomplete(record);
+        return Outcome::Incomplete(Box::new(record));
     }
     Outcome::Completed(result)
 }

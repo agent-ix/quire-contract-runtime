@@ -405,7 +405,7 @@ fn tc_194_function_call_precedes_the_body() {
                         .contains(&ChargePoint::FunctionCall)
                 }) {
                     Ok(charged) => Outcome::Completed(Value::Boolean(charged)),
-                    Err(r) => Outcome::Refused(r),
+                    Err(r) => Outcome::Refused(Box::new(r)),
                 }
             }),
         }],
@@ -479,7 +479,9 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
                     (Some(Value::Boolean(a)), Some(Value::Boolean(b))) => {
                         Outcome::Completed(Value::Boolean(a && b))
                     }
-                    _ => Outcome::Refused(quire_contract_runtime::exact::Refusal::CheckedInvariant),
+                    _ => Outcome::Refused(Box::new(
+                        quire_contract_runtime::exact::Refusal::CheckedInvariant,
+                    )),
                 }
             }),
         )
@@ -777,7 +779,7 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(ref refusal) if matches!(**refusal, Refusal::CheckedInvariant)
     ));
     assert!(meter.admitted_charges().is_empty());
 
@@ -937,7 +939,7 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(ref refusal) if matches!(**refusal, Refusal::CheckedInvariant)
     ));
     assert!(meter.admitted_charges().is_empty());
 }
@@ -999,7 +1001,7 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
                         });
                     match attempt {
                         Ok(value) => Outcome::Completed(value),
-                        Err(r) => Outcome::Refused(r),
+                        Err(r) => Outcome::Refused(Box::new(r)),
                     }
                 }),
             },
@@ -1068,7 +1070,7 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(quire_contract_runtime::exact::Refusal::CheckedInvariant)
+        Outcome::Refused(ref refusal) if matches!(**refusal, quire_contract_runtime::exact::Refusal::CheckedInvariant)
     ));
 }
 
@@ -1128,7 +1130,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
             body: Box::new(|frame, _arguments| {
                 frame
                     .meter(|_meter| frame.call("reentrant_call", &[]))
-                    .unwrap_or(Outcome::Refused(Refusal::CheckedInvariant))
+                    .unwrap_or(Outcome::Refused(Box::new(Refusal::CheckedInvariant)))
             }),
         }],
     }
@@ -1141,7 +1143,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(ref refusal) if matches!(**refusal, Refusal::CheckedInvariant)
     ));
 }
 
@@ -1195,7 +1197,7 @@ fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(ref refusal) if matches!(**refusal, Refusal::CheckedInvariant)
     ));
 }
 
