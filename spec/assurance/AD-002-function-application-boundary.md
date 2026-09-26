@@ -58,4 +58,4 @@ own, same as the layout rules above: `CheckedPackage::enter` returns `Option<Dep
 back (`src/exact/expression.rs`); a signature check next to `enter` pins its exact return type.
 `evaluate_integer_arithmetic` builds its `Outcome<Integer>` directly rather than through an inner
 `Result<Integer, Stop>` round-trip, for the same reason (`src/exact/numeric.rs`); a source-inspection
-test (`tests/exact_outcomes.rs`) pins that its body never reintroduces one.
+test (`tests/exact_arithmetic.rs`, TC-036) pins that its body never reintroduces one.

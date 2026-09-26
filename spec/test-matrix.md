@@ -48,6 +48,7 @@ type: TestMatrix
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-025 | 🚧 sequence and ordered-set cases not yet in tests/exact_collection.rs |
 | FR-007 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | TC-034 | ✅ implemented |
 | FR-007 | FR-007-AC-13 | TC-035 | ✅ implemented |
+| FR-007 | FR-007-AC-14 | TC-036 | ✅ implemented |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | TC-030 | ✅ implemented |
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
@@ -98,6 +99,7 @@ type: TestMatrix
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
 | TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ implemented |
+| TC-036 | Pin evaluate_integer_arithmetic's direct Outcome construction | Unit | P1 | FR-007-AC-14 | ✅ implemented |
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | ✅ implemented |
 
@@ -144,7 +146,7 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   `src/exact_accounting_tests.rs` for the cumulative-counter boundary no public operator can
   reach;
   TC-033: `tests/exact_vocabulary.rs`; TC-034: `tests/exact_semantics.rs`; TC-035:
-  `tests/exact_debug_parity.rs`.
+  `tests/exact_debug_parity.rs`; TC-036: `tests/exact_arithmetic.rs`.
 - TC-016, TC-017, TC-031: `tests/exact_outcomes.rs` and, for TC-031's check-before-mutate ordering
   across every counter, the in-crate `src/exact_accounting_tests.rs` (needs `Charge`'s
   crate-private builders to construct a charge that moves every counter at once, so is reachable
