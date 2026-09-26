@@ -47,6 +47,13 @@ fn int(value: i128) -> Integer {
     Integer::from(value)
 }
 
+/// An expected `Integer` built independently of `Integer::from(i128)`: through
+/// `Integer`'s decimal-string `FromStr`, which promotes via `from_big` rather
+/// than the fast `i128`-to-`Integer` conversion under test.
+fn oracle(value: i128) -> Integer {
+    value.to_string().parse().unwrap()
+}
+
 fn ratio(numerator: i128, denominator: i128) -> Rational {
     Rational::new(int(numerator), int(denominator)).unwrap()
 }
@@ -554,14 +561,14 @@ fn tc_023_generated_integer_and_ordering_against_an_i128_oracle() {
                 let mut meter = Meter::new(UNLIMITED);
                 assert_eq!(
                     evaluate_integer_arithmetic(operation, None, &mut meter),
-                    Outcome::Completed(int(expected))
+                    Outcome::Completed(oracle(expected))
                 );
                 assert_eq!(consumed(&meter), [amount, 0, 0, 0, 0, 0, 0, count, 3, 1]);
                 let in_range = i64::try_from(expected).is_ok();
                 let mut meter = Meter::new(UNLIMITED);
                 let outcome = evaluate_integer_arithmetic(operation, Some(&bounded), &mut meter);
                 if in_range {
-                    assert_eq!(outcome, Outcome::Completed(int(expected)));
+                    assert_eq!(outcome, Outcome::Completed(oracle(expected)));
                 } else {
                     assert_eq!(outcome, Outcome::Refused(Refusal::IntegerOutOfDomain));
                     assert_eq!(meter.admitted_charges(), &INTEGER[..2]);
