@@ -78,26 +78,43 @@ impl QuantityUnit {
 }
 
 /// An exact rational value in a unit.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Quantity {
+///
+/// Its fields sit behind one `Box`: `Value` carries a `Quantity`
+/// inline, and CBMC's cost for moving a `Value` through any enum grows with
+/// the combined size of every inline variant payload.
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub struct Quantity(Box<QuantityFields>);
+
+#[derive(Clone, Eq, Hash, PartialEq)]
+struct QuantityFields {
     value: Rational,
     unit: QuantityUnit,
+}
+
+impl core::fmt::Debug for Quantity {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("Quantity")
+            .field("value", &self.0.value)
+            .field("unit", &self.0.unit)
+            .finish()
+    }
 }
 
 impl Quantity {
     /// A quantity of exactly `value` in `unit`.
     pub fn new(value: Rational, unit: QuantityUnit) -> Self {
-        Self { value, unit }
+        Self(Box::new(QuantityFields { value, unit }))
     }
 
     /// The exact value.
     pub fn value(&self) -> &Rational {
-        &self.value
+        &self.0.value
     }
 
     /// The unit.
     pub fn unit(&self) -> &QuantityUnit {
-        &self.unit
+        &self.0.unit
     }
 }
 
@@ -202,7 +219,7 @@ pub fn convert_quantity(
     target: &QuantityTarget,
     meter: &mut Meter,
 ) -> Result<Outcome<Conversion>, IllTyped> {
-    if !source.unit.converts_to(unit) {
+    if !source.0.unit.converts_to(unit) {
         return Err(ill_typed(IllTypedCause::IncompatibleDimensions));
     }
     let target = match target {
@@ -233,10 +250,10 @@ pub fn compare_quantity(
     right: &Quantity,
     meter: &mut Meter,
 ) -> Result<Outcome<bool>, IllTyped> {
-    if !left.unit.has_dimension_of(&right.unit) {
+    if !left.0.unit.has_dimension_of(&right.0.unit) {
         return Err(ill_typed(IllTypedCause::IncompatibleDimensions));
     }
-    if left.unit != right.unit {
+    if left.0.unit != right.0.unit {
         return Err(ill_typed(IllTypedCause::DistinctUnits));
     }
     Ok(Outcome::from_stop(
@@ -253,7 +270,7 @@ fn ill_typed(cause: IllTypedCause) -> IllTyped {
 fn read_identities(operands: &[&Quantity], meter: &mut Meter) -> Result<(), Stop> {
     let mut bits = 0;
     for (read, operand) in (1_u64..).zip(operands) {
-        bits = operand.value.max_part_bits().max(bits);
+        bits = operand.0.value.max_part_bits().max(bits);
         meter.charge(
             Charge::new(ChargePoint::UnitIdentityRead)
                 .size(LimitKind::ValueOccurrences, read)
@@ -335,23 +352,23 @@ fn charge_retain(meter: &mut Meter) -> Result<(), Stop> {
 fn type_check(operation: QuantityOperation<'_>) -> Result<(), IllTyped> {
     match operation {
         QuantityOperation::Add(a, b) | QuantityOperation::Subtract(a, b) => {
-            if !a.unit.has_dimension_of(&b.unit) {
+            if !a.0.unit.has_dimension_of(&b.0.unit) {
                 return Err(ill_typed(IllTypedCause::IncompatibleDimensions));
             }
-            if a.unit.is_affine() || b.unit.is_affine() {
+            if a.0.unit.is_affine() || b.0.unit.is_affine() {
                 return Err(ill_typed(IllTypedCause::AffineUnitArithmetic));
             }
-            if a.unit != b.unit {
+            if a.0.unit != b.0.unit {
                 return Err(ill_typed(IllTypedCause::DistinctUnits));
             }
         }
         QuantityOperation::Multiply(a, b) | QuantityOperation::Divide(a, b) => {
-            if a.unit.is_affine() || b.unit.is_affine() {
+            if a.0.unit.is_affine() || b.0.unit.is_affine() {
                 return Err(ill_typed(IllTypedCause::AffineUnitArithmetic));
             }
         }
         QuantityOperation::Power(a, _) => {
-            if a.unit.is_affine() {
+            if a.0.unit.is_affine() {
                 return Err(ill_typed(IllTypedCause::AffineUnitArithmetic));
             }
         }
@@ -363,8 +380,10 @@ fn type_check(operation: QuantityOperation<'_>) -> Result<(), IllTyped> {
 /// wins: a zero divisor, then a zero base under a negative exponent.
 fn check_undefined(operation: QuantityOperation<'_>) -> Result<(), Stop> {
     let undefined = match operation {
-        QuantityOperation::Divide(_, divisor) => divisor.value.is_zero(),
-        QuantityOperation::Power(base, exponent) => base.value.is_zero() && exponent.is_negative(),
+        QuantityOperation::Divide(_, divisor) => divisor.0.value.is_zero(),
+        QuantityOperation::Power(base, exponent) => {
+            base.0.value.is_zero() && exponent.is_negative()
+        }
         QuantityOperation::Add(..)
         | QuantityOperation::Subtract(..)
         | QuantityOperation::Multiply(..) => false,
@@ -386,42 +405,41 @@ fn evaluate(operation: QuantityOperation<'_>, meter: &mut Meter) -> Result<Quant
     read_identities(&operands, meter)?;
     check_undefined(operation)?;
     let result = match operation {
-        QuantityOperation::Add(a, b) => Quantity {
-            value: rational_event(RationalArithmetic::Add, &a.value, &b.value, meter)?,
-            unit: a.unit.clone(),
-        },
-        QuantityOperation::Subtract(a, b) => Quantity {
-            value: rational_event(RationalArithmetic::Subtract, &a.value, &b.value, meter)?,
-            unit: a.unit.clone(),
-        },
+        QuantityOperation::Add(a, b) => Quantity::new(
+            rational_event(RationalArithmetic::Add, &a.0.value, &b.0.value, meter)?,
+            a.0.unit.clone(),
+        ),
+        QuantityOperation::Subtract(a, b) => Quantity::new(
+            rational_event(RationalArithmetic::Subtract, &a.0.value, &b.0.value, meter)?,
+            a.0.unit.clone(),
+        ),
         QuantityOperation::Multiply(a, b) | QuantityOperation::Divide(a, b) => {
-            let (left_edges, right_edges) = (to_root(&a.unit), to_root(&b.unit));
+            let (left_edges, right_edges) = (to_root(&a.0.unit), to_root(&b.0.unit));
             charge_edges(left_edges.len().saturating_add(right_edges.len()), meter)?;
-            let left = events(&a.value, &left_edges, meter)?;
-            let right = events(&b.value, &right_edges, meter)?;
+            let left = events(&a.0.value, &left_edges, meter)?;
+            let right = events(&b.0.value, &right_edges, meter)?;
             let (left_unit, right_unit) =
-                (a.unit.canonical_compound(), b.unit.canonical_compound());
+                (a.0.unit.canonical_compound(), b.0.unit.canonical_compound());
             if matches!(operation, QuantityOperation::Multiply(..)) {
-                Quantity {
-                    value: rational_event(RationalArithmetic::Multiply, &left, &right, meter)?,
-                    unit: QuantityUnit::Compound(left_unit.multiply(&right_unit)),
-                }
+                Quantity::new(
+                    rational_event(RationalArithmetic::Multiply, &left, &right, meter)?,
+                    QuantityUnit::Compound(left_unit.multiply(&right_unit)),
+                )
             } else {
-                Quantity {
-                    value: rational_event(RationalArithmetic::Divide, &left, &right, meter)?,
-                    unit: QuantityUnit::Compound(left_unit.divide(&right_unit)),
-                }
+                Quantity::new(
+                    rational_event(RationalArithmetic::Divide, &left, &right, meter)?,
+                    QuantityUnit::Compound(left_unit.divide(&right_unit)),
+                )
             }
         }
         QuantityOperation::Power(a, exponent) => {
-            let edges = to_root(&a.unit);
+            let edges = to_root(&a.0.unit);
             charge_edges(edges.len(), meter)?;
-            let base = events(&a.value, &edges, meter)?;
-            Quantity {
-                value: power(&base, exponent, meter)?
-                    .ok_or(Stop::Undefined(Undefined::DivisionByZero))?,
-                unit: QuantityUnit::Compound(a.unit.canonical_compound().power(exponent)),
-            }
+            let base = events(&a.0.value, &edges, meter)?;
+            Quantity::new(
+                power(&base, exponent, meter)?.ok_or(Stop::Undefined(Undefined::DivisionByZero))?,
+                QuantityUnit::Compound(a.0.unit.canonical_compound().power(exponent)),
+            )
         }
     };
     charge_rational_target(meter)?;
@@ -486,7 +504,7 @@ fn convert(
     meter: &mut Meter,
 ) -> Result<Conversion, Stop> {
     read_identities(&[source], meter)?;
-    let source_edges = to_root(&source.unit);
+    let source_edges = to_root(&source.0.unit);
     let target_edges: Vec<_> = unit
         .path()
         .iter()
@@ -494,7 +512,7 @@ fn convert(
         .map(|edge| (edge, Direction::Reverse))
         .collect();
     charge_edges(source_edges.len().saturating_add(target_edges.len()), meter)?;
-    let canonical = events(&source.value, &source_edges, meter)?;
+    let canonical = events(&source.0.value, &source_edges, meter)?;
     let exact = events(&canonical, &target_edges, meter)?;
     let value = match target {
         Target::Exact => {
@@ -561,10 +579,10 @@ fn place(
 /// right, with no operation event and no `unit.target-domain`.
 fn compare(left: &Quantity, right: &Quantity, meter: &mut Meter) -> Result<Ordering, Stop> {
     read_identities(&[left, right], meter)?;
-    let (left_edges, right_edges) = (to_root(&left.unit), to_root(&right.unit));
+    let (left_edges, right_edges) = (to_root(&left.0.unit), to_root(&right.0.unit));
     charge_edges(left_edges.len().saturating_add(right_edges.len()), meter)?;
-    let left = events(&left.value, &left_edges, meter)?;
-    let right = events(&right.value, &right_edges, meter)?;
+    let left = events(&left.0.value, &left_edges, meter)?;
+    let right = events(&right.0.value, &right_edges, meter)?;
     charge_retain(meter)?;
     Ok(left.cmp(&right))
 }

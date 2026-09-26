@@ -47,6 +47,13 @@ fn int(value: i128) -> Integer {
     Integer::from(value)
 }
 
+/// An expected `Integer` built independently of `Integer::from(i128)`: through
+/// `Integer`'s decimal-string `FromStr`, which promotes via `from_big` rather
+/// than the fast `i128`-to-`Integer` conversion under test.
+fn oracle(value: i128) -> Integer {
+    value.to_string().parse().unwrap()
+}
+
 fn ratio(numerator: i128, denominator: i128) -> Rational {
     Rational::new(int(numerator), int(denominator)).unwrap()
 }
@@ -554,14 +561,14 @@ fn tc_023_generated_integer_and_ordering_against_an_i128_oracle() {
                 let mut meter = Meter::new(UNLIMITED);
                 assert_eq!(
                     evaluate_integer_arithmetic(operation, None, &mut meter),
-                    Outcome::Completed(int(expected))
+                    Outcome::Completed(oracle(expected))
                 );
                 assert_eq!(consumed(&meter), [amount, 0, 0, 0, 0, 0, 0, count, 3, 1]);
                 let in_range = i64::try_from(expected).is_ok();
                 let mut meter = Meter::new(UNLIMITED);
                 let outcome = evaluate_integer_arithmetic(operation, Some(&bounded), &mut meter);
                 if in_range {
-                    assert_eq!(outcome, Outcome::Completed(int(expected)));
+                    assert_eq!(outcome, Outcome::Completed(oracle(expected)));
                 } else {
                     assert_eq!(outcome, Outcome::Refused(Refusal::IntegerOutOfDomain));
                     assert_eq!(meter.admitted_charges(), &INTEGER[..2]);
@@ -1098,4 +1105,46 @@ fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
         .completed()
         .is_some());
     assert!(!fresh.charge_log_truncated());
+}
+
+/// `evaluate_integer_arithmetic` builds its `Outcome` directly rather than
+/// through an inner `Result<Integer, Stop>` round-trip -- a Kani-provability
+/// rule with no owning FR or NFR of its own (see AD-002's Risks section). No
+/// type signature distinguishes a direct build from an equivalent
+/// `Result`-round-trip rewrite that reaches the same `Outcome` values, so
+/// this is a source check rather than a behavioural one: it bans any
+/// `Result<` type spelled in the function's body, not only the literal
+/// `Outcome::from_stop` call, so a `Result` staged through a local binding
+/// and a `match` (rather than passed straight to `from_stop`) is caught too.
+///
+/// Trace: TC-036, FR-007-AC-14
+#[test]
+fn tc_036_integer_arithmetic_builds_outcome_directly() {
+    let source = include_str!("../src/exact/numeric.rs");
+    let start = source
+        .find("pub fn evaluate_integer_arithmetic(")
+        .expect("evaluate_integer_arithmetic exists in src/exact/numeric.rs");
+    let after_signature = &source[start..];
+    // The function's own closing brace is unindented; every brace inside its
+    // body (match arms, if-let blocks) is indented, so this is the first
+    // unindented one after the signature.
+    let end = after_signature
+        .find("\n}\n")
+        .expect("evaluate_integer_arithmetic has a closing brace")
+        + "\n}".len();
+    let function = &after_signature[..end];
+    let code: String = function
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(
+        !code.contains("Result<"),
+        "evaluate_integer_arithmetic spells a Result<..> type again, whether \
+         staged through Outcome::from_stop or a local match"
+    );
+    assert!(
+        code.contains("Outcome::Completed(result)"),
+        "evaluate_integer_arithmetic no longer builds its Outcome directly"
+    );
 }

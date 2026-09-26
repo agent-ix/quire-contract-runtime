@@ -103,6 +103,8 @@ the QSpec 7d7943a accounting schedule.
 | FR-007-AC-10 | `Rational` membership admits exactly the reduced pairs inside both intervals — including refusing a value whose numeric magnitude is inside the numerator interval but whose reduced denominator is outside the denominator interval — an absent domain decides no membership and retains, and every exposed rational is in canonical form with zero as `0/1`. | Test (TC-034) |
 | FR-007-AC-11 | `Decimal` value comparison is on the normalized representation and charges are sized on the retained one, demonstrated by a pair equal in value whose ordering and retain charges differ; `Decimal` exposes no structural `PartialEq`. | Test (TC-034) |
 | FR-007-AC-12 | `mod` returns the Euclidean remainder for every operand sign whatever `div`/`rem` law is selected; a quotient/remainder pair outside the consumer domain is refused as a pair naming which members were admitted, exposing neither; quantity `IllTyped` causes appear in the stated per-operation order with zero charges, and `Multiply`/`Divide`/`Power` raise no dimension fault. | Test (TC-034) |
+| FR-007-AC-13 | Every hand-written `Debug` impl for a boxed value or type struct (`Rational`, `RationalDomain`, `Decimal`, `DecimalType`, `Quantity`, `Text`, `EnumValue`, `ObjectReference`, `CompoundUnit`) renders exactly the fields its `*Fields` struct declares, in declaration order, against a fixed pinned string. | Test (TC-035) |
+| FR-007-AC-14 | `evaluate_integer_arithmetic` builds its `Outcome<Integer>` directly; its body contains no `Result<_, Stop>` round trip. | Test (TC-036) |
 
 ## Dependencies
 
