@@ -198,13 +198,19 @@ audit-panic:
 kani-census:
 	$(PYTHON) scripts/check_kani_harnesses.py
 
+# CBMC segfaults on some harnesses under the field-sensitivity metadata flag
+# without an unlimited stack. `ulimit -s unlimited` itself fails where the
+# hard limit is finite, so the fallback raises the soft limit to the hard one
+# instead of leaving it unset.
+KANI_STACK := bash -c 'ulimit -s unlimited 2>/dev/null || ulimit -s "$$(ulimit -H -s)"; exec "$$@"' --
+
 .PHONY: kani
 kani: kani-census
-	bash -c 'ulimit -s unlimited && $(PYTHON) scripts/run_kani_gate.py'
+	$(KANI_STACK) $(PYTHON) scripts/run_kani_gate.py
 
 .PHONY: kani-mutations
 kani-mutations:
-	$(PYTHON) scripts/check_kani_mutations.py
+	$(KANI_STACK) $(PYTHON) scripts/check_kani_mutations.py
 
 # =============================================================================
 # Shared assurance
@@ -227,8 +233,8 @@ assurance-env: $(ASSURANCE_PYTHON)
 assurance-inputs: assurance-env
 	mkdir -p $(ASSURANCE_DIR)
 	$(PYTHON) scripts/run_feature_matrix.py --json > $(FEATURE_RESULT)
-	$(PYTHON) scripts/run_kani_gate.py --json > $(KANI_RESULT)
-	$(PYTHON) scripts/check_kani_mutations.py --json > $(KANI_MUTATION_RESULT)
+	$(KANI_STACK) $(PYTHON) scripts/run_kani_gate.py --json > $(KANI_RESULT)
+	$(KANI_STACK) $(PYTHON) scripts/check_kani_mutations.py --json > $(KANI_MUTATION_RESULT)
 	$(PYTHON) scripts/measure_footprint.py --json > $(FOOTPRINT_RESULT)
 	$(QUIRE) coverage --scope . --json > $(QUIRE_EXPORT)
 	rustup run $(MSRV) $(CARGO) check --locked --all-targets --all-features \
