@@ -1206,3 +1206,52 @@ fn ir286_diag9_m13_unmarked_control() {
         _ => panic!("not a completed integer"),
     }
 }
+
+/// `Refused`'s payload filling all 24 payload bytes, every byte initialised,
+/// first word the `Value::Boolean` tag.
+#[allow(dead_code)]
+#[repr(C)]
+struct FullRefusal {
+    marker: u64,
+    refusal: Box<Refusal>,
+    filler: u64,
+}
+
+#[allow(dead_code)]
+#[repr(u64)]
+enum OutcomeLikeFull {
+    Completed(Value),
+    Refused(FullRefusal),
+}
+
+#[inline(never)]
+fn m14_full(x: i64) -> OutcomeLikeFull {
+    match x.checked_add(1) {
+        Some(sum) => OutcomeLikeFull::Completed(Value::Integer(Integer::from(sum))),
+        None => OutcomeLikeFull::Refused(FullRefusal {
+            marker: 0,
+            refusal: Box::new(Refusal::IntegerOutOfDomain),
+            filler: 0,
+        }),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m14_full_refusal() {
+    match m14_full(symbolic_small()) {
+        OutcomeLikeFull::Completed(Value::Integer(ref r)) => {
+            assert!(*r >= Integer::one() && *r <= Integer::from(10i64))
+        }
+        _ => panic!("not a completed integer"),
+    }
+}
+
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag9_m14_full_refusal_mutated() {
+    match m14_full(symbolic_small()) {
+        OutcomeLikeFull::Completed(Value::Integer(ref r)) => assert!(*r <= Integer::from(9i64)),
+        _ => panic!("not a completed integer"),
+    }
+}
