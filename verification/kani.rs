@@ -13,15 +13,18 @@ use crate::{
 // `quire_contract_runtime::exact` operators directly (`quire-contract-codegen`
 // `src/exact_scalar.rs:1370` `use quire_contract_runtime::exact as rt;`), `compare_ieee` among
 // them at `src/exact_scalar.rs:1677`. `exact::Integer` (the operand type behind
-// `evaluate_integer_arithmetic`, CG's other principal `rt::` call site) is an unbounded `BigInt`:
-// a harness that builds one from a symbolic operand — even an operand narrowed to `i8` by
-// `kani::assume` — makes every arithmetic and comparison step inside `num-bigint`'s digit-vector
-// representation symbolic too, and that did not discharge in the roughly ten minutes budgeted for
-// it here; it is rejected for that reason, not attempted with a larger budget. `compare_ieee`
-// reaches `src/exact/ieee.rs` (`decode`, `Class`, `total_order_key`) without ever constructing a
-// `BigInt`: `IeeeValue` is a plain `(IeeeWidth, u64)` bit pattern, and every metering charge below
-// it — `Integer`-typed inside `Meter`/`Charge` (`src/exact/accounting.rs`) — is built from
-// concrete, non-symbolic widths and counts, so no case-split reaches `num-bigint` at all.
+// `evaluate_integer_arithmetic`, CG's other principal `rt::` call site) holds a value inline as
+// `i64` and promotes to a boxed `BigInt` only when it does not fit, so a symbolic operand narrowed
+// to a small integer type never reaches `BigInt` on its own. What this census still excludes is a
+// harness that builds an `Integer` behind a symbolic `exact::Value` and drives it through the
+// generic call path (`Frame::call`): `Value`'s container arms (`Collection`, `Composite`,
+// `Option`) read a pointer out of a merged, not-fully-constant payload when the prover cannot
+// determine which variant it holds, which does not discharge, independent of `Integer`'s own
+// representation. `compare_ieee` reaches `src/exact/ieee.rs` (`decode`, `Class`,
+// `total_order_key`) without ever constructing a `BigInt` or a `Value`: `IeeeValue` is a plain
+// `(IeeeWidth, u64)` bit pattern, and every metering charge below it — `Integer`-typed inside
+// `Meter`/`Charge` (`src/exact/accounting.rs`) — is built from concrete, non-symbolic widths and
+// counts, so no case-split reaches either at all.
 //
 // Every limit below is `u64::MAX`, so metering never refuses: harnesses built on
 // `EXACT_UNLIMITED` are scoped to an unbounded budget and discharge nothing about
