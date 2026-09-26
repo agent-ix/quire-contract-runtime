@@ -703,3 +703,78 @@ fn ir286_diag5_t11_stack_nested_covering() {
     };
     assert!(Integer::zero() <= *x);
 }
+
+/// Diagnostic: `call("f", [5])` with the `Evaluation` forgotten, never read
+/// or dropped: isolates everything before the `Outcome<Value>` read.
+#[kani::proof]
+fn ir286_diag5_direct_call_forget() {
+    let checked = checked_add_one();
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .call(
+            "f",
+            alloc::vec![Value::Integer(Integer::from(5i64))],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    core::mem::forget(evaluation);
+}
+
+/// Diagnostic: the symbolic `evaluate` through `Frame::call`, `Evaluation`
+/// forgotten: whether the symbolic path converges up to the result read.
+#[kani::proof]
+fn ir286_diag5_symbolic_evaluate_forget() {
+    let checked = checked_add_one();
+    let expression = call_f_through_frame(&checked);
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![Value::Integer(Integer::from(x))],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    core::mem::forget(evaluation);
+}
+
+/// Diagnostic: symbolic `x` in a heap `Vec<Value>`, read back, then
+/// `evaluate_integer_arithmetic(x + 1)` on it.
+#[kani::proof]
+fn ir286_diag5_symbolic_heap_add() {
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    let values = alloc::vec![Value::Integer(Integer::from(x))];
+    let Value::Integer(operand) = &values[0] else {
+        panic!("not an integer");
+    };
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let one = Integer::one();
+    let outcome =
+        evaluate_integer_arithmetic(IntegerArithmetic::Add(operand, &one), None, &mut meter);
+    let Outcome::Completed(sum) = outcome else {
+        panic!("not completed");
+    };
+    assert!(sum >= Integer::one() && sum <= Integer::from(10i64));
+}
+
+/// Diagnostic: the same with `x` on the stack.
+#[kani::proof]
+fn ir286_diag5_symbolic_stack_add() {
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    let operand = Integer::from(x);
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let one = Integer::one();
+    let outcome =
+        evaluate_integer_arithmetic(IntegerArithmetic::Add(&operand, &one), None, &mut meter);
+    let Outcome::Completed(sum) = outcome else {
+        panic!("not completed");
+    };
+    assert!(sum >= Integer::one() && sum <= Integer::from(10i64));
+}
