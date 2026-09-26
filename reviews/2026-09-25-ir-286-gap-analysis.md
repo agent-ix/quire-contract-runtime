@@ -74,3 +74,41 @@ rules the PR adds are owned by no spec artifact and guarded by no check.
   SR-010.
 - NFR-002 Kani gate: 8 of 8 declared harnesses pass at or above their obligation floors. Each was
   run alone under a 16G memory cap.
+
+## Dispositions
+
+Disposition pass 2026-09-26 at `ab7a9302fcf1b5bd88a6aee597a8ba87a9117c47`. Each outcome was checked
+against the code and the fix commits.
+
+| FND | Outcome | sha/reason |
+|-----|---------|------------|
+| FND-001 | fixed | 5a4aefc, rewritten in ab7a930. AD-002 now owns the `Value`/`ValueType` layout rule (explicit tag, no inline payload wider than `Integer`/`IntegerInterval`), and compile-time assertions in `src/exact/composite.rs` guard it. AD-002 still validates. The two remaining rules are recorded as FND-004 |
+| FND-002 | fixed | 3c2c95d: TC-023's expected value no longer runs through `Integer::from(i128)`. The sign-drop mutant of `big_from_i128` now fails `tc_023_generated_integer_and_ordering_against_an_i128_oracle` |
+| FND-003 | deferred | Pre-existing on `origin/main` 23fbb13 and out of scope for this PR: the conformance crate fails to compile with E0004 on both trees. The risk this PR added is covered by `tests/exact_debug_parity.rs` (see SR-010 FND-011) |
+
+### New findings in the fix round
+
+| ID | Severity | Summary | Refs |
+|----|----------|---------|------|
+| FND-004 | low | Two of the four CBMC-driven rules from FND-001 are still owned by no spec artifact and guarded by no check: `CheckedPackage::enter` returning `Option`, and building `Outcome` directly instead of going through `Result<_, Stop>`. The AD-002 amendment covers the layout only. Failure scenario: a refactor puts `enter()?` back on `Result<_, Stop>`, and every gate stays green | src/exact/expression.rs:716, src/exact/numeric.rs:242-244, spec/assurance/AD-002-function-application-boundary.md:50-53 |
+
+**Verdict after the fix round: CONDITIONAL.** FND-001 and FND-002 are fixed. FND-003 is deferred as
+pre-existing. The one new finding is low.
+
+### Dispositions, round 2
+
+Disposition pass 2026-09-26 at `272af361cd9f69076bf69b9c8db2b2ed91160a5f`.
+
+| FND | Outcome | sha/reason |
+|-----|---------|------------|
+| FND-004 | fixed | 272af36. AD-002's Risks section now owns both rules. `enter_signature_is_option` pins `enter`'s return type, and `tc_kani_layout_integer_arithmetic_builds_outcome_directly` checks `evaluate_integer_arithmetic`'s source. Mutants: putting `Outcome::from_stop` back fails the source test. Changing `enter` to return `Result<_, Stop>` fails to compile, though the three existing callers (`let Some(guard) = … else`) already fail on their own, so the pin adds a check only against a coordinated rewrite of `enter` and its callers. A `Result` round trip that avoids the literal `from_stop` survives (FND-005) |
+
+### New findings, round 2
+
+| ID | Severity | Summary | Refs |
+|----|----------|---------|------|
+| FND-005 | low | The source check is narrower than the rule AD-002 states ("its body never reintroduces one", meaning a `Result<Integer, Stop>` round trip). The test matches only two literals: no `Outcome::from_stop`, and at least one `Outcome::Completed(result)`. The reviewer rewrote the tail as `let staged: Result<Integer, Stop> = Ok(result); match staged { Ok(result) => Outcome::Completed(result), Err(Stop::…) => … }`. That is a real `Result` round trip, and the test passed | tests/exact_arithmetic.rs:1119-1141, spec/assurance/AD-002-function-application-boundary.md:59-61 |
+| FND-006 | low | The source check is wired up inconsistently. AD-002 says the test lives in `tests/exact_outcomes.rs`, but it is in `tests/exact_arithmetic.rs`. The test's name has no `tc_NNN` id, and its only trace is `Trace: AD-002`, which does not bind: `quire coverage --json` lists `tc_kani_layout_integer_arithmetic_builds_outcome_directly` under `untracked_symbols`. Failure scenario: a reader following AD-002 finds no such test in the named file, and coverage never counts the guard | spec/assurance/AD-002-function-application-boundary.md:61, tests/exact_arithmetic.rs:1117-1119 |
+
+**Verdict after round 2: CONDITIONAL, low findings only.** FND-001, FND-002 and FND-004 are fixed.
+FND-003 stays deferred as pre-existing. FND-005 and FND-006 are low.
