@@ -778,3 +778,79 @@ fn ir286_diag5_symbolic_stack_add() {
     };
     assert!(sum >= Integer::one() && sum <= Integer::from(10i64));
 }
+
+// ---- Spike 6: bisecting the symbolic path. Each harness takes `x`
+// symbolic in `[0, 9]` and stops one stage further along.
+
+fn symbolic_argument() -> Value {
+    let x: i64 = kani::any();
+    kani::assume((0..=9).contains(&x));
+    Value::Integer(Integer::from(x))
+}
+
+/// Stage 1: admission only (`plan_call` against the checked package).
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag6_symbolic_admit() {
+    let checked = checked_add_one();
+    let objects = ObjectEnvironment::default();
+    let arguments = alloc::vec![symbolic_argument()];
+    assert!(crate::exact::plan_call(&checked, "f", &arguments, &objects).is_ok());
+}
+
+/// Stage 2: `check_expression` for the root, then `plan_evaluation`
+/// (admission against the root's parameters); no body runs.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag6_symbolic_check_expression_plan() {
+    let checked = checked_add_one();
+    let expression = call_f_through_frame(&checked);
+    let objects = ObjectEnvironment::default();
+    let arguments = alloc::vec![symbolic_argument()];
+    assert!(crate::exact::plan_evaluation(&checked, &expression, &arguments, &objects).is_ok());
+}
+
+/// Stage 3: `evaluate` with an identity root (no `Frame::call`); result read.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag6_symbolic_evaluate_identity() {
+    let checked = checked_add_one();
+    let domain = IntegerInterval::new(Integer::from(0i64), Integer::from(9i64)).expect("nonempty");
+    let expression = checked
+        .check_expression(
+            alloc::vec![("x".to_string(), ValueType::Int(domain))],
+            ValueType::Integer,
+            Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+        )
+        .expect("checks");
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![symbolic_argument()],
+            &objects,
+            &mut meter,
+        )
+        .expect("admitted");
+    let Outcome::Completed(Value::Integer(ref result)) = evaluation.outcome else {
+        panic!("identity did not complete with an Integer");
+    };
+    assert!(*result >= Integer::zero() && *result <= Integer::from(9i64));
+}
+
+/// Stage 4: `CheckedPackage::call("f", [x])` directly (no root); result read.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_diag6_symbolic_direct_call() {
+    let checked = checked_add_one();
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .call("f", alloc::vec![symbolic_argument()], &objects, &mut meter)
+        .expect("admitted");
+    let Outcome::Completed(Value::Integer(ref result)) = evaluation.outcome else {
+        panic!("f(x) did not complete with an Integer");
+    };
+    assert!(*result >= Integer::one() && *result <= Integer::from(10i64));
+}
