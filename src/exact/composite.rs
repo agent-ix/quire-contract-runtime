@@ -42,9 +42,14 @@ use super::text::{Text, TextType};
 /// and panicking macros are excluded from this module's exact sources, so a
 /// layout check needs a way to fail the build without reaching for either
 /// family.
+// Never constructed: only its associated HOLDS item below is ever named.
+#[allow(dead_code)]
 struct ConstAssert<const CONDITION: bool>;
 
 impl ConstAssert<true> {
+    // Read only by naming it (`ConstAssert::<{ .. }>::HOLDS`) for its side
+    // effect of forcing evaluation, never by value.
+    #[allow(dead_code)]
     const HOLDS: () = ();
 }
 
