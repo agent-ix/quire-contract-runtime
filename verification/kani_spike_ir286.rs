@@ -1285,3 +1285,53 @@ fn ir286_diag9_m16_value_merge_drop() {
     };
     assert!(*r >= Integer::one() && *r <= Integer::from(10i64));
 }
+
+/// The real path (`frame_call_add_one_bounded`), with the result read and the
+/// `Evaluation` then forgotten instead of dropped (m10's shape): the drop of a
+/// merged `Value` is what CBMC cannot bound, not the read.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_frame_call_add_one_bounded_forget() {
+    let checked = checked_add_one();
+    let expression = call_f_through_frame(&checked);
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![symbolic_argument()],
+            &objects,
+            &mut meter,
+        )
+        .expect("arity and value-kind admit a symbolic Int[0,9] argument");
+    match &evaluation.outcome {
+        Outcome::Completed(Value::Integer(result)) => {
+            assert!(*result >= Integer::one() && *result <= Integer::from(10i64))
+        }
+        _ => panic!("f(x) did not complete with an Integer"),
+    }
+    core::mem::forget(evaluation);
+}
+
+/// Mutated twin of the above: `f(9) = 10 > 9` must be a counterexample.
+#[kani::proof]
+#[kani::unwind(3)]
+fn ir286_frame_call_add_one_bounded_forget_mutated() {
+    let checked = checked_add_one();
+    let expression = call_f_through_frame(&checked);
+    let objects = ObjectEnvironment::default();
+    let mut meter = Meter::new(EXACT_UNLIMITED);
+    let evaluation = checked
+        .evaluate(
+            &expression,
+            alloc::vec![symbolic_argument()],
+            &objects,
+            &mut meter,
+        )
+        .expect("arity and value-kind admit a symbolic Int[0,9] argument");
+    match &evaluation.outcome {
+        Outcome::Completed(Value::Integer(result)) => assert!(*result <= Integer::from(9i64)),
+        _ => panic!("f(x) did not complete with an Integer"),
+    }
+    core::mem::forget(evaluation);
+}
