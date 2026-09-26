@@ -36,6 +36,17 @@ use super::rational::{Rational, RationalDomain};
 use super::reference::ObjectReference;
 use super::text::{Text, TextType};
 
+/// Fails to compile when `CONDITION` is `false`: only `ConstAssert<true>` has
+/// an associated `HOLDS` item, so instantiating this with a `false` condition
+/// is a missing-associated-item error at compile time. `assert!` and `panic!`
+/// are excluded from this module's exact sources, so a layout check needs a
+/// way to fail the build that uses neither.
+struct ConstAssert<const CONDITION: bool>;
+
+impl ConstAssert<true> {
+    const HOLDS: () = ();
+}
+
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.
 #[non_exhaustive]
@@ -80,14 +91,22 @@ pub enum ValueType {
 // describe, checked at compile time rather than left to hold by
 // construction discipline alone: no inline payload wider than
 // `IntegerInterval`'s 32 bytes, and the whole enum at its measured size.
-const _: () = assert!(mem::size_of::<ValueType>() == 40);
-const _: () = assert!(mem::size_of::<RationalDomain>() <= mem::size_of::<IntegerInterval>());
-const _: () = assert!(mem::size_of::<DecimalType>() <= mem::size_of::<IntegerInterval>());
-const _: () = assert!(mem::size_of::<QuantityUnit>() <= mem::size_of::<IntegerInterval>());
-const _: () = assert!(mem::size_of::<TextType>() <= mem::size_of::<IntegerInterval>());
-const _: () = assert!(mem::size_of::<NodeKey>() <= mem::size_of::<IntegerInterval>());
-const _: () = assert!(mem::size_of::<Box<ValueType>>() <= mem::size_of::<IntegerInterval>());
-const _: () = assert!(mem::size_of::<Box<CollectionType>>() <= mem::size_of::<IntegerInterval>());
+const _: () = ConstAssert::<{ mem::size_of::<ValueType>() == 40 }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<RationalDomain>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<DecimalType>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<QuantityUnit>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<TextType>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<NodeKey>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<Box<ValueType>>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
+const _: () = ConstAssert::<
+    { mem::size_of::<Box<CollectionType>>() <= mem::size_of::<IntegerInterval>() },
+>::HOLDS;
 
 impl ValueType {
     /// `K<element>[bound]`.
@@ -192,18 +211,22 @@ pub enum Value {
 // describe, checked at compile time rather than left to hold by
 // construction discipline alone: no inline payload wider than `Integer`'s 16
 // bytes, and the whole enum at its measured size.
-const _: () = assert!(mem::size_of::<Value>() == 24);
-const _: () = assert!(mem::size_of::<Integer>() == 16);
-const _: () = assert!(mem::size_of::<Rational>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<Decimal>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<IeeeValue>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<Quantity>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<Text>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<EnumValue>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<Rc<OptionValue>>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<Rc<CompositeValue>>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<Rc<CollectionValue>>() <= mem::size_of::<Integer>());
-const _: () = assert!(mem::size_of::<ObjectReference>() <= mem::size_of::<Integer>());
+const _: () = ConstAssert::<{ mem::size_of::<Value>() == 24 }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<Integer>() == 16 }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<Rational>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<Decimal>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<IeeeValue>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<Quantity>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<Text>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () = ConstAssert::<{ mem::size_of::<EnumValue>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<Rc<OptionValue>>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<Rc<CompositeValue>>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<Rc<CollectionValue>>() <= mem::size_of::<Integer>() }>::HOLDS;
+const _: () =
+    ConstAssert::<{ mem::size_of::<ObjectReference>() <= mem::size_of::<Integer>() }>::HOLDS;
 
 impl Value {
     /// `occ(v)` of `quire.value.accounting/v1`: one for the value itself plus
