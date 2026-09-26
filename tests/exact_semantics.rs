@@ -427,7 +427,8 @@ fn tc_034_decimal_value_equality_is_normalized_but_charges_are_retained() {
 #[test]
 fn tc_034_decimal_has_no_structural_partial_eq() {
     let source = include_str!("../src/exact/decimal.rs");
-    assert!(source.contains("#[derive(Clone, Debug)]\npub struct Decimal {"));
+    assert!(source.contains("#[derive(Clone)]\npub struct Decimal(Box<DecimalFields>);"));
+    assert!(source.contains("#[derive(Clone)]\nstruct DecimalFields {"));
     // `DecimalResult` does implement `PartialEq`, on its retained
     // representation and loss record; `Decimal` itself must not.
     assert!(!source.contains("impl PartialEq for Decimal "));

@@ -10,6 +10,7 @@
 //! that topology over the admitted keys; owner joins and stale keys stay
 //! compiler checks.
 
+use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
 use core::fmt;
@@ -278,10 +279,10 @@ impl UnitGraph {
             )?;
             dimension = dimension.multiply(&root.dimension.power(exponent));
         }
-        Ok(CompoundUnit {
-            terms: terms.iter().cloned().collect(),
+        Ok(CompoundUnit::from_parts(
+            terms.iter().cloned().collect(),
             dimension,
-        })
+        ))
     }
 }
 
@@ -420,13 +421,33 @@ pub enum CompoundUnitCause {
 /// A normalized compound unit: canonical root-unit keys to nonzero exponents.
 /// The empty map is the sole dimensionless unit. Structural equality is value
 /// identity.
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
-pub struct CompoundUnit {
+// Fields behind one `Box`: `ValueType::Quantity` carries this type
+// inline, and an `Int` domain read back from a heap `ValueType` folds under CBMC
+// only when `IntegerInterval` fills `ValueType`'s whole payload union.
+#[derive(Clone, Default, Eq, Hash, PartialEq)]
+pub struct CompoundUnit(Box<CompoundUnitFields>);
+
+#[derive(Clone, Default, Eq, Hash, PartialEq)]
+struct CompoundUnitFields {
     terms: BTreeMap<NodeKey, Integer>,
     dimension: Dimension,
 }
 
+impl fmt::Debug for CompoundUnit {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CompoundUnit")
+            .field("terms", &self.0.terms)
+            .field("dimension", &self.0.dimension)
+            .finish()
+    }
+}
+
 impl CompoundUnit {
+    fn from_parts(terms: BTreeMap<NodeKey, Integer>, dimension: Dimension) -> Self {
+        Self(Box::new(CompoundUnitFields { terms, dimension }))
+    }
+
     /// The dimensionless unit.
     pub fn dimensionless() -> Self {
         Self::default()
@@ -434,40 +455,37 @@ impl CompoundUnit {
 
     /// The single-term compound unit `root^1` of a declared unit's root.
     pub(crate) fn of_root(unit: &Unit) -> Self {
-        Self {
-            terms: [(unit.root, Integer::one())].into(),
-            dimension: unit.dimension.clone(),
-        }
+        Self::from_parts([(unit.root, Integer::one())].into(), unit.dimension.clone())
     }
 
     /// Ascending `(root unit, exponent)` terms.
     pub fn terms(&self) -> impl Iterator<Item = (NodeKey, &Integer)> {
-        self.terms.iter().map(|(key, exponent)| (*key, exponent))
+        self.0.terms.iter().map(|(key, exponent)| (*key, exponent))
     }
 
     /// The normalized dimension map.
     pub fn dimension(&self) -> &Dimension {
-        &self.dimension
+        &self.0.dimension
     }
 
     pub(crate) fn multiply(&self, other: &Self) -> Self {
-        Self {
-            terms: combine(&self.terms, &other.terms, Integer::add),
-            dimension: self.dimension.multiply(&other.dimension),
-        }
+        Self::from_parts(
+            combine(&self.0.terms, &other.0.terms, Integer::add),
+            self.0.dimension.multiply(&other.0.dimension),
+        )
     }
 
     pub(crate) fn divide(&self, other: &Self) -> Self {
-        Self {
-            terms: combine(&self.terms, &other.terms, Integer::sub),
-            dimension: self.dimension.divide(&other.dimension),
-        }
+        Self::from_parts(
+            combine(&self.0.terms, &other.0.terms, Integer::sub),
+            self.0.dimension.divide(&other.0.dimension),
+        )
     }
 
     pub(crate) fn power(&self, exponent: &Integer) -> Self {
-        Self {
-            terms: scale_exponents(&self.terms, exponent),
-            dimension: self.dimension.power(exponent),
-        }
+        Self::from_parts(
+            scale_exponents(&self.0.terms, exponent),
+            self.0.dimension.power(exponent),
+        )
     }
 }

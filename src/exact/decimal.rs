@@ -5,6 +5,7 @@
 //! Every intermediate is an exact integer or reduced rational; no binary
 //! floating-point value exists anywhere on this path.
 
+use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cmp::Ordering;
@@ -69,10 +70,25 @@ impl DecimalRepresentation {
 ///
 /// Equality and ordering are mathematical and use [`Decimal::normalized`];
 /// the type deliberately has no structural `PartialEq`.
-#[derive(Clone, Debug)]
-pub struct Decimal {
+// Fields behind one `Box`, for the reason `Rational` gives: no
+// inline `Value` payload may be larger than an `Integer`.
+#[derive(Clone)]
+pub struct Decimal(Box<DecimalFields>);
+
+#[derive(Clone)]
+struct DecimalFields {
     representation: DecimalRepresentation,
     normalized: DecimalRepresentation,
+}
+
+impl core::fmt::Debug for Decimal {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("Decimal")
+            .field("representation", &self.0.representation)
+            .field("normalized", &self.0.normalized)
+            .finish()
+    }
 }
 
 impl Decimal {
@@ -84,20 +100,20 @@ impl Decimal {
     /// A decimal retaining `representation` as provenance.
     pub fn from_representation(representation: DecimalRepresentation) -> Self {
         let normalized = representation.normalized();
-        Self {
+        Self(Box::new(DecimalFields {
             representation,
             normalized,
-        }
+        }))
     }
 
     /// Pre-normalized provenance.
     pub fn representation(&self) -> &DecimalRepresentation {
-        &self.representation
+        &self.0.representation
     }
 
     /// Canonical mathematical representation.
     pub fn normalized(&self) -> &DecimalRepresentation {
-        &self.normalized
+        &self.0.normalized
     }
 
     /// Mathematical ordering. This is the unmetered scalar primitive consumed
@@ -107,7 +123,7 @@ impl Decimal {
     /// larger scale without materializing a power of ten larger than the
     /// operands (see `compare_shifted` below).
     pub fn compare(&self, other: &Self) -> Ordering {
-        let (left, right) = (&self.normalized, &other.normalized);
+        let (left, right) = (&self.0.normalized, &other.0.normalized);
         let (left_scale, right_scale) = (u64::from(left.scale), u64::from(right.scale));
         // `l / 10^ls` against `r / 10^rs`, both sides multiplied by `10^max(ls, rs)`.
         if left_scale >= right_scale {
@@ -128,7 +144,7 @@ impl Decimal {
 
     /// Mathematical equality over normalized values.
     pub fn numerically_equal(&self, other: &Self) -> bool {
-        self.normalized == other.normalized
+        self.0.normalized == other.0.normalized
     }
 }
 
@@ -319,13 +335,30 @@ impl DecimalLoss {
 /// A well-formed `Decimal[lo, hi; smin, smax; mode]` type: inclusive
 /// membership coefficient and scale bounds plus the rounding spelling. Its
 /// target scale is `smax`.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DecimalType {
+// Fields behind one `Box`, for the reason `CompoundUnit` gives.
+#[derive(Clone, Eq, PartialEq)]
+pub struct DecimalType(Box<DecimalTypeFields>);
+
+#[derive(Clone, Eq, PartialEq)]
+struct DecimalTypeFields {
     lower: Integer,
     upper: Integer,
     min_scale: u32,
     max_scale: u32,
     rounding: RoundingMode,
+}
+
+impl core::fmt::Debug for DecimalType {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("DecimalType")
+            .field("lower", &self.0.lower)
+            .field("upper", &self.0.upper)
+            .field("min_scale", &self.0.min_scale)
+            .field("max_scale", &self.0.max_scale)
+            .field("rounding", &self.0.rounding)
+            .finish()
+    }
 }
 
 impl DecimalType {
@@ -346,38 +379,38 @@ impl DecimalType {
         if lower > upper || min_scale > max_scale {
             return Err(malformed);
         }
-        Ok(Self {
+        Ok(Self(Box::new(DecimalTypeFields {
             lower,
             upper,
             min_scale,
             max_scale,
             rounding,
-        })
+        })))
     }
 
     /// Inclusive lower membership coefficient `lo`.
     pub fn lower(&self) -> &Integer {
-        &self.lower
+        &self.0.lower
     }
 
     /// Inclusive upper membership coefficient `hi`.
     pub fn upper(&self) -> &Integer {
-        &self.upper
+        &self.0.upper
     }
 
     /// Inclusive minimum membership scale `smin`.
     pub fn min_scale(&self) -> u32 {
-        self.min_scale
+        self.0.min_scale
     }
 
     /// Inclusive maximum membership scale `smax`, also the target scale.
     pub fn max_scale(&self) -> u32 {
-        self.max_scale
+        self.0.max_scale
     }
 
     /// Selected rounding spelling.
     pub fn rounding(&self) -> RoundingMode {
-        self.rounding
+        self.0.rounding
     }
 
     /// quire-specification/FR-140 value-only membership. With normalized (`c`, `s`), the value is a
@@ -386,14 +419,14 @@ impl DecimalType {
     /// materialized and no charge is made.
     pub fn contains(&self, value: &Decimal) -> bool {
         let normalized = value.normalized();
-        let scale = normalized.scale().max(self.min_scale);
-        if scale > self.max_scale {
+        let scale = normalized.scale().max(self.0.min_scale);
+        if scale > self.0.max_scale {
             return false;
         }
         let shift = u64::from(scale.saturating_sub(normalized.scale()));
         let coefficient = normalized.coefficient();
-        compare_shifted(coefficient, shift, &self.lower).is_ge()
-            && compare_shifted(coefficient, shift, &self.upper).is_le()
+        compare_shifted(coefficient, shift, &self.0.lower).is_ge()
+            && compare_shifted(coefficient, shift, &self.0.upper).is_le()
     }
 }
 
@@ -458,7 +491,7 @@ pub struct DecimalResult {
 /// Result identity is the exact retained representation and loss record.
 impl PartialEq for DecimalResult {
     fn eq(&self, other: &Self) -> bool {
-        self.value.representation == other.value.representation && self.loss == other.loss
+        self.value.0.representation == other.value.0.representation && self.loss == other.loss
     }
 }
 
@@ -523,7 +556,7 @@ fn expanded_side(sides: [Shifted<'_>; 2]) -> (u64, Option<Shifted<'_>>) {
 }
 
 fn retained_parts(value: &Decimal) -> Shifted<'_> {
-    let representation = &value.representation;
+    let representation = &value.0.representation;
     (
         representation.coefficient(),
         u64::from(representation.scale()),
@@ -781,10 +814,10 @@ impl DecimalType {
     pub(crate) fn placement<'a>(&self, value: &'a Rational) -> Result<Placement<'a>, Refusal> {
         let terminating = terminating_scale(value.denominator())
             .and_then(|scale| u32::try_from(scale).ok())
-            .filter(|scale| *scale <= self.max_scale);
+            .filter(|scale| *scale <= self.0.max_scale);
         // A reduced value that is not a multiple of `10^-T` always discards a
         // nonzero digit.
-        if terminating.is_none() && self.rounding == RoundingMode::Exact {
+        if terminating.is_none() && self.0.rounding == RoundingMode::Exact {
             return Err(Refusal::InexactDecimal);
         }
         Ok(Placement { value, terminating })
@@ -795,20 +828,20 @@ impl DecimalType {
     fn round_at_target(&self, value: &Rational) -> Result<Placed, Refusal> {
         let (numerator, denominator) = (value.numerator(), value.denominator());
         let units = Rational::from_integer(
-            numerator.mul(&Integer::power_of_ten(u64::from(self.max_scale))),
+            numerator.mul(&Integer::power_of_ten(u64::from(self.0.max_scale))),
         )
         // A reduced denominator is positive, so the division exists.
         .div(&Rational::from_integer(denominator.clone()))
         .ok_or(Refusal::InexactDecimal)?;
-        let rounded = round(&units, self.rounding).ok_or(Refusal::InexactDecimal)?;
+        let rounded = round(&units, self.0.rounding).ok_or(Refusal::InexactDecimal)?;
         Ok(Placed {
             loss: Some(DecimalLoss {
                 exact: ExactLossValue::scaled(value, 0),
-                rounded: DecimalRepresentation::new(rounded.clone(), self.max_scale),
-                mode: self.rounding,
+                rounded: DecimalRepresentation::new(rounded.clone(), self.0.max_scale),
+                mode: self.0.rounding,
             }),
             coefficient: rounded,
-            scale: self.max_scale,
+            scale: self.0.max_scale,
         })
     }
 }
@@ -824,7 +857,7 @@ impl Placement<'_> {
     /// `(sbits(a,T), sdigits(a,T))`, which bound the retained coefficient
     /// `v × 10^T`; an integer target is scale zero, where this is `bits(a)`.
     pub(crate) fn retained_sizes(&self, target: &DecimalType) -> (Integer, Integer) {
-        let (numerator, scale) = (self.value.numerator(), u64::from(target.max_scale));
+        let (numerator, scale) = (self.value.numerator(), u64::from(target.0.max_scale));
         (
             shifted_bits(numerator, scale),
             shifted_digits(numerator, scale),
@@ -872,7 +905,7 @@ fn terminating_scale(denominator: &Integer) -> Option<u64> {
 impl Placed {
     /// The upscale shift `k = T − s` from this coefficient's scale into `T`.
     fn upscale(&self, target: &DecimalType) -> u64 {
-        u64::from(target.max_scale.saturating_sub(self.scale))
+        u64::from(target.0.max_scale.saturating_sub(self.scale))
     }
 
     /// Refuse a value outside the target's declared membership.
@@ -893,7 +926,7 @@ impl Placed {
     pub(crate) fn retain(self, target: &DecimalType) -> DecimalResult {
         let upscale = self.upscale(target);
         DecimalResult {
-            value: Decimal::new(expand_one((&self.coefficient, upscale)), target.max_scale),
+            value: Decimal::new(expand_one((&self.coefficient, upscale)), target.0.max_scale),
             loss: self.loss,
         }
     }
