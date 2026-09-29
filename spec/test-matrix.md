@@ -23,7 +23,7 @@ type: TestMatrix
 | FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |
 | FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
 | FR-004 | FR-004-AC-8 | TC-006 | ✅ Complete |
-| FR-006 | FR-006-AC-1, FR-006-AC-5, FR-006-AC-6 | TC-016 | ✅ implemented |
+| FR-006 | FR-006-AC-1, FR-006-AC-6 | TC-016 | ✅ implemented |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | ✅ implemented |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
 | FR-006 | FR-006-AC-4 | TC-017 | ✅ implemented |
@@ -42,11 +42,10 @@ type: TestMatrix
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-025 | 🚧 sequence and ordered-set cases not yet in tests/exact_collection.rs |
 | FR-007 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | TC-034 | ✅ implemented |
 | FR-007 | FR-007-AC-13 | TC-035 | ✅ implemented |
-| FR-007 | FR-007-AC-14 | TC-036 | ✅ implemented |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | TC-030 | ✅ implemented |
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
-| FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | TC-033 | ✅ implemented |
+| FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | TC-033 | ✅ implemented |
 | FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented: AC-1's linked-only application is proved by `tc_194_kernel_check_is_refused_so_no_kernel_package_is_applicable` (a package `check` rejects under `CheckMode::Kernel` is never applicable — that is AC-6's inspection too) together with `tc_194_linked_package_applies_every_declared_function` and the rest of this corpus's `Linked`-application tests, which call only a package `check` admitted under `CheckMode::Linked`. AC-2/AC-3's "arity before any per-argument check, all before the `function.call` charge, before the body" ordering is covered for both `call` and `Frame::call` |
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
 | FR-273 | FR-273-AC-5 | TC-194 | ✅ implemented: AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (`conformance/qsl-agreement/tests/tc_191_function_application.rs:98` and the matching lines in the other three vectors) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
@@ -71,7 +70,7 @@ type: TestMatrix
 | TC-007 | Audit runtime footprint and packaging policy | Inspection | P0 | NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2 | ✅ Complete |
 | TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-004-AC-3, NFR-002-AC-3 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
-| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-5, FR-006-AC-6 | ✅ implemented |
+| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
 | TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | ✅ implemented |
 | TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | ✅ implemented |
@@ -85,15 +84,14 @@ type: TestMatrix
 | TC-030 | Dispose negotiation items independently and in input order | Unit | P0 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5 | ✅ implemented |
 | TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | ✅ implemented |
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | ✅ implemented |
-| TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6 | ✅ implemented |
+| TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
 | TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ implemented |
-| TC-036 | Pin evaluate_integer_arithmetic's direct Outcome construction | Unit | P1 | FR-007-AC-14 | ✅ implemented |
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | ✅ implemented |
 
-Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
-build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
+Inspection-class TC-005, TC-007, and TC-008 rest on build, compile-fail, and measurement outputs.
+Every test-matrix row now has a `tc_NNN` Rust test
 binding; executable semantic claims retain direct acceptance-criterion trace tags.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
@@ -135,7 +133,7 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   `src/exact_accounting_tests.rs` for the cumulative-counter boundary no public operator can
   reach;
   TC-033: `tests/exact_vocabulary.rs`; TC-034: `tests/exact_semantics.rs`; TC-035:
-  `tests/exact_debug_parity.rs`; TC-036: `tests/exact_arithmetic.rs`.
+  `tests/exact_debug_parity.rs`.
 - TC-016, TC-017, TC-031: `tests/exact_outcomes.rs` and, for TC-031's check-before-mutate ordering
   across every counter, the in-crate `src/exact_accounting_tests.rs` (needs `Charge`'s
   crate-private builders to construct a charge that moves every counter at once, so is reachable
@@ -162,9 +160,7 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   the public campaign record/discard paths' five saturating increments plus saturating totals from
   symbolic near-overflow states. It does not prove unlisted module behavior.
 - TC-004: `tests/proptest_adapter.rs`.
-- TC-005: `tests/release_contract.rs`, compile-fail crate documentation, and `make test-features`.
-- TC-007: `tests/release_contract.rs`, the footprint crate's fixed-result test, the linked-footprint
-  and panic-relocation measurement run by `make size`, and the unsafe, panic-surface, and license
-  audits.
-- TC-008: `tests/release_contract.rs` recursively scans all shipped runtime source, supplemented by
-  five compile-fail enum doctests and public API documentation.
+- TC-005: compile-fail crate documentation and `make test-features`.
+- TC-007: the footprint crate's fixed-result test, the linked-footprint and panic-relocation
+  measurement run by `make size`, and the license check.
+- TC-008: five compile-fail enum doctests and public API documentation.

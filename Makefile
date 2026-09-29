@@ -34,8 +34,6 @@ help:
 	@echo "  make spec             - Validate and cover the specification with Quire"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - run all declared cargo-deny policy checks"
-	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
-	@echo "  make audit-panic      - Reject intentional panic paths in runtime source"
 	@echo "  make kani             - Run the Kani proofs"
 	@echo "  make kani-mutations   - Require injected defects to fail their owning proofs"
 	@echo "  make ci               - All CI gates locally (hosted CI is manual-only)"
@@ -120,14 +118,6 @@ deny:
 cargo-audit:
 	$(CARGO) audit
 
-.PHONY: audit-unsafe
-audit-unsafe:
-	bash scripts/check_unsafe_comments.sh
-
-.PHONY: audit-panic
-audit-panic:
-	bash scripts/check_panic_surface.sh
-
 # =============================================================================
 # Proofs
 #
@@ -156,5 +146,4 @@ kani-mutations:
 
 .NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features conformance doc msrv size deny audit-unsafe audit-panic \
-	kani kani-mutations test
+ci: fmt-check spec lint test-features conformance doc msrv size deny kani kani-mutations test

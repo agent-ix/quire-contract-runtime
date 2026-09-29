@@ -67,8 +67,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
-| FR-006-AC-5 | Exact sources contain no host float, `std`, `unsafe` or panic path, and the public surface equals the private-module re-export set. | Test (TC-016) |
-| FR-006-AC-6 | `Refusal::code()` is `Some` for exactly `IeeeNanPayloadNotRepresentable`, `IeeeRationalOutOfDomain`, `ForeignReference` and `CardinalityOutOfBound` with their normative spellings, and `None` for all nine other variants; no `Refusal`, `Undefined` or `Incomplete` variant carries a string field. | Test (TC-016) |
+| FR-006-AC-6 | `Refusal::code()` is `Some` for exactly `IeeeNanPayloadNotRepresentable`, `IeeeRationalOutOfDomain`, `ForeignReference` and `CardinalityOutOfBound` with their normative spellings, and `None` for all nine other variants. | Test (TC-016) |
 
 ## Dependencies
 

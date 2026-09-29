@@ -19,7 +19,7 @@ resolver/build compatibility checks; they do not claim distinct runtime behavior
 ## Test Procedure
 
 Run tests with no default features, with `alloc`, with `std`, and with all features. Run the
-feature-policy source test and the default-profile compile-fail doctest for `proptest_adapter`.
+default-profile compile-fail doctest for `proptest_adapter`.
 
 Also execute isolated `--no-default-features --features snapshot-json` tests and doctests,
 then compile that exact library profile for `thumbv7em-none-eabi` on Rust 1.75.0. Check

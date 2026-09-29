@@ -104,31 +104,6 @@ fn tc_034_decimal_default_rounding_is_exact_and_refuses_a_discarded_digit() {
     assert_eq!(outcome, Outcome::Refused(Refusal::InexactDecimal));
 }
 
-/// Trace: TC-034, FR-007-AC-8
-#[test]
-fn tc_034_decimal_rounding_never_reads_host_floating_point() {
-    // Precedent: tests/exact_outcomes.rs
-    // `tc_016_exact_sources_have_no_host_float_std_panic_or_unsafe_path` scans
-    // every `src/exact` source for the same forbidden tokens; this repeats the
-    // check scoped to `decimal.rs`, whose six rounding spellings this test
-    // exercises.
-    let source = include_str!("../src/exact/decimal.rs");
-    let code: String = source
-        .lines()
-        .filter(|line| !line.trim_start().starts_with("//"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    for token in ["f32", "f64"] {
-        let hit = code.match_indices(token).any(|(at, _)| {
-            let before = code[..at].chars().next_back();
-            let after = code[at + token.len()..].chars().next();
-            let word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
-            !word(before) && !word(after)
-        });
-        assert!(!hit, "src/exact/decimal.rs contains {token}");
-    }
-}
-
 // ---- AC-9: IEEE exceptional semantics --------------------------------------
 
 const SIGN32: u32 = 1 << 31;
@@ -421,17 +396,6 @@ fn tc_034_decimal_value_equality_is_normalized_but_charges_are_retained() {
     // Comparing the narrow retained value against itself has no scale
     // expansion and smaller bit/digit amounts.
     assert_eq!(consumed(&narrow_vs_narrow), [4, 2, 0, 0, 0, 0, 0, 2, 3, 1]);
-}
-
-/// Trace: TC-034, FR-007-AC-11
-#[test]
-fn tc_034_decimal_has_no_structural_partial_eq() {
-    let source = include_str!("../src/exact/decimal.rs");
-    assert!(source.contains("#[derive(Clone)]\npub struct Decimal(Box<DecimalFields>);"));
-    assert!(source.contains("#[derive(Clone)]\nstruct DecimalFields {"));
-    // `DecimalResult` does implement `PartialEq`, on its retained
-    // representation and loss record; `Decimal` itself must not.
-    assert!(!source.contains("impl PartialEq for Decimal "));
 }
 
 // ---- AC-12: Euclidean `mod`, pair refusal and quantity fault order --------

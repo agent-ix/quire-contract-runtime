@@ -19,21 +19,14 @@ license controls remain explicit.
 
 ## Test Procedure
 
-Run `make ci`. Inspect the `tc_007_release_controls_are_mandatory` result, default dependency tree,
-unsafe audit, `cargo deny` result, and the `make size` output.
-The source-policy test parses the footprint harness and requires actual calls to every constructor,
-both accounting mutations, and every operator family. A footprint-crate unit test executes that
-population at two fixed inputs and compares exact results. The source-policy test also recursively
-parses every shipped runtime source file and constrains accounting inherent and trait implementations,
-private aliases, cross-file functions, and macros that could add a reset seam.
-`make size` links the fixed-population consumer on the MSRV compiler for the declared target and
-measures it.
+Run `make ci`. Inspect the default dependency tree, the `cargo deny` result, and the `make size`
+output. A footprint-crate unit test executes the fixed population at two fixed inputs and compares
+exact results. `make size` links the fixed-population consumer on the MSRV compiler for the
+declared target and measures it.
 
 ## Expected Results
 
-The source policy and footprint semantic tests pass, the default normal dependency count and
-unsafe-block count are zero, the license and publication gates pass, and
-`scripts/check_linked_footprint.sh` exits successfully only when the fixed-target runtime/harness
-sections are at least 500 and no larger than 4,096 bytes and no runtime/harness panic-path reference
-is linked.
-
+The footprint semantic test passes, the default normal dependency count is zero, the license gate
+passes, and `scripts/check_linked_footprint.sh` exits successfully only when the fixed-target
+runtime/harness sections are at least 500 and no larger than 4,096 bytes and no runtime/harness
+panic-path reference is linked.

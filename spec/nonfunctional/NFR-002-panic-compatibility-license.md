@@ -47,8 +47,7 @@ must be explicit to downstream users.
 
 ## Verification
 
-CI runs Clippy, unit/property tests, manifest inspection, unsafe audit, and
-cargo-deny. The public API documentation states its size, panic, feature, and compatibility contracts.
+CI runs Clippy, unit/property tests, and cargo-deny. The public API documentation states its size, panic, feature, and compatibility contracts.
 
 ## Dependencies
 

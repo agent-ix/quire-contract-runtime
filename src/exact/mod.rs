@@ -54,8 +54,7 @@
 //! is bounded only by the deployment's `value_occurrences` limit; a generous
 //! limit admits a nesting deep enough that a *recursive* walk would overflow
 //! the host stack, which is silent corruption rather than a panic on the
-//! governed `thumbv7em-none-eabi` target, so `make audit-panic` cannot see
-//! it — which is why `Debug` and `Drop` are hand-written rather than derived,
+//! governed `thumbv7em-none-eabi` target — which is why `Debug` and `Drop` are hand-written rather than derived,
 //! the same as every other value-walking algorithm here.
 //! [`Value`] shares nested composite and collection values through
 //! [`alloc::rc::Rc`], never `Arc`: this crate has no concurrency and no

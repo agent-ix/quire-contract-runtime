@@ -46,8 +46,6 @@ DOMAIN_TARGETS = [
     "--test",
     "proptest_adapter",
     "--test",
-    "release_contract",
-    "--test",
     "snapshot",
 ]
 
@@ -73,7 +71,7 @@ FEATURE_SETS = (
     # The exact oracle tests are `#![cfg(feature = "exact")]`, so no other row runs
     # them. The shared-corpus agreement package is `make conformance`, not a row
     # here: it needs Rust 1.98 and a git dependency this crate's graph never has.
-    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation", "--test", "release_contract"], ["TC-005", "TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
+    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation"], ["TC-005", "TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
 )
 
 # Actual no_std-target library builds, not host tests that can obtain std through

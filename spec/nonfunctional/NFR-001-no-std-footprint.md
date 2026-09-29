@@ -46,7 +46,7 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 ## Verification
 
 The local composite gate checks every declared target and feature at the MSRV, builds and tests the
-fixed bare-metal footprint consumer, runs the unsafe and panic audits, and measures the linked
+fixed bare-metal footprint consumer, and measures the linked
 sections and panic relocations with `make size`.
 
 ## Dependencies

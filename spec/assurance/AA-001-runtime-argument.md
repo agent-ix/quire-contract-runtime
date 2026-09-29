@@ -48,7 +48,7 @@ until the named human owner reviews the results and records a decision.
 ## Reasoning
 
 Specification traceability, exhaustive small-domain tests, property and Kani harnesses, dependency
-and license checks, unsafe audit, footprint measurement, and explicit gaps jointly address the known
+and license checks, footprint measurement, and explicit gaps jointly address the known
 failure scenarios without treating any one tool output as a release decision.
 
 ## Sufficiency Decision

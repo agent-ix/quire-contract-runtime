@@ -45,7 +45,7 @@ remain distinct. The core performs no I/O and has no intentional panic path.
 
 ## Controls
 
-Feature-matrix CI, requirement-tagged tests, cargo-deny, unsafe audit, API documentation, and the
+Feature-matrix CI, requirement-tagged tests, cargo-deny, API documentation, and the
 footprint measurement constrain changes. Human review is mandatory for release.
 
 ## Replacement
