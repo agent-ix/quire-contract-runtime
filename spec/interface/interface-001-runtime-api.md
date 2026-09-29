@@ -124,11 +124,11 @@ operation vectors or a checked-in specification model that calls no `quire-exact
 
 Classification is by rule, not by a frozen list, because the upstream kernel is still converging
 (QSL-131 redesigns `Value`, `ValueType` and the enum and quantity shapes). An item is a kernel item
-exactly when the pinned `quire-exact` revision exports an item of that name; every other `exact` item
+exactly when the quire-exact version this crate depends on exports an item of that name; every other `exact` item
 is runtime-owned. When an item moves from the runtime to the kernel it keeps its `exact` path and
 takes the kernel's shape. Consumers adapt to that shape; the path and the owner do not move again.
 The `consumed` lists below record what generated code and the code generator call today, classified
-against `quire-exact` revision `0dc0834`; they illustrate the rule and do not replace it.
+against the quire-exact version this crate depends on; they illustrate the rule and do not replace it.
 
 ```yaml
 exact:
@@ -137,7 +137,7 @@ exact:
   consumers: [generated oracle source, quire-contract-codegen host code]
   kernel:
     owner: quire-exact
-    rule: every exact item whose name the pinned quire-exact revision exports
+    rule: every exact item whose name the quire-exact version this crate depends on exports
     runtime_role: re-export unchanged at the same exact path; no runtime definition
     named_kernel_types: [Value, ValueType, Outcome, Refusal, Undefined, BoundViolation, Meter, ChargePoint, Incomplete, ScalarLimits, NodeKey, Origin, Location]
     oracle_restriction: a generated oracle proving a kernel operation, or a runtime operation that calls one, may not call that operation for its own expectation (ADR-013 O-13; ADR-011 §2.3 rule 8)
@@ -155,7 +155,7 @@ exact:
       quantity: [Quantity]
   runtime_owned:
     owner: quire-contract-runtime
-    rule: every exact item the pinned quire-exact revision does not export, plus the items below regardless of upstream names
+    rule: every exact item the quire-exact version this crate depends on does not export, plus the items below regardless of upstream names
     always_runtime: [Frame, Body, CheckedPackage, Evaluation, plan_call, negotiate_integer_division, negotiate_ieee]
     consumed:
       function_application: [PackageDeclarations, FunctionDeclaration, CheckedPackage, CheckMode, CheckingLimits, CheckRefusal, InputRefusal, Frame]
@@ -184,7 +184,7 @@ The table below records, for every runtime-owned `exact` operation that evaluate
 | --- | --- |
 | `evaluate_quantity` | `evaluate_quantity_arithmetic` |
 
-**Open issue.** `quire-exact` revision `0dc0834` declares Rust 1.98 and is not `no_std`, which
+**Open issue.** The quire-exact version this crate depends on declares Rust 1.98 and is not `no_std`, which
 conflicts with `compatibility.msrv` (Rust 1.75) and the `exact` feature's no_std build that
 interface-001-AC-13 requires. Resolving the conflict is a pending owner decision; IR-18 tracks it.
 
@@ -193,10 +193,10 @@ interface-001-AC-13 requires. Resolving the conflict is a pending owner decision
 | ID | Criterion | Verification |
 | --- | --- | --- |
 | interface-001-AC-1 | The `exact` module shall expose every item that generated oracle source or `quire-contract-codegen` — at the `quire-contract-codegen` revision that pins this runtime revision — imports from it at the path `quire_contract_runtime::exact::<Name>`. | Inspection |
-| interface-001-AC-2 | Where the pinned `quire-exact` revision exports an item whose name the `exact` module exposes, the `exact` module shall expose that `quire-exact` item unchanged. | Inspection |
-| interface-001-AC-3 | Where the pinned `quire-exact` revision exports an item whose name the `exact` module exposes, the `exact` module shall contain no public item definition with that name. | Inspection |
+| interface-001-AC-2 | Where the quire-exact version this crate depends on exports an item whose name the `exact` module exposes, the `exact` module shall expose that `quire-exact` item unchanged. | Inspection |
+| interface-001-AC-3 | Where the quire-exact version this crate depends on exports an item whose name the `exact` module exposes, the `exact` module shall contain no public item definition with that name. | Inspection |
 | interface-001-AC-4 | When an item's owner changes from the runtime to `quire-exact`, the `exact` module shall keep exposing that item at the path it exposed before the change. | Inspection |
-| interface-001-AC-5 | Where the pinned `quire-exact` revision exports `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location`, the `exact` module shall expose the `quire-exact` definition of that type — an explicit per-type instance of interface-001-AC-2 for the `named_kernel_types` list. | Inspection |
+| interface-001-AC-5 | Where the quire-exact version this crate depends on exports `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location`, the `exact` module shall expose the `quire-exact` definition of that type — an explicit per-type instance of interface-001-AC-2 for the `named_kernel_types` list. | Inspection |
 | interface-001-AC-6 | Where the `exact` module exposes the `quire-exact` definition of `NodeKey`, the runtime's library source shall not call a `NodeKey` constructor. | Inspection |
 | interface-001-AC-7 | The runtime shall define `Frame`, `Body`, `CheckedPackage`, `Evaluation` and `plan_call` in its own source. | Inspection |
 | interface-001-AC-8 | The runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
@@ -204,5 +204,5 @@ interface-001-AC-13 requires. Resolving the conflict is a pending owner decision
 | interface-001-AC-10 | The runtime shall define every item the `outside_exact` list names outside the `exact` module. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
 | interface-001-AC-12 | `quire-contract-codegen` shall resolve the same `quire-exact` revision that the runtime's `exact` module re-exports. | Inspection (this check belongs in `quire-contract-codegen`'s own lockfile, not the runtime's) |
-| interface-001-AC-13 | Pending the owner decision on `quire-exact`'s MSRV and `no_std` status (see Open issue above; `quire-exact` revision `0dc0834` declares Rust 1.98 and is not `no_std`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`, TC-005) |
+| interface-001-AC-13 | Pending the owner decision on `quire-exact`'s MSRV and `no_std` status (see Open issue above; the quire-exact version this crate depends on declares Rust 1.98 and is not `no_std`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`, TC-005) |
 | interface-001-AC-14 | The runtime's normal dependencies shall include no crate published from agent-ix/quire-spec-language other than `quire-exact`. | Inspection |
