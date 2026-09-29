@@ -47,8 +47,7 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 - The core is safe Rust, performs no allocation or I/O, and has no required dependency.
 - Undefined partial operations return `None`; counters saturate rather than panic.
 - Public data enums are non-exhaustive for forward-compatible retention of future states.
-- Exact type and release artifact sizes are target-dependent and retained per candidate. The v0.1
-  gate fixes Rust 1.75 and `thumbv7em-none-eabi`, then limits the representative static-library
+- Exact type and release artifact sizes are target-dependent. The v0.1 gate fixes Rust 1.75 and `thumbv7em-none-eabi`, then limits the representative static-library
   fixed-population consumer's linked `.text` plus `.rodata` to 4 KiB with no panic relocation.
   MP-001 defines the exercised API set and shared release profile.
 - The crate is `AGPL-3.0-or-later` and `publish = false` until the human v0.1 source-release
@@ -60,21 +59,12 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 
 ```bash
 make ci          # every mandatory local gate; hosted CI stays manual-only
-make assurance   # shared pins and the Quoin chain
 ```
 
-The seven checked-in Kani harnesses run under pinned Kani 0.67.0 and each must discharge a declared
-positive obligation floor. An absent `cargo-kani` is reported as `unavailable` and fails the gate; it
-is never recorded as a skip and never as a pass.
-
-This repository retains no evidence framework of its own and no evidence. Verification results are
-handed to the released Engineering Assurance, Quire and Quoin contracts, pinned in
-`assurance/pins.json`, and Quoin retains the producer bytes. The records that used to sit under
-`evidence/` were deleted under `agent-ix/quire-contract-runtime#11`; the preservation constraint that
-held them was released for the pre-stable phase by the repository owner and re-applies at the move
-toward stable releases. Requirements, test cases, the matrix, the suite registry and assurance artifacts live under `spec/`;
-plans under `plan/`; historical planning and review records under `planning/`; and code reviews and
-gap analyses under `reviews/`.
+The checked-in Kani harnesses run under `make kani`, which fails when a proof fails or `cargo-kani`
+is absent. Requirements, test cases, the matrix and assurance artifacts live under `spec/`; plans
+under `plan/`; historical planning and review records under `planning/`; and code reviews and gap
+analyses under `reviews/`.
 
 Agent-assisted contributions remain subject to the same traceability, review, evidence, and human
 release gates as every other contribution.

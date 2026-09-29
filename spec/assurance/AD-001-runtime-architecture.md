@@ -15,7 +15,7 @@ relationships:
 
 The default boundary is this crate's safe Rust core: identity, observations, verdicts, operators,
 checked integer helpers, and campaign counts. Generated code and callers are outside. The optional
-proptest adapter is a development-only boundary; proptest itself is external and pinned.
+proptest adapter is a development-only boundary; proptest itself is external.
 
 ## Views
 
@@ -32,7 +32,7 @@ traits are sealed to preserve semantics. Counters saturate because evidence coll
 
 ## Risks
 
-The optional proptest mapping is coupled to a pinned external API. Source size is only a proxy for
+The optional proptest mapping is coupled to an external API. Source size is only a proxy for
 target footprint. Kani coverage depends on an external proof tool. These limitations remain in the
 measurement and gap reports.
 

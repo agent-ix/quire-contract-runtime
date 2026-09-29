@@ -13,7 +13,6 @@ type: TestMatrix
 | FR-001 | FR-001-AC-1, FR-001-AC-2 | TC-001 | ✅ Complete |
 | FR-001 | FR-001-AC-3 | TC-008 | ✅ Complete |
 | FR-001 | FR-001-AC-4 | TC-001 | ✅ Complete |
-| FR-001 | FR-001-AC-5 | TC-008 | ✅ Complete |
 | FR-002 | FR-002-AC-1, FR-002-AC-2 | TC-002 | ✅ Complete |
 | FR-002 | FR-002-AC-3 | TC-003 | ✅ Complete |
 | FR-002 | FR-002-AC-4 | TC-003 | ✅ Complete |
@@ -24,11 +23,6 @@ type: TestMatrix
 | FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |
 | FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
 | FR-004 | FR-004-AC-8 | TC-006 | ✅ Complete |
-| FR-005 | FR-005-AC-1 | TC-009 | ✅ Complete |
-| FR-005 | FR-005-AC-2 | TC-010 | ✅ Complete |
-| FR-005 | FR-005-AC-3 | TC-011 | ✅ Complete |
-| FR-005 | FR-005-AC-5 | TC-013 | ✅ Complete |
-| FR-005 | FR-005-AC-6 | TC-014 | ✅ Complete |
 | FR-006 | FR-006-AC-1, FR-006-AC-5, FR-006-AC-6 | TC-016 | ✅ implemented |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | ✅ implemented |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
@@ -75,12 +69,7 @@ type: TestMatrix
 | TC-005 | Resolve and build every supported feature profile | Inspection | P0 | FR-003-AC-2, NFR-001-AC-1, interface-001-AC-13 | ✅ Complete |
 | TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-8 | ✅ Complete |
 | TC-007 | Audit runtime footprint and packaging policy | Inspection | P0 | NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2 | ✅ Complete |
-| TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-001-AC-5, FR-004-AC-3, NFR-002-AC-3 | ✅ Complete |
-| TC-009 | Classify every shared pin through the packaged compatibility matrix | Integration | P0 | FR-005-AC-1 | ✅ Complete |
-| TC-010 | Reach Quoin through the declared adapter with no producer executed | Integration | P0 | FR-005-AC-2 | ✅ Complete |
-| TC-011 | Bind the sealed record's impact snapshot to the Quire static export | Integration | P0 | FR-005-AC-3 | ✅ Complete |
-| TC-013 | Demonstrate all twelve outcomes and pair every negative with a positive control | Integration | P0 | FR-005-AC-5, NFR-002-AC-3 | ✅ Complete |
-| TC-014 | Prove no generic evidence machinery remains | Integration | P0 | FR-005-AC-6 | ✅ Complete |
+| TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-004-AC-3, NFR-002-AC-3 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 | TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-5, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
@@ -104,7 +93,7 @@ type: TestMatrix
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | ✅ implemented |
 
 Inspection-class TC-005, TC-007, and TC-008 combine self-identifying Rust source-policy tests with
-retained build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
+build, compile-fail, or audit outputs. Every test-matrix row now has a `tc_NNN` Rust test
 binding; executable semantic claims retain direct acceptance-criterion trace tags.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
@@ -120,7 +109,7 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
   `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.
 - FR-273-AC-5 (TC-194's shared-corpus row): `conformance/qsl-agreement/tests/tc_191_function_application.rs`,
-  pinned to the quire-spec-language `ea39f91` authority (`conformance/qsl-agreement/Cargo.toml`).
+  against the quire-spec-language authority `conformance/qsl-agreement/Cargo.toml` depends on.
   It agrees on the closed `InputRefusal` vocabulary (`UnknownFunction`, `Arity`, `WrongValueKind`,
   `DanglingReference`) with its codes and causes, and the charge count of one admitted call (AP05).
   It does **not** agree on check *ordering*: each of its five vectors (AP01 through AP05) triggers
@@ -156,9 +145,9 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   (`src/exact/accounting.rs`): `occurrence: 0` does not compile, so the malformed request cannot be
   written.
 - TC-018 through TC-022: `conformance/qsl-agreement/tests/`, run by `make conformance` against
-  quire-spec-language d01371b9, with charges checked against agent-ix/quire-specification@7d7943a.
+  quire-spec-language.
 - TC-024: `tests/exact_composite.rs`; TC-025: `tests/exact_collection.rs`; TC-026:
-  `tests/exact_equality.rs`. All run with `--features exact` against quire-spec-language d01371b9.
+  `tests/exact_equality.rs`. All run with `--features exact`.
 
 - TC-015: `tests/snapshot.rs`, private near-limit accounting tests, compile-fail API docs,
   and an isolated native memory-ceiling control. REV-009 records independent acceptance of
@@ -171,16 +160,11 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   dispatch/truth-table wiring, independent widened i8 arithmetic oracles,
   symbolic invalid division/remainder, full-width `usize` index definedness, option definedness, and
   the public campaign record/discard paths' five saturating increments plus saturating totals from
-  symbolic near-overflow states. `make kani-census` enforces the seven proof names and trace markers.
-  It does not prove unlisted module behavior.
+  symbolic near-overflow states. It does not prove unlisted module behavior.
 - TC-004: `tests/proptest_adapter.rs`.
-- TC-005: `tests/release_contract.rs`, compile-fail crate documentation, `make test-features`, and the
-  retained default dependency record.
-- TC-007: `tests/release_contract.rs`, the footprint crate's fixed-result test, plus the governed
-  linked-footprint and panic-relocation measurement published by
-  `scripts/measure_footprint.py`, and the unsafe, panic-surface, and license audits.
+- TC-005: `tests/release_contract.rs`, compile-fail crate documentation, and `make test-features`.
+- TC-007: `tests/release_contract.rs`, the footprint crate's fixed-result test, the linked-footprint
+  and panic-relocation measurement run by `make size`, and the unsafe, panic-surface, and license
+  audits.
 - TC-008: `tests/release_contract.rs` recursively scans all shipped runtime source, supplemented by
   five compile-fail enum doctests and public API documentation.
-- TC-009 through TC-011, TC-013 and TC-014: `tests/shared_assurance.rs`, which invokes the shared-assurance gates
-  rather than reimplementing them. A test that recomputes what a gate computes is a second
-  implementation that can agree with itself while both are wrong.

@@ -20,15 +20,14 @@ license controls remain explicit.
 ## Test Procedure
 
 Run `make ci`. Inspect the `tc_007_release_controls_are_mandatory` result, default dependency tree,
-unsafe audit, `cargo deny` result, and the enforced release-size output retained by MP-001.
+unsafe audit, `cargo deny` result, and the `make size` output.
 The source-policy test parses the footprint harness and requires actual calls to every constructor,
 both accounting mutations, and every operator family. A footprint-crate unit test executes that
 population at two fixed inputs and compares exact results. The source-policy test also recursively
 parses every shipped runtime source file and constrains accounting inherent and trait implementations,
 private aliases, cross-file functions, and macros that could add a reset seam.
-`scripts/measure_footprint.py` links the fixed-population consumer on the declared MSRV compiler for
-the declared target and publishes the measurement as a structured document, so the numbers a reader
-sees are the numbers a gate read.
+`make size` links the fixed-population consumer on the MSRV compiler for the declared target and
+measures it.
 
 ## Expected Results
 

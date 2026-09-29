@@ -39,7 +39,6 @@ expanding the trusted boundary.
 
 ## Evidence Policy
 
-Evidence identifies source revision, tool version, feature selection, inputs, outputs, and digest.
 Missing, inconclusive, rejected, discarded, or failed results remain visible. A human release owner
 alone judges sufficiency.
 
