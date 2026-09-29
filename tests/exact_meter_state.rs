@@ -49,7 +49,7 @@ fn integer_bound(domain: &IntegerDomain) -> Option<&IntegerInterval> {
     match domain {
         IntegerDomain::Mathematical => None,
         IntegerDomain::Bounded(interval) => Some(interval),
-        // `IntegerDomain` is `#[non_exhaustive]` (NFR-002-AC-3). A future
+        // `IntegerDomain` is `#[non_exhaustive]` (NFR-002). A future
         // domain kind may carry no `&IntegerInterval` at all, so there is no
         // safe default here.
         _ => unreachable!("IntegerDomain gained a variant with no known bound representation"),
@@ -630,7 +630,7 @@ fn tc_032_ac7_compound_unit_terms_ascend_by_node_key_for_any_construction_order(
         let compound = match combined.unit() {
             QuantityUnit::Compound(compound) => compound,
             QuantityUnit::Declared(_) => panic!("a compound-unit product must stay compound"),
-            // `QuantityUnit` is `#[non_exhaustive]` (NFR-002-AC-3).
+            // `QuantityUnit` is `#[non_exhaustive]` (NFR-002).
             _ => panic!("QuantityUnit gained a variant this test does not expect"),
         };
         let terms: Vec<NodeKey> = compound.terms().map(|(key, _)| key).collect();

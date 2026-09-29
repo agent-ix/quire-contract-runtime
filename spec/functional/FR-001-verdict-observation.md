@@ -37,7 +37,6 @@ point, and per-clause observations.
 |----|----------|--------------|
 | FR-001-AC-1 | The three verdicts remain distinct through construction and pattern matching. | Test (TC-001) |
 | FR-001-AC-2 | Every verdict carries requirement, revision, execution-point, and observation identity. | Test (TC-001) |
-| FR-001-AC-3 | Rejection has no API that converts it to successful evidence. | Inspection |
 | FR-001-AC-4 | The five clause outcomes — passed, failed, rejected, not-evaluated, undefined — are distinct through construction and pattern matching, and a failed or rejected clause retains its typed code, clause identity and optional borrowed detail. | Test (TC-001) |
 
 ## Dependencies

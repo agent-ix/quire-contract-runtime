@@ -122,7 +122,7 @@ impl TextProfile {
 
 /// A Unicode normalization form.
 ///
-/// Deliberately not `#[non_exhaustive]` (NFR-002-AC-3, IR-77): this is
+/// Deliberately not `#[non_exhaustive]` (NFR-002, IR-77): this is
 /// Unicode's own closed vocabulary (UAX #15), the 2x2 combination of
 /// {canonical, compatibility} x {decomposition, composition}, not this
 /// crate's own evolving surface. [`TextProfile`], which *is* this crate's

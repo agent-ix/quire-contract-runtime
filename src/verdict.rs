@@ -36,7 +36,7 @@ impl<'a> VerdictContext<'a> {
 
 /// Stable terminal category for counters and adapters.
 ///
-/// Trace: TC-008, NFR-002-AC-3
+/// Trace: NFR-002
 // Implements: FR-001
 ///
 /// Downstream exhaustive matching is rejected so future terminal categories cannot be silently
@@ -70,7 +70,7 @@ pub enum VerdictKind {
 /// There is deliberately no conversion to `bool` or `Result<(), _>` in the core: downstream code
 /// must choose how to retain a rejected precondition instead of accidentally treating it as success.
 ///
-/// Trace: TC-008, FR-001-AC-3, NFR-002-AC-3
+/// Trace: NFR-002
 // Implements: FR-001
 ///
 /// Downstream exhaustive matching is rejected:

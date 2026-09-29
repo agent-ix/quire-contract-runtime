@@ -11,16 +11,13 @@ type: TestMatrix
 | Functional Req | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
 | FR-001 | FR-001-AC-1, FR-001-AC-2 | TC-001 | ✅ Complete |
-| FR-001 | FR-001-AC-3 | TC-008 | ✅ Complete |
 | FR-001 | FR-001-AC-4 | TC-001 | ✅ Complete |
 | FR-002 | FR-002-AC-1, FR-002-AC-2 | TC-002 | ✅ Complete |
 | FR-002 | FR-002-AC-3 | TC-003 | ✅ Complete |
 | FR-002 | FR-002-AC-4 | TC-003 | ✅ Complete |
 | FR-003 | FR-003-AC-1 | TC-004 | ✅ Complete |
-| FR-003 | FR-003-AC-2 | TC-005 | ✅ Complete |
 | FR-003 | FR-003-AC-3 | TC-004 | ✅ Complete |
 | FR-004 | FR-004-AC-1, FR-004-AC-2 | TC-006 | ✅ Complete |
-| FR-004 | FR-004-AC-3 | TC-008 | ✅ Complete |
 | FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
 | FR-004 | FR-004-AC-8 | TC-006 | ✅ Complete |
 | FR-006 | FR-006-AC-1, FR-006-AC-6 | TC-016 | ✅ implemented |
@@ -55,7 +52,6 @@ type: TestMatrix
 | Interface | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
 | interface-001 | interface-001-AC-1, interface-001-AC-2, interface-001-AC-3, interface-001-AC-4, interface-001-AC-5, interface-001-AC-6, interface-001-AC-7, interface-001-AC-8, interface-001-AC-9, interface-001-AC-10, interface-001-AC-11, interface-001-AC-14 | — | 🚧 pending adoption |
-| interface-001 | interface-001-AC-13 | TC-005 | ✅ Complete (`scripts/run_feature_matrix.py` `build-exact-no-std-msrv` row) |
 
 ## Test Case Summary
 
@@ -65,10 +61,8 @@ type: TestMatrix
 | TC-002 | Exercise Boolean evaluation contracts | Unit | P0 | FR-002-AC-1, FR-002-AC-2 | ✅ Complete |
 | TC-003 | Check definedness boundaries | Property | P0 | FR-002-AC-3, FR-002-AC-4, NFR-002-AC-1 | ✅ Complete |
 | TC-004 | Preserve proptest tri-state mapping | Unit | P0 | FR-003-AC-1, FR-003-AC-3 | ✅ Complete |
-| TC-005 | Resolve and build every supported feature profile | Inspection | P0 | FR-003-AC-2, NFR-001-AC-1, interface-001-AC-13 | ✅ Complete |
 | TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-8 | ✅ Complete |
-| TC-007 | Audit runtime footprint and packaging policy | Inspection | P0 | NFR-001-AC-2, NFR-001-AC-3, NFR-002-AC-2 | ✅ Complete |
-| TC-008 | Inspect provenance-bearing public model | Inspection | P0 | FR-001-AC-3, FR-004-AC-3, NFR-002-AC-3 | ✅ Complete |
+| TC-007 | Audit runtime footprint | Test | P0 | NFR-001-AC-3 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 | TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
@@ -90,8 +84,9 @@ type: TestMatrix
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4 | ✅ implemented |
 
-Inspection-class TC-005, TC-007, and TC-008 rest on build, compile-fail, and measurement outputs.
-Every test-matrix row now has a `tc_NNN` Rust test
+NFR-001-AC-1 and NFR-001-AC-2 are verified by the build gates (`make msrv`, `make test-features`,
+`make lint` under `#![forbid(unsafe_code)]`), and interface-001-AC-13 by the `make test-features`
+row `build-exact-no-std-msrv`; none of them has a test case. Every test-matrix row now has a `tc_NNN` Rust test
 binding; executable semantic claims retain direct acceptance-criterion trace tags.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
@@ -160,7 +155,5 @@ binding; executable semantic claims retain direct acceptance-criterion trace tag
   the public campaign record/discard paths' five saturating increments plus saturating totals from
   symbolic near-overflow states. It does not prove unlisted module behavior.
 - TC-004: `tests/proptest_adapter.rs`.
-- TC-005: compile-fail crate documentation and `make test-features`.
-- TC-007: the footprint crate's fixed-result test, the linked-footprint and panic-relocation
-  measurement run by `make size`, and the license check.
-- TC-008: five compile-fail enum doctests and public API documentation.
+- TC-007: the footprint crate's fixed-result test and the linked-footprint and panic-relocation
+  measurement run by `make size`.

@@ -347,7 +347,7 @@ fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
         Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
         Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
         Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
-        // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3).
+        // `Outcome` is `#[non_exhaustive]` (NFR-002).
         _ => panic!("expected Outcome::Incomplete, got an unrecognized outcome variant"),
     }
 }
@@ -1148,7 +1148,7 @@ fn tc_031_charge_plan_reservation_is_unaffected_by_the_injected_denial() {
 /// Trace: TC-016, FR-006-AC-6
 #[test]
 fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
-    // `Refusal` is `#[non_exhaustive]` (NFR-002-AC-3), so this match, compiled
+    // `Refusal` is `#[non_exhaustive]` (NFR-002), so this match, compiled
     // from `tests/` as a downstream crate, needs a wildcard arm. Rather than a
     // silent `_ => None` (which would falsely claim a new variant carries no
     // normative code), the wildcard panics: adding a variant without

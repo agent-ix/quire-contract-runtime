@@ -314,7 +314,7 @@ impl MapStop for Outcome<bool> {
             Outcome::Refused(reason) => Outcome::Refused(reason),
             Outcome::Incomplete(record) => Outcome::Incomplete(record),
             Outcome::Completed(value) => panic!("completed ordering {value} is not a stop"),
-            // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3); no safe retyping
+            // `Outcome` is `#[non_exhaustive]` (NFR-002); no safe retyping
             // exists for a variant this helper does not know about.
             _ => unreachable!("Outcome gained a variant `map_stop` does not know how to retype"),
         }
@@ -583,7 +583,7 @@ fn tc_023_generated_integer_and_ordering_against_an_i128_oracle() {
                     OrderingOperator::LessOrEqual => ordering != Ordering::Greater,
                     OrderingOperator::Greater => ordering == Ordering::Greater,
                     OrderingOperator::GreaterOrEqual => ordering != Ordering::Less,
-                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002-AC-3).
+                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002).
                     // `operator` is drawn only from `OrderingOperator::ALL`
                     // above, so this arm is unreachable unless `ALL` grows
                     // without this match being updated to match.
@@ -704,7 +704,7 @@ fn tc_023_generated_rational_arithmetic_and_ordering_against_an_i128_oracle() {
                     OrderingOperator::LessOrEqual => ordering.is_le(),
                     OrderingOperator::Greater => ordering.is_gt(),
                     OrderingOperator::GreaterOrEqual => ordering.is_ge(),
-                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002-AC-3).
+                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002).
                     // `operator` is drawn only from `OrderingOperator::ALL`
                     // above, so this arm is unreachable unless `ALL` grows
                     // without this match being updated to match.

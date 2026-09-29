@@ -185,7 +185,7 @@ impl Refusal {
 
 /// The side of a cardinality bound a formed collection violates.
 ///
-/// Deliberately not `#[non_exhaustive]` (NFR-002-AC-3, IR-77): an inclusive
+/// Deliberately not `#[non_exhaustive]` (NFR-002, IR-77): an inclusive
 /// bound has exactly two sides, below the minimum or above the maximum, so
 /// this is closed by the definition of "violates a bound," not by this
 /// crate's own evolving vocabulary.

@@ -53,32 +53,32 @@ DOMAIN_TARGETS = [
 #
 # Doc tests get their own row per feature set because `cargo test --doc` cannot be
 # combined with an explicit target selection, and because the crate's
-# `compile_fail` doctests are the whole of TC-005's default-surface evidence and
-# TC-008's non-exhaustive-enum evidence. Dropping them to keep the table tidy
+# `compile_fail` doctests are the default-surface and non-exhaustive-enum
+# evidence. Dropping them to keep the table tidy
 # would silently delete a verification.
 FEATURE_SETS = (
-    ("test-core", ["--no-default-features", *DOMAIN_TARGETS], ["TC-005", "NFR-001"], True),
-    ("test-core-doc", ["--no-default-features", "--doc"], ["TC-005", "TC-008"], False),
-    ("test-alloc", ["--features", "alloc", *DOMAIN_TARGETS], ["TC-005", "NFR-001"], True),
-    ("test-alloc-doc", ["--features", "alloc", "--doc"], ["TC-005", "TC-008"], False),
-    ("test-std", ["--features", "std", *DOMAIN_TARGETS], ["TC-005", "NFR-001"], True),
-    ("test-std-doc", ["--features", "std", "--doc"], ["TC-005", "TC-008"], False),
-    ("test-snapshot-json", ["--locked", "--no-default-features", "--features", "snapshot-json", *DOMAIN_TARGETS], ["TC-005", "TC-015", "FR-004"], True),
-    ("test-snapshot-json-doc", ["--locked", "--no-default-features", "--features", "snapshot-json", "--doc"], ["TC-005", "TC-008", "TC-015"], False),
-    ("test-all", ["--all-features", *DOMAIN_TARGETS], ["TC-005"], True),
-    ("test-all-doc", ["--all-features", "--doc"], ["TC-005", "TC-008"], False),
-    ("test-footprint", ["-p", "quire-contract-runtime-footprint"], ["TC-005", "NFR-001"], True),
+    ("test-core", ["--no-default-features", *DOMAIN_TARGETS], ["NFR-001"], True),
+    ("test-core-doc", ["--no-default-features", "--doc"], ["NFR-002"], False),
+    ("test-alloc", ["--features", "alloc", *DOMAIN_TARGETS], ["NFR-001"], True),
+    ("test-alloc-doc", ["--features", "alloc", "--doc"], ["NFR-002"], False),
+    ("test-std", ["--features", "std", *DOMAIN_TARGETS], ["NFR-001"], True),
+    ("test-std-doc", ["--features", "std", "--doc"], ["NFR-002"], False),
+    ("test-snapshot-json", ["--locked", "--no-default-features", "--features", "snapshot-json", *DOMAIN_TARGETS], ["TC-015", "FR-004"], True),
+    ("test-snapshot-json-doc", ["--locked", "--no-default-features", "--features", "snapshot-json", "--doc"], ["NFR-002", "TC-015"], False),
+    ("test-all", ["--all-features", *DOMAIN_TARGETS], ["NFR-001"], True),
+    ("test-all-doc", ["--all-features", "--doc"], ["NFR-002"], False),
+    ("test-footprint", ["-p", "quire-contract-runtime-footprint"], ["NFR-001"], True),
     # The exact oracle tests are `#![cfg(feature = "exact")]`, so no other row runs
     # them. The shared-corpus agreement package is `make conformance`, not a row
     # here: it needs Rust 1.98 and a git dependency this crate's graph never has.
-    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation"], ["TC-005", "TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
+    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation"], ["TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
 )
 
 # Actual no_std-target library builds, not host tests that can obtain std through
 # dev dependencies. No linked-footprint claim is made for either feature.
 NO_STD_BUILDS = (
-    ("build-snapshot-json-no-std-msrv", "snapshot-json", ["TC-005", "TC-015", "NFR-001"]),
-    ("build-exact-no-std-msrv", "exact", ["TC-005", "TC-016", "FR-006", "NFR-001"]),
+    ("build-snapshot-json-no-std-msrv", "snapshot-json", ["TC-015", "NFR-001"]),
+    ("build-exact-no-std-msrv", "exact", ["TC-016", "FR-006", "NFR-001"]),
 )
 
 

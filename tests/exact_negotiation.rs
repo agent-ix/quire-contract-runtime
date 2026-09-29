@@ -370,7 +370,7 @@ fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause
 fn tc_030_no_disposition_converts_into_an_outcome_variant() {
     // Both negotiators also stay checked against the closed set of dispositions
     // this test knows about. `IntegerDivisionDisposition` and `IeeeDisposition`
-    // are `#[non_exhaustive]` (NFR-002-AC-3: downstream generated oracles must
+    // are `#[non_exhaustive]` (NFR-002: downstream generated oracles must
     // not exhaustively match them), so this crate's own `tests/` — a separate,
     // downstream-compiled crate — can no longer enforce coverage with a plain
     // exhaustive `match` and a compile error. `matches!` plus an explicit assertion is a

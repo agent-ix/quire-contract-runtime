@@ -64,7 +64,7 @@ runs.
 
 Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004,
 FR-006 through FR-012, FR-273, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
-runtime API contract implemented by those FRs. Test cases TC-001 through TC-008, TC-015 through
+runtime API contract implemented by those FRs. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
 TC-035 (TC-027–TC-029 unused), and TC-194–TC-195 provide the verification matrix. The assurance
 artifacts bind the intended use, boundary, and open human decision.
 
