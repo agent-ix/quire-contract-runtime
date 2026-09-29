@@ -9,7 +9,6 @@ type: interface
 
 ```yaml
 name: GeneratedOracleRuntime
-version: quire-contract-runtime-v1
 ownership: quire-contract-runtime
 features:
   default: []

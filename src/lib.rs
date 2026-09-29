@@ -78,7 +78,3 @@ pub use accounting::{CampaignCounts, CampaignReport, CampaignSnapshot, IdentityM
 pub use identity::{ClauseId, ContractIdentity, ExecutionPoint, RequirementId, RevisionId};
 pub use observation::{ClauseKind, ClauseOutcome, FailureDetail, FailureKind, Observation};
 pub use verdict::{Verdict, VerdictContext, VerdictKind};
-
-/// Version of the documented public layout and semantic contract.
-// Implements: FR-001
-pub const RUNTIME_CONTRACT_VERSION: &str = "quire-contract-runtime-v1";

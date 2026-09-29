@@ -157,7 +157,6 @@ fn tc_008_evidence_model_is_non_exhaustive_and_opaque() {
             "src/accounting.rs::use snapshot_json::decode_campaign_snapshot",
             "src/accounting.rs::use snapshot_json::encode_campaign_snapshot",
             "src/identity.rs::struct ContractIdentity",
-            "src/lib.rs::const RUNTIME_CONTRACT_VERSION",
             "src/lib.rs::mod accounting",
             "src/lib.rs::mod exact",
             "src/lib.rs::mod identity",

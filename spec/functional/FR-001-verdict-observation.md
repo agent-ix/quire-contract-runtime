@@ -30,8 +30,6 @@ point, and per-clause observations.
 - The runtime shall expose the three verdict variants without a Boolean conversion.
 - A failure or rejection shall retain a typed code, clause identity, and optional borrowed detail.
 - Observations shall distinguish passed, failed, rejected, not-evaluated, and undefined clauses.
-- The crate shall expose `RUNTIME_CONTRACT_VERSION`, one string naming the version of the
-  documented public layout and semantic contract.
 
 ## Acceptance Criteria
 
