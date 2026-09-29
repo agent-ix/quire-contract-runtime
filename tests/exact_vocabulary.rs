@@ -2,7 +2,6 @@
 //! normalized unit values, through the public `exact` surface.
 #![cfg(feature = "exact")]
 
-
 use quire_contract_runtime::exact::{
     CompoundUnit, Dimension, EnumDeclaration, EnumValue, Integer, InvalidSemanticGraph, NodeKey,
     PackageRefusalCode, Rational, SelectionRefusalCode, SemanticGraphCause, UnitDeclaration,
