@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Test actual runtime reports and independently authored JSON. Decoding remains unqualified
-accounting inspection; no generated terminal outcomes or shared assurance verdicts are tested.
+accounting inspection; no generated terminal outcomes are tested.
 
 ## Test Procedure
 

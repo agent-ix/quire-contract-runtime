@@ -40,7 +40,7 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 |----|----------|--------------|
 | NFR-001-AC-1 | The default feature profile compiles without `std` or an allocator. | compile-time-check (`make size`) |
 | NFR-001-AC-2 | The library compiles with no `unsafe` code. | compile-time-check (`#![forbid(unsafe_code)]`, `make lint`) |
-| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Test (TC-007, `make size`) |
+| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, the fixed-population static-library consumer in `measurement/footprint/` has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Test (TC-007, `make size`) |
 
 ## Verification
 

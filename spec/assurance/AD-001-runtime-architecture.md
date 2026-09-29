@@ -5,9 +5,6 @@ type: ArchitectureDescription
 status: proposed
 owner: runtime-maintainers
 system: quire-contract-runtime v0.1
-relationships:
-  - target: ix://agent-ix/quire-contract-runtime/AP-001
-    type: realizes
 ---
 # Quire contract runtime architecture
 

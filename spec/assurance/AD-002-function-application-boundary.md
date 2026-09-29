@@ -6,8 +6,6 @@ status: proposed
 owner: runtime-maintainers
 system: quire-contract-runtime v0.1
 relationships:
-  - target: ix://agent-ix/quire-contract-runtime/AP-001
-    type: realizes
   - target: ix://agent-ix/quire-contract-runtime/FR-273
     type: realizes
 ---
@@ -43,7 +41,7 @@ application stays out of scope, matching FR-008's own deferral of the unlinked e
 ## Risks
 
 The termination and definedness proof burden for every applied function lives entirely in
-`PackageDeclarations::check`, outside this crate's own Kani proof surface; this crate's assurance
+`PackageDeclarations::check`, outside this crate's own Kani proof surface; this crate
 depends on that upstream proof rather than reproducing it. The call surface follows
 quire-spec-language, so a later quire-spec-language release that changes
 `CheckedPackage`'s signature requires a coordinated re-port, the same dependency FR-008

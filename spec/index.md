@@ -4,14 +4,8 @@ name: quire-contract-runtime
 org: agent-ix
 component_type: rust-library
 implementation_language: rust
-tags: [contract-runtime, no-std, assurance]
-depends_on:
-  - ix://agent-ix/quire-contract-ir/PGM-01
+tags: [contract-runtime, no-std]
 standards_alignment: [iso-iec-ieee-29148]
-relationships:
-  - target: ix://agent-ix/quire-contract-ir/PGM-01
-    type: depends_on
-    cardinality: "1:1"
 security_critical: false
 ---
 # Master Requirements Specification
@@ -57,7 +51,7 @@ return a tri-state verdict, and optionally adapt that verdict to a property-test
 ### Intended Users
 
 Generated customer code relies on the default core. Test harness authors may enable optional
-adapters. Reviewers and release owners rely on the tests, proofs and measurements this repository
+adapters. Reviewers rely on the tests, proofs and measurements this repository
 runs.
 
 ## Requirements Architecture
@@ -65,12 +59,9 @@ runs.
 Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004,
 FR-006 through FR-012, FR-273, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
 runtime API contract implemented by those FRs. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
-TC-035 (TC-027–TC-029 unused), and TC-194–TC-195 provide the verification matrix. The assurance
-artifacts bind the intended use, boundary, and open human decision.
+TC-035 (TC-027–TC-029 unused), and TC-194–TC-195 provide the verification matrix.
 
 ## References
 
 - [Program umbrella](https://github.com/agent-ix/quire-contract-ir/issues/1).
-- [PGM-01 governance gate](https://github.com/agent-ix/quire-contract-ir/issues/3), identified as
-  `ix://agent-ix/quire-contract-ir/PGM-01`; this specification does not redefine it.
 - [Runtime epic](https://github.com/agent-ix/quire-contract-runtime/issues/4).
