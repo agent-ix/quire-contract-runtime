@@ -19,7 +19,7 @@ reasoning:
       - no blocking specification or gap-review finding remains
 assumptions:
   - id: assumption-consumer-validation
-    statement: consuming projects validate the pinned crate for their own intended use
+    statement: consuming projects validate the crate for their own intended use
     owner: human-release-owner
     status: open
     review_by: "2026-12-31T00:00:00Z"

@@ -1,8 +1,8 @@
 //! Metered integer arithmetic, rational arithmetic, numeric ordering and Boolean
-//! connectives under QSpec 7d7943a `quire.value.accounting/v1`, whose every
+//! connectives under QSpec `quire.value.accounting/v1`, whose every
 //! arithmetic amount is derived from operand bit lengths.
 //!
-//! The pinned authority (quire-spec-language d9d5273) does not meter these
+//! The quire-spec-language authority does not meter these
 //! families yet (pending agent-ix/quire-spec-language#119), so every charge here
 //! is checked against the QSpec definition rows and the TC-191 P11 and TC-190
 //! Q11 atom schedules, and every value against an independent `i128` oracle.

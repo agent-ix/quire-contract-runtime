@@ -11,9 +11,9 @@ relationships:
 ## Description
 
 When the `exact` feature is enabled, the runtime shall evaluate the scalar operator families of
-complete V1 at agent-ix/quire-specification@7d7943a with values and outcome kinds equal to the
-pinned quire-spec-language authority (d9d5273) on every shared-corpus vector, and charges equal to
-the QSpec 7d7943a accounting schedule.
+complete V1 in agent-ix/quire-specification with values and outcome kinds equal to the
+quire-spec-language authority on every shared-corpus vector, and charges equal to the QSpec
+accounting schedule.
 
 ## Inputs
 
@@ -79,7 +79,7 @@ the QSpec 7d7943a accounting schedule.
   strictly positive, the reduced form is unique, and zero is exactly `0/1` — never `-0/1` and
   never `0/n` for any other `n`. Every rational exposed by the runtime is in this form.
 - Integer arithmetic, rational arithmetic, numeric ordering and Boolean connectives charge the
-  7d7943a `integer-arithmetic.*`, `rational-arithmetic.*`, `ordering.*` and
+  QSpec `integer-arithmetic.*`, `rational-arithmetic.*`, `ordering.*` and
   `boolean.result-retain` points; a connective evaluates its right operand only when the left
   does not decide it.
 - Every arithmetic, normalize, rounding, retain-upscale, unit-event and target-domain amount is
@@ -96,7 +96,7 @@ the QSpec 7d7943a accounting schedule.
 | FR-007-AC-3 | IEEE profile operations agree with QSpec TC-193. | Test (TC-020) |
 | FR-007-AC-4 | Text and enum operations agree with QSpec TC-186. | Test (TC-021) |
 | FR-007-AC-5 | Quantity and unit-graph operations agree with QSpec TC-187. | Test (TC-022) |
-| FR-007-AC-6 | Every evaluated shared-corpus vector is executed on both the runtime and the pinned authority with equal Debug renderings; admission-only vectors and charges not yet metered by the authority are listed by name. | Test (TC-018, TC-019, TC-020, TC-021, TC-022) |
+| FR-007-AC-6 | Every evaluated shared-corpus vector is executed on both the runtime and the quire-spec-language authority with equal Debug renderings; admission-only vectors and charges not yet metered by the authority are listed by name. | Test (TC-018, TC-019, TC-020, TC-021, TC-022) |
 | FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec TC-191 P11 and TC-190 Q11 atom charges, with short-circuit and denial behavior at every point; operand-derived arithmetic and normalize amounts are charged before any intermediate or result is allocated. | Test (TC-023) |
 | FR-007-AC-8 | The six rounding spellings round every exact tie to the stated neighbour for both signs; an omitted spelling is `Exact` and refuses a discarded nonzero digit; no rounding path reads host floating point. | Test (TC-034) |
 | FR-007-AC-9 | IEEE NaN propagation is leftmost-wins with sign and payload preserved and the result quieted; `invalid` is raised when any operand is signaling; an unrepresentable NaN payload is refused, never truncated; `-0.0` and `+0.0` convert to the same exact value with `discarded_negative_zero` reported; `total_order_key` totally orders every bit pattern including both zeros and NaNs. | Test (TC-034) |
@@ -109,4 +109,4 @@ the QSpec 7d7943a accounting schedule.
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
-  `ix://agent-ix/quire-specification` at `7d7943a`; quire-spec-language at `d9d5273`.
+  `ix://agent-ix/quire-specification`; quire-spec-language.

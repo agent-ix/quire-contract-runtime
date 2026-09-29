@@ -47,9 +47,10 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 - The core is safe Rust, performs no allocation or I/O, and has no required dependency.
 - Undefined partial operations return `None`; counters saturate rather than panic.
 - Public data enums are non-exhaustive for forward-compatible retention of future states.
-- Exact type and release artifact sizes are target-dependent. The v0.1 gate fixes Rust 1.75 and `thumbv7em-none-eabi`, then limits the representative static-library
-  fixed-population consumer's linked `.text` plus `.rodata` to 4 KiB with no panic relocation.
-  MP-001 defines the exercised API set and shared release profile.
+- Exact type and release artifact sizes are target-dependent. The v0.1 gate fixes Rust 1.75 and
+  `thumbv7em-none-eabi`, then limits the representative static-library fixed-population
+  consumer's linked `.text` plus `.rodata` to 4 KiB with no panic relocation. MP-001 defines the
+  exercised API set and shared release profile.
 - The crate is `AGPL-3.0-or-later` and `publish = false` until the human v0.1 source-release
   decision.
 - Release evidence can support a consuming project's validation or accreditation decision; it does

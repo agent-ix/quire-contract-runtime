@@ -55,7 +55,7 @@ type: TestMatrix
 
 | Interface | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
-| interface-001 | interface-001-AC-1, interface-001-AC-2, interface-001-AC-3, interface-001-AC-4, interface-001-AC-5, interface-001-AC-6, interface-001-AC-7, interface-001-AC-8, interface-001-AC-9, interface-001-AC-10, interface-001-AC-11, interface-001-AC-12, interface-001-AC-14 | — | 🚧 pending adoption |
+| interface-001 | interface-001-AC-1, interface-001-AC-2, interface-001-AC-3, interface-001-AC-4, interface-001-AC-5, interface-001-AC-6, interface-001-AC-7, interface-001-AC-8, interface-001-AC-9, interface-001-AC-10, interface-001-AC-11, interface-001-AC-14 | — | 🚧 pending adoption |
 | interface-001 | interface-001-AC-13 | TC-005 | ✅ Complete (`scripts/run_feature_matrix.py` `build-exact-no-std-msrv` row) |
 
 ## Test Case Summary
