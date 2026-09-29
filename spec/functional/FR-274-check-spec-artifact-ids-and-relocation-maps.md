@@ -14,14 +14,13 @@ relationships:
 
 ## Description
 
-`make spec` SHALL run a check local to this repository that fails when two spec artifacts declare
-one identifier, when one test case leads more than one matrix row, when two recorded ID blocks of
-one family overlap, or when a relocation map disagrees with the tree; and, when the change adds a
-relocation map and a base revision is named, fails when the identifier set or the renamed files
-disagree with that map. A relocation map already present at the base revision is a record of an
-earlier change and is not validated against the working tree. The identifier, ID-block, collision and relocation-map rules the check
-enforces are those of `ix://agent-ix/quire-contract-ir/ADR-0056`. The check is this repository's
-own and behaves as `quire-contract-ir:FR-345` does over that repository's tree.
+`make spec` SHALL run a check local to this repository, before any other command of its recipe,
+that fails when two spec artifacts declare one identifier, when one test case leads more than one
+matrix row, when two recorded ID blocks of one family overlap, or when a relocation map is
+malformed; and, when the change adds a relocation map, fails when the identifiers, the live test
+cases or the moved paths disagree with that map. The identifier, ID-block, collision and
+relocation-map rules the check enforces are those of `ix://agent-ix/quire-contract-ir/ADR-0056`.
+The check reads the tree of its working directory.
 
 A spec artifact is a Markdown document under `spec/` outside `spec/reviews/`: the StR, FR, NFR,
 interface, TC, AD, AA, AP, CAC, MP and SUR artifacts, the master-requirements document and the
@@ -29,12 +28,27 @@ test matrices. Its identifier is the first `id:` line of its YAML frontmatter; a
 frontmatter `id` declares no identifier. Files under `plan/`, `planning/`, `reviews/` and
 `spec/reviews/` carry their own identifiers and are not read for identifiers.
 
-The identifier set of a revision is the union of every spec artifact's frontmatter identifier and
-every `TC` ID leading a `Test Case Summary` row of a `TestMatrix` at that revision.
+At a revision:
 
-A relocation map is added by the change when `SPEC_BASE` is set and the map's path is present in the
-working tree and absent at `SPEC_BASE`. When `SPEC_BASE` is not set, no relocation map is added by
-the change.
+- the **frontmatter identifier set** is the set of identifiers the spec artifacts declare;
+- the **live test-case set** is the set of `TC` IDs leading a `## Test Case Summary` row of a
+  spec artifact typed `TestMatrix`.
+
+The base revision is the revision named by the `SPEC_BASE` environment variable.
+
+- When `make spec` runs without `SPEC_BASE` in its environment and the ref `origin/main` exists,
+  `make spec` SHALL set `SPEC_BASE` to the merge base of `HEAD` and `origin/main`.
+- When `make spec` runs without `SPEC_BASE` in its environment and the ref `origin/main` does not
+  exist, `make spec` SHALL run the check with `SPEC_BASE` unset.
+
+A relocation map is **added by the change** when `SPEC_BASE` is set and the map's path is present in
+the working tree and absent at `SPEC_BASE`. When `SPEC_BASE` is not set, no relocation map is added
+by the change.
+
+A path is **moved away** when it names a file under `spec/` at `SPEC_BASE` and no file exists at
+that path in the working tree, whether the file was deleted, moved within `spec/` or moved out of
+`spec/`. The check decides this from paths alone and applies no content-similarity rename
+detection.
 
 ## Inputs
 
@@ -44,7 +58,7 @@ the change.
 - The `## ID Blocks` table of the spec artifact typed `master-requirements`, when that table is
   present.
 - Every file under `spec/relocations/`: a tab-separated relocation map.
-- A base revision named by the `SPEC_BASE` environment variable, read from Git objects, when set.
+- The base revision named by `SPEC_BASE`, read from Git objects, when set.
 
 ## Outputs
 
@@ -71,15 +85,15 @@ the change.
   `new_id`.
 - The check SHALL NOT validate the `new_path` or `new_id` of a relocation map present at
   `SPEC_BASE`, or of any relocation map when `SPEC_BASE` is not set, against the working tree.
-- When `SPEC_BASE` is set and the change adds at least one relocation map, the check SHALL take the
-  identifier set at `SPEC_BASE`, replace each `old_id` by its `new_id` for every added-map row where
-  both are identifiers, add every `new_id` whose `old_id` is `-`, and require the result to equal
-  the identifier set in the working tree.
-- When `SPEC_BASE` is set and the change adds at least one relocation map, the check SHALL require
-  every file renamed under `spec/` between `SPEC_BASE` and the working tree to have exactly one row
-  across the added maps.
-- The check SHALL compare identifier sets across revisions only when `SPEC_BASE` is set and the
-  change adds a relocation map.
+- When the change adds at least one relocation map, the check SHALL take the frontmatter identifier
+  set at `SPEC_BASE`, replace each `old_id` by its `new_id` for every added-map row where both are
+  identifiers, add every `new_id` whose `old_id` is `-`, and require the result to equal the
+  frontmatter identifier set in the working tree.
+- When the change adds at least one relocation map, the check SHALL require the live test-case set
+  in the working tree to equal the live test-case set at `SPEC_BASE`.
+- When the change adds at least one relocation map, the check SHALL require every path moved away
+  to be the `old_path` of exactly one row across the added maps.
+- The check SHALL compare revisions only when the change adds a relocation map.
 - When the check finds a defect, the check SHALL exit with a non-zero status.
 - The check SHALL NOT report a defect as a warning.
 
@@ -101,20 +115,28 @@ the change.
 | FR-274-AC-12 | If a row of a relocation map added by the change names a `new_path` absent from the working tree, then the check exits non-zero and reports the row's `path:line`. | Test (TC-196) |
 | FR-274-AC-13 | If a row of a relocation map added by the change has a `new_id` that is not `-` and the spec artifact at its `new_path` declares a different `id`, then the check exits non-zero and reports the row's `path:line`. | Test (TC-196) |
 | FR-274-AC-14 | If a relocation map row has `old_path` `-` and either an `old_id` other than `-` or a `new_id` that is not a `TM` ID, then the check exits non-zero and reports the row's `path:line`. | Test (TC-196) |
-| FR-274-AC-15 | While `SPEC_BASE` is set and the change adds a relocation map, when the working tree drops an identifier, adds a non-`TM` identifier, adds a `TM` identifier with no map row, or renumbers an identifier with no map row, the check exits non-zero and reports each differing identifier with the `path:line` that declares it at `SPEC_BASE` or in the working tree. | Test (TC-196) |
-| FR-274-AC-16 | While `SPEC_BASE` is set and the change adds a relocation map, when a file renamed under `spec/` between `SPEC_BASE` and the working tree has no row, or more than one row, across the added maps, the check exits non-zero and reports the renamed file's old and new paths. | Test (TC-196) |
-| FR-274-AC-17 | While `SPEC_BASE` is set and the change adds a relocation map listing every rename, a new root index and new subsystem matrices with `old_path` and `old_id` `-`, and a collision renumbering as one `old_id`/`new_id` pair, the check exits 0. | Test (TC-196) |
+| FR-274-AC-15 | While the change adds a relocation map, when the working tree's frontmatter identifier set drops an identifier, adds a non-`TM` identifier, adds a `TM` identifier with no map row, or renumbers an identifier with no map row, the check exits non-zero and reports each differing identifier with the `path:line` that declares it at `SPEC_BASE` or in the working tree. | Test (TC-196) |
+| FR-274-AC-16 | While the change adds a relocation map, when a path moved away is the `old_path` of no row, or of rows in two added maps, the check exits non-zero and reports the moved-away path and the `path:line` of each row naming it. | Test (TC-196) |
+| FR-274-AC-17 | While the change adds a relocation map listing every path moved away, a new root index and new subsystem matrices with `old_path` and `old_id` `-`, and a requirement-identifier collision renumbering as one `old_id`/`new_id` pair, with the live test-case set unchanged, the check exits 0. | Test (TC-196) |
 | FR-274-AC-18 | While `SPEC_BASE` is set and the change adds no relocation map, when the change adds requirement and test-case identifiers, the check exits 0. | Test (TC-196) |
 | FR-274-AC-19 | When the tree holds none of the defects this table names, the check exits 0 and writes exactly one summary line to standard output and nothing to standard error. | Test (TC-196) |
-| FR-274-AC-20 | When the check finds any defect, `make spec` exits non-zero. | Test (TC-196) |
-| FR-274-AC-21 | While `SPEC_BASE` is set and the change adds a relocation map, when a `TC` ID leading a `Test Case Summary` row at `SPEC_BASE` leads no such row in the working tree, the check exits non-zero and reports the identifier, even when that `TC`'s artifact file remains. | Test (TC-196) |
+| FR-274-AC-20 | When the check finds a defect, `make spec` runs the check before `quire validate`, exits non-zero, and its output carries the check's finding. | Test (TC-196) |
+| FR-274-AC-21 | While the change adds a relocation map, when a `TC` ID leading a `Test Case Summary` row at `SPEC_BASE` leads no such row in the working tree, the check exits non-zero and reports the identifier, even when that `TC`'s artifact file remains. | Test (TC-196) |
 | FR-274-AC-22 | When a relocation map present at `SPEC_BASE` names a `new_path` absent from the working tree or a `new_id` its `new_path` no longer declares, the check reports nothing for that map. | Test (TC-196) |
+| FR-274-AC-23 | While `SPEC_BASE` is not set, when the working tree holds a relocation map whose `new_path` is absent from the working tree or whose `new_id` its `new_path` does not declare, the check reports nothing for that map, compares no revisions, and exits 0. | Test (TC-196) |
+| FR-274-AC-24 | When the check finds a defect, it exits non-zero and labels no finding as a warning. | Test (TC-196) |
+| FR-274-AC-25 | When `make spec` runs without `SPEC_BASE` in its environment in a repository where the ref `origin/main` exists, it runs the check with `SPEC_BASE` set to the merge base of `HEAD` and `origin/main`. | Test (TC-196) |
+| FR-274-AC-26 | When `make spec` runs without `SPEC_BASE` in its environment in a repository with no ref `origin/main`, it runs the check with `SPEC_BASE` unset. | Test (TC-196) |
 
 ## Dependencies
 
 - **Upstream**: [StR-002](../stakeholder/StR-002-machine-checkable-specification.md).
 - **Decision**: `ix://agent-ix/quire-contract-ir/ADR-0056` defines identifiers, ID blocks,
   collisions, matrices and relocation maps.
-- **Peer requirement**: `quire-contract-ir:FR-345` specifies the same check over that repository's
-  tree; this requirement states it over this one and shares no code with it.
+- **Peer requirement**: `quire-contract-ir:FR-345` specifies that repository's own check under the
+  same decision. This requirement governs this repository's check and differs from FR-345's text:
+  it validates `new_path` and `new_id` only for relocation maps added by the change; it excludes
+  `planning/`; it compares the live test-case set as well as the frontmatter identifier set; it
+  reports `path:line` for every finding; it defines a moved-away path without rename detection; and
+  `make spec` supplies `SPEC_BASE` from `origin/main`. The two checks share no code.
 - **Verification**: [TC-196](../test/TC-196-spec-artifact-id-and-relocation-check.md).

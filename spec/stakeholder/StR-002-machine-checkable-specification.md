@@ -23,7 +23,7 @@ renumbers an identifier breaks every reference to it without any error.
 
 | ID | Criteria | Validation |
 |----|----------|------------|
-| StR-002-VC-1 | A specification change that duplicates an identifier or loses one in a move fails `make spec` before it merges. | Test (TC-196) |
+| StR-002-VC-1 | A specification change that duplicates an identifier, or loses one in a move relative to `origin/main`, fails `make spec`. | Test (TC-196) |
 
 ## Dependencies
 
