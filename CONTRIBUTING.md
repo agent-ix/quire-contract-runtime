@@ -13,7 +13,7 @@ Contributions are welcome from people using any development method, including
 agent-assisted workflows. The standard is the same for every contribution:
 
 - requirements and acceptance criteria are updated before implementation;
-- the repository's specification, review, test, and assurance gates pass;
+- the repository's specification, review, and test gates pass;
 - source and third-party provenance remain truthful and reviewable;
 - a human maintainer reviews the pull request and owns release decisions.
 

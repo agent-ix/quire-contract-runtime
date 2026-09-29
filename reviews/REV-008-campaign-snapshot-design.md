@@ -186,5 +186,4 @@ This is approval of the bounded implementation direction, not implemented
 transport, parser qualification, proof, release or human evidence sufficiency.
 
 No implementation, new dependency, native parser qualification or source release
-is claimed by this proposal. Current shared-assurance pin compatibility remains
-a separate campaign integration gate, with the owner decision boundary unchanged.
+is claimed by this proposal.

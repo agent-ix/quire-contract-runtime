@@ -79,7 +79,7 @@ semantic refusal. No source/report mutation or filesystem access occurs in the c
 
 This schema does not authenticate imported counters. Package/run/candidate identity,
 generated terminal outcomes, policy and independent producer verification remain outside
-the runtime. No verdict, attestation, receipt, retained store or generic envelope is added.
+the runtime.
 
 ## Acceptance Criteria
 

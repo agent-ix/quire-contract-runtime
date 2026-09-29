@@ -24,8 +24,3 @@ runtime limits the trusted surface and allows downstream projects to validate it
 |----|----------|------------|
 | StR-001-VC-1 | A harness distinguishes success, failed postconditions, and rejected preconditions. | Demonstration |
 | StR-001-VC-2 | The default linked surface compiles with `#![no_std]` and invokes no allocator. | Demonstration (`make size`) |
-
-## Dependencies
-
-The governing compatibility, provenance, evidence, and qualification policy is PGM-01 at
-`ix://agent-ix/quire-contract-ir/PGM-01`.
