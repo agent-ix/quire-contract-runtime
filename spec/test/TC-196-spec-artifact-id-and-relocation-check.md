@@ -38,25 +38,34 @@ Git repository built by the test, never against this repository's own `spec/` tr
    `path:line` (FR-274-AC-7). Replace them with adjacent ranges of one family, and with one identical
    numeric range in two families; expect exit 0 (FR-274-AC-8).
 8. Add a relocation map under `spec/relocations/` seeded, one map per run, with a wrong header, an
-   out-of-order row, a repeated non-`-` `old_path`, a `new_path` absent from the tree, a `new_path`
-   whose artifact declares a different `id` than `new_id`, an added-file row with a non-`-`
-   `old_id`, and an added-file row whose `new_id` is not a `TM` ID; expect a non-zero exit naming
-   each defect's `path:line` (FR-274-AC-9 through FR-274-AC-14).
-9. Commit the clean tree as the base, set `SPEC_BASE` to it, and in the working tree move files
-   while adding a relocation map that omits, in turn: a dropped identifier, an added non-`TM`
-   identifier, an added `TM` identifier, a renumbered identifier and a renamed file; expect a
-   non-zero exit each time naming the identifier or the renamed file's paths (FR-274-AC-15,
-   FR-274-AC-16).
-10. With `SPEC_BASE` set, make the same moves with a complete map: every rename, a new root index
+   out-of-order row, a repeated non-`-` `old_path`, an added-file row with a non-`-` `old_id`, and
+   an added-file row whose `new_id` is not a `TM` ID; expect a non-zero exit naming each defect's
+   `path:line` (FR-274-AC-9, FR-274-AC-10, FR-274-AC-11, FR-274-AC-14).
+9. Commit the clean tree as the base and set `SPEC_BASE` to it. Add a relocation map whose row names
+   a `new_path` absent from the tree, then one whose `new_path` artifact declares a different `id`
+   than `new_id`; expect a non-zero exit naming the row's `path:line` each time (FR-274-AC-12,
+   FR-274-AC-13).
+10. Commit to the base a relocation map whose rows were valid when committed, then move or renumber
+    the files it names so its `new_path` is absent and its `new_id` is no longer declared; with
+    `SPEC_BASE` set to that base, and again with `SPEC_BASE` unset, expect no finding for that map
+    (FR-274-AC-22).
+11. With `SPEC_BASE` set, move files in the working tree while adding a relocation map that omits,
+    in turn: a dropped identifier, an added non-`TM` identifier, an added `TM` identifier, a
+    renumbered identifier and a renamed file; expect a non-zero exit each time naming the identifier
+    or the renamed file's paths (FR-274-AC-15, FR-274-AC-16).
+12. With `SPEC_BASE` set and a relocation map added, remove one `TC`'s `Test Case Summary` row while
+    keeping its `TC` artifact file; expect a non-zero exit naming that `TC` (FR-274-AC-21).
+13. With `SPEC_BASE` set, make the same moves with a complete map: every rename, a new root index
     and new subsystem matrices with `old_path` and `old_id` `-`, and one collision renumbering as an
     `old_id`/`new_id` pair; expect exit 0 (FR-274-AC-17).
-11. With `SPEC_BASE` set and no relocation map added, add one FR and one `TC`; expect exit 0
+14. With `SPEC_BASE` set and no relocation map added, add one FR and one `TC`; expect exit 0
     (FR-274-AC-18).
-12. Run `make spec` over a tree carrying the step-2 duplicate identifier; expect a non-zero exit
+15. Run `make spec` over a tree carrying the step-2 duplicate identifier; expect a non-zero exit
     whose output carries the check's finding (FR-274-AC-20).
 
 ## Expected Results
 
 Every seeded defect fails the check with a non-zero exit and a finding on standard error naming the
 identifier or path and every `path:line` involved; every near-miss and the clean tree exit 0, the
-clean tree with exactly one summary line; and `make spec` exits non-zero whenever the check fails.
+clean tree with exactly one summary line; a relocation map already at the base revision is not
+validated against the moved tree; and `make spec` exits non-zero whenever the check fails.

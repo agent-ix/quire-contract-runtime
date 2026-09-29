@@ -63,11 +63,12 @@ its own.
 
 ## Requirements Architecture
 
-Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-012,
-FR-273, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
-runtime API contract implemented by those FRs. FR-274 specifies the repository-local check of
-spec-artifact identifiers and relocation maps for `make spec`, under the layout convention of
-`ix://agent-ix/quire-contract-ir/ADR-0056`. Test cases TC-001 through TC-036 and TC-194–TC-196
+Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-012, FR-273,
+and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral runtime
+API contract implemented by those FRs. Stakeholder requirement StR-002, a machine-checkable
+specification with unique identifiers, is refined by FR-274, which specifies the repository-local
+check of spec-artifact identifiers and relocation maps for `make spec`, under the layout convention
+of `ix://agent-ix/quire-contract-ir/ADR-0056`. Test cases TC-001 through TC-036 and TC-194–TC-196
 (TC-012, TC-027–TC-029 unused) provide the verification matrix. The assurance artifacts bind the
 intended use, boundary, evidence, and open human decision.
 
