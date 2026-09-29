@@ -62,7 +62,7 @@ type: TestMatrix
 | TC-003 | Check definedness boundaries | Property | P0 | FR-002-AC-3, FR-002-AC-4, NFR-002-AC-1 | ✅ Complete |
 | TC-004 | Preserve proptest tri-state mapping | Unit | P0 | FR-003-AC-1, FR-003-AC-3 | ✅ Complete |
 | TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-8 | ✅ Complete |
-| TC-007 | Audit runtime footprint | Test | P0 | NFR-001-AC-3 | ✅ Complete |
+| TC-007 | Audit runtime footprint | Inspection | P0 | NFR-001-AC-3 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 | TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
