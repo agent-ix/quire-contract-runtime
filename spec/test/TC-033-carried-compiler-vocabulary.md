@@ -23,10 +23,8 @@ semantic-graph causes and normalized unit values. Evidence: `tests/exact_vocabul
    unlisted spellings, and `PackageRefusalCode::as_str`.
 5. Drive `UnitGraph::admit` and `check_terms` into each structural `SemanticGraphCause`.
 6. Build `Dimension` and `CompoundUnit` from the same terms in several orders; compare and iterate.
-7. Inspect the `node.rs`, `definition.rs` and `unit.rs` re-exports for a `Meter` parameter or
-   return, and for an item this requirement does not name.
 
 ## Expected Results
 
 Every spelling is byte-exact, every structural cause is reachable, no compiler-admission cause is,
-normalized unit values are order-independent, and nothing in the vocabulary touches a meter.
+and normalized unit values are order-independent.

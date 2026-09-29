@@ -66,9 +66,9 @@ The runtime shall neither evaluate the item nor alter the item, the package or a
 | FR-009-AC-2 | A `Mathematical` consumer is `Supported`; a `Finite` consumer is `Supported` exactly when `operand`, `intermediate` and `result` are all present, and `RequiresBound` for each of the seven incomplete bound subsets. | Test (TC-030) |
 | FR-009-AC-3 | IEEE causes are decided in the order width, operation, rounding, exceptional policy, first failure wins: an item failing two checks reports the earlier cause, and a non-rounding operation with an unsupported rounding direction is not `Unsupported(Rounding(..))`. | Test (TC-030) |
 | FR-009-AC-4 | `requires_finite_proof` yields `RequiresBound` only when no `unsupported` cause applies; an item that both lacks a capability and needs an undischargeable proof reports the capability cause. | Test (TC-030) |
-| FR-009-AC-5 | Neither negotiator takes or mutates a `Meter`, and no disposition is convertible into an `Outcome` variant. | Test (TC-030) |
+| FR-009-AC-5 | No `IeeeDisposition` is convertible into an `Outcome` variant, as the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) shows. | compile-time-check (TC-195) |
 
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
-  `ix://agent-ix/quire-specification` at `7d7943a`.
+  `ix://agent-ix/quire-specification`.

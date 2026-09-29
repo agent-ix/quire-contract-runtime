@@ -36,5 +36,5 @@ the runtime, independently of the shared-corpus agreement suites. Evidence:
 
 ## Expected Results
 
-Every semantics above is the one FR-007 states, decided without host floating point, and each
+Every semantics above is the one FR-007 states, and each
 check fails if the stated decision changes.

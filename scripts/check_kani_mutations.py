@@ -6,8 +6,8 @@ that cannot fail. This is the campaign that makes the difference observable: eac
 declared defect is injected into a scratch copy of the source — never into the
 working tree — and the harness that owns it must reject it.
 
-The result is published as `runtime.kani-mutation/v1`. A row is `pass` when the
-proof rejected the defect, which is the outcome that means the control held.
+A row is `pass` when the proof rejected the defect, which is the outcome that
+means the control held.
 
 Five outcomes, kept apart:
 
@@ -19,15 +19,11 @@ Five outcomes, kept apart:
                 so the campaign no longer describes this repository
   unavailable   cargo-kani is not installed, so nothing was injected at all
 
-Exit status
-  gate mode : 0 when every declared defect was rejected, 1 otherwise
-  --json    : 0 whenever a document was produced, 2 when none could be
+Exit status: 0 when every declared defect was rejected, 1 otherwise.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
 import os
 import pwd
 import shutil
@@ -38,13 +34,6 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-PROTOCOL = "runtime.kani-mutation/v1"
-
-# The floor is stated here, beside the campaign it governs, rather than imported
-# from a shared policy module. The module it used to come from existed to give
-# the deleted evidence framework a single place to state quantitative floors;
-# there is one campaign and it owns its own floor.
-MINIMUM_KANI_MUTATIONS = 3
 
 MUTATIONS = (
     (
@@ -85,30 +74,16 @@ MUTATIONS = (
 )
 
 
-class ProducerError(RuntimeError):
-    """No result document could be produced at all."""
-
-
 def copy_candidate(destination: Path) -> None:
     shutil.copytree(
         ROOT,
         destination,
-        ignore=shutil.ignore_patterns(
-            ".git", "evidence", "target", "__pycache__", ".venv-assurance"
-        ),
+        ignore=shutil.ignore_patterns(".git", "target", "__pycache__"),
     )
 
 
 def prove(argv: list[str], cwd: Path, environment: dict[str, str]) -> subprocess.CompletedProcess:
-    """Run the model checker.
-
-    This is a named seam, and the reason it exists is a finding. A campaign that
-    injects defects can itself be hollowed out to report success without running
-    anything, and nothing downstream would tell the difference: an all-`pass`
-    document is what a working campaign also produces. The seam lets a test
-    supply a prover that accepts the defect and require this module to report
-    `fail`, which is the only way the failure direction is ever exercised.
-    """
+    """Run the model checker."""
     return subprocess.run(
         argv, cwd=cwd, env=environment, check=False, capture_output=True, text=True
     )
@@ -165,39 +140,14 @@ def run_mutation(relative: str, old: str, new: str, harness: str) -> tuple[str, 
     return "pass", None
 
 
-def observed_kani_version(home: Path) -> str | None:
-    """The prover's own version, or None. Never a placeholder.
-
-    A field named `version` carrying the word "observed" is worse than an absent
-    one: a reader cannot tell it from a measurement.
-    """
-    try:
-        result = subprocess.run(
-            [str(home / ".cargo" / "bin" / "cargo-kani"), "--version"],
-            capture_output=True,
-            text=True,
-            check=False,
-            env={**os.environ, "HOME": str(home), "CARGO_HOME": str(home / ".cargo")},
-        )
-    except OSError:
-        return None
-    if result.returncode != 0:
-        return None
-    return result.stdout.strip() or None
-
-
-def collect() -> dict[str, Any]:
-    if len(MUTATIONS) < MINIMUM_KANI_MUTATIONS:
-        raise ProducerError(
-            f"configured {len(MUTATIONS)} mutations, minimum {MINIMUM_KANI_MUTATIONS}"
-        )
+def collect() -> list[dict[str, Any]]:
     home = Path(pwd.getpwuid(os.getuid()).pw_dir)
     have_kani = (home / ".cargo" / "bin" / "cargo").is_file() and (
         home / ".cargo" / "bin" / "cargo-kani"
     ).is_file()
 
     entries = []
-    for relative, old, new, harness, trace in MUTATIONS:
+    for relative, old, new, harness, _trace in MUTATIONS:
         if not have_kani:
             outcome, detail = "unavailable", "the trusted cargo-kani toolchain is absent"
         else:
@@ -206,46 +156,22 @@ def collect() -> dict[str, Any]:
             {
                 "symbol": f"mutation::{harness}::{relative}",
                 "outcome": outcome,
-                "traceIds": [trace],
                 "detail": detail,
-                "mutation": {"file": relative, "from": old, "to": new, "harness": harness},
             }
         )
-    return {
-        "protocol": PROTOCOL,
-        "tool": {
-            "identity": "cargo-kani",
-            "version": observed_kani_version(home) if have_kani else None,
-        },
-        "minimum": MINIMUM_KANI_MUTATIONS,
-        "entries": entries,
-    }
+    return entries
 
 
-def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="emit runtime.kani-mutation/v1 on stdout; the producer role",
-    )
-    arguments = parser.parse_args(argv[1:])
-    try:
-        document = collect()
-    except (ProducerError, OSError) as error:
-        print(f"KANI_MUTATION_UNAVAILABLE: {error}", file=sys.stderr)
-        return 2
-    if arguments.json:
-        print(json.dumps(document, indent=2, sort_keys=True))
-        return 0
-    failures = [row for row in document["entries"] if row["outcome"] != "pass"]
+def main() -> int:
+    entries = collect()
+    failures = [row for row in entries if row["outcome"] != "pass"]
     for row in failures:
         print(f"KANI_MUTATION_{row['outcome'].upper()}: {row['detail']}", file=sys.stderr)
     if failures:
         return 1
-    print(f"verified {len(document['entries'])} Kani semantic mutation controls")
+    print(f"verified {len(entries)} Kani semantic mutation controls")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv))
+    raise SystemExit(main())

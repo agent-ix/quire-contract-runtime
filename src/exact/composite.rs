@@ -731,7 +731,7 @@ impl OptionValue {
 /// Whether a declared field admits only a present value (`f: T`) or also
 /// `absent` and explicit `null` (`f: T?`).
 ///
-/// Deliberately not `#[non_exhaustive]` (NFR-002-AC-3, IR-77): a field
+/// Deliberately not `#[non_exhaustive]` (NFR-002, IR-77): a field
 /// declaration either carries the grammar's `?` or does not, so this is
 /// closed by the grammar rule itself, not by this crate's own evolving
 /// vocabulary.

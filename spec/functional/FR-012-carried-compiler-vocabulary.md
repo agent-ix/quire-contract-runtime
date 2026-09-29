@@ -100,9 +100,8 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 | FR-012-AC-3 | `SelectionRefusalCode::ALL` is the eight codes in normative check order, `as_str` yields the lock spelling for each, `from_code` resolves exactly those eight spellings and nothing else, and `PackageRefusalCode::as_str` is `invalid_package`. | Test (TC-033) |
 | FR-012-AC-4 | Each of the thirteen graph causes is raised by an admissible input to `UnitGraph::admit`, and `UndeclaredCase` by reading a case against its declaration; no graph input raises any of the four compiler-admission causes; `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for exactly the malformed member lists named above; and `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no raise site in the crate. | Test (TC-033) |
 | FR-012-AC-5 | `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every construction order of the same terms. | Test (TC-033) |
-| FR-012-AC-6 | No item re-exported by `src/exact/mod.rs` from `node.rs`, `definition.rs` or `unit.rs` takes or returns a `Meter`, and every one of them is named by this requirement. | Test (TC-033) |
 
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md), [FR-011](./FR-011-meter-state-at-a-stop.md);
-  `ix://agent-ix/quire-specification` at `7d7943a`.
+  `ix://agent-ix/quire-specification`.

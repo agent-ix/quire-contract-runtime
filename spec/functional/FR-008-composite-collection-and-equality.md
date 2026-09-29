@@ -14,8 +14,8 @@ relationships:
 
 When the `exact` feature is enabled, the runtime shall construct composite and collection values,
 compare values for equality, build finite values from a containment graph, and carry terminal object
-references, with values and outcome kinds equal to the pinned quire-spec-language authority
-(d01371b9) on every shared-corpus vector, and charges equal to the QSpec 7d7943a accounting
+references, with values and outcome kinds equal to the quire-spec-language authority
+on every shared-corpus vector, and charges equal to the QSpec accounting
 schedule. As with FR-006 and FR-007, the runtime is an implementation of that definition, not a
 second semantic authority: `quire_spec_language::value` decides every construction, comparison and
 canonical-order question; every type, field and variant this requirement adds keeps the authority's
@@ -152,11 +152,10 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge and refuses a cross-universe reference pair as `ForeignReference`; `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order. | Test (TC-026) |
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
-| FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec 7d7943a spelling, `ChargePoint::ALL` has exactly 52 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
+| FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 52 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-9 | `Value`'s `Debug` and `Drop` are hand-written and iterative: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and the hand-written `Debug` output is an exact literal string, in both compact and alternate form, on a small fixed value. | Test (TC-024, TC-025) |
 
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md); [FR-007](./FR-007-exact-scalar-families.md);
-  `ix://agent-ix/quire-specification` at `7d7943a` (`value-accounting.md`); quire-spec-language at
-  `d01371b9`.
+  `ix://agent-ix/quire-specification` (`value-accounting.md`); quire-spec-language.

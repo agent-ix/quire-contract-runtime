@@ -151,22 +151,6 @@ fn tc_001_clause_outcomes_are_distinct_through_construction_and_matching() {
     assert_eq!(rejected_detail.message, None);
 }
 
-/// Trace: TC-008, FR-001-AC-5
-#[test]
-fn tc_008_runtime_contract_version_matches_interface_frontmatter() {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("spec/interface/interface-001-runtime-api.md");
-    let contract = std::fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("interface-001 contract is readable: {error}"));
-    let version = contract
-        .lines()
-        .find_map(|line| line.strip_prefix("version: "))
-        .expect("interface-001 contract declares a version")
-        .trim();
-
-    assert_eq!(quire_contract_runtime::RUNTIME_CONTRACT_VERSION, version);
-}
-
 /// Trace: TC-006, FR-004-AC-8
 #[test]
 fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {

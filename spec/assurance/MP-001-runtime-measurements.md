@@ -20,48 +20,6 @@ statistical_design:
   decision_rule:
     comparator: le
     threshold: 0
-protected_apparatus:
-  - Makefile
-  - Cargo.toml
-  - rust-toolchain.toml
-  - scripts/run_feature_matrix.py
-  - scripts/run_kani_gate.py
-  - scripts/check_kani_mutations.py
-  - scripts/check_kani_harnesses.py
-  - scripts/measure_footprint.py
-  - scripts/check_linked_footprint.sh
-  - scripts/assurance_chain.py
-  - assurance/change-assurance.json
-  - verification/kani.rs
-  - measurement/footprint/**
-negative_controls:
-  - kind: suppressed-observation
-    description: >-
-      each producer emits one row for every item in its own declared table
-      (FEATURE_SETS and NO_STD_BUILDS, EXPECTED_KANI_HARNESSES plus a
-      suite-census row, MUTATIONS) whether or not the item ran -- an absent
-      tool is `unavailable`, a harness missing from the transcript is
-      `not-computed`, a mutation that never reached a verdict is
-      `inconclusive` -- and the chain refuses an empty document and any
-      unnamed outcome, so an item left out is an escalation rather than a
-      lower count; shrinking a declared table edits a protected file.
-  - kind: apparatus-edit
-    description: >-
-      the four producer scripts and the census module that declares the Kani
-      harnesses and floors, the harness source, the footprint population, the
-      workspace manifest and toolchain file that set the release profile,
-      features and compiler, the Makefile recipe that runs the producers, the
-      chain driver, and the change declaration are protected, so editing one
-      alongside a change it grades changes the recorded digests.
-  - kind: stale-evidence
-    description: >-
-      scripts/assurance_chain.py seals the declared source digests, each
-      proof's configuration digest, and the observed tool versions against
-      the exact candidate revision, and Quoin reports a receipt requested for
-      any other revision as `candidate_revision_mismatch` -- so a result
-      collected against an earlier revision or apparatus cannot be presented
-      as current, and an identity the chain cannot bind is itself one of the
-      three escalation classes the decision rule counts.
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AP-001
     type: measures
@@ -75,117 +33,52 @@ validation or accreditation.
 
 ## Decision Rule
 
-The estimate is a `count` of escalation items in one collection over the source candidate. Each of
-the following is one item:
+The estimate is a `count` of escalation items in one run over the source candidate. Each of the
+following is one item:
 
-- a failed gate: a producer row whose outcome is anything other than `pass` (`fail`, `vacuous`,
-  `not-computed`, `unavailable`, or `inconclusive`), since each producer's gate fails on exactly
-  those rows; this includes the linked footprint falling outside its 500-byte floor and 4 KiB
-  ceiling or retaining a panic-path reference;
-- a missing identity: a source, toolchain, or producer identity that the assurance chain requires
-  and could not bind; and
+- a failed gate: any `make ci` prerequisite that exits non-zero, including the linked footprint
+  falling outside its 500-byte floor and 4 KiB ceiling or retaining a panic-path reference; and
 - an unresolved material gap: an open finding against this candidate that is neither closed nor
   explicitly deferred in this plan.
 
 The rule `{ comparator: le, threshold: 0 }` holds only when that count is zero, which is the
 `objective.direction: zero` reading: any non-zero count escalates to the human release decision.
-The linked footprint's byte count is a producer output that the footprint gate judges; it is not the
-estimate, and the byte count itself is never compared with the threshold.
+The linked footprint's byte count is judged by the footprint gate; it is not the estimate, and the
+byte count itself is never compared with the threshold.
 
 ## Population
 
 The population is the exact source revision across core, alloc, std, and proptest features; all
 Boolean truth-table rows; checked integer boundaries; verdict mappings; and accounting transitions.
 
-The v0.1 linked-footprint population is versioned with this plan. Its static-library consumer calls
-every public runtime constructor, `CampaignReport::record_verdict`,
-`CampaignReport::record_discard`, and every Boolean, option, index, and checked-integer operator
-family. TC-007 parses the harness and requires those call expressions, executes the population at two
-fixed inputs with exact expected results, and requires the linked artifact to stay above the fixed
-500-byte population floor with no panic-path references from its runtime/harness objects. Changing or making the population unreachable
-therefore requires an explicit measurement-plan and test update. The harness is a workspace member
-and uses the root release profile (`lto = "thin"`, one codegen unit, and aborting panics), not a
-private profile.
+The linked-footprint population's static-library consumer calls every public runtime constructor,
+`CampaignReport::record_verdict`, `CampaignReport::record_discard`, and every Boolean, option, index,
+and checked-integer operator family. TC-007 parses the harness and requires those call expressions,
+executes the population at two fixed inputs with exact expected results, and requires the linked
+artifact to stay above the 500-byte population floor with no panic-path references from its
+runtime/harness objects. The harness is a workspace member and uses the root release profile
+(`lto = "thin"`, one codegen unit, and aborting panics), not a private profile.
 
 ## Collection Procedure
 
-Run `make assurance-inputs`. It is the only target that executes a producer, and each command it runs
-is the exact argv the corresponding proof obligation declares in `assurance/change-assurance.json`; a
-declared command that is not the executed command would be a lie in a sealed attestation.
+Run `make ci`. The measurements come from these targets:
 
-Four producers belong to this repository and each publishes a declared structured result rather than
-a transcript:
-
-- `scripts/run_feature_matrix.py` publishes `runtime.feature-matrix/v1`. It runs fourteen rows —
-  five feature sets (core, alloc, std, snapshot-json, all features) over the crate's own test
-  targets, their five doc-test lanes, the footprint package, the `exact` oracle tests, and two
-  no_std MSRV library builds (snapshot-json and exact) — and decides each row from two structured channels: cargo's own
-  `--message-format=json` `compiler-message` level for the build phase, and libtest's process exit
-  status for the test phase. Build failure and test failure are different facts and are reported
-  separately. Per-test granularity would require libtest's unstable JSON formatter and therefore a
-  different compiler than the one the crate ships on; that limitation is stated rather than papered
-  over by parsing `test result: ok.` out of human output.
-- `scripts/run_kani_gate.py` publishes `runtime.kani-proof/v1`, one row per declared harness plus a
-  suite-census row. Kani publishes no machine-readable result, so this producer is the single place in
-  the repository where a transcript is parsed; every downstream consumer reads a field. A harness
-  passes only when it was checked, verification succeeded, and it discharged at least its declared
-  positive obligation floor. A harness that verified below its floor is `vacuous`, a declared harness
-  the transcript never mentions is `not-computed`, and an absent `cargo-kani` makes every row
-  `unavailable`. `make kani` exits non-zero on any of those, so a green local run means the proofs ran
-  here.
-- `scripts/check_kani_mutations.py` publishes `runtime.kani-mutation/v1`. It injects five
-  representative defects — Boolean, arithmetic, accounting, and two in the exact IEEE comparison — into a scratch copy of the source — never
-  into the working tree — and requires the owning proof to reject each one. A harness that verifies
-  the mutated source anyway is `fail` — the harness proves less than it claims. A run that never
-  reaches a verification result — the candidate copy did not compile, or Kani fell over first — is the
-  separate `inconclusive`, so a broken build is never read as a hollow harness or as a control that
-  held.
-- `scripts/measure_footprint.py` publishes `runtime.footprint/v1`. It links the footprint staticlib on
-  the declared MSRV compiler for `thumbv7em-none-eabi` and then measures it through
-  `scripts/check_linked_footprint.sh`, which owns `size` and `objdump` and emits the same document.
-  Nothing re-derives its numbers; a second implementation of a measurement is a second answer.
-
-The declared obligation floors, and the counts measured at this candidate revision. They are equal
-today by construction, not by any check: raising a floor above its measured count makes the gate
-report `vacuous`, but lowering one is invisible to the gate, so the measurement is recorded here and
-a lowered floor becomes a two-file edit rather than a one-line one.
-
-| Harness | Declared floor | Measured |
-|---|---|---|
-| `tc_001_public_model_preserves_provenance` | 140 | 140 |
-| `tc_002_boolean_truth_tables` | 136 | 136 |
-| `tc_003_campaign_accounting_saturates` | 264 | 264 |
-| `tc_003_checked_i8_arithmetic_matches_primitives` | 59 | 59 |
-| `tc_003_exact_ieee_numeric_equal_matches_nan_unordered` | 2417 | 2417 |
-| `tc_003_i32_division_boundaries_are_undefined` | 43 | 43 |
-| `tc_003_option_helpers_preserve_definedness` | 52 | 52 |
-| `tc_003_slice_index_is_defined_exactly_in_bounds` | 24 | 24 |
-
-`scripts/check_kani_harnesses.py` remains the cheap static half of the proof gate: it makes the eight
-proof names and their TC-001/TC-002/TC-003 ownership an executable census, so a deleted, renamed, or
-`cfg`-ed-out harness is caught without needing the model checker at all. It also reads each harness's
-trace binding out of the harness source, so the published result document carries a binding that
-cannot silently disagree with a second copy.
-
-One further input is not this repository's producer. `quire coverage --scope . --json` is the
-static specification, obligation, and coverage export; Quire executes nothing.
-
-`scripts/assurance_chain.py` then drives the official chain over those already-written bytes: it
-seals the change-assurance record, seals one proof attestation per obligation, hands the producer's
-bytes to Quoin's intake, and asks for a verification receipt. It reads every attested result out of
-the bytes the producer wrote. It runs no producer, and that is asserted behaviourally by two runs —
-one with cargo, cargo-kani, rustup and rustc replaced by logging stubs, requiring the log to be
-empty, and a control that stubs `quoin` and requires the chain to fail, because an empty log and an
-unconsulted `PATH` are otherwise the same observation.
-
-Retention, integrity checking, audit, attestation, and receipts are Quoin's. This plan no longer
-describes a local collector, a local envelope builder, a local verifier, a local anchor census, or a
-Make recipe that polices its own execution controls, because none of those exist here any more.
-
-It also no longer describes a retained-evidence compatibility view. The records that view read were
-deleted under `agent-ix/quire-contract-runtime#11`, by the repository owner's decision to release the
-evidence-preservation constraint for the pre-stable phase
-(`agent-ix/engineering-assurance#7`). Nothing was rewritten to keep the view working.
+- `make test-features` runs `scripts/run_feature_matrix.py`: five feature sets (core, alloc, std,
+  snapshot-json, all features) over the crate's own test targets, their five doc-test lanes, the
+  footprint package, the `exact` oracle tests, and two no_std MSRV library builds (snapshot-json and
+  exact). Each row's build phase is read from cargo's `--message-format=json` `compiler-message`
+  level and its test phase from libtest's exit status, so a build failure and a test failure are
+  reported separately.
+- `make kani` runs `cargo kani --features exact` over the harnesses in `verification/kani.rs`. It
+  exits non-zero when a proof fails or `cargo-kani` is absent.
+- `make kani-mutations` runs `scripts/check_kani_mutations.py`. It injects five representative
+  defects — Boolean, arithmetic, accounting, and two in the exact IEEE comparison — into a scratch
+  copy of the source, never into the working tree, and requires the owning proof to reject each one.
+  A harness that verifies the mutated source anyway is `fail`. A run that never reaches a
+  verification result is `inconclusive`, so a broken build is never read as a hollow harness or as
+  a control that held.
+- `make size` links the footprint staticlib on the MSRV compiler for `thumbv7em-none-eabi` and
+  measures it with `scripts/check_linked_footprint.sh`, which owns `size` and `objdump`.
 
 The following design extensions remain explicitly deferred beyond this source candidate: adding a
 second independent Kani-to-coverage semantic oracle (FND-409), and expanding the representative
@@ -196,28 +89,14 @@ not claim those classes closed.
 
 A green run supports only the bounded source candidate. A skipped Kani run, absent governance gate,
 or open human review remains an explicit limitation. The representative consumer's runtime/harness
-`.text` plus `.rodata` is compared with the fixed 500-byte population floor and 4 KiB ceiling, and
-its runtime/harness objects are rejected if they retain a panic-path reference. That value is not
+`.text` plus `.rodata` is compared with the 500-byte population floor and 4 KiB ceiling, and its
+runtime/harness objects are rejected if they retain a panic-path reference. That value is not
 treated as whole-application RAM/ROM utilization.
 
-The observational release-rlib byte count is retired with this change. It gated nothing by design —
-it varies with compiler metadata and build paths — and the deleted collector was its only caller, so
-it was a number nobody could act on collected by a tool that no longer exists. The governed
-measurement, which is the linked `.text` plus `.rodata` figure above, is unchanged in definition,
-floor, ceiling, target, and compiler. Removing an observation is recorded here rather than left to be
-noticed in a diff.
-
-The eight Kani harnesses are bounded verification controls, not a whole-crate proof. Public-model
+The Kani harnesses are bounded verification controls, not a whole-crate proof. Public-model
 provenance and Boolean assertions gate constructors and dispatch, while i8 checked arithmetic uses
 independent i16 widening oracles. Division/remainder uses symbolic invalid inputs, index
 definedness quantifies over full `usize`, and campaign accounting drives the public record/discard
-paths from symbolic near-overflow states to cover all five increments and the saturating total. The Kani
-toolchain may differ from both the shipped stable compiler and the Rust 1.75 compatibility compiler;
-that exact tool identity is retained rather than treated as compiler equivalence. The bytes each
-producer writes are retained by Quoin under `target/`, bound by digest into a sealed attestation;
-they are not externally signed runner attestations.
-
-An empty `cargo fmt --check` transcript is its documented success form; its numeric zero status is
-still bound to the source and tool digests. Historical local oracle records are corroborating audit
-history only, never an independent attestation or substitute for fresh human review of this source
-candidate.
+paths from symbolic near-overflow states to cover all five increments and the saturating total. The
+Kani toolchain may differ from both the shipped stable compiler and the Rust 1.75 compatibility
+compiler.

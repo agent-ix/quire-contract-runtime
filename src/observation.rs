@@ -4,7 +4,7 @@ use crate::ClauseId;
 
 /// Semantic role of one contract clause.
 ///
-/// Trace: TC-008, NFR-002-AC-3
+/// Trace: NFR-002-AC-3
 // Implements: FR-001
 ///
 /// ```compile_fail
@@ -38,7 +38,7 @@ pub enum ClauseKind {
 
 /// Observable result of evaluating one clause.
 ///
-/// Trace: TC-008, NFR-002-AC-3
+/// Trace: NFR-002-AC-3
 // Implements: FR-001
 ///
 /// ```compile_fail
@@ -72,7 +72,7 @@ pub enum ClauseOutcome {
 
 /// Stable category for a failure or rejection.
 ///
-/// Trace: TC-008, NFR-002-AC-3
+/// Trace: NFR-002-AC-3
 // Implements: FR-001
 ///
 /// ```compile_fail

@@ -2,8 +2,8 @@
 //! QSpec TC-185 exact decimal semantics: runtime versus authority.
 //!
 //! Every tabled vector D01–D23 is evaluated. Values, outcome kinds, charge
-//! schedules and charge amounts all agree with the authority at revision
-//! `d01371b`, which derives every decimal and ordering amount from the
+//! schedules and charge amounts all agree with the authority, which
+//! derives every decimal and ordering amount from the
 //! operands (agent-ix/quire-spec-language#119).
 
 #[macro_use]
@@ -484,7 +484,7 @@ fn tc_019_generated_operations_and_denials_agree() {
             }};
             vectors += 6 * 3 * 6;
             // The schedule agrees with the authority above; the amounts are the
-            // runtime's alone, checked against an independent QSpec 7d7943a
+            // runtime's alone, checked against an independent QSpec
             // oracle.
             let (a, b) = (dec(ca, sa), dec(cb, sb));
             let operations = [
@@ -544,7 +544,7 @@ fn sdigits(coefficient: i128, shift: u64) -> u64 {
     digits(coefficient) + shift
 }
 
-/// The QSpec 7d7943a consumed counters of one unlimited decimal operation
+/// The QSpec consumed counters of one unlimited decimal operation
 /// (index into add, subtract, multiply, divide, negate, round) on `(c, s)`
 /// operands at target scale `T`, derived from the operands and, for
 /// `decimal.result-retain`, the retained coefficient. The work count is the
@@ -821,7 +821,7 @@ fn tc_019_d22_d23_result_retain_upscale_is_charged_before_materialization() {
 fn tc_019_operand_derived_amounts_at_exact_and_one_under_limits() {
     use ChargePoint::*;
     // Each `(operation, target scale, mode, counter, exact amount, consumed
-    // before the denied charge, denied charge)`, checked against QSpec 7d7943a.
+    // before the denied charge, denied charge)`, checked against QSpec.
     let one_under = |run: &dyn Fn(&mut Meter) -> Outcome<DecimalResult>,
                      kind: LimitKind,
                      amount: u64,

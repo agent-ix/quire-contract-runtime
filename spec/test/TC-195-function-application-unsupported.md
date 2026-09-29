@@ -5,6 +5,8 @@ type: TC
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/FR-273
     type: verifies
+  - target: ix://agent-ix/quire-contract-runtime/FR-009
+    type: verifies
 ---
 # TC-195: Negotiate a function's undischargeable capability as unsupported
 
@@ -28,8 +30,7 @@ agent-ix/quire-contract-runtime#34.
 3. Inspect `negotiate_ieee`'s signature (`&[IeeeItemRequirement], &IeeeBackendCapabilities`) and
    confirm it takes no `Meter` parameter, so no application-time charge is reachable from it by
    construction; check the `compile_fail` doctest on `IeeeDisposition` proves no disposition is
-   convertible into an `Outcome` variant or an `InputRefusal`, as FR-009-AC-5 already requires for
-   the bare operators.
+   convertible into an `Outcome` variant or an `InputRefusal`, which is also FR-009-AC-5's evidence.
 4. Apply a function whose requirements negotiate `Supported`; check the application completes
    normally and produces no disposition of its own.
 

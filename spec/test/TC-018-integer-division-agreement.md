@@ -10,7 +10,7 @@ relationships:
 
 ## Description
 
-Execute every QSpec 7d7943a TC-192 vector on the runtime and on quire-spec-language d9d5273.
+Execute every QSpec TC-192 vector on the runtime and on quire-spec-language.
 Evidence: `conformance/qsl-agreement/tests/tc_192_integer_division.rs` (`make conformance`) and the
 arithmetic allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 

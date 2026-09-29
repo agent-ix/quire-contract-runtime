@@ -10,16 +10,17 @@ inputs: [borrowed identities, clause outcomes, Boolean operands, checked integer
 outputs: [tri-state verdicts, observations, defined values, complete counters]
 invariants: [rejection is never success, undefined operations never panic]
 failure_behaviors: [return a typed failure or None, saturate counters]
+# The ComponentAssuranceContract schema requires at least one entry; this restates the
+# Cargo.toml `rust-version` and is informational — nothing reads it.
 version_pins:
   rust-msrv: "1.75"
-  governance: agent-ix/quire-contract-ir#3
 controls:
-  surfaces: [Cargo features, CI, requirement-tagged tests, sealed proof attestations]
+  surfaces: [Cargo features, CI, requirement-tagged tests, Kani proofs]
   fallback: disable optional adapters and use the dependency-free core
   abstention: retain rejected discarded and inconclusive states
   escalation: human release owner reviews unresolved gaps
 isolation: no dependency on Quoin Quire or code-generation repositories
-replacement: preserve public semantics and evidence identities
+replacement: preserve public semantics
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AP-001
     type: references
@@ -44,9 +45,8 @@ remain distinct. The core performs no I/O and has no intentional panic path.
 
 ## Controls
 
-Feature-matrix CI, requirement-tagged tests, cargo-deny, unsafe audit, API documentation, and the
-governed footprint measurement sealed into a Quoin proof attestation constrain changes. Human review
-is mandatory for release. This repository retains no measurement envelope of its own.
+Feature-matrix CI, requirement-tagged tests, cargo-deny, API documentation, and the
+footprint measurement constrain changes. Human review is mandatory for release.
 
 ## Replacement
 

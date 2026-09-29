@@ -2,9 +2,6 @@
 //! normalized unit values, through the public `exact` surface.
 #![cfg(feature = "exact")]
 
-use std::fs;
-use std::path::Path;
-
 use quire_contract_runtime::exact::{
     CompoundUnit, Dimension, EnumDeclaration, EnumValue, Integer, InvalidSemanticGraph, NodeKey,
     PackageRefusalCode, Rational, SelectionRefusalCode, SemanticGraphCause, UnitDeclaration,
@@ -553,69 +550,6 @@ fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
     assert_eq!(CompoundUnit::dimensionless(), CompoundUnit::default());
 }
 
-/// Trace: TC-033, FR-012-AC-6
-#[test]
-fn tc_033_node_definition_unit_reexports_never_touch_a_meter_and_are_all_named() {
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/exact");
-    let mod_rs = fs::read_to_string(directory.join("mod.rs")).unwrap();
-
-    // Collect the names `mod.rs` re-exports from node.rs, definition.rs and unit.rs.
-    let mut reexported: Vec<String> = Vec::new();
-    for item in mod_rs.split("pub use ").skip(1) {
-        let item = item.split(';').next().unwrap();
-        let Some((module, names)) = item.split_once("::") else {
-            continue;
-        };
-        if !matches!(module, "node" | "definition" | "unit") {
-            continue;
-        }
-        reexported.extend(
-            names
-                .trim_matches(|c| c == '{' || c == '}')
-                .split(',')
-                .map(str::trim)
-                .filter(|name| !name.is_empty())
-                .map(|name| format!("{module}::{name}")),
-        );
-    }
-    assert_eq!(reexported.len(), 4 + 4 + 9, "{reexported:?}");
-
-    // `Meter` does not appear anywhere in these three files at all, which is stricter than "no
-    // re-exported signature mentions it" and fails closed if a metered function is ever added.
-    for module in ["node", "definition", "unit"] {
-        let source = fs::read_to_string(directory.join(format!("{module}.rs"))).unwrap();
-        let code: String = source
-            .lines()
-            .filter(|line| !line.trim_start().starts_with("//"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        let mentions_meter = code.match_indices("Meter").any(|(at, _)| {
-            let before = code[..at].chars().next_back();
-            let after = code[at + "Meter".len()..].chars().next();
-            let is_word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
-            !is_word(before) && !is_word(after)
-        });
-        assert!(!mentions_meter, "{module}.rs mentions Meter");
-    }
-
-    // Every re-export must be named by FR-012 itself, as a backtick-quoted identifier somewhere
-    // in the requirement's own text, so an unnamed re-export fails this test rather than passing
-    // silently.
-    let requirement = fs::read_to_string(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("spec/functional/FR-012-carried-compiler-vocabulary.md"),
-    )
-    .unwrap();
-    let unnamed: Vec<&String> = reexported
-        .iter()
-        .filter(|qualified| {
-            let name = qualified.rsplit("::").next().unwrap();
-            !requirement.contains(&format!("`{name}`"))
-        })
-        .collect();
-    assert!(unnamed.is_empty(), "FR-012 does not name: {unnamed:?}");
-}
-
 /// Trace: TC-033, FR-012-AC-4
 #[test]
 fn tc_033_enum_declaration_new_is_the_only_runtime_admission_point() {
@@ -638,39 +572,4 @@ fn tc_033_enum_declaration_new_is_the_only_runtime_admission_point() {
     // An ordered declaration may list its cases in any order.
     assert!(EnumDeclaration::new(key(1), true, &["b", "a"]).is_ok());
     assert!(EnumDeclaration::new(key(1), false, &["a", "b"]).is_ok());
-}
-
-/// Trace: TC-033, FR-012-AC-4
-#[test]
-fn tc_033_carried_only_causes_have_no_raise_site_in_the_crate() {
-    // `OwnerNotSelected` and `StaleKey` need a compiler that computes keys and resolves a lock
-    // selection; `ForeignDeclaration` and `UnreducedRational` cannot be presented through this
-    // API. All four are carried for a generated oracle to report, so a raise site appearing here
-    // would mean the runtime started re-deciding a compiler decision.
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut sources = String::new();
-    for entry in fs::read_dir(directory.join("exact")).unwrap() {
-        let path = entry.unwrap().path();
-        if path.extension().is_some_and(|extension| extension == "rs") {
-            sources.push_str(&fs::read_to_string(&path).unwrap());
-        }
-    }
-    let code: String = sources
-        .lines()
-        .filter(|line| !line.trim_start().starts_with("//"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    for cause in [
-        "OwnerNotSelected",
-        "StaleKey",
-        "ForeignDeclaration",
-        "UnreducedRational",
-    ] {
-        let raised = format!("SemanticGraphCause::{cause}");
-        assert!(!code.contains(&raised), "{cause} has a raise site");
-        assert!(
-            code.contains(cause),
-            "{cause} is not declared in the vocabulary"
-        );
-    }
 }

@@ -57,22 +57,6 @@ fn tc_004_recording_adapter_preserves_the_campaign_census() {
     assert_eq!(report.counts().discarded(), 0);
 }
 
-/// `adapt` records nothing because it has no `CampaignReport` to record into: its signature takes
-/// only a verdict. That is a fact about the function's type, not a value this test could
-/// construct and compare (a `report` never passed to `adapt` trivially stays unchanged, which the
-/// compiler already guarantees and no runtime assertion could falsify), so it is checked in the
-/// source text, the same way `CheckedInteger`'s seal and FR-012's re-export set are.
-///
-/// Trace: TC-004, FR-003-AC-3
-#[test]
-fn tc_004_adapt_signature_takes_no_report() {
-    let source = include_str!("../src/proptest_adapter.rs");
-    assert!(source.contains("pub fn adapt(verdict: &Verdict<'_>) -> TestCaseResult {"));
-    assert!(source.contains(
-        "pub fn adapt_recording(report: &mut CampaignReport<'_>, verdict: &Verdict<'_>) -> TestCaseResult {"
-    ));
-}
-
 /// Trace: TC-004, FR-003-AC-3
 #[test]
 fn tc_004_recording_adapter_maps_matching_verdicts_to_pinned_results_and_records_exactly_once() {

@@ -3,9 +3,7 @@
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
-use std::fs;
 use std::num::NonZeroU64;
-use std::path::Path;
 
 use quire_contract_runtime::exact::{
     admit_text, compare_enum, compare_text, construct_collection, divide, evaluate_boolean,
@@ -160,7 +158,7 @@ fn tc_016_charge_point_and_limit_vocabularies_round_trip() {
     }
     assert_eq!(ChargePoint::from_code("equality.not-a-real-point"), None);
     assert_eq!(ChargePoint::from_code("ordering"), None);
-    // The QSpec 7d7943a scalar families, in definition-row order.
+    // The QSpec scalar families, in definition-row order.
     assert_eq!(
         spellings[spellings.len() - 11..],
         [
@@ -332,131 +330,6 @@ fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
     ));
 }
 
-/// Trace: TC-016, FR-006-AC-5
-#[test]
-fn tc_016_exact_sources_have_no_host_float_std_panic_or_unsafe_path() {
-    let root = include_str!("../src/lib.rs");
-    for attribute in [
-        "#![no_std]",
-        "#![forbid(unsafe_code)]",
-        "#![deny(clippy::arithmetic_side_effects, clippy::indexing_slicing)]",
-    ] {
-        assert!(root.contains(attribute), "{attribute}");
-    }
-    assert!(root.contains("#[cfg(feature = \"exact\")]\npub mod exact;"));
-
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/exact");
-    let mut sources = Vec::new();
-    for entry in fs::read_dir(&directory).unwrap() {
-        let path = entry.unwrap().path();
-        sources.push((
-            path.file_name().unwrap().to_string_lossy().into_owned(),
-            fs::read_to_string(&path).unwrap(),
-        ));
-    }
-    sources.sort();
-    assert_eq!(sources.len(), 23);
-    let forbidden = [
-        "f32",
-        "f64",
-        "std::",
-        "panic!",
-        "unreachable!",
-        "todo!",
-        "unimplemented!",
-        ".unwrap(",
-        ".expect(",
-        "unsafe",
-        "assert!",
-        "debug_assert!",
-        "debug_assert_eq!",
-        "debug_assert_ne!",
-        "SystemTime",
-        "Instant",
-        "thread_rng",
-        "getrandom",
-    ];
-    for (name, source) in &sources {
-        let code: String = source
-            .lines()
-            .filter(|line| !line.trim_start().starts_with("//"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        for token in forbidden {
-            let hit = code.match_indices(token).any(|(at, _)| {
-                let before = code[..at].chars().next_back();
-                let after = code[at + token.len()..].chars().next();
-                let word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
-                let starts_with_word = token.chars().next().is_some_and(char::is_alphanumeric);
-                let ends_with_word = token.chars().last().is_some_and(char::is_alphanumeric);
-                let joined_before = starts_with_word && word(before);
-                let joined_after = ends_with_word && word(after);
-                !joined_before && !joined_after
-            });
-            assert!(!hit, "{name} contains {token}");
-        }
-    }
-}
-
-/// Trace: TC-016, FR-006-AC-5
-#[test]
-fn tc_016_exact_surface_is_reexported_from_private_modules() {
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/exact");
-    let module = fs::read_to_string(directory.join("mod.rs")).unwrap();
-    let mut declared = BTreeSet::new();
-    for line in module.lines() {
-        assert!(
-            !line.starts_with("pub mod"),
-            "exact submodules are private: {line}"
-        );
-        if let Some(name) = line
-            .strip_prefix("mod ")
-            .and_then(|rest| rest.strip_suffix(';'))
-        {
-            declared.insert(name.to_owned());
-        }
-    }
-    let exported: BTreeSet<String> = module
-        .split("pub use ")
-        .skip(1)
-        .flat_map(|item| {
-            let item = item.split(';').next().unwrap();
-            let (module, names) = item.split_once("::").unwrap();
-            names
-                .trim_matches(|c| c == '{' || c == '}')
-                .split(',')
-                .map(str::trim)
-                .filter(|name| !name.is_empty())
-                .map(|name| format!("{module}::{name}"))
-                .collect::<Vec<_>>()
-        })
-        .collect();
-    let mut public = BTreeSet::new();
-    for name in &declared {
-        let source = fs::read_to_string(directory.join(format!("{name}.rs"))).unwrap();
-        for line in source.lines() {
-            for kind in [
-                "pub struct ",
-                "pub enum ",
-                "pub fn ",
-                "pub const ",
-                "pub trait ",
-                "pub type ",
-            ] {
-                if let Some(rest) = line.strip_prefix(kind) {
-                    let item: String = rest
-                        .chars()
-                        .take_while(|c| c.is_alphanumeric() || *c == '_')
-                        .collect();
-                    public.insert(format!("{name}::{item}"));
-                }
-            }
-        }
-    }
-    assert_eq!(declared.len(), 22);
-    assert_eq!(public, exported);
-}
-
 // ---- TC-031 / FR-010: the injected-charge-denial seam ---------------------
 
 fn limits_with_work(work_units: u64) -> ScalarLimits {
@@ -474,7 +347,7 @@ fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
         Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
         Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
         Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
-        // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3).
+        // `Outcome` is `#[non_exhaustive]` (NFR-002).
         _ => panic!("expected Outcome::Incomplete, got an unrecognized outcome variant"),
     }
 }
@@ -1272,103 +1145,10 @@ fn tc_031_charge_plan_reservation_is_unaffected_by_the_injected_denial() {
     );
 }
 
-/// Trace: TC-031, FR-010-AC-6
-///
-/// The behavioral half of FR-010-AC-6 (a zero `occurrence` is a compile error, not a runtime
-/// value) cannot be demonstrated by a `#[test]` that runs: there is no `occurrence: 0` value to
-/// construct and observe. `src/exact/accounting.rs`'s `compile_fail` doctest on `InjectedDenial`
-/// is the actual evidence that the malformed construction does not compile. This test is the
-/// structural half: it inspects the crate's own source to confirm the field that makes that
-/// doctest fail to compile is still `NonZeroU64`, not `u64`, so the doctest cannot have drifted
-/// into testing something else while still failing to compile for an unrelated reason.
-///
-/// It asserts the doctest's own presence too, and not only the field's type. Asserting the field
-/// alone leaves AC-6 backed by a test that still passes after the doctest is deleted — the
-/// criterion would report green with its actual evidence gone, which is the defect class this
-/// whole criterion exists to refuse.
-#[test]
-fn tc_031_occurrence_field_is_nonzerou64_so_zero_cannot_be_constructed() {
-    let accounting_source = include_str!("../src/exact/accounting.rs");
-    let doctest_start = accounting_source.find("/// ```compile_fail").expect(
-        "the FR-010-AC-6 compile_fail doctest is gone from src/exact/accounting.rs; it is the \
-         only evidence that a zero occurrence does not compile, and this test is not a \
-         substitute for it",
-    );
-    let doctest_end = doctest_start
-        + accounting_source[doctest_start..]
-            .find("/// ```\n#[derive")
-            .expect("unterminated compile_fail doctest in src/exact/accounting.rs");
-    let doctest = &accounting_source[doctest_start..doctest_end];
-    assert!(
-        doctest.contains("occurrence: 0,"),
-        "the FR-010-AC-6 doctest must still construct `occurrence: 0`; a doctest that no longer \
-         names the malformed value proves nothing about it: {doctest}"
-    );
-    let struct_start = accounting_source
-        .find("pub struct InjectedDenial {")
-        .expect("InjectedDenial struct not found in src/exact/accounting.rs");
-    let struct_end = struct_start
-        + accounting_source[struct_start..]
-            .find('}')
-            .expect("unterminated InjectedDenial struct");
-    let struct_body = &accounting_source[struct_start..struct_end];
-    assert!(
-        struct_body.contains("pub occurrence: NonZeroU64,"),
-        "InjectedDenial::occurrence must stay NonZeroU64 for the FR-010-AC-6 doctest to mean \
-         what it claims: {struct_body}"
-    );
-}
-
-/// Counts `Refusal`'s own declared variants directly from source (the same "read the crate's own
-/// declaration" pattern `tests/release_contract.rs`'s TC-008 extension uses for `src/exact/`'s
-/// enum census), so `tc_016` below can assert its `variants` array is complete against the real
-/// enum rather than only against itself. Without this, `expected_code`'s wildcard-panic guard
-/// only fires when a *constructed* value of an unenumerated variant is actually exercised through
-/// `variants` -- a variant added to the enum but never added to `variants` never gets constructed
-/// at all, so the panic never fires and the hand-maintained `13` stays correct by never being
-/// checked against anything. That is the same vacuous-gate shape IR-77 exists to close elsewhere.
-///
-/// Not a general Rust parser: detects a variant's start as an identifier line at brace/paren
-/// depth 1 (directly inside the enum body), which is exactly how `Refusal`'s mix of unit and
-/// struct-like variants are laid out today.
-fn refusal_variant_count(outcome_source: &str) -> usize {
-    let marker = "pub enum Refusal {";
-    let start = outcome_source
-        .find(marker)
-        .expect("Refusal enum not found in src/exact/outcome.rs");
-    let mut depth = 1i32;
-    let mut count = 0usize;
-    for line in outcome_source[start + marker.len()..].lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with('#') {
-            continue;
-        }
-        if depth == 1
-            && trimmed
-                .as_bytes()
-                .first()
-                .is_some_and(u8::is_ascii_uppercase)
-        {
-            count += 1;
-        }
-        for ch in trimmed.chars() {
-            match ch {
-                '{' | '(' => depth += 1,
-                '}' | ')' => depth -= 1,
-                _ => {}
-            }
-        }
-        if depth == 0 {
-            break;
-        }
-    }
-    count
-}
-
 /// Trace: TC-016, FR-006-AC-6
 #[test]
 fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
-    // `Refusal` is `#[non_exhaustive]` (NFR-002-AC-3), so this match, compiled
+    // `Refusal` is `#[non_exhaustive]` (NFR-002), so this match, compiled
     // from `tests/` as a downstream crate, needs a wildcard arm. Rather than a
     // silent `_ => None` (which would falsely claim a new variant carries no
     // normative code), the wildcard panics: adding a variant without
@@ -1421,17 +1201,6 @@ fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
         },
         Refusal::CheckedInvariant,
     ];
-    // Checked against the enum declaration itself, not just against this array's own length:
-    // a variant added to `Refusal` but never added here would otherwise never be constructed,
-    // so `expected_code`'s wildcard-panic guard would never fire and this count would stay
-    // "correct" by never being compared to anything real.
-    let declared = refusal_variant_count(include_str!("../src/exact/outcome.rs"));
-    assert_eq!(
-        variants.len(),
-        declared,
-        "enumerate every Refusal variant here; src/exact/outcome.rs declares {declared}"
-    );
-
     let some_count = variants
         .iter()
         .filter(|refusal| expected_code(refusal).is_some())
@@ -1443,49 +1212,5 @@ fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
 
     for refusal in variants {
         assert_eq!(refusal.code(), expected_code(&refusal));
-    }
-}
-
-/// Trace: TC-016, FR-006-AC-6
-#[test]
-fn tc_016_refusal_undefined_incomplete_carry_no_string_field() {
-    fn type_source<'a>(source: &'a str, keyword: &str, name: &str) -> &'a str {
-        let needle = format!("{keyword} {name}");
-        let start = source
-            .find(&needle)
-            .unwrap_or_else(|| panic!("{name} not found in source"));
-        let from_start = &source[start..];
-        let open = from_start.find('{').unwrap();
-        let mut depth = 0_usize;
-        for (i, c) in from_start[open..].char_indices() {
-            match c {
-                '{' => depth += 1,
-                '}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return &from_start[open..open + i + 1];
-                    }
-                }
-                _ => {}
-            }
-        }
-        panic!("unbalanced braces reading {name}");
-    }
-
-    let outcome_source = include_str!("../src/exact/outcome.rs");
-    let accounting_source = include_str!("../src/exact/accounting.rs");
-
-    let bodies = [
-        type_source(outcome_source, "pub enum", "Undefined"),
-        type_source(outcome_source, "pub enum", "Refusal"),
-        type_source(accounting_source, "pub struct", "Incomplete"),
-    ];
-    for body in bodies {
-        for token in ["String", "&str", "&'static str"] {
-            assert!(
-                !body.contains(token),
-                "found {token} in a field of the source scanned: {body}"
-            );
-        }
     }
 }

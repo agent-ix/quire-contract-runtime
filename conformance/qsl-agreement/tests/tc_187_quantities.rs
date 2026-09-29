@@ -7,7 +7,7 @@
 //! target cycle, an unknown target, a cross-dimension target) and U06's zero
 //! scale are evaluated through both graph admissions.
 //!
-//! The authority at revision `d01371b` derives every `unit.rational-arithmetic`
+//! The authority derives every `unit.rational-arithmetic`
 //! and `unit.target-domain` amount from operands
 //! (agent-ix/quire-spec-language#119), so [`lagged!`] runs its metered
 //! comparison, under the caller's own tuple, through [`agree!`].
@@ -1001,7 +1001,7 @@ fn edges(spec: &GraphSpec, name: &str) -> Vec<(Fraction, Fraction)> {
     }
 }
 
-/// The QSpec 7d7943a consumed counters of an unlimited exact conversion:
+/// The QSpec consumed counters of an unlimited exact conversion:
 /// `unit.identity-read` at `maxparts`, one `unit.edge` per edge, and per edge
 /// two `unit.rational-arithmetic` events sized by the rational row from the
 /// reduced operands only, then `unit.target-domain` and `unit.result-retain`.
@@ -1063,7 +1063,7 @@ fn tc_022_generated_conversions_arithmetic_and_denials_agree() {
                     let expected = from_root(&spec, to, to_root(&spec, from, value)).rational();
                     assert_eq!(exact(&converted.0), expected, "{value:?} {from} -> {to}");
                     // The schedule agrees with the authority; the amounts are
-                    // the runtime's alone, checked against QSpec 7d7943a.
+                    // the runtime's alone, checked against QSpec.
                     let f = fixture();
                     let (_, _, consumed) = metered(UNLIMITED, |m| {
                         convert_quantity(

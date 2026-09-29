@@ -57,17 +57,16 @@ return a tri-state verdict, and optionally adapt that verdict to a property-test
 ### Intended Users
 
 Generated customer code relies on the default core. Test harness authors may enable optional
-adapters. Reviewers and release owners rely on the Quire static export, the sealed Quoin change-assurance
-record, its proof attestations and its verification receipt. This repository retains no evidence of
-its own.
+adapters. Reviewers and release owners rely on the tests, proofs and measurements this repository
+runs.
 
 ## Requirements Architecture
 
-Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-012,
-FR-273, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
-runtime API contract implemented by those FRs. Test cases TC-001 through TC-034 and TC-194–TC-195
-(TC-012, TC-027–TC-029 unused) provide the verification matrix. The assurance artifacts bind the
-intended use, boundary, evidence, and open human decision.
+Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004,
+FR-006 through FR-012, FR-273, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
+runtime API contract implemented by those FRs. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
+TC-035 (TC-027–TC-029 unused), and TC-194–TC-195 provide the verification matrix. The assurance
+artifacts bind the intended use, boundary, and open human decision.
 
 ## References
 

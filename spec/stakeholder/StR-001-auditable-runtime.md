@@ -23,7 +23,7 @@ runtime limits the trusted surface and allows downstream projects to validate it
 | ID | Criteria | Validation |
 |----|----------|------------|
 | StR-001-VC-1 | A harness distinguishes success, failed postconditions, and rejected preconditions. | Demonstration |
-| StR-001-VC-2 | The default linked surface compiles with `#![no_std]`, invokes no allocator, and resolves no runtime dependency. | Inspection |
+| StR-001-VC-2 | The default linked surface compiles with `#![no_std]` and invokes no allocator. | Demonstration (`make size`) |
 
 ## Dependencies
 

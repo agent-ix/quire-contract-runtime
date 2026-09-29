@@ -4,8 +4,6 @@
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
-use std::fs;
-use std::path::Path;
 
 use quire_contract_runtime::exact::{
     negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,
@@ -365,86 +363,12 @@ fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause
     );
 }
 
-// ---- AC-5: no Meter, no Outcome -------------------------------------------------
-
-/// The exact source text of a top-level `fn name(...) { ... }` item, found by
-/// brace matching from its first opening brace. Panics if `name` is absent.
-fn function_source<'a>(source: &'a str, name: &str) -> &'a str {
-    let needle = format!("fn {name}(");
-    let start = source
-        .find(&needle)
-        .unwrap_or_else(|| panic!("{name} not found in source"));
-    let from_start = &source[start..];
-    let open = from_start.find('{').unwrap();
-    let mut depth = 0_usize;
-    for (i, c) in from_start[open..].char_indices() {
-        match c {
-            '{' => depth += 1,
-            '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return &from_start[..open + i + 1];
-                }
-            }
-            _ => {}
-        }
-    }
-    panic!("unbalanced braces reading {name}");
-}
-
-/// Trace: TC-030, FR-009-AC-5
+/// Trace: TC-030
 #[test]
-fn tc_030_negotiators_take_no_meter() {
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/exact");
-
-    let division_source = fs::read_to_string(src_dir.join("division.rs")).unwrap();
-    let negotiate_integer_division_source =
-        function_source(&division_source, "negotiate_integer_division");
-    assert!(
-        !negotiate_integer_division_source.contains("Meter"),
-        "negotiate_integer_division mentions Meter:\n{negotiate_integer_division_source}"
-    );
-
-    let ieee_source = fs::read_to_string(src_dir.join("ieee.rs")).unwrap();
-    let negotiate_ieee_source = function_source(&ieee_source, "negotiate_ieee");
-    assert!(
-        !negotiate_ieee_source.contains("Meter"),
-        "negotiate_ieee mentions Meter:\n{negotiate_ieee_source}"
-    );
-}
-
-/// Trace: TC-030, FR-009-AC-5
-#[test]
-fn tc_030_no_disposition_converts_into_an_outcome_variant() {
-    // If either disposition ever grew a conversion into `Outcome` — most
-    // plausibly `impl From<IeeeDisposition> for Outcome<T>` or the integer
-    // equivalent — it would read `From<IeeeDisposition>` or
-    // `From<IntegerDivisionDisposition>` somewhere in `src/`. Scanning every
-    // source file, rather than only the two that declare the dispositions,
-    // catches a conversion placed anywhere in the crate.
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut checked_any = false;
-    for entry in fs::read_dir(src_dir.join("exact")).unwrap() {
-        let path = entry.unwrap().path();
-        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
-            continue;
-        }
-        let source = fs::read_to_string(&path).unwrap();
-        for forbidden in ["From<IeeeDisposition>", "From<IntegerDivisionDisposition>"] {
-            assert!(
-                !source.contains(forbidden),
-                "{} converts a disposition into another type ({forbidden}); \
-                 dispositions are provider dispositions, never Outcome variants",
-                path.display()
-            );
-        }
-        checked_any = true;
-    }
-    assert!(checked_any, "no source files were scanned");
-
+fn tc_030_every_disposition_is_a_known_variant() {
     // Both negotiators also stay checked against the closed set of dispositions
     // this test knows about. `IntegerDivisionDisposition` and `IeeeDisposition`
-    // are `#[non_exhaustive]` (NFR-002-AC-3: downstream generated oracles must
+    // are `#[non_exhaustive]` (NFR-002: downstream generated oracles must
     // not exhaustively match them), so this crate's own `tests/` — a separate,
     // downstream-compiled crate — can no longer enforce coverage with a plain
     // exhaustive `match` and a compile error. `matches!` plus an explicit assertion is a

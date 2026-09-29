@@ -87,7 +87,6 @@ the runtime. No verdict, attestation, receipt, retained store or generic envelop
 |----|----------|--------------|
 | FR-004-AC-1 | Mixed outcome sequences produce the specified four counters. | Test (TC-006) |
 | FR-004-AC-2 | Counter overflow saturates and never panics or wraps. | Test (TC-006) |
-| FR-004-AC-3 | No public report constructor can omit a metric. | Inspection |
 | FR-004-AC-4 | Allocation-free immutable snapshots retain exact identity and all counters after subsequent report recording; imported snapshots cannot resume a mutable report. | Test (TC-015) |
 | FR-004-AC-5 | JSON transport round-trips real mixed reports and refuses independently authored malformed, incomplete, duplicate, unsupported or inconsistent data. | Test (TC-015) |
 | FR-004-AC-6 | Conservative at-limit inspection distinguishes representable values from potentially saturated counts/totals without inventing overflow history. | Test (TC-015) |

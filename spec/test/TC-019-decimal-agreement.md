@@ -10,7 +10,7 @@ relationships:
 
 ## Description
 
-Execute every QSpec 7d7943a TC-185 vector on the runtime and on quire-spec-language d9d5273.
+Execute every QSpec TC-185 vector on the runtime and on quire-spec-language.
 Evidence: `conformance/qsl-agreement/tests/tc_185_exact_decimals.rs` (`make conformance`) and the
 upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 
@@ -20,7 +20,7 @@ upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 2. For every vector with an authority run, compare value and outcome kind on both sides; for
    vectors whose charges the authority meters, also compare charges, counters and every injected
    denial.
-3. For D09, D13 and D20–D23, meter the runtime alone at the exact QSpec 7d7943a limit tuple and one
+3. For D09, D13 and D20–D23, meter the runtime alone at the exact QSpec limit tuple and one
    under the first short counter, and check the runtime's charges and counters agree with the
    authority like every other vector. D20–D21 short `integer_bits` at `ordering.arithmetic`; D22–D23
    charge the result-retain upscale before materialization, and D23 has no authority run.

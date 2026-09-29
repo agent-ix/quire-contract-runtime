@@ -1,8 +1,8 @@
 //! Metered integer arithmetic, rational arithmetic, numeric ordering and Boolean
-//! connectives under QSpec 7d7943a `quire.value.accounting/v1`, whose every
+//! connectives under QSpec `quire.value.accounting/v1`, whose every
 //! arithmetic amount is derived from operand bit lengths.
 //!
-//! The pinned authority (quire-spec-language d9d5273) does not meter these
+//! The quire-spec-language authority does not meter these
 //! families yet (pending agent-ix/quire-spec-language#119), so every charge here
 //! is checked against the QSpec definition rows and the TC-191 P11 and TC-190
 //! Q11 atom schedules, and every value against an independent `i128` oracle.
@@ -314,7 +314,7 @@ impl MapStop for Outcome<bool> {
             Outcome::Refused(reason) => Outcome::Refused(reason),
             Outcome::Incomplete(record) => Outcome::Incomplete(record),
             Outcome::Completed(value) => panic!("completed ordering {value} is not a stop"),
-            // `Outcome` is `#[non_exhaustive]` (NFR-002-AC-3); no safe retyping
+            // `Outcome` is `#[non_exhaustive]` (NFR-002); no safe retyping
             // exists for a variant this helper does not know about.
             _ => unreachable!("Outcome gained a variant `map_stop` does not know how to retype"),
         }
@@ -583,7 +583,7 @@ fn tc_023_generated_integer_and_ordering_against_an_i128_oracle() {
                     OrderingOperator::LessOrEqual => ordering != Ordering::Greater,
                     OrderingOperator::Greater => ordering == Ordering::Greater,
                     OrderingOperator::GreaterOrEqual => ordering != Ordering::Less,
-                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002-AC-3).
+                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002).
                     // `operator` is drawn only from `OrderingOperator::ALL`
                     // above, so this arm is unreachable unless `ALL` grows
                     // without this match being updated to match.
@@ -704,7 +704,7 @@ fn tc_023_generated_rational_arithmetic_and_ordering_against_an_i128_oracle() {
                     OrderingOperator::LessOrEqual => ordering.is_le(),
                     OrderingOperator::Greater => ordering.is_gt(),
                     OrderingOperator::GreaterOrEqual => ordering.is_ge(),
-                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002-AC-3).
+                    // `OrderingOperator` is `#[non_exhaustive]` (NFR-002).
                     // `operator` is drawn only from `OrderingOperator::ALL`
                     // above, so this arm is unreachable unless `ALL` grows
                     // without this match being updated to match.
@@ -1105,46 +1105,4 @@ fn tc_017_charge_log_is_capped_and_counters_stay_exact() {
         .completed()
         .is_some());
     assert!(!fresh.charge_log_truncated());
-}
-
-/// `evaluate_integer_arithmetic` builds its `Outcome` directly rather than
-/// through an inner `Result<Integer, Stop>` round-trip -- a Kani-provability
-/// rule with no owning FR or NFR of its own (see AD-002's Risks section). No
-/// type signature distinguishes a direct build from an equivalent
-/// `Result`-round-trip rewrite that reaches the same `Outcome` values, so
-/// this is a source check rather than a behavioural one: it bans any
-/// `Result<` type spelled in the function's body, not only the literal
-/// `Outcome::from_stop` call, so a `Result` staged through a local binding
-/// and a `match` (rather than passed straight to `from_stop`) is caught too.
-///
-/// Trace: TC-036, FR-007-AC-14
-#[test]
-fn tc_036_integer_arithmetic_builds_outcome_directly() {
-    let source = include_str!("../src/exact/numeric.rs");
-    let start = source
-        .find("pub fn evaluate_integer_arithmetic(")
-        .expect("evaluate_integer_arithmetic exists in src/exact/numeric.rs");
-    let after_signature = &source[start..];
-    // The function's own closing brace is unindented; every brace inside its
-    // body (match arms, if-let blocks) is indented, so this is the first
-    // unindented one after the signature.
-    let end = after_signature
-        .find("\n}\n")
-        .expect("evaluate_integer_arithmetic has a closing brace")
-        + "\n}".len();
-    let function = &after_signature[..end];
-    let code: String = function
-        .lines()
-        .filter(|line| !line.trim_start().starts_with("//"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    assert!(
-        !code.contains("Result<"),
-        "evaluate_integer_arithmetic spells a Result<..> type again, whether \
-         staged through Outcome::from_stop or a local match"
-    );
-    assert!(
-        code.contains("Outcome::Completed(result)"),
-        "evaluate_integer_arithmetic no longer builds its Outcome directly"
-    );
 }

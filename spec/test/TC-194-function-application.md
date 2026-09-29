@@ -39,7 +39,7 @@ agent-ix/quire-contract-runtime#34.
    expression checked against another package returns `Ok(Evaluation)` with
    `Refused(CheckedInvariant)`.
 8. For a shared-corpus function-application vector, check the outcome, refusal and charge sequence
-   against the quire-spec-language `ea39f91` authority.
+   against the quire-spec-language authority.
 9. Inspect this requirement's corpus for `CheckMode::Kernel`: check that every applied package is
    checked under `CheckMode::Linked` and that no test applies a package checked only under
    `CheckMode::Kernel` (FR-273-AC-6).

@@ -31,27 +31,25 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 
 | Metric | Target | Threshold | Method |
 |--------|--------|-----------|--------|
-| Default dependencies | 0 | 0 | compile-time-check |
-| Unsafe blocks | 0 | 0 | inspection |
+| Unsafe blocks | 0 | 0 | compile-time-check |
 | Linked `.text` + `.rodata` | 500 B population floor | 4 KiB ceiling | performance-benchmarking |
 
 ## Acceptance Criteria
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| NFR-001-AC-1 | The default feature profile compiles without `std` and resolves no runtime dependencies. | compile-time-check (TC-005) |
-| NFR-001-AC-2 | Library source contains no `unsafe` block. | Inspection (TC-007) |
-| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Inspection (TC-007) |
+| NFR-001-AC-1 | The default feature profile compiles without `std` or an allocator. | compile-time-check (`make size`) |
+| NFR-001-AC-2 | The library compiles with no `unsafe` code. | compile-time-check (`#![forbid(unsafe_code)]`, `make lint`) |
+| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Test (TC-007, `make size`) |
 
 ## Verification
 
-The local composite gate checks every declared target and feature at the MSRV, builds and tests the
-fixed bare-metal footprint consumer, runs the unsafe and panic audits, and publishes the
-linked-section and panic-relocation measurements identified by MP-001 as a structured result.
-
-The observational release-rlib byte count is retired. It gated nothing, it varied with compiler
-metadata and build paths, and the collector that recorded it no longer exists; MP-001's Interpretation
-records the retirement and its reason. The governed measurement is unchanged.
+`make size` builds the footprint crate, which depends on the runtime with
+`default-features = false`, for `thumbv7em-none-eabi` on Rust 1.75, so the default profile compiles
+without `std` or an allocator; it then enforces the 500-byte floor, the 4 KiB ceiling and the
+absence of panic relocations. `make lint` runs Clippy on the runtime and the footprint crate, and
+`#![forbid(unsafe_code)]` rejects any `unsafe` code. No gate checks that the default profile
+resolves no required third-party dependency.
 
 ## Dependencies
 
