@@ -1,12 +1,12 @@
 ---
 id: TC-007
-title: "Audit runtime footprint and release controls"
+title: "Audit runtime footprint"
 type: TC
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/NFR-001
     type: verifies
 ---
-# TC-007: Audit runtime footprint and release controls
+# TC-007: Audit runtime footprint
 
 ## Description
 

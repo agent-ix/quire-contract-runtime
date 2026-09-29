@@ -363,9 +363,7 @@ fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause
     );
 }
 
-// ---- AC-5: no Meter, no Outcome -------------------------------------------------
-
-/// Trace: TC-030, FR-009-AC-5
+/// Trace: TC-030
 #[test]
 fn tc_030_no_disposition_converts_into_an_outcome_variant() {
     // Both negotiators also stay checked against the closed set of dispositions

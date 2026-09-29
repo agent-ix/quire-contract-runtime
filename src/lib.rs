@@ -19,6 +19,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![deny(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
+// Trace: FR-003-AC-2
 #![cfg_attr(
     not(feature = "proptest"),
     doc = r#"

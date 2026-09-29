@@ -802,7 +802,7 @@ pub enum IeeeUnsupportedCause {
 /// The per-item I13 negotiation disposition. It is not an evaluator outcome
 /// and never changes package admission or selects a substitute evaluator.
 ///
-/// Trace: TC-195, FR-273-AC-4
+/// Trace: TC-195, FR-273-AC-4, FR-009-AC-5
 ///
 /// `IeeeDisposition` converts to neither `Outcome<Value>` nor `InputRefusal`:
 /// no such `From`/`Into` impl exists, so this would-be conversion is a

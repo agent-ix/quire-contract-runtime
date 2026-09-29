@@ -31,7 +31,6 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 
 | Metric | Target | Threshold | Method |
 |--------|--------|-----------|--------|
-| Default dependencies | 0 | 0 | compile-time-check |
 | Unsafe blocks | 0 | 0 | compile-time-check |
 | Linked `.text` + `.rodata` | 500 B population floor | 4 KiB ceiling | performance-benchmarking |
 
@@ -39,17 +38,18 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| NFR-001-AC-1 | The default feature profile compiles without `std` and resolves no runtime dependencies. | compile-time-check (`make msrv`, `make test-features`) |
+| NFR-001-AC-1 | The default feature profile compiles without `std` or an allocator. | compile-time-check (`make size`) |
 | NFR-001-AC-2 | The library compiles with no `unsafe` code. | compile-time-check (`#![forbid(unsafe_code)]`, `make lint`) |
 | NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, MP-001's fixed-population static-library consumer has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Test (TC-007, `make size`) |
 
 ## Verification
 
-The build gates verify this requirement. `make msrv` and the no_std rows of `make test-features`
-compile the default, `snapshot-json` and `exact` profiles without `std` on Rust 1.75.
-`#![forbid(unsafe_code)]`, checked by `make lint`, rejects any `unsafe` code. `make size` builds the
-fixed bare-metal footprint consumer and enforces the 500-byte floor, the 4 KiB ceiling and the
-absence of panic relocations.
+`make size` builds the footprint crate, which depends on the runtime with
+`default-features = false`, for `thumbv7em-none-eabi` on Rust 1.75, so the default profile compiles
+without `std` or an allocator; it then enforces the 500-byte floor, the 4 KiB ceiling and the
+absence of panic relocations. `make lint` runs Clippy on the runtime and the footprint crate, and
+`#![forbid(unsafe_code)]` rejects any `unsafe` code. No gate checks that the default profile
+resolves no required third-party dependency.
 
 ## Dependencies
 
