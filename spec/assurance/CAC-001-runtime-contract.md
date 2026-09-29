@@ -10,6 +10,10 @@ inputs: [borrowed identities, clause outcomes, Boolean operands, checked integer
 outputs: [tri-state verdicts, observations, defined values, complete counters]
 invariants: [rejection is never success, undefined operations never panic]
 failure_behaviors: [return a typed failure or None, saturate counters]
+# The ComponentAssuranceContract schema requires at least one entry; this restates the
+# Cargo.toml `rust-version` and is informational — nothing reads it.
+version_pins:
+  rust-msrv: "1.75"
 controls:
   surfaces: [Cargo features, CI, requirement-tagged tests, Kani proofs]
   fallback: disable optional adapters and use the dependency-free core
