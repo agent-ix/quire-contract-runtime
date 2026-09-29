@@ -10,8 +10,8 @@ relationships:
 
 ## Description
 
-The pinned authority does not meter these families yet (quire-spec-language#119), so charges are
-checked against QSpec 7d7943a and values against an independent `i128` oracle. Evidence:
+The quire-spec-language authority does not meter these families yet (quire-spec-language#119), so charges are
+checked against QSpec and values against an independent `i128` oracle. Evidence:
 `tests/exact_arithmetic.rs` and `tests/exact_allocation.rs` (`--features exact`).
 
 ## Test Procedure
@@ -36,5 +36,5 @@ checked against QSpec 7d7943a and values against an independent `i128` oracle. E
 
 ## Expected Results
 
-Every value equals the oracle, every charge schedule equals QSpec 7d7943a, and every denial
+Every value equals the oracle, every charge schedule equals QSpec, and every denial
 names its point with no result unit.

@@ -92,4 +92,4 @@ and what the meter holds at all is what this requirement fixes.
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
-  `ix://agent-ix/quire-specification` at `7d7943a`.
+  `ix://agent-ix/quire-specification`.

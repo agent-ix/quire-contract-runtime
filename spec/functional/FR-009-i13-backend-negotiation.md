@@ -71,4 +71,4 @@ The runtime shall neither evaluate the item nor alter the item, the package or a
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
-  `ix://agent-ix/quire-specification` at `7d7943a`.
+  `ix://agent-ix/quire-specification`.

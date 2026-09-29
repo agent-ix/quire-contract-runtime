@@ -185,8 +185,8 @@ macro_rules! shared_helpers {
         }
 
         /// An outcome with every admitted charge and no consumed counter: the
-        /// agreement shape of a vector whose charge amounts QSpec 7d7943a
-        /// derives from operands, which the authority d9d5273 does not yet do.
+        /// agreement shape of a vector whose charge amounts QSpec
+        /// derives from operands, which the authority does not yet do.
         pub fn scheduled<T>(
             limits: ScalarLimits,
             run: impl FnOnce(&mut Meter) -> T,

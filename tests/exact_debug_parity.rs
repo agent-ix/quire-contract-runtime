@@ -1,6 +1,6 @@
 //! Debug-rendering regression pins for the nine value/type structs whose
 //! `Debug` impl is hand-written because their fields sit behind one `Box`.
-//! FR-007-AC-6's own oracle -- equal Debug renderings against the pinned
+//! FR-007-AC-6's own oracle -- equal Debug renderings against the quire-spec-language
 //! authority -- lives in `conformance/qsl-agreement`, which does not compile
 //! on this tree or on `origin/main` (E0004, unrelated to this PR). This is
 //! not that oracle (FR-007-AC-13, TC-035): it only pins each type's own

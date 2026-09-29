@@ -160,7 +160,7 @@ fn tc_016_charge_point_and_limit_vocabularies_round_trip() {
     }
     assert_eq!(ChargePoint::from_code("equality.not-a-real-point"), None);
     assert_eq!(ChargePoint::from_code("ordering"), None);
-    // The QSpec 7d7943a scalar families, in definition-row order.
+    // The QSpec scalar families, in definition-row order.
     assert_eq!(
         spellings[spellings.len() - 11..],
         [

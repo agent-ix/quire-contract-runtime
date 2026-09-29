@@ -77,4 +77,4 @@ depend on the configured `ScalarLimits`.
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md), [FR-011](./FR-011-meter-state-at-a-stop.md);
-  `ix://agent-ix/quire-specification` at `7d7943a`.
+  `ix://agent-ix/quire-specification`.

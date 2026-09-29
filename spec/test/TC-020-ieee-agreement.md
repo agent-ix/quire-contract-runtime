@@ -10,7 +10,7 @@ relationships:
 
 ## Description
 
-Execute every QSpec 7d7943a TC-193 vector on the runtime and on quire-spec-language d9d5273.
+Execute every QSpec TC-193 vector on the runtime and on quire-spec-language.
 Evidence: `conformance/qsl-agreement/tests/tc_193_ieee_profiles.rs` (`make conformance`).
 
 ## Test Procedure

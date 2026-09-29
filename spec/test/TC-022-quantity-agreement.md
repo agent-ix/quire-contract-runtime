@@ -10,7 +10,7 @@ relationships:
 
 ## Description
 
-Execute every QSpec 7d7943a TC-187 vector on the runtime and on quire-spec-language d9d5273.
+Execute every QSpec TC-187 vector on the runtime and on quire-spec-language.
 Evidence: `conformance/qsl-agreement/tests/tc_187_quantities.rs` (`make conformance`).
 
 ## Test Procedure
@@ -21,7 +21,7 @@ Evidence: `conformance/qsl-agreement/tests/tc_187_quantities.rs` (`make conforma
    and integer targets, compound units and values on both sides; compare charges and counters where
    the authority meters them.
 3. For U10, U13, U15, U16, U19, U20, U22–U24, U26, U28 and U29, agree with the authority on the
-   value, charge schedule and consumed counters, metered under the QSpec 7d7943a limit tuple and one
+   value, charge schedule and consumed counters, metered under the QSpec limit tuple and one
    under its first short counter: `unit.rational-arithmetic` per event operands, power
    `max(1, |n| × maxparts)`, and `unit.target-domain` from the operand and target scale.
 4. Deny every named charge; sweep conversions across two unit families against an `i128` fraction
