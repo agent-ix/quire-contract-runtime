@@ -42,7 +42,7 @@ must be explicit to downstream users.
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | NFR-002-AC-1 | Valid public evaluation and accounting inputs encounter no intentional panic path. | property-based-testing (TC-003) |
-| NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive. | compile_fail doctest (`src/observation.rs`, `src/verdict.rs`) |
+| NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive, as the `compile_fail` doctests in `src/observation.rs` and `src/verdict.rs` show. | compile-time-check |
 
 ## Verification
 

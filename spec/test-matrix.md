@@ -88,8 +88,9 @@ type: TestMatrix
 
 NFR-001-AC-1 is verified by `make size` and NFR-001-AC-2 by `make lint` under
 `#![forbid(unsafe_code)]`; FR-003-AC-2 and NFR-002-AC-3 by `compile_fail` doctests; and interface-001-AC-13 by the `make test-features`
-row `build-exact-no-std-msrv`; none of them has a test case. Every test-matrix row now has a `tc_NNN` Rust test
-binding; executable semantic claims retain direct acceptance-criterion trace tags.
+row `build-exact-no-std-msrv`; none of them has a test case. Every other row is backed by a `tc_NNN`
+Rust test, a Kani harness or a `compile_fail` doctest; executable semantic claims retain direct
+acceptance-criterion trace tags.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
 (`tc_031_further_charges_after_the_injected_denial_meter_normally`,
