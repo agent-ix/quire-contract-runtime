@@ -23,82 +23,8 @@ exceptions = [
 multiple-versions = "allow"
 wildcards = "warn"
 
-# One copy of every first-party crate. Cargo treats each distinct git source spec
-# (url + rev) as a separate package, so a stray `rev =`, a path/git split or a new
-# repo cycle would build the same crate twice with mismatched types. cargo-deny
-# matches exact names (no globs), so each qsl-* crate is listed. RT's graph holds
-# only its own two crates today; the rest guard against a future dependency.
-[[bans.deny]]
-name = "quire-contract-runtime"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-contract-runtime-footprint"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-contract-model"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-contract-ir"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-verification-contracts"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-canonical"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-exact"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "quire-spec-language"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-attrs"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-cst"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-eval"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-forms"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-foundation"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-package"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-replay"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-route"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-semantics"
-deny-multiple-versions = true
-
-[[bans.deny]]
-name = "qsl-source"
-deny-multiple-versions = true
+# One copy of every first-party crate is enforced by scripts/check_one_copy.awk
+# (run from `make deny`), which reads every tracked Cargo.lock.
 
 [advisories]
 version = 2

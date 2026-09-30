@@ -36,7 +36,7 @@ make ci               # all mandatory local gates; never dispatches hosted CI
 ## Safety scaffolding
 
 - `clippy.toml` caps cognitive complexity / arg count
-- `deny.toml` allow-lists licenses and denies unknown registries/git sources, and bans a second copy of any first-party crate
+- `deny.toml` allow-lists licenses and denies unknown registries/git sources, and `make deny` fails if any agent-ix git crate resolves more than once in a Cargo.lock (`scripts/check_one_copy.awk`)
 - `rustfmt.toml` uses stable rustfmt settings with a 100-char width. CI fails on drift.
 - `verification/kani.rs` is compiled under `cfg(kani)`. Stable Clippy does not type-check that
   configuration; rustfmt and `make kani` are the controls for this boundary.

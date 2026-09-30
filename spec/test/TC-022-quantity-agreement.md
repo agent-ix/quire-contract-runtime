@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Execute every QSpec TC-187 vector on the runtime and on quire-spec-language.
-Evidence: `tests/tc_187_quantities.rs` in agent-ix/quire-integration.
+Evidence: none in this repository. The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430.
 
 ## Test Procedure
 

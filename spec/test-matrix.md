@@ -22,15 +22,15 @@ type: TestMatrix
 | FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
 | FR-004 | FR-004-AC-8 | TC-006 | ✅ Complete |
 | FR-006 | FR-006-AC-1, FR-006-AC-6 | TC-016 | ✅ implemented |
-| FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | ✅ implemented |
+| FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
 | FR-006 | FR-006-AC-4 | TC-017 | ✅ implemented |
 | FR-007 | FR-007-AC-1 | TC-018 | ✅ implemented |
 | FR-007 | FR-007-AC-2 | TC-019 | ✅ implemented |
-| FR-007 | FR-007-AC-3 | TC-020 | ✅ implemented |
-| FR-007 | FR-007-AC-4 | TC-021 | ✅ implemented |
-| FR-007 | FR-007-AC-5 | TC-022 | ✅ implemented |
-| FR-007 | FR-007-AC-6 | TC-018, TC-019, TC-020, TC-021, TC-022 | ✅ implemented |
+| FR-007 | FR-007-AC-3 | TC-020 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
+| FR-007 | FR-007-AC-4 | TC-021 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
+| FR-007 | FR-007-AC-5 | TC-022 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
+| FR-007 | FR-007-AC-6 | TC-018, TC-019, TC-020, TC-021, TC-022 | 🚧 partly evidenced: the runtime-side Debug pins remain (TC-035); the QSL Debug-parity half is removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430 |
 | FR-007 | FR-007-AC-7 | TC-023 | ✅ implemented |
 | FR-008 | FR-008-AC-1, FR-008-AC-2 | TC-024 | ✅ implemented |
 | FR-008 | FR-008-AC-3, FR-008-AC-4 | TC-025 | ✅ implemented |
@@ -47,7 +47,7 @@ type: TestMatrix
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | TC-033 | ✅ implemented |
 | FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented: AC-1's linked-only application is proved by `tc_194_kernel_check_is_refused_so_no_kernel_package_is_applicable` (a package `check` rejects under `CheckMode::Kernel` is never applicable — that is AC-6's inspection too) together with `tc_194_linked_package_applies_every_declared_function` and the rest of this corpus's `Linked`-application tests, which call only a package `check` admitted under `CheckMode::Linked`. AC-2/AC-3's "arity before any per-argument check, all before the `function.call` charge, before the body" ordering is covered for both `call` and `Frame::call` |
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
-| FR-273 | FR-273-AC-5 | TC-194 | ✅ implemented: AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (`tests/tc_191_function_application.rs` in agent-ix/quire-integration and the matching lines in the other three vectors) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
+| FR-273 | FR-273-AC-5 | TC-194 | 🚧 partly evidenced: the QSL shared-corpus half is removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430; the runtime-only ordering tests remain. AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (the removed QSL shared-corpus vectors; see Evidence Locations) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
 | FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `negotiate_ieee(&[IeeeItemRequirement], &IeeeBackendCapabilities)` receives no `Meter` at all, so no application-time charge is reachable from it by construction — the evidence is that signature plus the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) proving no conversion path from a disposition into `Outcome`/`InputRefusal` exists. `tc_195_negotiate_ieee_takes_no_meter_by_signature` inspects that signature and confirms negotiation still runs and reports one disposition per requirement; it carries no `Meter` assertion of its own, since a `Meter` never passed to `negotiate_ieee` cannot be evidence of anything the call did |
 ## Interface Requirement Coverage
 
@@ -68,11 +68,11 @@ type: TestMatrix
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 | TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
-| TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | ✅ implemented |
-| TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | ✅ implemented |
-| TC-020 | Agree with the authority on IEEE profile vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-3, FR-007-AC-6 | ✅ implemented |
-| TC-021 | Agree with the authority on text and enum vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-4, FR-007-AC-6 | ✅ implemented |
-| TC-022 | Agree with the authority on quantity and unit vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-5, FR-007-AC-6 | ✅ implemented |
+| TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 steps 4-5 implemented (`tests/exact_allocation.rs`); steps 1-3, the QSL agreement half, are removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430 |
+| TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | 🚧 steps 4-5 implemented (`tests/exact_allocation.rs`); steps 1-3, the QSL agreement half, are removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430 |
+| TC-020 | Agree with the authority on IEEE profile vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-3, FR-007-AC-6 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, no test evidences it here |
+| TC-021 | Agree with the authority on text and enum vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-4, FR-007-AC-6 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, no test evidences it here |
+| TC-022 | Agree with the authority on quantity and unit vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-5, FR-007-AC-6 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, no test evidences it here |
 | TC-023 | Meter integer, rational, ordering and Boolean operations | Property | P0 | FR-007-AC-7 | ✅ implemented |
 | TC-024 | Construct composite values and their declaration environment | Unit | P0 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9 | ✅ implemented |
 | TC-025 | Construct collections and order them by the canonical key | Property | P0 | FR-008-AC-3, FR-008-AC-4, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | 🚧 steps 1–2 and 4–7 implemented in `tests/exact_collection.rs`; steps 3 and 5 cover the set and bag only, so FR-008-AC-10 through FR-008-AC-12's sequence and ordered-set cases are not yet tested |
@@ -104,9 +104,8 @@ acceptance-criterion trace tags.
 - TC-194, TC-195: `tests/exact_function_application.rs` (`--features exact`), landed under
   agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
   `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.
-- FR-273-AC-5 (TC-194's shared-corpus row): `tests/tc_191_function_application.rs` in agent-ix/quire-integration,
-  against the quire-spec-language authority that package depends on.
-  It agrees on the closed `InputRefusal` vocabulary (`UnknownFunction`, `Arity`, `WrongValueKind`,
+- FR-273-AC-5 (TC-194's shared-corpus row): the QSL agreement oracle is removed from this repository;
+  recreating it in agent-ix/quire-integration is planned under Linear IR-430. The removed oracle agreed on the closed `InputRefusal` vocabulary (`UnknownFunction`, `Arity`, `WrongValueKind`,
   `DanglingReference`) with its codes and causes, and the charge count of one admitted call (AP05).
   It does **not** agree on check *ordering*: each of its five vectors (AP01 through AP05) triggers
   exactly one refusal in isolation — no vector supplies a call violating two checks at once — so the
@@ -140,8 +139,7 @@ acceptance-criterion trace tags.
   `--features exact`. FR-010-AC-6's evidence is a `compile_fail` doctest on `InjectedDenial`
   (`src/exact/accounting.rs`): `occurrence: 0` does not compile, so the malformed request cannot be
   written.
-- TC-018 through TC-022: `tests/` in agent-ix/quire-integration, run there against
-  quire-spec-language.
+- TC-018 through TC-022: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. Only TC-018/TC-019's allocation-bound steps keep evidence here.
 - TC-024: `tests/exact_composite.rs`; TC-025: `tests/exact_collection.rs`; TC-026:
   `tests/exact_equality.rs`. All run with `--features exact`.
 

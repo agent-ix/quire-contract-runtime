@@ -13,9 +13,9 @@ relationships:
 
 ## Scope
 
-The cross-repo agreement package (agent-ix/quire-integration, formerly `conformance/qsl-agreement` here) executes each shared vector twice, once on
-quire-spec-language and once on the runtime, and compares Debug renderings. It is never a
-dependency of the runtime, and runs from that repository.
+The QSL agreement oracle (formerly `conformance/qsl-agreement` here) is removed from this repository; recreating it in
+agent-ix/quire-integration is planned under Linear IR-430. It executed each shared vector twice, once on
+quire-spec-language and once on the runtime, and compared Debug renderings.
 
 ## Known upstream lag
 

@@ -7,6 +7,8 @@
 # for specification validation.
 
 CARGO ?= cargo
+# --locked only when no local patch is active: a patch rewrites the resolution.
+LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 PYTHON ?= python3
 QUIRE ?= quire
 
@@ -29,7 +31,7 @@ help:
 	@echo "  make size             - Measure the linked $(FOOTPRINT_TARGET) footprint"
 	@echo "  make spec             - Validate and cover the specification with Quire"
 	@echo "  make clean            - cargo clean"
-	@echo "  make deny             - cargo-deny licenses and one-copy bans"
+	@echo "  make deny             - cargo-deny licenses, bans and sources; one-copy lockfile check"
 	@echo "  make use-local        - patch first-party git deps to sibling checkouts"
 	@echo "  make use-remote       - drop the local patch file"
 	@echo "  make kani             - Run the Kani proofs"
@@ -79,12 +81,12 @@ build:
 
 .PHONY: msrv
 msrv:
-	rustup run $(MSRV) $(CARGO) check --locked --all-targets --all-features
+	rustup run $(MSRV) $(CARGO) check $(LOCKED) --all-targets --all-features
 
 # Link the footprint staticlib on the MSRV compiler, then measure it.
 .PHONY: size
 size:
-	$(CARGO) +$(MSRV) build --locked --release --manifest-path measurement/footprint/Cargo.toml \
+	$(CARGO) +$(MSRV) build $(LOCKED) --release --manifest-path measurement/footprint/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(FOOTPRINT_TARGET_DIR)
 	bash scripts/check_linked_footprint.sh
 
@@ -115,6 +117,9 @@ LOCAL_CARGO_CONFIG := .cargo/config.toml
 use-local:
 	@set -e; \
 	for dep in $(FIRST_PARTY_GIT_DEPS); do \
+		if [ "$$(printf '%s' "$$dep" | tr -cd ':' | wc -c)" != 2 ] || printf '%s' "$$dep" | grep -q '::\|^:\|:$$'; then \
+			echo "use-local: malformed FIRST_PARTY_GIT_DEPS entry '$$dep' (want repo:crate:dir)" >&2; exit 1; \
+		fi; \
 		repo=$${dep%%:*}; rest=$${dep#*:}; dir=$${rest#*:}; \
 		if [ ! -f "../$$repo/$$dir/Cargo.toml" ]; then \
 			echo "use-local: ../$$repo/$$dir/Cargo.toml not found; clone agent-ix/$$repo next to this repo" >&2; \
@@ -131,11 +136,15 @@ use-local:
 			echo "$$crate = { path = \"../$$repo/$$dir\" }"; \
 		done; \
 	  done; } > $(LOCAL_CARGO_CONFIG); \
-	echo "wrote $(LOCAL_CARGO_CONFIG)"
+	echo "wrote $(LOCAL_CARGO_CONFIG)"; \
+	if $(CARGO) metadata --format-version 1 2>&1 >/dev/null | grep -q 'patch .* was not used'; then \
+		rm -f $(LOCAL_CARGO_CONFIG); echo "use-local: a patch was not used; the sibling's version does not satisfy the requirement" >&2; exit 1; \
+	fi
 
 .PHONY: use-remote
 use-remote:
 	rm -f $(LOCAL_CARGO_CONFIG)
+	git ls-files -z -- 'Cargo.lock' '*/Cargo.lock' | xargs -0 -r git checkout --
 
 # =============================================================================
 # Supply chain & safety
@@ -143,7 +152,8 @@ use-remote:
 
 .PHONY: deny
 deny:
-	$(CARGO) deny --workspace check licenses bans
+	$(CARGO) deny --workspace check licenses bans sources
+	@set -e; for f in $$(git ls-files -- 'Cargo.lock' '*/Cargo.lock'); do awk -F'"' -f scripts/check_one_copy.awk $$f; done
 
 .PHONY: cargo-audit
 cargo-audit:

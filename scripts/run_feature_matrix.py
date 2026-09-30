@@ -69,8 +69,8 @@ FEATURE_SETS = (
     ("test-all-doc", ["--all-features", "--doc"], ["NFR-002"], False),
     ("test-footprint", ["-p", "quire-contract-runtime-footprint"], ["NFR-001"], True),
     # The exact oracle tests are `#![cfg(feature = "exact")]`, so no other row runs
-    # them. The shared-corpus agreement package lives in agent-ix/quire-integration, not a row
-    # here: it needs Rust 1.98 and a git dependency this crate's graph never has.
+    # them. The QSL shared-corpus agreement oracle is removed from this repository; recreating
+    # it in agent-ix/quire-integration is planned under Linear IR-430.
     ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation"], ["TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
 )
 

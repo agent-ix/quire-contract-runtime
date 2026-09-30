@@ -4,7 +4,7 @@
 //! Implements: FR-006, FR-007, FR-008, FR-273.
 //!
 //! `quire-spec-language` `quire_spec_language::value` is the semantic
-//! authority. This module is a conformance-gated `no_std + alloc` port of that
+//! authority. This module is a `no_std + alloc` port of that
 //! authority for generated oracles: every type, field and variant keeps the
 //! authority's name and order, so a shared-corpus test compares the two by
 //! their `Debug` renderings, and no operator decides anything the authority
