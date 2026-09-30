@@ -10,6 +10,5 @@ target/
 *-target/
 target-*/
 .worktrees/
-
-# make use-local writes this
 .cargo/config.toml
+.cargo/Cargo.lock.pre-local
