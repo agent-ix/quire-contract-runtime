@@ -26,8 +26,8 @@ make spec             # Quire validation and coverage
 make build            # release build
 make clean            # cargo clean
 make deny             # cargo deny licenses and one-copy bans
-make use-local        # patch first-party git deps to sibling checkouts (gitignored .cargo/config.toml)
-make use-remote       # remove that patch file
+make use-local        # patch first-party git deps to sibling checkouts via a gitignored .cargo/config.toml (none today); snapshots Cargo.lock to .cargo/Cargo.lock.pre-local; fails if cargo metadata fails or a patch is unused
+make use-remote       # delete the patch config and restore Cargo.lock from that snapshot (no snapshot: lock untouched)
 make kani             # the proofs; an absent toolchain fails
 make kani-mutations   # injected defects must fail their owning proofs
 make ci               # all mandatory local gates; never dispatches hosted CI
