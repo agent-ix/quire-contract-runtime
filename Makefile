@@ -33,7 +33,7 @@ help:
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo-deny licenses, bans and sources; one-copy lockfile check"
 	@echo "  make use-local        - patch first-party git deps to sibling checkouts"
-	@echo "  make use-remote       - drop the local patch file"
+	@echo "  make use-remote       - Remove the local patch file and restore Cargo.lock; build from GitHub"
 	@echo "  make kani             - Run the Kani proofs"
 	@echo "  make kani-mutations   - Require injected defects to fail their owning proofs"
 	@echo "  make ci               - All CI gates locally (hosted CI is manual-only)"
@@ -107,8 +107,9 @@ clean:
 # first-party git dependency to its working tree at $(SIBLINGS)/<repo>, uncommitted
 # edits included. `use-local` first snapshots Cargo.lock to the gitignored
 # .cargo/Cargo.lock.pre-local; `use-remote` deletes the config and restores the
-# lock from that snapshot (and does nothing to the lock if there is none), so a
-# deliberate `cargo update -p` made without a patch is never lost.
+# lock from that snapshot (and does nothing to the lock if there is none). So the
+# lock returns to its state before the first `use-local`; lock changes made while
+# a patch is active are discarded, and a `cargo update -p` made without a patch is kept.
 # Format: <repo>:<crate>:<crate-dir>; entries are grouped by repo here, in any
 # order, so each repo gets exactly one [patch] table.
 # SIBLINGS is the directory holding the sibling clones: the parent of the main
@@ -121,18 +122,17 @@ LOCAL_PATCHES ?=
 .PHONY: use-local
 use-local:
 	@set -e; mkdir -p .cargo; \
-	: > .cargo/config.toml; \
 	for spec in $(LOCAL_PATCHES); do \
 	  if [ "$$(printf '%s' "$$spec" | tr -cd ':' | wc -c)" != 2 ] || printf '%s' "$$spec" | grep -q '::\|^:\|:$$'; then \
-	    rm -f .cargo/config.toml; echo "use-local: malformed LOCAL_PATCHES entry '$$spec' (want repo:crate:dir)" >&2; exit 1; \
+	    echo "use-local: malformed LOCAL_PATCHES entry '$$spec' (want repo:crate:dir)" >&2; exit 1; \
 	  fi; \
 	  repo=$${spec%%:*}; rest=$${spec#*:}; dir=$${rest#*:}; \
 	  if [ ! -f "$(SIBLINGS)/$$repo/$$dir/Cargo.toml" ]; then \
-	    rm -f .cargo/config.toml; \
 	    echo "use-local: $(SIBLINGS)/$$repo is not cloned (no Cargo.toml at $(SIBLINGS)/$$repo/$$dir); clone agent-ix/$$repo next to this repo" >&2; exit 1; \
 	  fi; \
 	done; \
 	[ -f .cargo/Cargo.lock.pre-local ] || cp Cargo.lock .cargo/Cargo.lock.pre-local; \
+	: > .cargo/config.toml; \
 	repos=$$(for spec in $(LOCAL_PATCHES); do printf '%s\n' "$${spec%%:*}"; done | awk '!seen[$$0]++'); \
 	first=1; \
 	for repo in $$repos; do \
