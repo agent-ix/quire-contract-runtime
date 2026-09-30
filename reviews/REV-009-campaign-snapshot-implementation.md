@@ -12,9 +12,9 @@ review_set: subset
 ## Summary
 
 This is implementer qualification, not independent acceptance or a release decision.
-Approved proposal is REV-008 at `5a1a221af7b4bdaf0cb65af15095de1f872ef9fc`.
+Approved proposal is REV-008.
 Owning requirements/interface/test matrix and independently authored native controls were
-committed first in `e7d6742`; the original library failed the snapshot test compilation
+committed first; the original library failed the snapshot test compilation
 with E0599 (missing CampaignReport::snapshot), before production implementation.
 
 Core snapshots copy complete counters and borrow identity without allocation. Import is
@@ -109,8 +109,7 @@ not codegen issue #5 completion.
 
 ## Independent immutable-source review checkpoint
 
-The coordinator independently reviewed implementation
-`2c9385ad46894f5f7bac4f4280b562be836d5651`: complete codec, accounting, schema,
+The coordinator independently reviewed the implementation: complete codec, accounting, schema,
 requirements, test and gate changes. The reviewer separately executed all eight native
 snapshot controls and both library tests, including the real prlimit healthy/SIGABRT pair
 and public record_verdict near-limit control. No blocking finding remained in the bounded

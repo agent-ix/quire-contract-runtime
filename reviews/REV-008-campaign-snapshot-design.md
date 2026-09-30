@@ -12,9 +12,7 @@ review_set: subset
 ## Summary
 
 Specification-first proposal; independent review required before implementation.
-Base is runtime `60749bcaa9725c33362de399e4430ca105b4a50b`, after the deliberate
-legacy-evidence deletion. Codegen PR #27 currently pins older runtime `e360dad`;
-a later exact-pin compatibility change must be independently qualified. This
+The base is after the deliberate legacy-evidence deletion. This
 proposal does not revive deleted envelopes, a local evidence store, collectors,
 generic attestations or Make-integrity policy rejected by runtime issue #10.
 
