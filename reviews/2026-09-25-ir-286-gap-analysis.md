@@ -3,7 +3,7 @@ id: SR-011
 title: "Gap analysis — IR-286 concrete-path representation fixes against RT's exact-scalar requirements"
 type: SpecReview
 analysis: gap-analysis
-scope: "agent-ix/quire-contract-runtime@9f0071a12904081c7175730071d1c4bf65eb9c18; PR #79 (Linear IR-286) diff against origin/main 23fbb13, checked against FR-006, FR-007 (AC-6, AC-7, AC-10, AC-11), NFR-002 (Kani gate) and TC-016, TC-023, TC-034"
+scope: "agent-ix/quire-contract-runtime; PR #79 (Linear IR-286) diff against origin/main, checked against FR-006, FR-007 (AC-6, AC-7, AC-10, AC-11), NFR-002 (Kani gate) and TC-016, TC-023, TC-034"
 review_set: subset
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/FR-007
@@ -27,7 +27,7 @@ assert. The analysis is scoped to the requirements that own the types the PR tou
 
 - **Matrix step.** `quire coverage --scope . --strict` exits 1 at the reviewed head with
   `coverage could not evaluate its declared input: status-column-matches-nothing`, and `make spec`
-  fails structural validation on 3 documents, identically on `origin/main` 23fbb13. The engine's
+  fails structural validation on 3 documents, identically on `origin/main`. The engine's
   reconciliation is therefore unavailable, and this step fell back to a grep index over `tc_NNN`
   names and `Trace:` lines in `tests/`.
 - **Criteria backed by tests that exercise the changed code.**
@@ -77,14 +77,14 @@ rules the PR adds are owned by no spec artifact and guarded by no check.
 
 ## Dispositions
 
-Disposition pass 2026-09-26 at `ab7a9302fcf1b5bd88a6aee597a8ba87a9117c47`. Each outcome was checked
+Disposition pass 2026-09-26. Each outcome was checked
 against the code and the fix commits.
 
 | FND | Outcome | sha/reason |
 |-----|---------|------------|
-| FND-001 | fixed | 5a4aefc, rewritten in ab7a930. AD-002 now owns the `Value`/`ValueType` layout rule (explicit tag, no inline payload wider than `Integer`/`IntegerInterval`), and compile-time assertions in `src/exact/composite.rs` guard it. AD-002 still validates. The two remaining rules are recorded as FND-004 |
-| FND-002 | fixed | 3c2c95d: TC-023's expected value no longer runs through `Integer::from(i128)`. The sign-drop mutant of `big_from_i128` now fails `tc_023_generated_integer_and_ordering_against_an_i128_oracle` |
-| FND-003 | deferred | Pre-existing on `origin/main` 23fbb13 and out of scope for this PR: the conformance crate fails to compile with E0004 on both trees. The risk this PR added is covered by `tests/exact_debug_parity.rs` (see SR-010 FND-011) |
+| FND-001 | fixed | AD-002 now owns the `Value`/`ValueType` layout rule (explicit tag, no inline payload wider than `Integer`/`IntegerInterval`), and compile-time assertions in `src/exact/composite.rs` guard it. AD-002 still validates. The two remaining rules are recorded as FND-004 |
+| FND-002 | fixed | TC-023's expected value no longer runs through `Integer::from(i128)`. The sign-drop mutant of `big_from_i128` now fails `tc_023_generated_integer_and_ordering_against_an_i128_oracle` |
+| FND-003 | deferred | Pre-existing on `origin/main` and out of scope for this PR: the conformance crate fails to compile with E0004 on both trees. The risk this PR added is covered by `tests/exact_debug_parity.rs` (see SR-010 FND-011) |
 
 ### New findings in the fix round
 
@@ -97,11 +97,11 @@ pre-existing. The one new finding is low.
 
 ### Dispositions, round 2
 
-Disposition pass 2026-09-26 at `272af361cd9f69076bf69b9c8db2b2ed91160a5f`.
+Disposition pass 2026-09-26.
 
 | FND | Outcome | sha/reason |
 |-----|---------|------------|
-| FND-004 | fixed | 272af36. AD-002's Risks section now owns both rules. `enter_signature_is_option` pins `enter`'s return type, and `tc_kani_layout_integer_arithmetic_builds_outcome_directly` checks `evaluate_integer_arithmetic`'s source. Mutants: putting `Outcome::from_stop` back fails the source test. Changing `enter` to return `Result<_, Stop>` fails to compile, though the three existing callers (`let Some(guard) = … else`) already fail on their own, so the pin adds a check only against a coordinated rewrite of `enter` and its callers. A `Result` round trip that avoids the literal `from_stop` survives (FND-005) |
+| FND-004 | fixed | AD-002's Risks section now owns both rules. `enter_signature_is_option` pins `enter`'s return type, and `tc_kani_layout_integer_arithmetic_builds_outcome_directly` checks `evaluate_integer_arithmetic`'s source. Mutants: putting `Outcome::from_stop` back fails the source test. Changing `enter` to return `Result<_, Stop>` fails to compile, though the three existing callers (`let Some(guard) = … else`) already fail on their own, so the pin adds a check only against a coordinated rewrite of `enter` and its callers. A `Result` round trip that avoids the literal `from_stop` survives (FND-005) |
 
 ### New findings, round 2
 
@@ -115,9 +115,9 @@ FND-003 stays deferred as pre-existing. FND-005 and FND-006 are low.
 
 ### Dispositions, round 3
 
-Disposition pass 2026-09-26 at `1b514c1aac5400d3f6b756672223906b14ef871e`.
+Disposition pass 2026-09-26.
 
 | FND | Outcome | sha/reason |
 |-----|---------|------------|
-| FND-005 | fixed | 2f8ea3a. The source check now strips comment lines and bans any `Result<` type spelled in `evaluate_integer_arithmetic`'s body, not only the literal `Outcome::from_stop` call. The reviewer's `let staged: Result<Integer, Stop> = Ok(result); match staged { .. }` mutant now fails the test; reverting it passes again |
-| FND-006 | fixed | 2f8ea3a, ee0de40. The test is retagged `Trace: TC-036, FR-007-AC-14`, a new test case and acceptance criterion added to `spec/test/TC-036-integer-arithmetic-outcome-construction.md` and `spec/functional/FR-007-exact-scalar-families.md`. AD-002's Risks section now cites `tests/exact_arithmetic.rs` (the file the test actually lives in) and `TC-036`. `quire coverage --scope . --json` no longer lists the test under `untracked_symbols` |
+| FND-005 | fixed | The source check now strips comment lines and bans any `Result<` type spelled in `evaluate_integer_arithmetic`'s body, not only the literal `Outcome::from_stop` call. The reviewer's `let staged: Result<Integer, Stop> = Ok(result); match staged { .. }` mutant now fails the test; reverting it passes again |
+| FND-006 | fixed | The test is retagged `Trace: TC-036, FR-007-AC-14`, a new test case and acceptance criterion added to `spec/test/TC-036-integer-arithmetic-outcome-construction.md` and `spec/functional/FR-007-exact-scalar-families.md`. AD-002's Risks section now cites `tests/exact_arithmetic.rs` (the file the test actually lives in) and `TC-036`. `quire coverage --scope . --json` no longer lists the test under `untracked_symbols` |
