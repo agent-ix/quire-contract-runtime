@@ -25,7 +25,9 @@ make size             # thumbv7em linked footprint and panic-relocation gate
 make spec             # Quire validation and coverage
 make build            # release build
 make clean            # cargo clean
-make deny             # cargo deny check licenses
+make deny             # cargo deny licenses and one-copy bans
+make use-local        # patch first-party git deps to sibling checkouts (gitignored .cargo/config.toml)
+make use-remote       # remove that patch file
 make kani             # the proofs; an absent toolchain fails
 make kani-mutations   # injected defects must fail their owning proofs
 make ci               # all mandatory local gates; never dispatches hosted CI
@@ -34,7 +36,7 @@ make ci               # all mandatory local gates; never dispatches hosted CI
 ## Safety scaffolding
 
 - `clippy.toml` caps cognitive complexity / arg count
-- `deny.toml` allow-lists licenses and denies unknown registries/git sources
+- `deny.toml` allow-lists licenses and denies unknown registries/git sources, and `make deny` fails if any agent-ix git crate resolves more than once in a Cargo.lock (`scripts/check_one_copy.awk`)
 - `rustfmt.toml` uses stable rustfmt settings with a 100-char width. CI fails on drift.
 - `verification/kani.rs` is compiled under `cfg(kani)`. Stable Clippy does not type-check that
   configuration; rustfmt and `make kani` are the controls for this boundary.

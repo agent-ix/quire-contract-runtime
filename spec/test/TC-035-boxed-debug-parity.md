@@ -15,8 +15,8 @@ relationships:
 layout constraint; see `AD-002`'s risk section), which turned their derived `Debug` into a
 hand-written impl that lists each `*Fields` field explicitly. A field added to a `*Fields` struct
 but not to its `Debug` impl would disappear from the rendering with nothing to notice, since
-FR-007-AC-6's own Debug-parity oracle (equal renderings against the quire-spec-language authority) lives in
-`conformance/qsl-agreement`, which does not compile independently of this concern.
+FR-007-AC-6's own Debug-parity oracle (equal renderings against the quire-spec-language authority) is removed from
+this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430.
 Evidence: `tests/exact_debug_parity.rs` (`--features exact`).
 
 This is not FR-007-AC-6's oracle: it makes no comparison against the quire-spec-language authority, and it

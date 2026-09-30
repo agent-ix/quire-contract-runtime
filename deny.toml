@@ -23,6 +23,9 @@ exceptions = [
 multiple-versions = "allow"
 wildcards = "warn"
 
+# One copy of every first-party crate is enforced by scripts/check_one_copy.awk
+# (run from `make deny`), which reads every tracked Cargo.lock.
+
 [advisories]
 version = 2
 
