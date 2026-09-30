@@ -1,12 +1,12 @@
 //! Debug-rendering regression pins for the nine value/type structs whose
 //! `Debug` impl is hand-written because their fields sit behind one `Box`.
 //! FR-007-AC-6's own oracle -- equal Debug renderings against the quire-spec-language
-//! authority -- lives in `conformance/qsl-agreement`, which does not compile
-//! on this tree or on `origin/main` (E0004, unrelated to this PR). This is
+//! authority -- lives in agent-ix/quire-integration
+//! (the cross-repo composition repository). This is
 //! not that oracle (FR-007-AC-13, TC-035): it only pins each type's own
 //! rendering against a fixed string, so a field added to a `*Fields` struct
-//! but not to its `Debug` impl is caught here even while the conformance
-//! crate is red.
+//! but not to its `Debug` impl is caught here even while that oracle
+//! is red.
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{

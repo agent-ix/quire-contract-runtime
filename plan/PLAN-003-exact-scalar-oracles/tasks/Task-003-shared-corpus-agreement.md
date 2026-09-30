@@ -13,9 +13,9 @@ relationships:
 
 ## Scope
 
-A separate `conformance/qsl-agreement` package executes each shared vector twice, once on
+The cross-repo agreement package (agent-ix/quire-integration, formerly `conformance/qsl-agreement` here) executes each shared vector twice, once on
 quire-spec-language and once on the runtime, and compares Debug renderings. It is never a
-dependency of the runtime. `make conformance` runs it.
+dependency of the runtime, and runs from that repository.
 
 ## Known upstream lag
 

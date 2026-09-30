@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Execute every QSpec TC-185 vector on the runtime and on quire-spec-language.
-Evidence: `conformance/qsl-agreement/tests/tc_185_exact_decimals.rs` (`make conformance`) and the
+Evidence: `tests/tc_185_exact_decimals.rs` in agent-ix/quire-integration and the
 upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 
 ## Test Procedure

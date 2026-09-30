@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Execute every QSpec TC-187 vector on the runtime and on quire-spec-language.
-Evidence: `conformance/qsl-agreement/tests/tc_187_quantities.rs` (`make conformance`).
+Evidence: `tests/tc_187_quantities.rs` in agent-ix/quire-integration.
 
 ## Test Procedure
 
