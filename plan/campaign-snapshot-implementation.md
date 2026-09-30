@@ -5,7 +5,7 @@ type: Plan
 ---
 # Bounded runtime snapshot implementation and qualification
 
-Approved direction: REV-008 at `5a1a221af7b4bdaf0cb65af15095de1f872ef9fc`.
+Approved direction: REV-008.
 
 ## Sequence
 
