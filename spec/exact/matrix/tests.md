@@ -1,26 +1,15 @@
 ---
 id: TM-001
-title: "Contract runtime v0.1 test matrix"
+title: "Exact subsystem test matrix"
 type: TestMatrix
 ---
 
-# Contract runtime v0.1 test matrix
+# Exact subsystem test matrix
 
 ## Functional Requirement Coverage
 
 | Functional Req | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
-| FR-001 | FR-001-AC-1, FR-001-AC-2 | TC-001 | ✅ Complete |
-| FR-001 | FR-001-AC-4 | TC-001 | ✅ Complete |
-| FR-002 | FR-002-AC-1, FR-002-AC-2 | TC-002 | ✅ Complete |
-| FR-002 | FR-002-AC-3 | TC-003 | ✅ Complete |
-| FR-002 | FR-002-AC-4 | TC-003 | ✅ Complete |
-| FR-003 | FR-003-AC-1 | TC-004 | ✅ Complete |
-| FR-003 | FR-003-AC-2 | — | ✅ Complete (compile_fail doctest, `src/lib.rs`) |
-| FR-003 | FR-003-AC-3 | TC-004 | ✅ Complete |
-| FR-004 | FR-004-AC-1, FR-004-AC-2 | TC-006 | ✅ Complete |
-| FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
-| FR-004 | FR-004-AC-8 | TC-006 | ✅ Complete |
 | FR-006 | FR-006-AC-1, FR-006-AC-6 | TC-016 | ✅ implemented |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
@@ -49,23 +38,11 @@ type: TestMatrix
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
 | FR-273 | FR-273-AC-5 | TC-194 | 🚧 partly evidenced: the QSL shared-corpus half is removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430; the runtime-only ordering tests remain. AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (the removed QSL shared-corpus vectors; see Evidence Locations) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
 | FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `negotiate_ieee(&[IeeeItemRequirement], &IeeeBackendCapabilities)` receives no `Meter` at all, so no application-time charge is reachable from it by construction — the evidence is that signature plus the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) proving no conversion path from a disposition into `Outcome`/`InputRefusal` exists. `tc_195_negotiate_ieee_takes_no_meter_by_signature` inspects that signature and confirms negotiation still runs and reports one disposition per requirement; it carries no `Meter` assertion of its own, since a `Meter` never passed to `negotiate_ieee` cannot be evidence of anything the call did |
-## Interface Requirement Coverage
-
-| Interface | Acceptance Criteria | Test Cases | Coverage Status |
-|---|---|---|---|
-| interface-001 | interface-001-AC-1, interface-001-AC-2, interface-001-AC-3, interface-001-AC-4, interface-001-AC-5, interface-001-AC-6, interface-001-AC-7, interface-001-AC-8, interface-001-AC-9, interface-001-AC-10, interface-001-AC-11, interface-001-AC-14 | — | 🚧 pending adoption |
 
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 |---|---|---|---|---|---|
-| TC-001 | Preserve verdict and observation identity | Unit | P0 | FR-001-AC-1, FR-001-AC-2, FR-001-AC-4 | ✅ Complete |
-| TC-002 | Exercise Boolean evaluation contracts | Unit | P0 | FR-002-AC-1, FR-002-AC-2 | ✅ Complete |
-| TC-003 | Check definedness boundaries | Property | P0 | FR-002-AC-3, FR-002-AC-4, NFR-002-AC-1 | ✅ Complete |
-| TC-004 | Preserve proptest tri-state mapping | Unit | P0 | FR-003-AC-1, FR-003-AC-3 | ✅ Complete |
-| TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-8 | ✅ Complete |
-| TC-007 | Audit runtime footprint | Inspection | P0 | NFR-001-AC-3 | ✅ Complete |
-| TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 | TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
 | TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 steps 4-5 implemented (`tests/exact_allocation.rs`); steps 1-3, the QSL agreement half, are removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430 |
@@ -85,12 +62,6 @@ type: TestMatrix
 | TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ implemented |
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
-
-NFR-001-AC-1 is verified by `make size` and NFR-001-AC-2 by `make lint` under
-`#![forbid(unsafe_code)]`; FR-003-AC-2 and NFR-002-AC-3 by `compile_fail` doctests; and interface-001-AC-13 by the `make test-features`
-row `build-exact-no-std-msrv`; none of them has a test case. Every other row is backed by a `tc_NNN`
-Rust test, a Kani harness or a `compile_fail` doctest; executable semantic claims retain direct
-acceptance-criterion trace tags.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
 (`tc_031_further_charges_after_the_injected_denial_meter_normally`,
@@ -142,19 +113,3 @@ acceptance-criterion trace tags.
 - TC-018 through TC-022: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. Only TC-018/TC-019's allocation-bound steps keep evidence here.
 - TC-024: `tests/exact_composite.rs`; TC-025: `tests/exact_collection.rs`; TC-026:
   `tests/exact_equality.rs`. All run with `--features exact`.
-
-- TC-015: `tests/snapshot.rs`, private near-limit accounting tests, compile-fail API docs,
-  and an isolated native memory-ceiling control. REV-009 records independent acceptance of
-  the bounded transport; existing Kani evidence does not cover the parser, and exact shared
-  stack/full release qualification remains separate.
-
-- TC-001 and TC-006: `tests/integration.rs`.
-- TC-001 through TC-003: `tests/integration.rs`, `tests/operators.rs`, and seven Kani harnesses. The
-  proof scope is bounded: it checks public identity/observation/verdict provenance,
-  dispatch/truth-table wiring, independent widened i8 arithmetic oracles,
-  symbolic invalid division/remainder, full-width `usize` index definedness, option definedness, and
-  the public campaign record/discard paths' five saturating increments plus saturating totals from
-  symbolic near-overflow states. It does not prove unlisted module behavior.
-- TC-004: `tests/proptest_adapter.rs`.
-- TC-007: the footprint crate's fixed-result test and the linked-footprint and panic-relocation
-  measurement run by `make size`.

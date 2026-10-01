@@ -71,5 +71,5 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 
 ## Dependencies
 
-- **Upstream**: [FR-002](./FR-002-safe-operators.md);
+- **Upstream**: [FR-002](../../core/functional/FR-002-safe-operators.md);
   `ix://agent-ix/quire-specification` (`value-accounting.md`).

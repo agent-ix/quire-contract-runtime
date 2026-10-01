@@ -48,7 +48,7 @@ src/lib.rs             # crate root
 verification/kani.rs   # proof harnesses, compiled only under cfg(kani)
 measurement/footprint/ # the linked-footprint population
 tests/                 # integration, operator, proptest and exact-oracle tests
-spec/                  # requirements, test cases, matrix
+spec/                  # spec.md (subsystem registry), tests.md, <subsystem>/{functional,matrix,...}
 plan/                  # implementation plans
 scripts/               # feature matrix, footprint and Kani mutation scripts
 ```
