@@ -30,12 +30,12 @@ IR-349; it is planned until then.
 5. Diff the specification against its state before the move; expect no requirement, acceptance
    criterion or test case deleted, and every row whose evidence left the runtime marked planned with
    its reason (FR-275-AC-14, FR-275-AC-15).
-6. Before QSL-358 phase 2 is merged: compare every `exact` item the runtime defines with FR-275's
-   interim residue list; expect each is listed, with the expiry condition and the owner approval
-   status recorded (FR-275-AC-17).
-7. After QSL-358 phase 2 is merged: expect the `exact` module to define only the negotiators and
-   their types, nothing else under `src/exact`, and an empty interim residue list (FR-275-AC-16,
-   FR-275-AC-18).
+6. Compare every `exact` item the runtime defines, other than the negotiators, with FR-275's residue
+   list; expect each is listed as a defect to delete, and none is recorded as an exception, with
+   an expiry or with an approval (FR-275-AC-17). This step fails while any such item exists.
+7. Expect the `exact` module to define only the negotiators and their types, nothing else under
+   `src/exact`, and an empty residue list (FR-275-AC-16, FR-275-AC-18). This step fails while the
+   residue exists.
 8. Expect `negotiate_integer_division`, `negotiate_ieee` and their types defined in the runtime's
    own source with no QSL crate behind them (FR-275-AC-19).
 

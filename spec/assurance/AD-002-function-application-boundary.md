@@ -18,10 +18,11 @@ as the call surface for total pure functions: a port of the quire-spec-language 
 carrying its name and order, the shape FR-006 through FR-008 already establish for scalar, composite,
 collection and equality operators. The runtime is no second semantic authority for function bodies:
 the authority's `PackageDeclarations::check` proves purity, termination and definedness once, statically, and
-`CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`. That port is interim:
-FR-275 records it as part of a temporary exception to the no-vendoring rule (expiry: QSL-358 phase 2
-merged, owner approved 2026-10-01), after which QSL owns it in `quire-semantic-value` and this crate
-consumes it.
+`CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`. That port is not
+authorized: FR-275 records it as residue, vendored code that violates the no-vendoring rule, with no
+exception, no expiry and no approval. It is to be deleted; QSL owns it in `quire-semantic-value`
+(QSL-358) and this crate consumes it. How this crate handles its copy until then is an open owner
+decision.
 
 ## Views
 

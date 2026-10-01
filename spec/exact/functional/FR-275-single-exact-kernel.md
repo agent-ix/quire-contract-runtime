@@ -17,8 +17,8 @@ relationships:
 Where the `exact` feature is enabled, the runtime shall take the exact value kernel from the one
 `quire-exact` crate (the QSL repository's kernel crate, QSL ADR-011 X-1) and shall hold no copy,
 port or re-implementation of any item `quire-exact` exports. The end state is that the runtime holds
-no ported QSL code at all: it is reached via `quire-exact` now and via `quire-semantic-value` after
-QSL-358 phase 2. Its `exact` module is a re-export of those QSL-owned crates at the
+no ported QSL code at all: it is reached via `quire-exact` and via `quire-semantic-value` (QSL-358).
+Its `exact` module is a re-export of those QSL-owned crates at the
 `quire_contract_runtime::exact` path generated oracles already import. The runtime's own code in
 that module is only the backend negotiators, which are runtime-owned (below); the rest of its
 `src/exact` source copy (23 files, about 12,000 lines) is deleted.
@@ -27,27 +27,28 @@ The end state is delivered in two steps:
 
 1. **Step 1, the `quire-exact` exports now (IR-349 part 1).** Everything `quire-exact` exports today
    is deleted from the runtime and consumed from `quire-exact`.
-2. **Step 2, the residue after QSL-358 phase 2.** QSL says (as relayed by the team leader, from the
-   IR planner) that QSL-358 moves the residue (function application, checking environments,
-   containment and unit graphs, enumeration declarations and the carried compiler vocabulary) into a
-   new QSL-owned `no_std` plus `alloc` leaf crate, `quire-semantic-value` (QSL ADR-011 layer SV);
-   `quire-exact` stays the kernel. The residue is about 3,365 lines of the runtime's source (as
+2. **Step 2, the residue.** QSL says (as relayed by the team leader, from the IR planner) that
+   QSL-358 slices place the residue (function application, checking environments, containment and
+   unit graphs, enumeration declarations and the carried compiler vocabulary) in QSL-owned `no_std`
+   plus `alloc` leaf crate(s), `quire-semantic-value` (QSL ADR-011 layer SV); `quire-exact` stays the
+   kernel. The owner ruled FB-05 YES (relayed via the planner): a shared `no_std` plus `alloc` leaf
+   that the runtime may depend on. The residue is about 3,365 lines of the runtime's source (as
    relayed); about 7,670 further lines already exist in `quire-exact` in a different shape (`Rc`
-   against `Arc`, `EffectiveId` against `NodeKey`, `Quantity`), which IR-349 adapts to. When
-   QSL-358 phase 2 is merged the runtime deletes the residue and consumes `quire-semantic-value`.
-   The residue is not runtime-owned. QSL's slices 1 to 5 wait on the owner's FB-05 ruling (as
-   relayed).
+   against `Arc`, `EffectiveId` against `NodeKey`, `Quantity`), which IR-349 adapts to. The residue
+   is not runtime-owned: the runtime deletes it and consumes `quire-semantic-value`. The order and
+   mechanism are tracked by QSL-358 and IR-349.
 3. **The negotiators are runtime-owned, not residue.** QSL deleted its negotiators on purpose
    (QSL FR-078, as relayed), so `negotiate_integer_division`, `negotiate_ieee` and their types are the
    runtime's own code, not a port, and stay in the runtime in the end state (FR-009,
    interface-001-AC-8). QSL-358 does not move them.
 
-Between steps 1 and 2 the residue stays in the runtime. That is a **temporary exception to the
-no-vendoring rule**, not a settlement. Its expiry condition is "QSL-358 phase 2 merged", meaning the
-merge of the QSL change that places the last residue item in `quire-semantic-value`; phase 2 has no
-ticket of its own yet, so the condition is restated with that ticket's id once it exists. The
-exception is owned by QSL-358 and IR-349, and the owner (Peter) approved it on 2026-10-01 with
-that expiry condition unchanged. Step 2 is the only thing that ends it.
+The residue in the runtime's `src/exact` is ported QSL code. It is **not authorized**: it is vendored
+code that violates the no-vendoring rule. There is no exception, no expiry and no approval for it. The
+owner (Peter) ruled directly: "no vendoring. i didnt realize you had tried to approve vendoring 3000
+lines of corpus. Absolutely not allowed." The end state is that the runtime holds no ported QSL code,
+and the residue is to be deleted. How the runtime handles its copy until QSL-358 delivers the shared
+crate(s) is an open decision with the owner (see Open questions); this requirement states no interim
+policy.
 
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
 steps IR-349 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
@@ -73,21 +74,21 @@ crates that the runtime consumes.
   The runtime defines none of them (interface-001-AC-2, AC-3 and AC-5 state the same rule per item).
   Deleting the runtime's definitions is deletion, not relocation: no module, re-export alias,
   feature or wrapper keeps the old definitions reachable.
-- **The interim residue (temporary exception).** Until QSL-358 phase 2 is merged, the `exact` items
-  `quire-exact` does not export, other than the negotiators, stay in the runtime's source: function
-  application (FR-273, AD-002), the static checking environments, containment and unit graphs,
-  enumeration declarations and the carried compiler vocabulary (FR-012). They are a port of QSL code
-  and are kept only under the
-  temporary exception above (expiry: QSL-358 phase 2 merged; owner approved 2026-10-01). They consume
-  `quire-exact`'s `Value`, `Meter`, `Outcome` and `ScalarLimits`; they define no second one. They
-  keep their `exact` path when they move to `quire-semantic-value` (interface-001-AC-4).
-- **The end state.** After QSL-358 phase 2 the runtime defines no `exact` item except the
+- **The residue (not authorized).** The `exact` items `quire-exact` does not export, other than the
+  negotiators, are still in the runtime's source: function application (FR-273, AD-002), the static
+  checking environments, containment and unit graphs, enumeration declarations and the carried
+  compiler vocabulary (FR-012). They are a port of QSL code: vendored code that violates the
+  no-vendoring rule, with no exception, no expiry and no approval. Each is a defect against
+  FR-275-AC-1's end state, recorded in the residue list below, and is to be deleted. Where they
+  consume `quire-exact`, they use its `Value`, `Meter`, `Outcome` and `ScalarLimits` and define no
+  second one. The code that replaces them keeps the `exact` path (interface-001-AC-4).
+- **The end state.** The runtime defines no `exact` item except the
   runtime-owned negotiators: the rest of `src/exact` is deleted, `exact` re-exports `quire-exact` and
   `quire-semantic-value`, and no compatibility layer keeps the old source reachable. The runtime then
   depends on each of those crates once, by the same spelling rule as `quire-exact`.
 - **Runtime-owned negotiators.** `negotiate_integer_division`, `negotiate_ieee` and their requirement,
   capability and disposition types are defined in the runtime's own source (interface-001-AC-8). They
-  are not a port and not vendoring, and they are outside QSL-358 and the temporary exception. They
+  are not a port and not vendoring, and they are outside QSL-358 and the residue list. They
   consume the QSL `Value`, `Meter` and `Outcome` types where they need one.
 - **Dependency spelling.** The dependency is a git dependency on the QSL repository for the crate
   `quire-exact`, optional, enabled only by the `exact` feature (interface-001-AC-11), and spelled
@@ -117,8 +118,8 @@ crates that the runtime consumes.
   implementation of the kernel, no shared-corpus agreement test, no vendored vector or fixture from
   another repository, and no compatibility layer for the removed copy. With one kernel there is
   nothing to agree with. Tests of kernel behaviour belong to the QSL repository. In step 1 the
-  runtime keeps only the tests of the interim residue; in step 2 it keeps none of them, because the
-  residue's tests move to QSL with the code (the dispositions are in the test matrix, "Evidence at
+  runtime keeps only the tests of the residue; when the residue is deleted it keeps none of them,
+  because the residue's tests move to QSL with the code (the dispositions are in the test matrix, "Evidence at
   the kernel move").
 - **`no_std` plus `alloc`.** `quire-exact` is `#![no_std]` with `alloc`, and builds for
   `thumbv7em-none-eabi` in the QSL repository's `make ci` (QSL-357). With `exact` enabled and `std`
@@ -154,22 +155,21 @@ crates that the runtime consumes.
 | FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`. | Test (TC-199) |
 | FR-275-AC-11 | `make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band. | Test (TC-199, `make size`) |
 | FR-275-AC-12 | The runtime has no test that compares its output with a second implementation of the kernel or that depends on a QSL crate other than `quire-exact`. | Inspection (TC-197) |
-| FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order, except the items on the interim residue list; the runtime-owned negotiators are not ports. | Inspection (TC-197) |
+| FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order. The residue list is not an allowance: every item on it is a violation of this criterion, which stays unmet while the list is non-empty. The runtime-owned negotiators are not ports. | Inspection (TC-197) |
 | FR-275-AC-14 | The kernel move deletes no requirement, acceptance criterion or test case. | Inspection (TC-197) |
 | FR-275-AC-15 | Every matrix row whose evidence leaves the runtime in the kernel move carries a planned status with a stated reason, because the status vocabulary has no "verified upstream" status (a planner question, no status is invented). | Inspection (TC-197) |
-| FR-275-AC-16 | After QSL-358 phase 2 is merged, the runtime's `exact` module defines no item other than the backend negotiators and their types, and no file under `src/exact` holds anything else. | Inspection (TC-197) |
-| FR-275-AC-17 | Until QSL-358 phase 2 is merged, every `exact` item the runtime still defines, other than the negotiators, is named in the interim residue list, which records the expiry condition and the owner's approval status. | Inspection (TC-197) |
-| FR-275-AC-18 | The interim residue list is empty when QSL-358 phase 2 is merged. | Inspection (TC-197) |
+| FR-275-AC-16 | The runtime's `exact` module defines no item other than the backend negotiators and their types, and no file under `src/exact` holds anything else. Planned and unmet while the residue exists. | Inspection (TC-197) |
+| FR-275-AC-17 | Where the runtime still defines an `exact` item other than the negotiators, that item is a defect against FR-275-AC-1's end state, named in the residue list and deleted; there is no exception, no expiry and no approval for it. Planned and unmet while the residue exists. | Inspection (TC-197) |
+| FR-275-AC-18 | The residue list is empty. Planned and unmet while the residue exists. | Inspection (TC-197) |
 | FR-275-AC-19 | The runtime defines `negotiate_integer_division`, `negotiate_ieee` and their types in its own source and depends on no QSL crate for them. | Inspection (TC-197) |
 | FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
 | FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |
 
-## Interim residue list (temporary exception)
+## Residue list (not authorized; to be deleted)
 
-Expiry condition: QSL-358 phase 2 merged (the merge that places the last item below in
-`quire-semantic-value`; restated with its ticket id once phase 2 is ticketed). Owner approval:
-approved by Peter on 2026-10-01, expiry condition unchanged. Owned by QSL-358 and IR-349. Classified against what `quire-exact` exports; IR-349 part 1
-re-measures it. Where a source file holds both an exported item and a residue item, only the
+Every item below is vendored QSL code that violates the no-vendoring rule. There is no exception,
+no expiry and no approval. The order and mechanism of deletion are tracked by QSL-358 and IR-349.
+Classified against what `quire-exact` exports; IR-349 part 1 re-measures it. Where a source file holds both an exported item and a residue item, only the
 residue item is listed: the exported item is deleted in step 1. The negotiators are not on this list: they are runtime-owned.
 
 | Residue | Requirement | Source today |
@@ -187,16 +187,17 @@ and is deleted in step 1.
 - **MSRV is the owner's decision.** One floor, Rust 1.98.1, for all features, decided by Peter on
   2026-10-01 (it replaces the 1.82 the IR planner proposed under IR-18, as relayed). The footprint
   measurement at 1.98.1 was taken by the IR-349 foundation slice (NFR-001-AC-3).
-- **Owner approval of the temporary exception (given).** Step 1 leaves the residue in the runtime
-  until QSL-358 phase 2. Peter approved that exception on 2026-10-01, with its expiry "QSL-358 phase 2
-  merged" unchanged; QSL-358 and IR-349 own it.
+- **How the runtime handles its residue copy until QSL-358 lands (open, owner decision).** The
+  owner ruled there is no exception, no expiry and no approval for the copy. What the runtime does
+  with it in the meantime is not decided here and no interim policy is stated.
 - **Upkeep of the ban list (open).** The list under Guarded edges is a snapshot of QSL's workspace members
   when the list was written. The runtime maintainers keep it current until QSL's own lint (QSL-356, QSL #554) is in
   force; whether RT's gate should instead assert on the dependency source is not decided here.
 - **Status for rows whose evidence lives upstream (planner question).** The matrix has no "verified
   upstream" status; leaving rows stay "planned" with a reason (FR-275-AC-15).
-- **`quire-semantic-value` waits on the owner's FB-05 ruling** (QSL-358 slices 1 to 5, as relayed);
-  the dependency spelling and one-copy rules above apply to it once it exists.
+- **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`
+  plus `alloc` leaf the runtime may depend on. The dependency spelling and one-copy rules above
+  apply to it once it exists.
 - **Kernel shape change.** `quire-exact`'s `Value` is not the runtime's today (it shares through
   `Arc`, carries no object graph, and lacks cross-unit quantity arithmetic and the equality
   conversion table). QSL-358 slice 0 gives it an iterative `Value` (as relayed). Adapting the
@@ -210,8 +211,7 @@ and is deleted in step 1.
   [NFR-001](../../core/non-functional/NFR-001-no-std-footprint.md).
 - **Downstream**: the code steps IR-349: the foundation slice (floor, dependency, bans, one copy;
   no deletion; it adds the `deny.toml` entries) comes first; part 1 deletes the `quire-exact`
-  exports; part 2 deletes the residue after QSL-358 phase 2 is merged (as relayed from
-  QSL).
+  exports; part 2 deletes the residue (order and mechanism tracked by QSL-358 and IR-349).
 - **Routed**: the codegen repository's lock resolves two `quire-exact` copies and three
   `quire-contract-model` revisions; that is codegen's one-copy work (its layout AD, step 1d, the
   codegen owner) and is not a runtime requirement. This requirement covers the runtime only, so

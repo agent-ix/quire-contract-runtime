@@ -72,8 +72,8 @@ The runtime shall neither evaluate the item nor alter the item, the package or a
 
 The negotiators and their types are runtime-owned code, not a port of QSL code: QSL deleted its own
 negotiators on purpose (as relayed, QSL FR-078). Under [FR-275](./FR-275-single-exact-kernel.md) they
-stay in the runtime's own source in the end state, outside QSL-358 and outside the temporary
-exception that covers the residue (interface-001-AC-8).
+stay in the runtime's own source in the end state, outside QSL-358 and outside the residue that
+FR-275 lists for deletion (interface-001-AC-8).
 
 ## Dependencies
 

@@ -112,11 +112,10 @@ does not define, today, the function-application boundary (`Frame`, `Body`, `Che
 `Evaluation`, `plan_call`), the static checking environments generated oracles build before they
 evaluate. QSL-358 moves those into a QSL-owned `no_std` plus `alloc` leaf crate,
 `quire-semantic-value` (as relayed from QSL), so they are not runtime-owned in the end state: the
-runtime keeps them in its source only until QSL-358 phase 2 is merged, as the temporary exception
-that [FR-275](../../exact/functional/FR-275-single-exact-kernel.md) records (owner approved
-2026-10-01). The negotiation predicates are different: they are runtime-owned code, not a QSL port, and
+runtime's copy of them is not authorized: [FR-275](../../exact/functional/FR-275-single-exact-kernel.md)
+records it as residue to delete, with no exception, no expiry and no approval. The negotiation predicates are different: they are runtime-owned code, not a QSL port, and
 stay (interface-001-AC-8). The `runtime_owned` block's other items and interface-001-AC-7 and AC-9
-below describe the interim residue and are restated when it moves. The runtime's verdict,
+below describe the residue and are restated when it is deleted. The runtime's verdict,
 observation and campaign types lie outside `exact` and are never kernel types: a kernel `Outcome`
 reports what one evaluation produced, and a `Verdict` reports what an execution point established
 about a contract.
@@ -130,7 +129,7 @@ operation vectors or a checked-in specification model that calls no `quire-exact
 Classification is by rule, not by a frozen list, because the upstream kernel is still converging
 (QSL-131 redesigns `Value`, `ValueType` and the enum and quantity shapes). An item is a kernel item
 exactly when the upstream `quire-exact` crate exports an item of that name; every other `exact` item
-is interim residue (runtime-held until QSL-358 phase 2, see above). When an item moves from the runtime to the kernel it keeps its `exact` path and
+is residue (not authorized, to be deleted, see above). When an item moves from the runtime to the kernel it keeps its `exact` path and
 takes the kernel's shape. Consumers adapt to that shape; the path and the owner do not move again.
 The `consumed` lists below record what generated code and the code generator call today, classified
 against what the upstream `quire-exact` crate exports; they illustrate the rule and do not replace it.
@@ -181,11 +180,11 @@ exact:
     - quire-contract-codegen -> quire-exact (normal; ADR-011 X-1)
 ```
 
-The table below records, for every interim-residue `exact` operation that evaluates a
+The table below records, for every residue `exact` operation that evaluates a
 `quire-exact`-exported counterpart today, which `quire-exact` operation it calls
 (interface-001-AC-9):
 
-| Interim-residue `exact` operation | `quire-exact` operation it calls |
+| Residue `exact` operation | `quire-exact` operation it calls |
 | --- | --- |
 | `evaluate_quantity` | `evaluate_quantity_arithmetic` |
 
@@ -206,9 +205,9 @@ Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relay
 | interface-001-AC-4 | When an item's owner changes from the runtime to `quire-exact`, the `exact` module shall keep exposing that item at the path it exposed before the change. | Inspection |
 | interface-001-AC-5 | Where the upstream `quire-exact` crate exports `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location`, the `exact` module shall expose the `quire-exact` definition of that type — an explicit per-type instance of interface-001-AC-2 for the `named_kernel_types` list. | Inspection |
 | interface-001-AC-6 | Where the `exact` module exposes the `quire-exact` definition of `NodeKey`, the runtime's library source shall not call a `NodeKey` constructor. | Inspection |
-| interface-001-AC-7 | Until QSL-358 phase 2 is merged (temporary exception, FR-275; restated then), the runtime shall define `Frame`, `Body`, `CheckedPackage`, `Evaluation` and `plan_call` in its own source. | Inspection |
+| interface-001-AC-7 | The runtime shall not define `Frame`, `Body`, `CheckedPackage`, `Evaluation` or `plan_call` in its own source: the `exact` module shall expose the QSL-owned definitions (FR-275; no exception, no expiry). Planned and unmet while the runtime's copy exists. | Inspection |
 | interface-001-AC-8 | The runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
-| interface-001-AC-9 | Until QSL-358 phase 2 is merged, an interim-residue `exact` operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
+| interface-001-AC-9 | While a residue `exact` operation exists in the runtime, an operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
 | interface-001-AC-10 | The runtime shall define every item the `outside_exact` list names outside the `exact` module. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
 | interface-001-AC-13 | While the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
