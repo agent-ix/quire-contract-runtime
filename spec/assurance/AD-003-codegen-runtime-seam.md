@@ -112,6 +112,7 @@ records the same, and it is runtime's coupling).
 | --- | --- | --- | --- |
 | codegen to runtime | yes (normal, `exact`; dev adds `proptest`) | `codegen Cargo.toml:18`, `:31` | none |
 | runtime to codegen or IR | no | `deny.toml` has `unknown-git = "deny"` with no `allow-git`, and every first-party dependency is a git source, so `make deny` fails on any such edge. `scripts/check_one_copy.awk` checks duplicate revisions only and blocks no edge | the rule is implicit in the sources policy; no test or comment says it is the guard; a path dependency would not be caught; `make ci` stops at `spec` (failing on `main`) before it reaches `deny`, so run `make deny` directly |
+| runtime to any other QSL crate (`qsl-eval`, `qsl-replay`, the QSL root) | no | the same sources policy once `allow-git` admits the one `quire-exact` source: `allow-git` names a repository, so the exception must be narrowed to that crate or the lint of QSL-356 must carry it | `deny.toml` cannot tell crates of one repository apart; the guard is QSL's lint (QSL-356, as relayed) or a `bans` entry per crate |
 | runtime to `quire-exact` | yes (accepted, decision F) | QSL ADR-011 lists "RT to `quire-exact`" as a new edge. QSL's `arch-lint` classifies a dependency whose source names the QSL repository as QSL and exempts every normal CG edge into QSL, which is not the RT edge | QSL fixes FB-05 and its lint (QSL-356, as relayed); RT's `deny.toml` then needs `allow-git` for that one source |
 | any cycle among the four repositories | no | QSL `arch-lint direction` (FB-05, FB-11), run on request with the clones and outside QSL's `make ci` | manual; QSL gives no CI option (as relayed) |
 | generated crate to runtime | yes, by manifest | codegen's compile tests | covers the pinned revision only |
@@ -192,8 +193,11 @@ What is measured today, what is open and with whom, and what is routed.
 - The audit SR-623 (`reviews/ir-319-code-review.md`) covers the runtime's own design. This AD
   adds only what it does not: the consumer's side. Its findings that touch this seam are not
   restated: FND-001 and FND-002 (the kernel is a copy of QSL's, the agreement evidence was deleted
-  and the shared kernel is not adopted; tracked there as IR-342, IR-345 and IR-355, whose
-  conformance-against-`qsl-eval` idea decision F rejects), FND-003 (`CheckedInvariant` merges at
+  and the shared kernel is not adopted; tracked there as IR-342, IR-345 and IR-355). IR-355 is
+  superseded by decision F, which keeps no agreement test and rejects its `qsl-eval` idea. The
+  interim gap is that RT has no agreement evidence at all until QSL-357 lands and the copy is
+  deleted. Also FND-003 (`CheckedInvariant` merges at least ten conditions; IR-356) and FND-007
+  (one Kani harness reaches `exact`; IR-340).
   least ten conditions; IR-356) and FND-007 (one Kani harness reaches `exact`; IR-340).
 - The copy of QSL's kernel (decision F) puts two kernels in codegen's build graph
   (`rt::ScalarLimits` and `qsl_replay::ScalarLimits`, `codegen src/spine_replay.rs:16`), so the

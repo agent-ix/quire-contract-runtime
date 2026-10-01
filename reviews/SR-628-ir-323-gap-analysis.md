@@ -46,3 +46,10 @@ nothing a matrix would need to cover.
   subsystems have items on the seam (verdict, campaign report, proptest harness surface, exact).
   The References link `assurance/AD-003-codegen-runtime-seam.md` resolves from `spec/spec.md`.
 - No production code changes, so there is no code without an owning requirement in this diff.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | b828c91: the AD states the convention once ("File paths of the form `codegen src/...` are in the codegen repository"), and every CG path carries the prefix, including `codegen src/kani_obligations.rs:2060-2071`, `codegen src/spine_replay.rs:16` and `codegen src/oracle.rs:13` |
+| FND-002 | fixed | b828c91: `relationships` now lists FR-001, FR-007 and FR-008, and all 10 targets resolve |

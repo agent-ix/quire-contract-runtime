@@ -97,3 +97,26 @@ Verified correct at current origin/main:
 - The 5 errors are RT's own pre-existing breakage. IR-365 already owns them, but its text
   describes `spec/test-matrix.md` and MP-001. After RT #91 the error is in four subsystem matrices
   and MP-001 no longer fails, so update IR-365's description; no new ticket is needed.
+
+## New findings (disposition pass 1)
+
+Reviewed at agent-ix/quire-contract-runtime@b828c91673f33ff9a37bc85b48438e322d3fff4d.
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-010 | low | The direction row was narrowed from "runtime to codegen, IR or QSL: no" to "runtime to codegen or IR: no". With the `quire-exact` row now allowed, no row of the dependency table forbids an RT edge to any other QSL crate (`qsl-eval`, `qsl-replay`, the QSL root). T-1 and decision F imply it, but the table is the view that is supposed to state it. Add "runtime to any other QSL crate: no" or restore QSL in the row with "except `quire-exact` (decision F)". | spec/assurance/AD-003-codegen-runtime-seam.md:114-115, spec/assurance/AD-003-codegen-runtime-seam.md:165-167 |
+| FND-011 | low | Decision F says no shared-corpus agreement test is kept. That removes the purpose of IR-355, whose title is "repoint to quire-exact only (not qsl-eval)". The AD still lists IR-355 as tracking SR-623 FND-001/002, and says only that F rejects its `qsl-eval` idea. A reader cannot tell that IR-355 is superseded, nor that there is no agreement evidence at all until QSL-357 lands and the copy is deleted. State that IR-355 is superseded by decision F, and name the interim gap. | spec/assurance/AD-003-codegen-runtime-seam.md:150-153, spec/assurance/AD-003-codegen-runtime-seam.md:194-196 |
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | b828c91: the crossing table names the three emitters (`exact_scalar.rs:2817`, `composite_equality.rs:1573`, `exact_function.rs:1378`) and says the other users are codegen tests. Current state says "the three emitters' manifests". The Features paragraph says the harness and Kani manifests are written by codegen tests. Re-measured at CG 2fad745 |
+| FND-002 | fixed | b828c91: the pointer is now "(T-2)" |
+| FND-003 | fixed | b828c91: Decision C says CG's layout AD (IR-344 step 1c, PR #215) settles the form. Step 1c still deletes `RUNTIME_REVISION` at PR 215 head 83d8d97, and the AD cites that AD by ticket and PR, not by its AD number |
+| FND-004 | fixed | b828c91: the split is 35 in generator code and 2 emitted, which is 37. Re-measured at CG 2fad745: 26 + 9 + 2, with the emitted arms at `exact_function.rs:1331` and `:1363`. "A few `From` conversions" is right: 4 of the 9 `composite_equality.rs` arms sit in `From` impls (lines 249, 269, 319, 485). The failure row splits the reporter between generator and generated crate |
+| FND-005 | fixed | b828c91: "exempts every normal CG edge into QSL, which is not the RT edge"; this matches `fb05_violations` at QSL d81193f9 |
+| FND-006 | fixed | b828c91: "`check_one_copy.awk` checks duplicate revisions only and blocks no edge", and "`make ci` stops at `spec` ... before it reaches `deny`" |
+| FND-007 | fixed | b828c91: T-6 is now negotiator order and permutation plus "`InputRefusal` leaves the meter unchanged". These are grounded in FR-009-AC-1 and FR-273-AC-3. The `measure_discharged` statement has moved out of the list as "Stated but not testable today" |
+| FND-008 | fixed | b828c91: the owner is "QSL and codegen", and To QSpec is still none, which is now consistent |
+| FND-009 | fixed | b828c91: "the commits, runtime 215e443 and codegen 2fad745, are informational and asserted nowhere"; ccc722b and ed0a04b are also marked informational |
