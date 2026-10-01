@@ -95,7 +95,7 @@ def environment() -> dict[str, str]:
 
 def no_std_row(symbol: str, feature: str, traces: list[str], available: bool) -> dict[str, Any]:
     native_flags = [
-        "+1.75.0", "build", "--locked", "--lib", "--no-default-features",
+        "+1.82.0", "build", "--locked", "--lib", "--no-default-features",
         "--features", feature, "--target", "thumbv7em-none-eabi",
         "--message-format=json",
     ]

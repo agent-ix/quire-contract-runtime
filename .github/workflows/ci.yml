@@ -35,12 +35,12 @@ jobs:
           make spec
 
   msrv:
-    name: Rust 1.75 surface and footprint
+    name: Rust 1.82 surface and footprint
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install MSRV
-        uses: dtolnay/rust-toolchain@1.75.0
+        uses: dtolnay/rust-toolchain@1.82.0
         with:
           targets: thumbv7em-none-eabi
       - name: Check full declared surface

@@ -23,6 +23,8 @@ dependency graph. The negative cases run in a scratch copy of the workspace that
    licence error alone does not satisfy this step: the `banned` line must be present. Repeat with
    `qsl-replay`, `qsl-semantics` and `quire-spec-language`. Each failure is FR-275-AC-8.
 4. Repeat step 3 with each of those crates as a dev dependency; expect the same `banned` error.
+   `make deny-mutations` (`scripts/check_deny_bans.sh`) runs steps 2 to 4 in a scratch copy and
+   requires the `banned` line for each case.
 5. Compare the list with QSL's current workspace members; report any member missing from the list
    and not named `quire-exact` or a residue crate QSL-358 names.
 

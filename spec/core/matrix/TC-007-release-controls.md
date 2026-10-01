@@ -10,9 +10,10 @@ relationships:
 
 ## Description
 
-Verify the Rust 1.75 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte
+Verify the Rust 1.82 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte
 population floor and 4 KiB ceiling for linked `.text` plus `.rodata` and retains no runtime/harness
-panic-path reference. IR-349 restates this at Rust 1.82 when it re-measures (FR-275-AC-20, AC-21).
+panic-path reference. IR-349 part 1 moved this from Rust 1.75 to 1.82 and re-measured it
+(FR-275-AC-20, AC-21).
 
 ## Test Procedure
 

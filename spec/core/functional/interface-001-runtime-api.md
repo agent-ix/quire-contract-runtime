@@ -212,5 +212,5 @@ planner's call under IR-18 (as relayed).
 | interface-001-AC-9 | Until QSL-358 phase 2 is merged, an interim-residue `exact` operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
 | interface-001-AC-10 | The runtime shall define every item the `outside_exact` list names outside the `exact` module. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
-| interface-001-AC-13 | Unbacked until IR-349 moves the feature-matrix row to the 1.82 floor (see Open issue above; `quire-exact` is `no_std` plus `alloc`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
+| interface-001-AC-13 | While the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
 | interface-001-AC-14 | The runtime's normal dependencies shall include no crate published from agent-ix/quire-spec-language other than `quire-exact`. | Inspection |
