@@ -92,7 +92,7 @@ stays "planned" with the reason stated, and whether the vocabulary should gain o
 question (raised in the PR). The runtime keeps no substitute test: no agreement test and no vendored vectors, and no test that
 calls a QSL crate other than `quire-exact` (FR-275-AC-12). A test of an item `quire-exact` exports
 leaves in step 1. A test of an interim-residue item stays only until QSL-358 phase 2 is merged
-(temporary exception, owner approval pending, see FR-275) and then leaves with the code to QSL
+(temporary exception, owner approved 2026-10-01, see FR-275) and then leaves with the code to QSL
 (FR-275-AC-16); the residue is not runtime-owned.
 
 | Test file | Test cases | Disposition | Reason |

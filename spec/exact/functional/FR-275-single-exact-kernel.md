@@ -46,8 +46,8 @@ Between steps 1 and 2 the residue stays in the runtime. That is a **temporary ex
 no-vendoring rule**, not a settlement. Its expiry condition is "QSL-358 phase 2 merged", meaning the
 merge of the QSL change that places the last residue item in `quire-semantic-value`; phase 2 has no
 ticket of its own yet, so the condition is restated with that ticket's id once it exists. The
-exception is owned by QSL-358 and IR-349, and the owner's approval of it is **pending**. An
-exception with no approval is not in force; step 2 is the only thing that ends it.
+exception is owned by QSL-358 and IR-349, and the owner (Peter) approved it on 2026-10-01 with
+that expiry condition unchanged. Step 2 is the only thing that ends it.
 
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
 steps IR-349 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
@@ -78,7 +78,7 @@ crates that the runtime consumes.
   application (FR-273, AD-002), the static checking environments, containment and unit graphs,
   enumeration declarations and the carried compiler vocabulary (FR-012). They are a port of QSL code
   and are kept only under the
-  temporary exception above (expiry: QSL-358 phase 2 merged; owner approval pending). They consume
+  temporary exception above (expiry: QSL-358 phase 2 merged; owner approved 2026-10-01). They consume
   `quire-exact`'s `Value`, `Meter`, `Outcome` and `ScalarLimits`; they define no second one. They
   keep their `exact` path when they move to `quire-semantic-value` (interface-001-AC-4).
 - **The end state.** After QSL-358 phase 2 the runtime defines no `exact` item except the
@@ -168,7 +168,7 @@ crates that the runtime consumes.
 
 Expiry condition: QSL-358 phase 2 merged (the merge that places the last item below in
 `quire-semantic-value`; restated with its ticket id once phase 2 is ticketed). Owner approval:
-pending. Owned by QSL-358 and IR-349. Classified against what `quire-exact` exports; IR-349 part 1
+approved by Peter on 2026-10-01, expiry condition unchanged. Owned by QSL-358 and IR-349. Classified against what `quire-exact` exports; IR-349 part 1
 re-measures it. The negotiators are not on this list: they are runtime-owned.
 
 | Residue | Requirement | Source today |
@@ -183,14 +183,12 @@ and is deleted in step 1.
 
 ## Open questions
 
-- **MSRV is decided, pending the owner's confirmation.** One floor, Rust 1.82, for all features:
-  the IR planner's call under IR-18 (as relayed). Not measured here (no 1.82 or 1.75 toolchain is
-  installed for this checkout), and QSL-358 slice 0 (which lowers `quire-exact`'s declared
-  version to 1.82) is in progress, not merged.
-- **Owner approval of the temporary exception (pending).** Step 1 leaves the residue in the runtime
-  until QSL-358 phase 2. Peter's approval of that exception, with its expiry "QSL-358 phase 2
-  merged", has not been given; QSL-358 and IR-349 own it. Without approval the residue cannot stand
-  in the runtime, and step 1 would then wait for phase 2.
+- **MSRV is decided and confirmed by the owner.** One floor, Rust 1.82, for all features: the IR
+  planner's call under IR-18 (as relayed), confirmed by Peter on 2026-10-01. The footprint
+  measurement at 1.82 is taken by IR-349 part 1 (NFR-001-AC-3).
+- **Owner approval of the temporary exception (given).** Step 1 leaves the residue in the runtime
+  until QSL-358 phase 2. Peter approved that exception on 2026-10-01, with its expiry "QSL-358 phase 2
+  merged" unchanged; QSL-358 and IR-349 own it.
 - **Upkeep of the ban list (open).** The list under Guarded edges is a snapshot of QSL's workspace members
   when the list was written. The runtime maintainers keep it current until QSL's own lint (QSL-356, QSL #554) is in
   force; whether RT's gate should instead assert on the dependency source is not decided here.

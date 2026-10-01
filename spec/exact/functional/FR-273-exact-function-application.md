@@ -122,7 +122,7 @@ The function-application surface (`Frame`, `Body`, `CheckedPackage`, `Evaluation
 not in `quire-exact` today. Under [FR-275](./FR-275-single-exact-kernel.md) it stays in the
 runtime's source only as part of its interim residue, running over the `quire-exact` `Value`,
 `Meter` and `Outcome`, as a temporary exception that expires when QSL-358 phase 2 is merged (owner
-approval pending). QSL then owns it and the runtime consumes it; the "port of the authority" wording
+approved 2026-10-01). QSL then owns it and the runtime consumes it; the "port of the authority" wording
 above describes the interim source, which is deleted at that point.
 
 ## Dependencies

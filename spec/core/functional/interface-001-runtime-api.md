@@ -113,8 +113,8 @@ does not define, today, the function-application boundary (`Frame`, `Body`, `Che
 evaluate. QSL-358 moves those into a QSL-owned `no_std` plus `alloc` leaf crate,
 `quire-semantic-value` (as relayed from QSL), so they are not runtime-owned in the end state: the
 runtime keeps them in its source only until QSL-358 phase 2 is merged, as the temporary exception
-that [FR-275](../../exact/functional/FR-275-single-exact-kernel.md) records (owner approval
-pending). The negotiation predicates are different: they are runtime-owned code, not a QSL port, and
+that [FR-275](../../exact/functional/FR-275-single-exact-kernel.md) records (owner approved
+2026-10-01). The negotiation predicates are different: they are runtime-owned code, not a QSL port, and
 stay (interface-001-AC-8). The `runtime_owned` block's other items and interface-001-AC-7 and AC-9
 below describe the interim residue and are restated when it moves. The runtime's verdict,
 observation and campaign types lie outside `exact` and are never kernel types: a kernel `Outcome`
@@ -191,7 +191,7 @@ The table below records, for every interim-residue `exact` operation that evalua
 
 **Open issue.** The upstream `quire-exact` crate is now `#![no_std]` plus `alloc` and builds for
 `thumbv7em-none-eabi` in its own repository's gate (QSL-357), so the `no_std` half of the earlier
-conflict is resolved. The Rust floor is decided, pending the owner's confirmation: `quire-exact`
+conflict is resolved. The Rust floor is decided and was confirmed by the owner on 2026-10-01: `quire-exact`
 needs Rust 1.82 (as relayed), and the runtime takes one floor, 1.82, for all features, the IR
 planner's call under IR-18 (as relayed).
 `compatibility.msrv` below states it. The end state (no ported QSL code in the runtime) and the `deny.toml` guard on QSL crates are
