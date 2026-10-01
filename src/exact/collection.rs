@@ -343,7 +343,7 @@ fn coalesce(
     }
     Ok(members
         .into_iter()
-        .flat_map(|(member, multiplicity)| core::iter::repeat(member).take(multiplicity))
+        .flat_map(|(member, multiplicity)| core::iter::repeat_n(member, multiplicity))
         .collect())
 }
 

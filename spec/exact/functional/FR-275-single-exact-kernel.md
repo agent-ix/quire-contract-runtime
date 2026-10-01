@@ -46,8 +46,8 @@ Between steps 1 and 2 the residue stays in the runtime. That is a **temporary ex
 no-vendoring rule**, not a settlement. Its expiry condition is "QSL-358 phase 2 merged", meaning the
 merge of the QSL change that places the last residue item in `quire-semantic-value`; phase 2 has no
 ticket of its own yet, so the condition is restated with that ticket's id once it exists. The
-exception is owned by QSL-358 and IR-349, and the owner's approval of it is **pending**. An
-exception with no approval is not in force; step 2 is the only thing that ends it.
+exception is owned by QSL-358 and IR-349, and the owner (Peter) approved it on 2026-10-01 with
+that expiry condition unchanged. Step 2 is the only thing that ends it.
 
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
 steps IR-349 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
@@ -78,7 +78,7 @@ crates that the runtime consumes.
   application (FR-273, AD-002), the static checking environments, containment and unit graphs,
   enumeration declarations and the carried compiler vocabulary (FR-012). They are a port of QSL code
   and are kept only under the
-  temporary exception above (expiry: QSL-358 phase 2 merged; owner approval pending). They consume
+  temporary exception above (expiry: QSL-358 phase 2 merged; owner approved 2026-10-01). They consume
   `quire-exact`'s `Value`, `Meter`, `Outcome` and `ScalarLimits`; they define no second one. They
   keep their `exact` path when they move to `quire-semantic-value` (interface-001-AC-4).
 - **The end state.** After QSL-358 phase 2 the runtime defines no `exact` item except the
@@ -129,12 +129,12 @@ crates that the runtime consumes.
   measurement crate depends on the runtime with `default-features = false`, so NFR-001's 500 byte
   floor, 4 KiB ceiling and panic-path check measure the same code as before and `make size` is the
   check. The kernel's size is outside that budget, as the `exact` feature always was.
-- **Toolchain.** `quire-exact` needs Rust 1.82 (as relayed: 1.98 was a QSL workspace default, and
-  QSL-358 slice 0 lowers its declared version to 1.82). The runtime takes one floor, Rust 1.82, for
-  all features and for the footprint measurement (the IR planner's call under IR-18, as relayed;
-  the runtime is prerelease with no external users). This replaces the 1.75 floor in
-  interface-001 and NFR-001-AC-3. The `make msrv` and `make size` toolchain, `rust-version` and
-  `MSRV` settings are code under IR-349 and follow this floor.
+- **Toolchain.** The runtime takes one floor, Rust 1.98.1, for all features and for the footprint
+  measurement: the owner's decision (Peter, 2026-10-01: "we are on rust 1.98.1"), the toolchain in
+  use everywhere the runtime spells one. It replaces the 1.75 floor in interface-001 and
+  NFR-001-AC-3, and is above the Rust 1.82 that `quire-exact` needs (as relayed), so `quire-exact`
+  builds on it. The `make msrv` and `make size` toolchain, `rust-version`, `clippy.toml` and
+  `MSRV` settings and the CI `msrv` job follow this floor.
 - **Nothing is lost.** No requirement, acceptance criterion or test case is deleted by this move.
   A row whose evidence leaves the runtime stays in the matrix as planned, with the reason stated.
 
@@ -150,7 +150,7 @@ crates that the runtime consumes.
 | FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second `quire-exact` entry. | Test (TC-197) |
 | FR-275-AC-7 | `deny.toml` carries a `[bans]` `deny` entry for each QSL workspace crate listed under Guarded edges, which includes `qsl-eval`, `qsl-replay` and `quire-spec-language`. | Inspection (TC-198) |
 | FR-275-AC-8 | `make deny` reports cargo-deny's `banned` error for the named crate, and exits non-zero, when the runtime's dependency graph, dev dependencies included, contains a crate listed under Guarded edges; a licence failure alone does not satisfy this. | Test (TC-198) |
-| FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. Planned and unbacked until IR-349 moves the row `build-exact-no-std-msrv` from Rust 1.75 to the 1.82 floor (the 1.75 build cannot pass against `quire-exact`). | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
+| FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor. | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
 | FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`. | Test (TC-199) |
 | FR-275-AC-11 | `make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band. | Test (TC-199, `make size`) |
 | FR-275-AC-12 | The runtime has no test that compares its output with a second implementation of the kernel or that depends on a QSL crate other than `quire-exact`. | Inspection (TC-197) |
@@ -161,36 +161,35 @@ crates that the runtime consumes.
 | FR-275-AC-17 | Until QSL-358 phase 2 is merged, every `exact` item the runtime still defines, other than the negotiators, is named in the interim residue list, which records the expiry condition and the owner's approval status. | Inspection (TC-197) |
 | FR-275-AC-18 | The interim residue list is empty when QSL-358 phase 2 is merged. | Inspection (TC-197) |
 | FR-275-AC-19 | The runtime defines `negotiate_integer_division`, `negotiate_ieee` and their types in its own source and depends on no QSL crate for them. | Inspection (TC-197) |
-| FR-275-AC-20 | The runtime's declared `rust-version` is 1.82. | Inspection (TC-199) |
-| FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.82. | Test (TC-199) |
+| FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
+| FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |
 
 ## Interim residue list (temporary exception)
 
 Expiry condition: QSL-358 phase 2 merged (the merge that places the last item below in
 `quire-semantic-value`; restated with its ticket id once phase 2 is ticketed). Owner approval:
-pending. Owned by QSL-358 and IR-349. Classified against what `quire-exact` exports; IR-349 part 1
-re-measures it. The negotiators are not on this list: they are runtime-owned.
+approved by Peter on 2026-10-01, expiry condition unchanged. Owned by QSL-358 and IR-349. Classified against what `quire-exact` exports; IR-349 part 1
+re-measures it. Where a source file holds both an exported item and a residue item, only the
+residue item is listed: the exported item is deleted in step 1. The negotiators are not on this list: they are runtime-owned.
 
 | Residue | Requirement | Source today |
 |---|---|---|
 | Function application: `PackageDeclarations`, `CheckedPackage`, `Frame`, `Body`, `Evaluation`, `plan_call` | FR-273 | `src/exact/expression.rs` |
-| Checking environments: `TypeEnvironment`, composite declarations, `ObjectEnvironment`, `CheckedEquality` | FR-008 | `src/exact/composite.rs`, `reference.rs`, `equality.rs` |
+| Checking environments: `TypeEnvironment`, composite declarations, `ObjectEnvironment`, `CheckedEquality` | FR-008 | `src/exact/composite.rs` (declarations and `TypeEnvironment`, not `Value`/`ValueType`), `reference.rs` (`ObjectEnvironment` and its refusal types only; the identities and `ObjectReference` are exported by `quire-exact` and are deleted in step 1), `equality.rs` (`CheckedEquality`, not the equality plan) |
 | Containment and unit graphs, enumeration declarations | FR-008, FR-007 | `src/exact/containment.rs`, `unit.rs`, `enumeration.rs` |
-| Carried compiler vocabulary | FR-012 | `src/exact/definition.rs`, `node.rs` |
+| Carried compiler vocabulary | FR-012 | `src/exact/definition.rs`, `node.rs` (`SemanticGraphCause` and `InvalidSemanticGraph` only; `NodeKey` is exported by `quire-exact` and is deleted in step 1) |
 
 The list is a classification aid, not a frozen record; an item `quire-exact` exports is not residue
 and is deleted in step 1.
 
 ## Open questions
 
-- **MSRV is decided, pending the owner's confirmation.** One floor, Rust 1.82, for all features:
-  the IR planner's call under IR-18 (as relayed). Not measured here (no 1.82 or 1.75 toolchain is
-  installed for this checkout), and QSL-358 slice 0 (which lowers `quire-exact`'s declared
-  version to 1.82) is in progress, not merged.
-- **Owner approval of the temporary exception (pending).** Step 1 leaves the residue in the runtime
-  until QSL-358 phase 2. Peter's approval of that exception, with its expiry "QSL-358 phase 2
-  merged", has not been given; QSL-358 and IR-349 own it. Without approval the residue cannot stand
-  in the runtime, and step 1 would then wait for phase 2.
+- **MSRV is the owner's decision.** One floor, Rust 1.98.1, for all features, decided by Peter on
+  2026-10-01 (it replaces the 1.82 the IR planner proposed under IR-18, as relayed). The footprint
+  measurement at 1.98.1 was taken by the IR-349 foundation slice (NFR-001-AC-3).
+- **Owner approval of the temporary exception (given).** Step 1 leaves the residue in the runtime
+  until QSL-358 phase 2. Peter approved that exception on 2026-10-01, with its expiry "QSL-358 phase 2
+  merged" unchanged; QSL-358 and IR-349 own it.
 - **Upkeep of the ban list (open).** The list under Guarded edges is a snapshot of QSL's workspace members
   when the list was written. The runtime maintainers keep it current until QSL's own lint (QSL-356, QSL #554) is in
   force; whether RT's gate should instead assert on the dependency source is not decided here.
@@ -209,8 +208,9 @@ and is deleted in step 1.
   [interface-001](../../core/functional/interface-001-runtime-api.md);
   [AD-003](../../assurance/AD-003-codegen-runtime-seam.md) decision F; QSL-357 (merged);
   [NFR-001](../../core/non-functional/NFR-001-no-std-footprint.md).
-- **Downstream**: the code steps IR-349: part 1 deletes the `quire-exact` exports and adds the
-  `deny.toml` entries; part 2 deletes the residue after QSL-358 phase 2 is merged (as relayed from
+- **Downstream**: the code steps IR-349: the foundation slice (floor, dependency, bans, one copy;
+  no deletion; it adds the `deny.toml` entries) comes first; part 1 deletes the `quire-exact`
+  exports; part 2 deletes the residue after QSL-358 phase 2 is merged (as relayed from
   QSL).
 - **Routed**: the codegen repository's lock resolves two `quire-exact` copies and three
   `quire-contract-model` revisions; that is codegen's one-copy work (its layout AD, step 1d, the

@@ -12,7 +12,7 @@ LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 PYTHON ?= python3
 QUIRE ?= quire
 
-MSRV := 1.75.0
+MSRV := 1.98.1
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
 
@@ -32,6 +32,7 @@ help:
 	@echo "  make spec             - Validate and cover the specification with Quire"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo-deny licenses, bans and sources; one-copy lockfile check"
+	@echo "  make deny-mutations   - Require each banned QSL crate to fail cargo-deny in a scratch copy"
 	@echo "  make use-local        - patch first-party git deps to sibling checkouts"
 	@echo "  make use-remote       - Remove the local patch file and restore Cargo.lock; build from GitHub"
 	@echo "  make kani             - Run the Kani proofs"
@@ -89,6 +90,13 @@ size:
 	$(CARGO) +$(MSRV) build $(LOCKED) --release --manifest-path measurement/footprint/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(FOOTPRINT_TARGET_DIR)
 	bash scripts/check_linked_footprint.sh
+	@# FR-275-AC-10: the footprint graph must not resolve `quire-exact`. The size band alone
+	@# would not catch a regression that enabled `exact` there, so the graph is checked directly.
+	@set -e; graph=$$($(CARGO) tree $(LOCKED) -p quire-contract-runtime-footprint \
+		--target $(FOOTPRINT_TARGET) --edges normal,build,dev --prefix none); \
+	if printf '%s\n' "$$graph" | grep -q '^quire-exact '; then \
+		echo "footprint graph resolves quire-exact (FR-275-AC-10)" >&2; exit 1; \
+	fi; echo "footprint graph holds no quire-exact"
 
 .PHONY: spec
 spec:
@@ -171,6 +179,12 @@ deny:
 	$(CARGO) deny --workspace check licenses bans sources
 	@set -e; for f in $$(git ls-files -- 'Cargo.lock' '*/Cargo.lock'); do awk -f scripts/check_one_copy.awk $$f; done
 
+# Mutation check of the QSL-crate bans (FR-275-AC-8, TC-198): each guarded crate added in a
+# scratch copy must fail `cargo deny` with the `banned` diagnostic.
+.PHONY: deny-mutations
+deny-mutations:
+	bash scripts/check_deny_bans.sh
+
 .PHONY: cargo-audit
 cargo-audit:
 	$(CARGO) audit
@@ -203,4 +217,4 @@ kani-mutations:
 
 .NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny kani kani-mutations test
+ci: fmt-check spec lint test-features doc msrv size deny deny-mutations kani kani-mutations test

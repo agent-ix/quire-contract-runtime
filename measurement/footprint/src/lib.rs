@@ -5,6 +5,7 @@
 #![deny(missing_docs)]
 #![deny(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
+use core::hint::black_box;
 #[cfg(not(test))]
 use core::panic::PanicInfo;
 
@@ -56,9 +57,12 @@ pub extern "C" fn quire_runtime_footprint(input: u32) -> u64 {
         ExecutionPoint::new("thumbv7em-none-eabi"),
         &observations,
     );
-    let passed = Verdict::passed(context);
-    let failed = Verdict::failed_postcondition(context, detail);
-    let rejected = Verdict::rejected_precondition(context, detail);
+    // `black_box` keeps each built value opaque to the optimiser: the entry point's result
+    // depends only on counters, so a toolchain that folds the unused verdict data away would
+    // otherwise link almost none of the runtime and the fixed population would measure nothing.
+    let passed = black_box(Verdict::passed(black_box(context)));
+    let failed = black_box(Verdict::failed_postcondition(black_box(context), detail));
+    let rejected = black_box(Verdict::rejected_precondition(black_box(context), detail));
     let mut report = CampaignReport::new(identity);
     let verdict = match operators::checked_add(input, 1) {
         Some(_) => passed,
@@ -68,6 +72,7 @@ pub extern "C" fn quire_runtime_footprint(input: u32) -> u64 {
         return 0;
     }
     report.record_discard();
+    let report = black_box(report);
 
     let values = [input, 1];
     let optional = Some(input);

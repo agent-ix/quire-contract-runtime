@@ -1,3 +1,8 @@
+# Every feature is in the graph: `quire-exact` is optional and enabled only by `exact`, so
+# without this the licence, ban and source checks would not see it (FR-275-AC-8).
+[graph]
+all-features = true
+
 [licenses]
 version = 2
 allow = [
@@ -17,11 +22,32 @@ confidence-threshold = 0.9
 exceptions = [
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-footprint" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-exact" },
 ]
 
 [bans]
 multiple-versions = "allow"
 wildcards = "warn"
+# FR-275 Guarded edges: the runtime depends on no crate of the QSL repository other than
+# `quire-exact`. `allow-git` below admits the whole repository, so every other QSL workspace
+# crate is banned by name. This is a snapshot of QSL's workspace members: a crate QSL adds later
+# is not banned until it is listed here (FR-275 Open questions).
+deny = [
+    { crate = "quire-spec-language" },
+    { crate = "qsl-attrs" },
+    { crate = "qsl-bench" },
+    { crate = "qsl-cst" },
+    { crate = "qsl-eval" },
+    { crate = "qsl-foundation" },
+    { crate = "qsl-forms" },
+    { crate = "qsl-package" },
+    { crate = "qsl-replay" },
+    { crate = "qsl-route" },
+    { crate = "qsl-semantics" },
+    { crate = "qsl-source" },
+    { crate = "xtask" },
+    { crate = "arch-lint" },
+]
 
 # One copy of every first-party crate is enforced by scripts/check_one_copy.awk
 # (run from `make deny`), which reads every tracked Cargo.lock.
@@ -32,3 +58,6 @@ version = 2
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+# The one git source: the QSL repository, for `quire-exact` only (FR-275; the bans above guard
+# the other crates in it).
+allow-git = ["https://github.com/agent-ix/quire-spec-language"]
