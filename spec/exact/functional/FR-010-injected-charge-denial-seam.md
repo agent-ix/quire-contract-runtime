@@ -74,6 +74,14 @@ depend on the configured `ScalarLimits`.
 | FR-010-AC-5 | After the injected denial fires, further charges are metered against the configured limits and no second charge is injected-denied. | Test (TC-031) |
 | FR-010-AC-6 | A 0-based `occurrence` cannot be constructed, so an injected denial can never silently match no charge and degrade into "no fault injected". | Test (TC-031) |
 
+## Kernel ownership
+
+The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
+behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
+This requirement stays in force and binds the `exact` feature as a whole; where its evidence
+moves to the kernel's repository the matrix says so and keeps the row, without deleting any
+acceptance criterion.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md), [FR-011](./FR-011-meter-state-at-a-stop.md);

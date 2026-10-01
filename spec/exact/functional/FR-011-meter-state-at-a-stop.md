@@ -89,6 +89,14 @@ and what the meter holds at all is what this requirement fixes.
 | FR-011-AC-7 | `Meter::consumed` answers for all ten `LimitKind` members with no panic path, and IEEE flag iteration, dimension and compound-unit term iteration, and the `UnitGraph::admit` and `check_terms` refusal orders are the stated ones for every input permutation. | Test (TC-032) |
 | FR-011-AC-8 | A connective whose right operand stops returns that stop unchanged, admits no `boolean.result-retain` charge and consumes no result unit. | Test (TC-032) |
 
+## Kernel ownership
+
+The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
+behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
+This requirement stays in force and binds the `exact` feature as a whole; where its evidence
+moves to the kernel's repository the matrix says so and keeps the row, without deleting any
+acceptance criterion.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);

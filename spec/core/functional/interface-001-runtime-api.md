@@ -183,9 +183,12 @@ The table below records, for every runtime-owned `exact` operation that evaluate
 | --- | --- |
 | `evaluate_quantity` | `evaluate_quantity_arithmetic` |
 
-**Open issue.** The upstream `quire-exact` crate declares Rust 1.98 and is not `no_std`, which
-conflicts with `compatibility.msrv` (Rust 1.75) and the `exact` feature's no_std build that
-interface-001-AC-13 requires. Resolving the conflict is a pending owner decision; IR-18 tracks it.
+**Open issue.** The upstream `quire-exact` crate is now `#![no_std]` plus `alloc` and builds for
+`thumbv7em-none-eabi` in its own repository's gate (QSL-357), so the `no_std` half of the earlier
+conflict is resolved. It still declares Rust 1.98, which conflicts with `compatibility.msrv`
+(Rust 1.75) for the `exact` feature. Resolving that is a pending owner decision; IR-18 tracks it and
+[FR-275](../../exact/functional/FR-275-single-exact-kernel.md) records the recommendation. The
+single-kernel end state and the `deny.toml` guard on QSL crates are FR-275.
 
 ### Acceptance criteria
 
@@ -202,5 +205,5 @@ interface-001-AC-13 requires. Resolving the conflict is a pending owner decision
 | interface-001-AC-9 | A runtime-owned `exact` operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
 | interface-001-AC-10 | The runtime shall define every item the `outside_exact` list names outside the `exact` module. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
-| interface-001-AC-13 | Pending the owner decision on `quire-exact`'s MSRV and `no_std` status (see Open issue above; the upstream `quire-exact` crate declares Rust 1.98 and is not `no_std`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
+| interface-001-AC-13 | Pending the owner decision on `quire-exact`'s MSRV (see Open issue above; the upstream `quire-exact` crate declares Rust 1.98, and is `no_std` plus `alloc`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
 | interface-001-AC-14 | The runtime's normal dependencies shall include no crate published from agent-ix/quire-spec-language other than `quire-exact`. | Inspection |

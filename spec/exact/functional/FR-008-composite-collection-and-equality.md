@@ -155,6 +155,14 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 52 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-9 | `Value`'s `Debug` and `Drop` are hand-written and iterative: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and the hand-written `Debug` output is an exact literal string, in both compact and alternate form, on a small fixed value. | Test (TC-024, TC-025) |
 
+## Kernel ownership
+
+The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
+behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
+This requirement stays in force and binds the `exact` feature as a whole; where its evidence
+moves to the kernel's repository the matrix says so and keeps the row, without deleting any
+acceptance criterion.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md); [FR-007](./FR-007-exact-scalar-families.md);

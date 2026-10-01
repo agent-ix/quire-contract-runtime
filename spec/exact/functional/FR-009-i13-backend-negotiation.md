@@ -68,6 +68,12 @@ The runtime shall neither evaluate the item nor alter the item, the package or a
 | FR-009-AC-4 | `requires_finite_proof` yields `RequiresBound` only when no `unsupported` cause applies; an item that both lacks a capability and needs an undischargeable proof reports the capability cause. | Test (TC-030) |
 | FR-009-AC-5 | No `IeeeDisposition` is convertible into an `Outcome` variant, as the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) shows. | compile-time-check (TC-195) |
 
+## Kernel ownership
+
+The negotiators and their requirement, capability and disposition types are runtime-owned
+(interface-001-AC-8). After [FR-275](./FR-275-single-exact-kernel.md) they stay in the runtime's own
+source and consume the one `quire-exact` kernel; they are not part of it.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);

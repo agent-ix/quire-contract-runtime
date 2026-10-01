@@ -151,7 +151,7 @@ records the same, and it is runtime's coupling).
   against this crate's 1.75 and `no_std`). No shared-corpus agreement test is kept between two
   copies, because there will be one. Pointing this crate's conformance at `qsl-eval` (the idea
   recorded under IR-355) is rejected: `qsl-eval` is QSL layer 5 and an FB-05 violation even as a
-  dev edge. Until the deletion lands, the exact rows of the seam above describe this crate's own
+  dev edge. FR-275 states this decision as a requirement. Until the deletion lands, the exact rows of the seam above describe this crate's own
   `exact`; after it they describe `quire-exact`, and the items SR-623 FND-002 lists as absent from
   `quire-exact` (cross-unit quantity, the equality-conversion table) are for the code move to
   resolve, not re-measured here. No compatibility layer carries the old copy.

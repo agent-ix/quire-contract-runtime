@@ -69,6 +69,14 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
 | FR-006-AC-6 | `Refusal::code()` is `Some` for exactly `IeeeNanPayloadNotRepresentable`, `IeeeRationalOutOfDomain`, `ForeignReference` and `CardinalityOutOfBound` with their normative spellings, and `None` for all nine other variants. | Test (TC-016) |
 
+## Kernel ownership
+
+The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
+behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
+This requirement stays in force and binds the `exact` feature as a whole; where its evidence
+moves to the kernel's repository the matrix says so and keeps the row, without deleting any
+acceptance criterion.
+
 ## Dependencies
 
 - **Upstream**: [FR-002](../../core/functional/FR-002-safe-operators.md);
