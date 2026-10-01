@@ -99,6 +99,18 @@ Reviewed at agent-ix/quire-contract-runtime@1e7f279c8af4473da052466a1834002ca65b
 | FND-013 | low | AD-002's System Boundary still extends `exact` with "a port of the quire-spec-language authority's own type, carrying its name and order" (`CheckedPackage`). The PR leaves it unchanged, with no pointer to FR-275's temporary exception, so a reader of AD-002 alone sees a standing port. FR-275 cites AD-002 for the residue. | spec/assurance/AD-002-function-application-boundary.md:16-21 |
 | FND-014 | low | The expiry condition "QSL-358 phase 2 merged" has no single event to check. QSL-358 is a phase-1 scoping ticket whose description plans phase 2 "split into slices", and phase 2 has no ticket of its own yet. FR-275-AC-16, AC-17 and AC-18 all key on that event. Name the event that ends the exception (for example, the phase-2 ticket, once filed, closed Done), or say the condition is restated when phase 2 is ticketed. | spec/exact/functional/FR-275-single-exact-kernel.md:34-37, spec/exact/functional/FR-275-single-exact-kernel.md:140-142, spec/exact/functional/FR-275-single-exact-kernel.md:146 |
 
+## New findings (disposition pass 2)
+
+Reviewed at agent-ix/quire-contract-runtime@2eb47a9f5a154b514f99610e5eacb7891c613381.
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-015 | medium | NFR-001-AC-3 now says the footprint band holds "On Rust 1.82", but its only evidence is `make size` on 1.75 (`Makefile` size target, `+$(MSRV)` = 1.75), and TC-007 stays `✅ Complete` in the core matrix. A different compiler (and LLVM) can move linked `.text` plus `.rodata`, so the ✅ claims a 1.82 measurement nobody made. The band (500 B to 4 KiB) and panic check are unchanged, so only the toolchain changed. Either keep NFR-001-AC-3 at the measured 1.75 and let IR-349 restate it when it moves the gate and re-measures, or mark TC-007 🚧 until the 1.82 build is measured. | spec/core/non-functional/NFR-001-no-std-footprint.md:43, spec/core/matrix/tests.md:32, spec/core/matrix/TC-007-release-controls.md:13 |
+| FND-016 | low | interface-001's Open issue says "The Rust floor is decided" with no caveat. FR-275's Open questions say the 1.82 floor is "decided, pending the owner's confirmation" (the IR planner's call under IR-18, as relayed). A reader of interface-001 alone takes an unconfirmed owner question as settled. Add "pending the owner's confirmation". | spec/core/functional/interface-001-runtime-api.md:194-196 |
+| FND-017 | low | `FR-078` is cited unprefixed in two RT documents, but it is a QSL requirement (QSL `spec/functional/FR-078-remove-qsl-negotiate-copies.md`). RT has no FR-078, so a reader resolves it in the wrong repository. Write "QSL FR-078". The claim itself is verified: QSL FR-078 calls the negotiators "RT capability predicates" and QSL removed its copies. | spec/exact/functional/FR-009-i13-backend-negotiation.md:74, spec/exact/functional/FR-275-single-exact-kernel.md:41 |
+| FND-018 | low | The spec.md Exact registry row says `exact` is "to be deleted in full" and also that "only the runtime-owned negotiators stay". These contradict each other; it means "deleted except the negotiators". | spec/spec.md:71 |
+| FND-019 | low | interface-001 `compatibility.const-evaluation` still justifies the runtime-only index helper by "not const-stable at Rust 1.75", while `msrv` beside it is now 1.82. Restate the reason at the 1.82 floor, or say it was measured at 1.75. | spec/core/functional/interface-001-runtime-api.md:88 |
+
 ## Dispositions
 
 | FND | outcome | sha/reason |
@@ -113,3 +125,7 @@ Reviewed at agent-ix/quire-contract-runtime@1e7f279c8af4473da052466a1834002ca65b
 | FND-008 | fixed | 1e7f279: "the runtime's only `no_std` target". |
 | FND-009 | fixed | 1e7f279: the leaving row lists TC-016, TC-017, TC-018, TC-019 and TC-023. TC-020..TC-022 are gone from the file table. |
 | FND-010 | fixed | 1e7f279: TC-197 is typed Integration in the summary. |
+| FND-011 | fixed | 2eb47a9: no QSL commit id is left in `spec/` (grep for 8b0c1ffe finds nothing). The ban list is "enumerated from QSL's workspace members when the list was written", and no new SHA appears in the spec diff. |
+| FND-012 | fixed | 2eb47a9: the arithmetic/allocation row now says the files "also use `CHARGE_LOG_CAPACITY`, which `quire-exact` does not export". |
+| FND-013 | fixed | 2eb47a9: AD-002 System Boundary adds "That port is interim: FR-275 records it as part of a temporary exception to the no-vendoring rule ... after which QSL owns it in `quire-semantic-value`". |
+| FND-014 | fixed | 2eb47a9: the expiry is now a single checkable event, "the merge of the QSL change that places the last residue item in `quire-semantic-value`", restated with the phase-2 ticket id once it exists (FR-275:46-49, residue list header :169-171). AC-16..AC-18 key on it. |

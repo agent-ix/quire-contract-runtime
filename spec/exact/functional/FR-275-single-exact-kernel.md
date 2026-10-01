@@ -38,7 +38,7 @@ The end state is delivered in two steps:
    The residue is not runtime-owned. QSL's slices 1 to 5 wait on the owner's FB-05 ruling (as
    relayed).
 3. **The negotiators are runtime-owned, not residue.** QSL deleted its negotiators on purpose
-   (FR-078, as relayed), so `negotiate_integer_division`, `negotiate_ieee` and their types are the
+   (QSL FR-078, as relayed), so `negotiate_integer_division`, `negotiate_ieee` and their types are the
    runtime's own code, not a port, and stay in the runtime in the end state (FR-009,
    interface-001-AC-8). QSL-358 does not move them.
 

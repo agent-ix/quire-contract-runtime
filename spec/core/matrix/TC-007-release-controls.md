@@ -10,9 +10,9 @@ relationships:
 
 ## Description
 
-Verify the Rust-floor (1.82 per FR-275; 1.75 until IR-349 moves the gate) `thumbv7em-none-eabi` footprint consumer remains between the 500-byte
+Verify the Rust 1.75 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte
 population floor and 4 KiB ceiling for linked `.text` plus `.rodata` and retains no runtime/harness
-panic-path reference.
+panic-path reference. IR-349 restates this at Rust 1.82 when it re-measures (FR-275-AC-20, AC-21).
 
 ## Test Procedure
 

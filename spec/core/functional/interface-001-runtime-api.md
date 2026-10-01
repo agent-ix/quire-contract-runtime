@@ -85,7 +85,7 @@ invariants:
   - snapshot-json uses alloc without std; allocator exhaustion is not universally recoverable
 compatibility:
   enums: non-exhaustive; consumers must preserve future unknown states
-  const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at Rust 1.75
+  const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at the runtime's Rust floor
   msrv: Rust 1.82
   licensing: AGPL-3.0-or-later
   publication: disabled (`publish = false`)
@@ -191,8 +191,9 @@ The table below records, for every interim-residue `exact` operation that evalua
 
 **Open issue.** The upstream `quire-exact` crate is now `#![no_std]` plus `alloc` and builds for
 `thumbv7em-none-eabi` in its own repository's gate (QSL-357), so the `no_std` half of the earlier
-conflict is resolved. The Rust floor is decided: `quire-exact` needs Rust 1.82 (as relayed), and
-the runtime takes one floor, 1.82, for all features, the IR planner's call under IR-18 (as relayed).
+conflict is resolved. The Rust floor is decided, pending the owner's confirmation: `quire-exact`
+needs Rust 1.82 (as relayed), and the runtime takes one floor, 1.82, for all features, the IR
+planner's call under IR-18 (as relayed).
 `compatibility.msrv` below states it. The end state (no ported QSL code in the runtime) and the `deny.toml` guard on QSL crates are
 [FR-275](../../exact/functional/FR-275-single-exact-kernel.md).
 
