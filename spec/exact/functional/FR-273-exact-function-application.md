@@ -116,6 +116,15 @@ calls the ported surface.
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
 | FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own `CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
 
+## Kernel ownership
+
+The function-application surface (`Frame`, `Body`, `CheckedPackage`, `Evaluation`, `plan_call`) is
+not in `quire-exact` today. Under [FR-275](./FR-275-single-exact-kernel.md) it stays in the
+runtime's source only as part of its interim residue, running over the `quire-exact` `Value`,
+`Meter` and `Outcome`, as a temporary exception that expires when QSL-358 phase 2 is merged (owner
+approval pending). QSL then owns it and the runtime consumes it; the "port of the authority" wording
+above describes the interim source, which is deleted at that point.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md); [FR-008](./FR-008-composite-collection-and-equality.md);
