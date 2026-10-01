@@ -151,7 +151,11 @@ records the same, and it is runtime's coupling).
   `rust-version = "1.98"`, against this crate's 1.75 (an open owner question, FR-275). No shared-corpus agreement test is kept between two
   copies, because there will be one. Pointing this crate's conformance at `qsl-eval` (the idea
   recorded under IR-355) is rejected: `qsl-eval` is QSL layer 5 and an FB-05 violation even as a
-  dev edge. FR-275 states this decision as a requirement. Until the deletion lands, the exact rows of the seam above describe this crate's own
+  dev edge. FR-275 states this decision as a requirement, and its end state is no ported QSL code in this
+  crate: QSL says (as relayed) that QSL-358 moves the whole residue (function application, checking
+  environments, containment and unit graphs, negotiators) into QSL-owned `no_std` plus `alloc` leaf
+  crate(s), so the entire `src/exact` is deleted, in two steps. The residue stays here until QSL-358
+  phase 2 is merged as a temporary exception to the no-vendoring rule (owner approval pending). Until the deletion lands, the exact rows of the seam above describe this crate's own
   `exact`; after it they describe `quire-exact`, and the items SR-623 FND-002 lists as absent from
   `quire-exact` (cross-unit quantity, the equality-conversion table) are for the code move to
   resolve, not re-measured here. No compatibility layer carries the old copy.

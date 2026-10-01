@@ -30,6 +30,11 @@ IR-349; it is planned until then.
 5. Diff the specification against its state before the move; expect no requirement, acceptance
    criterion or test case deleted, and every row whose evidence left the runtime marked planned with
    its reason (FR-275-AC-14, FR-275-AC-15).
+6. Before QSL-358 phase 2 is merged: compare every `exact` item the runtime defines with FR-275's
+   interim residue list; expect each is listed, with the expiry condition and the owner approval
+   status recorded (FR-275-AC-17).
+7. After QSL-358 phase 2 is merged: expect no `src/exact` directory, no item defined in the `exact`
+   module, and an empty interim residue list (FR-275-AC-16, FR-275-AC-18).
 
 ## Expected Results
 

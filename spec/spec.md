@@ -68,14 +68,14 @@ matrix and the test cases that matrix declares. Interface requirements live in `
 | Core | `spec/core/` | Verdict, identity and observation types; panic-free operators; the runtime API contract; the `no_std` footprint and panic/license quality requirements | `quire-contract-runtime`: `verdict`, `identity`, `observation`, `operators`, `kani_proofs` (`verification/kani.rs`, `cfg(kani)`); `quire-contract-runtime-footprint` | AD-001, AD-003 | runtime-maintainers |
 | Accounting | `spec/accounting/` | Complete campaign counters and the bounded immutable campaign snapshot transport | `quire-contract-runtime`: `accounting` (including its snapshot transport, `src/snapshot_json.rs`) | AD-001, AD-003 | runtime-maintainers |
 | Proptest adapter | `spec/proptest_adapter/` | Adaptation of verdicts to the proptest framework | `quire-contract-runtime`: `proptest_adapter` | AD-001, AD-003 | runtime-maintainers |
-| Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` (the runtime-owned items only; the value kernel is the `quire-exact` crate, FR-275) | AD-001, AD-002, AD-003 | runtime-maintainers |
+| Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` (to be deleted in full: the value kernel is the `quire-exact` crate and the interim residue moves to QSL-358's crate(s), FR-275) | AD-001, AD-002, AD-003 | runtime-maintainers |
 
 ## Requirements Architecture
 
 Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004,
 FR-006 through FR-012, FR-273, FR-275, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
-runtime API contract implemented by those FRs. FR-275 states the end state of the exact kernel: one
-`quire-exact` kernel, consumed and never copied. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
+runtime API contract implemented by those FRs. FR-275 states the end state of the exact kernel: QSL's
+kernel and the residue QSL-358 takes over, consumed and never copied, so the runtime holds no ported QSL code. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
 TC-035 (TC-027–TC-029 unused), TC-194–TC-195 and TC-197–TC-199 provide the verification matrix.
 
 ## References

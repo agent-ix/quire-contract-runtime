@@ -119,9 +119,11 @@ calls the ported surface.
 ## Kernel ownership
 
 The function-application surface (`Frame`, `Body`, `CheckedPackage`, `Evaluation`, `plan_call`) is
-runtime-owned (interface-001-AC-7). After [FR-275](./FR-275-single-exact-kernel.md) it stays in the
-runtime's own source and runs over the one `quire-exact` `Value`, `Meter` and `Outcome`; its
-"port of the authority" wording above describes how it is defined, not a second kernel.
+not in `quire-exact` today. Under [FR-275](./FR-275-single-exact-kernel.md) it stays in the
+runtime's source only as part of its interim residue, running over the `quire-exact` `Value`,
+`Meter` and `Outcome`, as a temporary exception that expires when QSL-358 phase 2 is merged (owner
+approval pending). QSL then owns it and the runtime consumes it; the "port of the authority" wording
+above describes the interim source, which is deleted at that point.
 
 ## Dependencies
 

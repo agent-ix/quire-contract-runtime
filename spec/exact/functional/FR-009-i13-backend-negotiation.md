@@ -70,9 +70,10 @@ The runtime shall neither evaluate the item nor alter the item, the package or a
 
 ## Kernel ownership
 
-The negotiators and their requirement, capability and disposition types are runtime-owned
-(interface-001-AC-8). After [FR-275](./FR-275-single-exact-kernel.md) they stay in the runtime's own
-source and consume the one `quire-exact` kernel; they are not part of it.
+The negotiators and their types are not in `quire-exact` today. Under
+[FR-275](./FR-275-single-exact-kernel.md) they stay in the runtime's source only as part of its
+interim residue, a temporary exception that expires when QSL-358 phase 2 is merged (owner approval
+pending); QSL then owns them and the runtime consumes them from QSL's crate(s).
 
 ## Dependencies
 

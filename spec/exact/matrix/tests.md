@@ -38,9 +38,9 @@ type: TestMatrix
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
 | FR-273 | FR-273-AC-5 | TC-194 | 🚧 partly evidenced: the QSL shared-corpus half is removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430; the runtime-only ordering tests remain. AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (the removed QSL shared-corpus vectors; see Evidence Locations) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
 | FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `negotiate_ieee(&[IeeeItemRequirement], &IeeeBackendCapabilities)` receives no `Meter` at all, so no application-time charge is reachable from it by construction — the evidence is that signature plus the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) proving no conversion path from a disposition into `Outcome`/`InputRefusal` exists. `tc_195_negotiate_ieee_takes_no_meter_by_signature` inspects that signature and confirms negotiation still runs and reports one disposition per requirement; it carries no `Meter` assertion of its own, since a `Meter` never passed to `negotiate_ieee` cannot be evidence of anything the call did |
-| FR-275 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15 | TC-197 | 🚧 planned (Linear IR-349): the runtime still holds its own copy of the kernel |
+| FR-275 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18 | TC-197 | 🚧 planned (Linear IR-349; AC-16 and AC-18 also need QSL-358 phase 2): the runtime still holds its own copy of the kernel and of the residue |
 | FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | 🚧 planned (Linear IR-349): `deny.toml` has no entry for `qsl-eval`, `qsl-replay` or `quire-spec-language` yet |
-| FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11 | TC-199 | 🚧 planned (Linear IR-349): the exact profile does not build against `quire-exact` yet; the footprint half holds today because the default profile resolves no kernel |
+| FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11 | TC-199 | 🚧 planned (Linear IR-349; AC-9 also needs QSL-358 phase 1, which lowers `quire-exact`'s declared Rust version: the `+1.75.0` build in row `build-exact-no-std-msrv` cannot pass before it, and the MSRV row stays open); the exact profile does not build against `quire-exact` yet; the footprint half holds today because the default profile resolves no kernel |
 
 ## Test Case Summary
 
@@ -65,7 +65,7 @@ type: TestMatrix
 | TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ implemented |
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
-| TC-197 | Inspect that the runtime holds one kernel and no copy | Inspection | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15 | 🚧 planned (Linear IR-349): the kernel copy is deleted in the code step |
+| TC-197 | Inspect that the runtime holds one kernel and no copy | Integration | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18 | 🚧 planned (Linear IR-349): the kernel copy is deleted in part 1 and the residue in part 2, after QSL-358 phase 2 |
 | TC-198 | Fail the build on a dependency on a guarded QSL crate | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | 🚧 planned (Linear IR-349): the `deny.toml` entries are added in the code step |
 | TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11 | 🚧 planned (Linear IR-349): the exact profile builds against the runtime's own copy until then |
 
@@ -82,26 +82,36 @@ trace tags. Rows marked planned or partly evidenced above are the exceptions.
 
 ## Evidence at the kernel move
 
-FR-275 moves the exact value kernel to `quire-exact` and deletes the runtime's copy (code step
-IR-349). Nothing in this matrix is deleted by that move (FR-275-AC-14). Until IR-349 lands every row
-above keeps its status; when the files below are deleted, IR-349 sets each affected row to planned
-with the reason in the last column, never removes it. The runtime keeps no substitute test: no
-agreement test and no vendored vectors, and no test that calls a QSL crate other than
-`quire-exact` (FR-275-AC-12). Classification follows interface-001's rule: a test of an item
-`quire-exact` exports leaves, a test of a runtime-owned item stays.
+FR-275 moves the exact value kernel to `quire-exact` and deletes the runtime's copy in two steps
+(code steps IR-349 part 1 and part 2). Nothing in this matrix is deleted by either step
+(FR-275-AC-14). Until IR-349 lands every row above keeps its status; when the files below are
+deleted, IR-349 sets each affected row to planned with the reason in the last column, never removes
+it. A leaving row will never be backed by RT: its evidence lives in the QSL repository. The matrix
+status vocabulary in use here has no "verified upstream" status, and none is invented; the row
+stays "planned" with the reason stated, and whether the vocabulary should gain one is a planner
+question (raised in the PR). The runtime keeps no substitute test: no agreement test and no vendored vectors, and no test that
+calls a QSL crate other than `quire-exact` (FR-275-AC-12). A test of an item `quire-exact` exports
+leaves in step 1. A test of an interim-residue item stays only until QSL-358 phase 2 is merged
+(temporary exception, owner approval pending, see FR-275) and then leaves with the code to QSL
+(FR-275-AC-16); the residue is not runtime-owned.
 
 | Test file | Test cases | Disposition | Reason |
 |---|---|---|---|
-| `tests/exact_function_application.rs` | TC-194, TC-195 | stays | function application and negotiation are runtime-owned (FR-273, AD-002); the tests then run over the `quire-exact` `Value`, `Meter` and `Outcome` |
-| `tests/exact_negotiation.rs` | TC-030 | stays | the `negotiate_*` predicates are runtime-owned (FR-009); no `Meter` participates |
-| `tests/exact_vocabulary.rs` | TC-033 | stays | the carried compiler vocabulary is runtime-owned unless `quire-exact` exports it (FR-012) |
-| `tests/exact_equality.rs` | TC-026 | stays | `CheckedEquality` and the checking environment are runtime-owned; its equality-plan assertions on a kernel item leave |
-| `tests/exact_composite.rs` | TC-024 | splits | declaration-environment checks stay; construction of kernel `Value`s leaves |
-| `tests/exact_outcomes.rs`, `tests/exact_arithmetic.rs`, `tests/exact_allocation.rs`, `tests/exact_collection.rs`, `tests/exact_meter_state.rs`, `tests/exact_semantics.rs`, `tests/exact_debug_parity.rs` | TC-016, TC-017, TC-018 to TC-023, TC-025, TC-031, TC-032, TC-034, TC-035 | leaves | kernel behaviour: `quire-exact` owns it and its evidence belongs to the QSL repository, which this repository does not track |
-| `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | leaves | in-crate tests of kernel `Meter` and `Integer` internals the runtime no longer defines |
+| `tests/exact_function_application.rs` | TC-194, TC-195 | stays until QSL-358 phase 2 | interim residue (FR-273, AD-002): the tests run over the `quire-exact` `Value`, `Meter` and `Outcome`, then leave with the code; rows stay planned until QSL's evidence exists |
+| `tests/exact_negotiation.rs` | TC-030 | stays until QSL-358 phase 2 | interim residue: the `negotiate_*` predicates (FR-009) |
+| `tests/exact_vocabulary.rs` | TC-033 | stays until QSL-358 phase 2 | interim residue unless `quire-exact` exports the vocabulary (FR-012) |
+| `tests/exact_equality.rs` | TC-026 | stays until QSL-358 phase 2 | interim residue: `CheckedEquality` and the checking environment; its equality-plan assertions on a kernel item leave in step 1 |
+| `tests/exact_composite.rs` | TC-024 | splits | construction of kernel `Value`s leaves in step 1; declaration-environment checks stay until QSL-358 phase 2 |
+| `tests/exact_arithmetic.rs`, `tests/exact_allocation.rs` | TC-016, TC-017, TC-018, TC-019, TC-023 | leaves in step 1 | the files use only items `quire-exact` exports: its evidence belongs to the QSL repository, which this repository does not track |
+| `tests/exact_outcomes.rs` | TC-016, TC-017, TC-031 | splits | the kernel `Meter`, `Outcome` and injected-denial tests leave in step 1; the cases that use `TypeEnvironment`, `CheckedEquality`, `CheckedPackage`, `ObjectEnvironment`, `UnitGraph`, `EnumDeclaration` and `evaluate_quantity`, which `quire-exact` does not export, stay until QSL-358 phase 2 |
+| `tests/exact_collection.rs` | TC-025 | splits | the collection-algebra and canonical-key cases leave in step 1; the cases built on `TypeEnvironment` and `CompositeDeclaration` stay until QSL-358 phase 2 |
+| `tests/exact_meter_state.rs` | TC-032 | splits | `UnitGraph::admit`, `CompoundUnit` and `evaluate_quantity` cases (FR-011-AC-7) stay until QSL-358 phase 2; the rest leave in step 1 |
+| `tests/exact_semantics.rs` | TC-034 | splits | the `UnitGraph`, `Dimension` and `evaluate_quantity` cases stay until QSL-358 phase 2; the rest leave in step 1 |
+| `tests/exact_debug_parity.rs` | TC-035 | splits | the `CompoundUnit`, `Dimension` and `EnumDeclaration` Debug pins stay until QSL-358 phase 2; the rest leave in step 1 |
+| `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | leaves in step 1 | in-crate tests of kernel `Meter` and `Integer` internals the runtime no longer defines |
 
-The runtime does keep one test of its own consumption: the inspection and builds of TC-197 to
-TC-199, which check that it uses the one kernel and guards its edges.
+The runtime keeps, in the end state, only the consumption checks TC-197 to TC-199: that it uses the
+QSL kernel, holds no ported code and guards its edges.
 
 ## Evidence Locations
 

@@ -15,6 +15,8 @@ Check that the runtime with `exact` and without `std` builds for `thumbv7em-none
 
 ## Test Procedure
 
+0. This step stays unbacked until QSL-358 phase 1 lowers `quire-exact`'s declared Rust version: the
+   row builds with `+1.75.0`, which cargo refuses for a dependency declaring 1.98.
 1. Run the `make test-features` row `build-exact-no-std-msrv` (`exact`, no `std`, target
    `thumbv7em-none-eabi`); expect success (FR-275-AC-9).
 2. Run `cargo tree -p quire-contract-runtime-footprint --target thumbv7em-none-eabi -i quire-exact`;

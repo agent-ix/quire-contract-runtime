@@ -107,10 +107,15 @@ itself unchanged.
 Ownership follows QSL ADR-013 O-13 and O-16 and ADR-011 X-1. `quire-exact` is the one owner of the
 exact value kernel: values and value types, the kernel evaluation `Outcome` with its `Undefined`,
 `Refusal` and `Incomplete` reasons, charge-before-work `Meter` accounting, `Origin`/`Location`
-provenance, the checked `NodeKey`, and the scalar and collection operations over them. The runtime
-keeps what the kernel does not define: the function-application boundary (`Frame`, `Body`,
-`CheckedPackage`, `Evaluation`, `plan_call`), the static checking environments generated oracles
-build before they evaluate, and the backend negotiation predicates. The runtime's verdict,
+provenance, the checked `NodeKey`, and the scalar and collection operations over them. The kernel
+does not define, today, the function-application boundary (`Frame`, `Body`, `CheckedPackage`,
+`Evaluation`, `plan_call`), the static checking environments generated oracles build before they
+evaluate, or the backend negotiation predicates. QSL-358 moves them into QSL-owned `no_std` plus
+`alloc` leaf crate(s) (as relayed from QSL), so they are not runtime-owned in the end state: the
+runtime keeps them in its source only until QSL-358 phase 2 is merged, as the temporary exception
+that [FR-275](../../exact/functional/FR-275-single-exact-kernel.md) records (owner approval
+pending). The `runtime_owned` block and interface-001-AC-7 to AC-9 below describe that interim
+residue and are restated when the items move. The runtime's verdict,
 observation and campaign types lie outside `exact` and are never kernel types: a kernel `Outcome`
 reports what one evaluation produced, and a `Verdict` reports what an execution point established
 about a contract.
@@ -124,7 +129,7 @@ operation vectors or a checked-in specification model that calls no `quire-exact
 Classification is by rule, not by a frozen list, because the upstream kernel is still converging
 (QSL-131 redesigns `Value`, `ValueType` and the enum and quantity shapes). An item is a kernel item
 exactly when the upstream `quire-exact` crate exports an item of that name; every other `exact` item
-is runtime-owned. When an item moves from the runtime to the kernel it keeps its `exact` path and
+is interim residue (runtime-held until QSL-358 phase 2, see above). When an item moves from the runtime to the kernel it keeps its `exact` path and
 takes the kernel's shape. Consumers adapt to that shape; the path and the owner do not move again.
 The `consumed` lists below record what generated code and the code generator call today, classified
 against what the upstream `quire-exact` crate exports; they illustrate the rule and do not replace it.
@@ -175,20 +180,21 @@ exact:
     - quire-contract-codegen -> quire-exact (normal; ADR-011 X-1)
 ```
 
-The table below records, for every runtime-owned `exact` operation that evaluates a
+The table below records, for every interim-residue `exact` operation that evaluates a
 `quire-exact`-exported counterpart today, which `quire-exact` operation it calls
 (interface-001-AC-9):
 
-| Runtime-owned `exact` operation | `quire-exact` operation it calls |
+| Interim-residue `exact` operation | `quire-exact` operation it calls |
 | --- | --- |
 | `evaluate_quantity` | `evaluate_quantity_arithmetic` |
 
 **Open issue.** The upstream `quire-exact` crate is now `#![no_std]` plus `alloc` and builds for
 `thumbv7em-none-eabi` in its own repository's gate (QSL-357), so the `no_std` half of the earlier
 conflict is resolved. It still declares Rust 1.98, which conflicts with `compatibility.msrv`
-(Rust 1.75) for the `exact` feature. Resolving that is a pending owner decision; IR-18 tracks it and
-[FR-275](../../exact/functional/FR-275-single-exact-kernel.md) records the recommendation. The
-single-kernel end state and the `deny.toml` guard on QSL crates are FR-275.
+(Rust 1.75) for the `exact` feature. QSL says (as relayed) that QSL-358 phase 1 lowers the declared
+version to what it needs, target 1.75; the MSRV row stays open until then (IR-18 tracks it). The
+end state (no ported QSL code in the runtime) and the `deny.toml` guard on QSL crates are
+[FR-275](../../exact/functional/FR-275-single-exact-kernel.md).
 
 ### Acceptance criteria
 
@@ -200,10 +206,10 @@ single-kernel end state and the `deny.toml` guard on QSL crates are FR-275.
 | interface-001-AC-4 | When an item's owner changes from the runtime to `quire-exact`, the `exact` module shall keep exposing that item at the path it exposed before the change. | Inspection |
 | interface-001-AC-5 | Where the upstream `quire-exact` crate exports `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location`, the `exact` module shall expose the `quire-exact` definition of that type — an explicit per-type instance of interface-001-AC-2 for the `named_kernel_types` list. | Inspection |
 | interface-001-AC-6 | Where the `exact` module exposes the `quire-exact` definition of `NodeKey`, the runtime's library source shall not call a `NodeKey` constructor. | Inspection |
-| interface-001-AC-7 | The runtime shall define `Frame`, `Body`, `CheckedPackage`, `Evaluation` and `plan_call` in its own source. | Inspection |
-| interface-001-AC-8 | The runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
-| interface-001-AC-9 | A runtime-owned `exact` operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
+| interface-001-AC-7 | Until QSL-358 phase 2 is merged (temporary exception, FR-275; restated then), the runtime shall define `Frame`, `Body`, `CheckedPackage`, `Evaluation` and `plan_call` in its own source. | Inspection |
+| interface-001-AC-8 | Until QSL-358 phase 2 is merged (temporary exception, FR-275; restated then), the runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
+| interface-001-AC-9 | Until QSL-358 phase 2 is merged, an interim-residue `exact` operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
 | interface-001-AC-10 | The runtime shall define every item the `outside_exact` list names outside the `exact` module. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
-| interface-001-AC-13 | Pending the owner decision on `quire-exact`'s MSRV (see Open issue above; the upstream `quire-exact` crate declares Rust 1.98, and is `no_std` plus `alloc`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
+| interface-001-AC-13 | Pending the owner decision on `quire-exact`'s MSRV (see Open issue above; the upstream `quire-exact` crate declares Rust 1.98, lowered by QSL-358 phase 1 as relayed, and is `no_std` plus `alloc`), while the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
 | interface-001-AC-14 | The runtime's normal dependencies shall include no crate published from agent-ix/quire-spec-language other than `quire-exact`. | Inspection |
