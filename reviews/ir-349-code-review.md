@@ -81,3 +81,11 @@ CI workflow edit (for the leader to put to the owner): the only change under `.g
 becomes `Rust 1.82 surface and footprint`, and `dtolnay/rust-toolchain@1.75.0` becomes `@1.82.0`.
 No new job, step, trigger or permission. The workflow is `workflow_dispatch` only and never runs
 `make ci`, so `deny-mutations` is wired into local `make ci` only, not into CI.
+
+## Dispositions
+
+Disposition pass 1, reviewed at agent-ix/quire-contract-runtime@ac43bf55a3d96d5ad6f2a375dd97c6dc662eb732.
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | ac43bf5: `copy_workspace` now copies `git ls-files -z --cached` through `tar --null -T -`, so untracked and ignored files (a `use-local` `.cargo/config.toml` included) never reach a scratch copy. `make deny-mutations` re-run at ac43bf5: 8 of 8 ok. |

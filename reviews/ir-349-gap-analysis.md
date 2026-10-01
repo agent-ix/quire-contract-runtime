@@ -50,3 +50,14 @@ decomposition plan is otherwise sound: the Arc vs Rc, NodeKey, Quantity (228 lin
 quire-exact) and missing equality-conversion table claims match quire-exact at QSL 0885a9ba, and
 step ordering by coupling is reasonable; its step 2 (Rc to Arc, Send/Sync on `Body`) is rightly
 called the risky one.
+
+## Dispositions
+
+Disposition pass 1, reviewed at agent-ix/quire-contract-runtime@ac43bf55a3d96d5ad6f2a375dd97c6dc662eb732.
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | ac43bf5: `make size` now lists `cargo tree -p quire-contract-runtime-footprint --target thumbv7em-none-eabi --edges normal,build,dev --prefix none` and fails on a `^quire-exact ` line. Mutation re-measured: with `features = ["exact"]` on the footprint dependency in a scratch copy the same listing finds quire-exact; unmodified it does not. |
+| FND-002 | fixed | ac43bf5: row `build-exact-no-std-msrv` traces `["TC-016", "TC-199", "FR-006", "FR-275", "NFR-001"]`. |
+| FND-003 | fixed | ac43bf5: tests.md names TC-198 and TC-199 as gate-target exceptions, and Evidence Locations has a TC-198/TC-199 entry. |
+| FND-004 | fixed | ac43bf5: the FR-275 residue list splits `reference.rs` (only `ObjectEnvironment` and its refusal types stay; identities and `ObjectReference` go in step 1) and `node.rs` (only `SemanticGraphCause`/`InvalidSemanticGraph` stay), and the PR body plan deletes them in its Value slice. Checked: quire-exact exports no `ObjectEnvironment`. |

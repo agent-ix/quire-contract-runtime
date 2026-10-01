@@ -50,3 +50,19 @@ quire-exact-covered kernel copy, no claim about QSL's quire-canonical. No requir
 was removed. The stale "until IR-349 moves it" sentences (interface-001-AC-13, FR-275-AC-9,
 TC-199 step 1, the matrix row) were all updated, and no 1.75 floor statement remains. TC-197
 stays planned with an accurate note.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-004 | low | TC-007 compares numbers that were not measured the same way. "973 bytes on Rust 1.98.1 ... The same population measured 907 bytes on Rust 1.75 and 913 on 1.82" reads as about 60 B of growth. But 907 and 913 were measured without `black_box`, and 973 with it. Re-measured with the head's `black_box` consumer on 1.82 (`--ignore-rust-version`): 1135 B. Without `black_box`: 913 B on 1.82 and 126 B on 1.98.1. Like for like, the toolchain move shrinks the measurement, and `black_box` itself adds about 220 B on 1.82. State that 907 and 913 come from the consumer before `black_box`, or give the 1135 B like-for-like figure. | spec/core/matrix/TC-007-release-controls.md:17-22 |
+
+## Dispositions
+
+Disposition pass 1, reviewed at agent-ix/quire-contract-runtime@ac43bf55a3d96d5ad6f2a375dd97c6dc662eb732.
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | ac43bf5: this slice is named "the IR-349 foundation slice" throughout (TC-007, NFR-001, TC-199, FR-275, tests.md). "Part 1" stays the deletion of the quire-exact exports, and FR-275 Downstream orders foundation slice, then part 1, then part 2. |
+| FND-002 | fixed | ac43bf5: NFR-001-AC-3 and FR-275-AC-9 hold no measurement or history; the measured values sit in TC-007's Description, marked informational. |
+| FND-003 | fixed | ac43bf5: `version = "=0.1.0"` dropped; the dependency is `git` plus `branch = "main"` only, matching FR-275's "records no version". Cargo.lock unchanged, with one quire-exact entry. |
