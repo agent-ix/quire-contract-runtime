@@ -156,9 +156,11 @@ records the same, and it is runtime's coupling).
   environments, containment and unit graphs, enumeration declarations, compiler vocabulary) into a
   QSL-owned `no_std` plus `alloc` leaf crate, `quire-semantic-value`, so `src/exact` is deleted
   except the backend negotiators, which are runtime-owned (QSL deleted its own on purpose, as
-  relayed), in two steps. The residue stays here until QSL-358
-  phase 2 is merged as a temporary exception to the no-vendoring rule (owner approved 2026-10-01, expiry unchanged). Until the deletion lands, the exact rows of the seam above describe this crate's own
-  `exact`; after it they describe `quire-exact`, and the items SR-623 FND-002 lists as absent from
+  relayed), in two steps. The residue is not authorized: it is vendored code, with no exception, no
+  expiry and no approval (the owner: "no vendoring ... Absolutely not allowed"), and it is to be
+  deleted. How this crate handles its copy until QSL-358 delivers the shared crate is an open owner
+  decision. While the copy exists, the exact rows of the seam above describe this crate's own
+  `exact`; after deletion they describe `quire-exact`, and the items SR-623 FND-002 lists as absent from
   `quire-exact` (cross-unit quantity, the equality-conversion table) are for the code move to
   resolve, not re-measured here. No compatibility layer carries the old copy.
 
