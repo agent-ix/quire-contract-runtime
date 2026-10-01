@@ -11,8 +11,10 @@ relationships:
 ## Description
 
 The quire-spec-language authority does not meter these families yet (quire-spec-language#119), so charges are
-checked against QSpec and values against an independent `i128` oracle. Evidence:
-`tests/exact_arithmetic.rs` and `tests/exact_allocation.rs` (`--features exact`).
+checked against QSpec and values against an independent `i128` oracle. Evidence was
+`tests/exact_arithmetic.rs` and `tests/exact_allocation.rs`; both left in IR-349 part 1, slice 1,
+because integer, rational, ordering and Boolean operations are the `quire-exact` kernel's now, so no
+test here evidences any step (the matrix row is planned, with that reason).
 
 ## Test Procedure
 

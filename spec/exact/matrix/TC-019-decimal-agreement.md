@@ -11,8 +11,10 @@ relationships:
 ## Description
 
 Execute every QSpec TC-185 vector on the runtime and on quire-spec-language.
-Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. Step 5 keeps evidence in the
-upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
+Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. Step 5 had evidence in the
+upscale allocation bound in `tests/exact_allocation.rs`; that file left in IR-349 part 1, slice 1,
+because decimals are the `quire-exact` kernel's now, so no test here evidences any step (the matrix
+row is planned, with that reason).
 
 ## Test Procedure
 
