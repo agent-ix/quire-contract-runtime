@@ -146,9 +146,9 @@ records the same, and it is runtime's coupling).
 - F. `exact` is a copy of QSL's kernel, which is vendoring and not allowed to stand. Its own
   header says it is "a `no_std + alloc` port" that "keeps the authority's name and order"
   (`src/exact/mod.rs:5-11`), and QSL's kernel now lives in `quire-exact`. The decision is to
-  delete `exact` and depend on `quire-exact`, once QSL-357 makes `quire-exact` `no_std` plus
-  `alloc` (its manifest today declares `rust-version = "1.98"` and default-feature dependencies,
-  against this crate's 1.75 and `no_std`). No shared-corpus agreement test is kept between two
+  delete `exact` and depend on `quire-exact`. QSL-357 has landed: `quire-exact` is `no_std` plus
+  `alloc` and builds for `thumbv7em-none-eabi` in QSL's own gate. Its manifest still declares
+  `rust-version = "1.98"`, against this crate's 1.75 (an open owner question, FR-275). No shared-corpus agreement test is kept between two
   copies, because there will be one. Pointing this crate's conformance at `qsl-eval` (the idea
   recorded under IR-355) is rejected: `qsl-eval` is QSL layer 5 and an FB-05 violation even as a
   dev edge. FR-275 states this decision as a requirement. Until the deletion lands, the exact rows of the seam above describe this crate's own
@@ -177,7 +177,7 @@ Local labels; the repository assigns requirement ids when one is authored.
   permutes the result (existing: FR-009-AC-1); an `InputRefusal` leaves the meter unchanged
   (existing: FR-273).
 - T-7. For the same input the oracle's `Outcome` equals QSL's replay outcome. As relayed, this
-  belongs in codegen's parity comparator (ADR-011 names `quire-contract-codegen#50`), not here;
+  belongs in codegen's parity comparator (`quire-contract-codegen#50`, QSL ADR-011 section 7.1), not here;
   it is trivial once both sides call one kernel (decision F).
 
 Stated but not testable today: `measure_discharged` is set only for a function read from an
@@ -195,10 +195,9 @@ What is measured today, what is open and with whom, and what is routed.
   restated: FND-001 and FND-002 (the kernel is a copy of QSL's, the agreement evidence was deleted
   and the shared kernel is not adopted; tracked there as IR-342, IR-345 and IR-355). IR-355 is
   superseded by decision F, which keeps no agreement test and rejects its `qsl-eval` idea. The
-  interim gap is that RT has no agreement evidence at all until QSL-357 lands and the copy is
-  deleted. Also FND-003 (`CheckedInvariant` merges at least ten conditions; IR-356) and FND-007
+  interim gap is that RT has no agreement evidence at all until the copy is deleted (QSL-357 has
+  landed). Also FND-003 (`CheckedInvariant` merges at least ten conditions; IR-356) and FND-007
   (one Kani harness reaches `exact`; IR-340).
-  least ten conditions; IR-356) and FND-007 (one Kani harness reaches `exact`; IR-340).
 - The copy of QSL's kernel (decision F) puts two kernels in codegen's build graph
   (`rt::ScalarLimits` and `qsl_replay::ScalarLimits`, `codegen src/spine_replay.rs:16`), so the
   oracle codegen emits and the replay QSL runs can disagree (T-7).
@@ -246,8 +245,8 @@ To codegen:
 | R3-C8 | State whether the serializable mirrors of runtime enums stay, or the kernel exposes a serialization the generator reuses (a stated need, not a request to copy). |
 
 To QSL, answered as relayed and no longer open: the runtime edge to `quire-exact` is accepted and
-QSL fixes FB-05 and its lint (QSL-356); T-7 belongs in codegen's parity comparator; admission
-carries the discharge (R3-Q7); `quire-exact` becomes `no_std` plus `alloc` under QSL-357 (decision
-F).
+QSL fixes FB-05 and its lint (QSL-356, QSL #554, in review); the T-7 comparison belongs in codegen's
+parity comparator (`quire-contract-codegen#50`, QSL ADR-011 section 7.1); admission carries the
+discharge (R3-Q7); `quire-exact` is `no_std` plus `alloc` (QSL-357, landed; decision F).
 
 To QSpec: none added by this AD.
