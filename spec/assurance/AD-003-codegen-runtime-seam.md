@@ -83,8 +83,10 @@ runtime's coupling).
   different revision: `RUNTIME_REVISION` is `ed0a04b` (`src/oracle.rs:13`), a commit before
   RT #83 to #88 (SR-623 records that the runtime changed a lot after it). Between the two the runtime's `src/` differs by 8
   files and 28 changed lines. Two runtime revisions are therefore live for one codegen build, and
-  the compile tests build against the old one while the generator links the newer. This is a pin
-  with no property it protects (D-4 and the open question below).
+  the compile tests build against the old one while the generator links the newer. CG's layout
+  AD (IR-344, CG PR #215, open) deletes `RUNTIME_REVISION` at its step 1c and has the emitted
+  manifest name the runtime the way CG's own `Cargo.toml` does; that ends the two-revision
+  condition, and until it lands the condition stands (D-4).
 - Wire versions this crate owns: `runtime.campaign-snapshot/v1` (decoder refuses another
   version, `UnsupportedVersion`), the node-key domain `quire.checked-semantic-node/v1` and the
   accounting version `quire.value.accounting/v1`, carried verbatim; IEEE definition
@@ -172,8 +174,8 @@ What is measured today, what is open and with whom, and what is routed.
   (runtime kernel) and the replay QSL runs (`quire-exact`) can disagree, and codegen's build
   graph holds both (`rt::ScalarLimits` and `qsl_replay::ScalarLimits`, `src/spine_replay.rs:16`).
 - Pin: `RUNTIME_REVISION` (`src/oracle.rs:13`) is a stale SHA written into six generators'
-  manifests. It protects nothing a compile test against the linked runtime would not, and it
-  makes the tests build against a runtime codegen does not link.
+  manifests, and it makes the tests build against a runtime codegen does not link. It is deleted
+  by CG's layout AD at step 1c (IR-344, PR #215, open), so nothing is routed for it here.
 - Panics at the seam: codegen's conversions from runtime enums to serializable mirrors end in
   `unreachable!` at 37 sites (`src/exact_scalar.rs` 26, `src/composite_equality.rs` 9,
   `src/exact_function.rs` 2), and two of those are emitted into generated oracle source
@@ -193,7 +195,7 @@ What is measured today, what is open and with whom, and what is routed.
 
 | Question | Owner | Recommendation | Cost of the alternative |
 | --- | --- | --- | --- |
-| What does a generated manifest say about this crate? Options: a branch spelling identical to codegen's own; or no manifest line (the consumer declares the dependency) | codegen | the branch spelling, with the compile tests building against the lock-resolved runtime; the output text stays deterministic and no SHA is minted | a stale SHA keeps two runtimes live |
+| What does a generated manifest say about this crate? | codegen | settled in CG's layout AD (IR-344 step 1c, PR #215, open): the constant is deleted and the manifest names the runtime as CG's own `Cargo.toml` does; confirm it lands | a stale SHA keeps two runtimes live |
 | Replace codegen's `unreachable!` conversions with `UnknownRuntimeVariant` | codegen | yes, and drop the emitted `unreachable!` for a typed stop | a runtime variant crashes generation or generated code |
 | Where does the discharge of a function's `decreases` measure travel to codegen? | QSpec, QSL | carry it on the admitted package so codegen sets the flag from it | the flag stays a constant codegen asserts |
 | Does the runtime adopt `quire-exact`, and if so how does that edge satisfy FB-05? | runtime and QSL (IR-342, IR-345) | decide the edge before the code move; if `quire-exact` stays in the QSL repository, FB-05 needs a named exception | the move lands and QSL's own lint reports it |
@@ -208,8 +210,7 @@ To codegen:
 
 | Id | Stated need |
 | --- | --- |
-| R3-C5 | Stop minting a runtime SHA: replace `RUNTIME_REVISION` (`src/oracle.rs:13`) and its use in the six manifest sites and the tests with one spelling that matches codegen's own dependency. |
-| R3-C6 | Replace the 37 `unreachable!` conversions over runtime enums, and the two emitted into generated source, with a typed refusal (`UnknownRuntimeVariant` already exists). |
+| R3-C6 | Replace the 37 `unreachable!` conversions over runtime enums, and the two emitted into generated source, with a typed refusal (`UnknownRuntimeVariant` already exists). Tracked as IR-352. |
 | R3-C7 | Set `measure_discharged` from a carried discharge, not as the constant `true`, once QSL and QSpec say where it travels. |
 | R3-C8 | State whether the serializable mirrors of runtime enums stay, or the runtime exposes a serialization the generator reuses (a stated need, not a request to copy). |
 
