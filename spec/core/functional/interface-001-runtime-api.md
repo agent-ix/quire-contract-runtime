@@ -1,5 +1,5 @@
 ---
-id: interface-001
+id: interface_001
 title: "Generated-oracle runtime API"
 type: interface
 ---
@@ -90,6 +90,24 @@ compatibility:
   licensing: AGPL-3.0-or-later
   publication: disabled (`publish = false`)
 ```
+
+## Features
+
+The interface's features in declaration order: every operation the contract above declares, one row each.
+
+| Feature | Kind |
+|---|---|
+| construct_verdict | operation |
+| inspect_verdict | operation |
+| evaluate_short_circuit_boolean | operation |
+| evaluate_total_boolean | operation |
+| evaluate_checked_value | operation |
+| record_campaign_verdict | operation |
+| adapt_to_proptest | operation |
+| snapshot_campaign | operation |
+| encode_campaign_snapshot | operation |
+| decode_campaign_snapshot | operation |
+| adapt_to_proptest_and_record | operation |
 
 ## Exact kernel surface
 

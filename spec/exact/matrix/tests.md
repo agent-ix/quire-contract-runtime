@@ -8,7 +8,7 @@ type: TestMatrix
 
 ## Functional Requirement Coverage
 
-| Functional Req | Acceptance Criteria | Test Cases | Coverage Status |
+| Functional Req | Acceptance Criteria | Test Cases | Status |
 |---|---|---|---|
 | FR-006 | FR-006-AC-1, FR-006-AC-6 | TC-016 | ✅ implemented |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
