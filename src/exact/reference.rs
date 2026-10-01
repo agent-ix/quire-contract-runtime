@@ -15,14 +15,12 @@ use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::fmt;
 
+use quire_exact::UniverseId;
+
 use super::composite::{
     fill_slots, ConstructionRefusal, FieldValue, ObjectTypeDeclaration, TypeEnvironment, Value,
 };
 use super::node::NodeKey;
-
-/// A universe identity in its canonical identity bytes.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct UniverseIdentity(Box<[u8]>);
 
 /// A declared object identity in its canonical identity bytes.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -43,18 +41,6 @@ fn identity_bytes(bytes: &[u8]) -> Result<Box<[u8]>, InvalidObjectIdentity> {
         return Err(InvalidObjectIdentity);
     }
     Ok(bytes.into())
-}
-
-impl UniverseIdentity {
-    /// A universe from its canonical identity bytes.
-    pub fn new(bytes: &[u8]) -> Result<Self, InvalidObjectIdentity> {
-        identity_bytes(bytes).map(Self)
-    }
-
-    /// The canonical identity bytes.
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
 }
 
 impl ObjectIdentity {
@@ -78,7 +64,7 @@ pub struct ObjectReference(Box<ObjectReferenceFields>);
 
 #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct ObjectReferenceFields {
-    universe: UniverseIdentity,
+    universe: UniverseId,
     object_type: NodeKey,
     identity: ObjectIdentity,
 }
@@ -97,7 +83,7 @@ impl core::fmt::Debug for ObjectReference {
 impl ObjectReference {
     /// The reference `(universe, object_type, identity)` supplied by a bound
     /// model snapshot.
-    pub fn new(universe: UniverseIdentity, object_type: NodeKey, identity: ObjectIdentity) -> Self {
+    pub fn new(universe: UniverseId, object_type: NodeKey, identity: ObjectIdentity) -> Self {
         Self(Box::new(ObjectReferenceFields {
             universe,
             object_type,
@@ -106,8 +92,8 @@ impl ObjectReference {
     }
 
     /// The universe identity.
-    pub fn universe(&self) -> &UniverseIdentity {
-        &self.0.universe
+    pub fn universe(&self) -> UniverseId {
+        self.0.universe
     }
 
     /// The object-type declaration identity.

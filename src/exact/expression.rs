@@ -42,15 +42,16 @@ use alloc::vec::Vec;
 use core::cell::{Cell, RefCell};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use super::accounting::{Charge, ChargePoint, Meter};
-use super::comparison::{IllTyped, IllTypedCause};
+use quire_exact::{
+    Charge, ChargePoint, DecimalLoss, IeeeExactLoss, IeeeFlags, IllTyped, IllTypedCause, Integer,
+    Meter, Outcome, Refusal,
+};
+
 use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
-use super::decimal::DecimalLoss;
 use super::division::IntegerDivisionConsumer;
-use super::ieee::{IeeeExactLoss, IeeeFlags, IeeeItemRequirement};
-use super::integer::Integer;
-use super::outcome::{Outcome, Refusal, Stop};
+use super::ieee::IeeeItemRequirement;
 use super::reference::ObjectEnvironment;
+use super::stop::{OutcomeStop, Stop};
 
 /// The authority's two checking modes, moved rather than added: the
 /// authority threads a `CheckMode` through its own per-expression checking

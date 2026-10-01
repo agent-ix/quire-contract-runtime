@@ -57,20 +57,10 @@ MUTATIONS = (
         "tc_003_campaign_accounting_saturates",
         "TC-003",
     ),
-    (
-        "src/exact/ieee.rs",
-        "            (Class::Nan { .. }, _) | (_, Class::Nan { .. }) => false,\n",
-        "            (Class::Nan { .. }, _) | (_, Class::Nan { .. }) => true,\n",
-        "tc_003_exact_ieee_numeric_equal_matches_nan_unordered",
-        "TC-003",
-    ),
-    (
-        "src/exact/ieee.rs",
-        "    if u64::from(biased) == format.exponent_ones() {\n        if fraction == 0 {\n",
-        "    if u64::from(biased) == format.exponent_ones() {\n        if fraction != 0 {\n",
-        "tc_003_exact_ieee_numeric_equal_matches_nan_unordered",
-        "TC-003",
-    ),
+    # `tc_003_exact_ieee_numeric_equal_matches_nan_unordered` proves a property of `compare_ieee`,
+    # which is `quire-exact`'s code since FR-275, so there is no source of it in this repository to
+    # inject a defect into: its two former injections (NaN comparison and NaN decoding in
+    # `src/exact/ieee.rs`) left with that file. The proof itself still runs under `make kani`.
 )
 
 

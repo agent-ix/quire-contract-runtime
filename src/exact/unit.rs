@@ -15,9 +15,9 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::integer::Integer;
+use quire_exact::{Integer, Rational};
+
 use super::node::{check_terms, refuse, InvalidSemanticGraph, NodeKey, SemanticGraphCause};
-use super::rational::Rational;
 
 /// Evaluator domain of a compound-unit value.
 pub const COMPOUND_UNIT_DOMAIN: &str = "quire.value.compound-unit/v1";

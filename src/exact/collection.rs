@@ -17,101 +17,28 @@ use alloc::rc::Rc;
 use alloc::vec::Vec;
 use core::cell::Cell;
 use core::cmp::Ordering;
-use core::fmt;
 use core::mem;
 
-use super::accounting::{length_amount, Charge, ChargePoint, LimitKind, Meter};
+use quire_exact::{
+    length_amount, BoundViolation, CardinalityBound, Charge, ChargePoint, CollectionKind, Integer,
+    LimitKind, Meter, Outcome, Refusal,
+};
+
 use super::composite::{
     Component, ConstructionCause, ConstructionRefusal, Deferred, Value, ValueType,
 };
 use super::equality::plan_pairs;
-use super::integer::Integer;
 use super::key::compare_keys;
-use super::outcome::{BoundViolation, Outcome, Refusal, Stop};
+use super::stop::{OutcomeStop, Stop};
 
-/// A collection kind.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum CollectionKind {
-    /// Ordered, duplicates retained.
-    Sequence,
-    /// Unordered, unique members.
-    Set,
-    /// Unordered, duplicates retained as multiplicity.
-    Bag,
-    /// Unique members in first-occurrence order.
-    OrderedSet,
-}
-
-impl CollectionKind {
-    /// Every kind.
-    pub const ALL: [Self; 4] = [Self::Sequence, Self::Set, Self::Bag, Self::OrderedSet];
-
-    /// Whether equal occurrences coalesce into one member.
-    pub fn is_unique(self) -> bool {
-        matches!(self, Self::Set | Self::OrderedSet)
-    }
-
-    /// Whether occurrence order is semantic.
-    pub fn is_ordered(self) -> bool {
-        matches!(self, Self::Sequence | Self::OrderedSet)
-    }
-}
-
-/// An inclusive declared cardinality bound `[minimum, maximum]`. It counts
-/// occurrences for sequences and bags and members for sets and ordered sets.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct CardinalityBound {
-    minimum: u64,
-    maximum: u64,
-}
-
-/// A cardinality bound with `minimum > maximum`.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct EmptyCardinalityBound {
-    /// The declared minimum.
-    pub minimum: u64,
-    /// The declared maximum.
-    pub maximum: u64,
-}
-
-impl fmt::Display for EmptyCardinalityBound {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            formatter,
-            "empty cardinality bound [{}, {}]",
-            self.minimum, self.maximum
-        )
-    }
-}
-
-impl CardinalityBound {
-    /// The inclusive bound `[minimum, maximum]`.
-    pub fn new(minimum: u64, maximum: u64) -> Result<Self, EmptyCardinalityBound> {
-        if minimum > maximum {
-            return Err(EmptyCardinalityBound { minimum, maximum });
-        }
-        Ok(Self { minimum, maximum })
-    }
-
-    /// The inclusive minimum.
-    pub fn minimum(self) -> u64 {
-        self.minimum
-    }
-
-    /// The inclusive maximum.
-    pub fn maximum(self) -> u64 {
-        self.maximum
-    }
-
-    fn violation(self, count: u64) -> Option<BoundViolation> {
-        if count < self.minimum {
-            Some(BoundViolation::BelowMinimum)
-        } else if count > self.maximum {
-            Some(BoundViolation::AboveMaximum)
-        } else {
-            None
-        }
+/// Which side of `bound`, if any, `count` falls outside. The kernel's own check is private.
+fn bound_violation(bound: CardinalityBound, count: u64) -> Option<BoundViolation> {
+    if count < bound.minimum() {
+        Some(BoundViolation::BelowMinimum)
+    } else if count > bound.maximum() {
+        Some(BoundViolation::AboveMaximum)
+    } else {
+        None
     }
 }
 
@@ -298,7 +225,7 @@ fn bound_and_retain(
     meter.charge(
         Charge::new(ChargePoint::CollectionBound).size(LimitKind::ValueOccurrences, count),
     )?;
-    if let Some(violation) = collection_type.bound.violation(count) {
+    if let Some(violation) = bound_violation(collection_type.bound, count) {
         return Err(Stop::Refused(Refusal::CardinalityOutOfBound {
             violation,
             kind,
