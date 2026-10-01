@@ -33,8 +33,11 @@ IR-349; it is planned until then.
 6. Before QSL-358 phase 2 is merged: compare every `exact` item the runtime defines with FR-275's
    interim residue list; expect each is listed, with the expiry condition and the owner approval
    status recorded (FR-275-AC-17).
-7. After QSL-358 phase 2 is merged: expect no `src/exact` directory, no item defined in the `exact`
-   module, and an empty interim residue list (FR-275-AC-16, FR-275-AC-18).
+7. After QSL-358 phase 2 is merged: expect the `exact` module to define only the negotiators and
+   their types, nothing else under `src/exact`, and an empty interim residue list (FR-275-AC-16,
+   FR-275-AC-18).
+8. Expect `negotiate_integer_division`, `negotiate_ieee` and their types defined in the runtime's
+   own source with no QSL crate behind them (FR-275-AC-19).
 
 ## Expected Results
 

@@ -87,3 +87,29 @@ Verified correct (coder claims):
   is the same at base and head: the same 5 documents fail structural validation (four matrix
   `Coverage Status` headers, interface-001 `id`/`features`, IR-365), with no new failure.
   Grammar is clean (80/80 at base, 84/84 at head).
+
+## New findings (disposition pass 1)
+
+Reviewed at agent-ix/quire-contract-runtime@1e7f279c8af4473da052466a1834002ca65bb785.
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-011 | medium | FR-275 records a QSL commit id (`8b0c1ffe`) twice, as the snapshot the ban list was taken from. The repository's CLAUDE.md forbids introducing SHAs or records that track versions. FR-275's own Dependency spelling bullet says "the runtime records no version, commit or digest of `quire-exact` in its sources or specification", and `8b0c1ffe` is a commit of the repository that holds `quire-exact`. TC-198 step 5 already compares the list with QSL's current workspace, so the commit id guards nothing. Drop it ("QSL's workspace members when this was written"). | spec/exact/functional/FR-275-single-exact-kernel.md:78-79, spec/exact/functional/FR-275-single-exact-kernel.md:86, spec/exact/functional/FR-275-single-exact-kernel.md:171-172 |
+| FND-012 | low | The evidence table says `tests/exact_arithmetic.rs` and `tests/exact_allocation.rs` "use only items `quire-exact` exports". `exact_arithmetic.rs` also imports `CHARGE_LOG_CAPACITY` (line 19, used at 1075-1083), which `quire-exact` does not export: its charge log is behind its `test-support` feature, through `Meter::admitted_charges`. The "leaves" disposition still holds, because it is the runtime `Meter`'s internal constant, but the stated reason is not exact. | spec/exact/matrix/tests.md:105 |
+| FND-013 | low | AD-002's System Boundary still extends `exact` with "a port of the quire-spec-language authority's own type, carrying its name and order" (`CheckedPackage`). The PR leaves it unchanged, with no pointer to FR-275's temporary exception, so a reader of AD-002 alone sees a standing port. FR-275 cites AD-002 for the residue. | spec/assurance/AD-002-function-application-boundary.md:16-21 |
+| FND-014 | low | The expiry condition "QSL-358 phase 2 merged" has no single event to check. QSL-358 is a phase-1 scoping ticket whose description plans phase 2 "split into slices", and phase 2 has no ticket of its own yet. FR-275-AC-16, AC-17 and AC-18 all key on that event. Name the event that ends the exception (for example, the phase-2 ticket, once filed, closed Done), or say the condition is restated when phase 2 is ticketed. | spec/exact/functional/FR-275-single-exact-kernel.md:34-37, spec/exact/functional/FR-275-single-exact-kernel.md:140-142, spec/exact/functional/FR-275-single-exact-kernel.md:146 |
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | 1e7f279: the end state is no ported QSL code, delivered in two steps. The residue is a temporary exception with expiry "QSL-358 phase 2 merged", owned by QSL-358 (exists, In Coding) and IR-349, with owner approval stated as pending. AC-13 covers ports. AC-16..AC-18, the interim residue list and TC-197 steps 6 and 7 are added. FR-273, FR-009, interface-001 and AD-003 F no longer call the residue runtime-owned (grep finds "runtime-owned" only in "not runtime-owned"). |
+| FND-002 | fixed | 1e7f279: the Toolchain bullet fixes no floor and the MSRV row is open (QSL-358 phase 1, IR-18). AC-9 and TC-199 step 0 say the row is unbacked until QSL-358 phase 1. This is consistent with interface-001-AC-13. |
+| FND-003 | fixed | 1e7f279: verified by imports. `exact_outcomes.rs` (TypeEnvironment, CheckedPackage, UnitGraph, EnumDeclaration, evaluate_quantity) and `exact_collection.rs` (TypeEnvironment, CompositeDeclaration) use residue items, and they, `exact_meter_state.rs`, `exact_semantics.rs` and `exact_debug_parity.rs` now split. `exact_allocation.rs` uses only `quire-exact` exports. On `exact_arithmetic.rs`, see FND-012. |
+| FND-004 | fixed | 1e7f279: the list holds all 14 non-kernel QSL workspace crates, which match QSL main's members and package names (`quire-spec-language`, 11 `qsl-*`, `xtask`, `arch-lint`). The gap for crates QSL adds later is stated, and TC-198 step 5 checks for drift. |
+| FND-005 | fixed | 1e7f279: AC-8 and TC-198 steps 3 and 4 require cargo-deny's `banned` error and say that a licence failure alone does not satisfy them. |
+| FND-006 | deferred | Planner question, raised in the PR body and in FR-275's Open questions. The status vocabulary has exactly four markers, ✅ ❌ 🚧 ⛔ (spec-artifacts-process StatusMarker.json; ⛔ = retired), none of which means "verified upstream". Rows stay 🚧 with a note saying RT will never back them. |
+| FND-007 | fixed | 1e7f279: spec/tests.md:19 now reads "no agreement test is kept: one kernel, FR-275". |
+| FND-008 | fixed | 1e7f279: "the runtime's only `no_std` target". |
+| FND-009 | fixed | 1e7f279: the leaving row lists TC-016, TC-017, TC-018, TC-019 and TC-023. TC-020..TC-022 are gone from the file table. |
+| FND-010 | fixed | 1e7f279: TC-197 is typed Integration in the summary. |

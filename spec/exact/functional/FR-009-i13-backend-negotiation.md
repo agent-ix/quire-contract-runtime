@@ -70,10 +70,10 @@ The runtime shall neither evaluate the item nor alter the item, the package or a
 
 ## Kernel ownership
 
-The negotiators and their types are not in `quire-exact` today. Under
-[FR-275](./FR-275-single-exact-kernel.md) they stay in the runtime's source only as part of its
-interim residue, a temporary exception that expires when QSL-358 phase 2 is merged (owner approval
-pending); QSL then owns them and the runtime consumes them from QSL's crate(s).
+The negotiators and their types are runtime-owned code, not a port of QSL code: QSL deleted its own
+negotiators on purpose (as relayed, FR-078). Under [FR-275](./FR-275-single-exact-kernel.md) they
+stay in the runtime's own source in the end state, outside QSL-358 and outside the temporary
+exception that covers the residue (interface-001-AC-8).
 
 ## Dependencies
 

@@ -40,12 +40,12 @@ Embedded and assurance-sensitive consumers need predictable resource use and a s
 |----|----------|--------------|
 | NFR-001-AC-1 | The default feature profile compiles without `std` or an allocator. | compile-time-check (`make size`) |
 | NFR-001-AC-2 | The library compiles with no `unsafe` code. | compile-time-check (`#![forbid(unsafe_code)]`, `make lint`) |
-| NFR-001-AC-3 | On Rust 1.75 for `thumbv7em-none-eabi`, the fixed-population static-library consumer in `measurement/footprint/` has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Test (TC-007, `make size`) |
+| NFR-001-AC-3 | On Rust 1.82 (the floor FR-275 sets; until IR-349 moves the gate, `make size` still builds with 1.75) for `thumbv7em-none-eabi`, the fixed-population static-library consumer in `measurement/footprint/` has linked `.text` plus `.rodata` between 500 bytes and 4 KiB and its runtime/harness objects retain no panic-path reference. | Test (TC-007, `make size`) |
 
 ## Verification
 
 `make size` builds the footprint crate, which depends on the runtime with
-`default-features = false`, for `thumbv7em-none-eabi` on Rust 1.75, so the default profile compiles
+`default-features = false`, for `thumbv7em-none-eabi` on the Rust floor (1.82 per FR-275; 1.75 until IR-349 moves the gate), so the default profile compiles
 without `std` or an allocator; it then enforces the 500-byte floor, the 4 KiB ceiling and the
 absence of panic relocations. `make lint` runs Clippy on the runtime and the footprint crate, and
 `#![forbid(unsafe_code)]` rejects any `unsafe` code. No gate checks that the default profile

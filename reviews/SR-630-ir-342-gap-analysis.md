@@ -55,3 +55,10 @@ part) and SR-629 FND-001 is ruled on.** Traceability is otherwise complete:
 - No production code changed.
 - The shared-corpus agreement test is excluded (FR-275-AC-12), and so is a `qsl-eval`
   conformance edge.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | 1e7f279: FR-275 Routed says IR-342 stays open after merge for the codegen part, which the team leader coordinates. The IR check is recorded, and I re-measured it: IR main has no `quire-exact` in any Cargo.toml or Cargo.lock and no `pub struct Meter` or `ScalarLimits`. |
+| FND-002 | fixed | 1e7f279: the migration end state is that the whole `src/exact` is deleted (FR-275-AC-16). The interim residue is bounded by an expiry condition and owner tickets (see SR-629 FND-001, and FND-014 on the expiry event). |

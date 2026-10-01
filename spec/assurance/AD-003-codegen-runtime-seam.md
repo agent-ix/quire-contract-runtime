@@ -147,14 +147,16 @@ records the same, and it is runtime's coupling).
   header says it is "a `no_std + alloc` port" that "keeps the authority's name and order"
   (`src/exact/mod.rs:5-11`), and QSL's kernel now lives in `quire-exact`. The decision is to
   delete `exact` and depend on `quire-exact`. QSL-357 has landed: `quire-exact` is `no_std` plus
-  `alloc` and builds for `thumbv7em-none-eabi` in QSL's own gate. Its manifest still declares
-  `rust-version = "1.98"`, against this crate's 1.75 (an open owner question, FR-275). No shared-corpus agreement test is kept between two
+  `alloc` and builds for `thumbv7em-none-eabi` in QSL's own gate. It needs Rust 1.82 (as relayed), so
+  this crate takes one floor, 1.82, for all features (the IR planner's call under IR-18, FR-275). No shared-corpus agreement test is kept between two
   copies, because there will be one. Pointing this crate's conformance at `qsl-eval` (the idea
   recorded under IR-355) is rejected: `qsl-eval` is QSL layer 5 and an FB-05 violation even as a
   dev edge. FR-275 states this decision as a requirement, and its end state is no ported QSL code in this
-  crate: QSL says (as relayed) that QSL-358 moves the whole residue (function application, checking
-  environments, containment and unit graphs, negotiators) into QSL-owned `no_std` plus `alloc` leaf
-  crate(s), so the entire `src/exact` is deleted, in two steps. The residue stays here until QSL-358
+  crate: QSL says (as relayed) that QSL-358 moves the residue (function application, checking
+  environments, containment and unit graphs, enumeration declarations, compiler vocabulary) into a
+  QSL-owned `no_std` plus `alloc` leaf crate, `quire-semantic-value`, so `src/exact` is deleted
+  except the backend negotiators, which are runtime-owned (QSL deleted its own on purpose, as
+  relayed), in two steps. The residue stays here until QSL-358
   phase 2 is merged as a temporary exception to the no-vendoring rule (owner approval pending). Until the deletion lands, the exact rows of the seam above describe this crate's own
   `exact`; after it they describe `quire-exact`, and the items SR-623 FND-002 lists as absent from
   `quire-exact` (cross-unit quantity, the equality-conversion table) are for the code move to
