@@ -95,4 +95,4 @@ the runtime.
 
 ## Dependencies
 
-- **Upstream**: [FR-001](./FR-001-verdict-observation.md).
+- **Upstream**: [FR-001](../../core/functional/FR-001-verdict-observation.md).

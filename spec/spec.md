@@ -54,6 +54,22 @@ Generated customer code relies on the default core. Test harness authors may ena
 adapters. Reviewers rely on the tests, proofs and measurements this repository
 runs.
 
+## Subsystems
+
+### Subsystem Registry
+
+Layout follows `ix://agent-ix/quire-contract-ir/ADR-0056`. Each subsystem directory under `spec/`
+holds its requirements (`stakeholder/`, `functional/`, `non-functional/`) and, in `matrix/`, its one
+matrix and the test cases that matrix declares. Interface requirements live in `functional/`.
+`spec/tests.md` indexes the matrices; `spec/assurance/` holds the architecture descriptions.
+
+| Subsystem | Path | Role | Owning crates/modules | ADs | Owner |
+| --- | --- | --- | --- | --- | --- |
+| Core | `spec/core/` | Verdict, identity and observation types; panic-free operators; the runtime API contract; the `no_std` footprint and panic/license quality requirements | `quire-contract-runtime`: `verdict`, `identity`, `observation`, `operators`, `kani_proofs` (`verification/kani.rs`, `cfg(kani)`); `quire-contract-runtime-footprint` | AD-001 | runtime-maintainers |
+| Accounting | `spec/accounting/` | Complete campaign counters and the bounded immutable campaign snapshot transport | `quire-contract-runtime`: `accounting` (including its snapshot transport, `src/snapshot_json.rs`) | AD-001 | runtime-maintainers |
+| Proptest adapter | `spec/proptest_adapter/` | Adaptation of verdicts to the proptest framework | `quire-contract-runtime`: `proptest_adapter` | AD-001 | runtime-maintainers |
+| Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` | AD-001, AD-002 | runtime-maintainers |
+
 ## Requirements Architecture
 
 Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004,

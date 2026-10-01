@@ -47,4 +47,4 @@ failed postconditions to test failure, and rejected preconditions to test reject
 
 ## Dependencies
 
-- **Upstream**: [FR-001](./FR-001-verdict-observation.md).
+- **Upstream**: [FR-001](../../core/functional/FR-001-verdict-observation.md).
