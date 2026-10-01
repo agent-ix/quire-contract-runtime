@@ -76,3 +76,19 @@ Routing note, not a finding on this PR: open PR #95 rewrites the same tests.md r
 and interface-001 with the old wording ("stays until QSL-358 phase 2", "interim residue", "AC-16
 and AC-18 also need QSL-358 phase 2"). Whichever PR merges second must keep this PR's wording and
 must not bring back the old text.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-006 | low | Nine disposition cells in tests.md repeat "(interim handling is an open owner decision)". It grants nothing, so it is not a permission, but it reads as if an interim period exists. Paragraph 98-99 above the table already says once that how residue tests are handled before deletion is an open owner decision. Drop the parenthetical from the cells and keep the single statement in that paragraph. This is optional and does not block merge. | spec/exact/matrix/tests.md:103, spec/exact/matrix/tests.md:105-113 |
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | f28783b: interface-001's seam YAML now has a `residue` block. It is marked QSL-owned (QSL-358, as relayed), not runtime-owned and not authorized, with no exception, expiry or approval. It lists the function_application items (now with Body, Evaluation and plan_call), checking, equality, enumeration and quantity. `runtime_owned` keeps only the negotiators (`always_runtime: [negotiate_integer_division, negotiate_ieee]`), and the YAML parses. The "restated when it is deleted" prose is gone. No other file calls the residue runtime-owned: I grepped spec, src, README, CLAUDE.md and the rest of the tree. |
+| FND-002 | fixed | f28783b: FR-275-AC-17 now reads "Every `exact` item the runtime defines, other than the negotiators, is named in the residue list, and the list records no exception, expiry or approval." It can pass today. TC-197 step 6 no longer has the "fails while" sentence, and only step 7 keeps one. |
+| FND-003 | fixed | f28783b: interface-001-AC-7 is now a single negative clause: "The runtime shall not define `Frame`, `Body`, `CheckedPackage`, `Evaluation` or `plan_call` in its own source (FR-275; no exception, no expiry)." |
+| FND-004 | fixed | f28783b: AD-002:23-24 and FR-273:124-125 now say "QSL is to own it ... (QSL-358, as relayed) and this crate / the runtime is to consume it". |
+| FND-005 | fixed | f28783b: the status text is gone from the FR-275-AC-16, AC-17 and AC-18 cells and from the interface-001-AC-7 cell. The FR-275 matrix row now carries it: AC-16 and AC-18 are unmet while the residue exists, AC-17 can be checked today, and interface-001-AC-7 is unmet. |

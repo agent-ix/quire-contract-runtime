@@ -100,17 +100,17 @@ test stays in the runtime until the code is deleted is an open owner decision, n
 
 | Test file | Test cases | Disposition | Reason |
 |---|---|---|---|
-| `tests/exact_function_application.rs` | TC-194, TC-195 | splits | the TC-194 function-application tests are residue (FR-273, AD-002; not authorized): they run over the `quire-exact` `Value`, `Meter` and `Outcome`, then leave with the code; rows stay planned until QSL's evidence exists (interim handling is an open owner decision). The TC-195 tests exercise `negotiate_ieee`, which is runtime-owned and stays (FR-275-AC-19, FR-009-AC-5) |
+| `tests/exact_function_application.rs` | TC-194, TC-195 | splits | the TC-194 function-application tests are residue (FR-273, AD-002; not authorized): they run over the `quire-exact` `Value`, `Meter` and `Outcome`, then leave with the code; rows stay planned until QSL's evidence exists. The TC-195 tests exercise `negotiate_ieee`, which is runtime-owned and stays (FR-275-AC-19, FR-009-AC-5) |
 | `tests/exact_negotiation.rs` | TC-030 | stays | the `negotiate_*` predicates are runtime-owned, not a QSL port (FR-009, FR-275) |
-| `tests/exact_vocabulary.rs` | TC-033 | leaves with the residue (interim handling is an open owner decision) | residue unless `quire-exact` exports the vocabulary (FR-012) |
-| `tests/exact_equality.rs` | TC-026 | leaves with the residue (interim handling is an open owner decision) | residue: `CheckedEquality` and the checking environment; its equality-plan assertions on a kernel item leave in step 1 |
-| `tests/exact_composite.rs` | TC-024 | splits | construction of kernel `Value`s leaves in step 1; declaration-environment checks leave with the residue (interim handling is an open owner decision) |
+| `tests/exact_vocabulary.rs` | TC-033 | leaves with the residue | residue unless `quire-exact` exports the vocabulary (FR-012) |
+| `tests/exact_equality.rs` | TC-026 | leaves with the residue | residue: `CheckedEquality` and the checking environment; its equality-plan assertions on a kernel item leave in step 1 |
+| `tests/exact_composite.rs` | TC-024 | splits | construction of kernel `Value`s leaves in step 1; declaration-environment checks leave with the residue |
 | `tests/exact_arithmetic.rs`, `tests/exact_allocation.rs` | TC-016, TC-017, TC-018, TC-019, TC-023 | leaves in step 1 | the files test kernel behaviour (they also use `CHARGE_LOG_CAPACITY`, which `quire-exact` does not export, so that constant's assertions go with the kernel's accounting evidence): evidence belongs to the QSL repository, which this repository does not track |
-| `tests/exact_outcomes.rs` | TC-016, TC-017, TC-031 | splits | the kernel `Meter`, `Outcome` and injected-denial tests leave in step 1; the cases that use `TypeEnvironment`, `CheckedEquality`, `CheckedPackage`, `ObjectEnvironment`, `UnitGraph`, `EnumDeclaration` and `evaluate_quantity`, which `quire-exact` does not export, leave with the residue (interim handling is an open owner decision) |
-| `tests/exact_collection.rs` | TC-025 | splits | the collection-algebra and canonical-key cases leave in step 1; the cases built on `TypeEnvironment` and `CompositeDeclaration` leave with the residue (interim handling is an open owner decision) |
-| `tests/exact_meter_state.rs` | TC-032 | splits | `UnitGraph::admit`, `CompoundUnit` and `evaluate_quantity` cases (FR-011-AC-7) leave with the residue (interim handling is an open owner decision); the rest leave in step 1 |
-| `tests/exact_semantics.rs` | TC-034 | splits | the `UnitGraph`, `Dimension` and `evaluate_quantity` cases leave with the residue (interim handling is an open owner decision); the rest leave in step 1 |
-| `tests/exact_debug_parity.rs` | TC-035 | splits | the `CompoundUnit`, `Dimension` and `EnumDeclaration` Debug pins leave with the residue (interim handling is an open owner decision); the rest leave in step 1 |
+| `tests/exact_outcomes.rs` | TC-016, TC-017, TC-031 | splits | the kernel `Meter`, `Outcome` and injected-denial tests leave in step 1; the cases that use `TypeEnvironment`, `CheckedEquality`, `CheckedPackage`, `ObjectEnvironment`, `UnitGraph`, `EnumDeclaration` and `evaluate_quantity`, which `quire-exact` does not export, leave with the residue |
+| `tests/exact_collection.rs` | TC-025 | splits | the collection-algebra and canonical-key cases leave in step 1; the cases built on `TypeEnvironment` and `CompositeDeclaration` leave with the residue |
+| `tests/exact_meter_state.rs` | TC-032 | splits | `UnitGraph::admit`, `CompoundUnit` and `evaluate_quantity` cases (FR-011-AC-7) leave with the residue; the rest leave in step 1 |
+| `tests/exact_semantics.rs` | TC-034 | splits | the `UnitGraph`, `Dimension` and `evaluate_quantity` cases leave with the residue; the rest leave in step 1 |
+| `tests/exact_debug_parity.rs` | TC-035 | splits | the `CompoundUnit`, `Dimension` and `EnumDeclaration` Debug pins leave with the residue; the rest leave in step 1 |
 | `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | leaves in step 1 | in-crate tests of kernel `Meter` and `Integer` internals the runtime no longer defines |
 
 The runtime keeps, in the end state, only the consumption checks TC-197 to TC-199: that it uses the

@@ -42,3 +42,9 @@ tagged tests and the source.
 which carries out the dispositions. Traceability for the changed rows is intact: every FR-275 AC
 is still traced, no row or id was removed, and the planned and unmet statuses match the code at
 head, where the residue is still present.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | f28783b: the `tests/exact_function_application.rs` row is now "splits". The TC-194 function-application tests are residue and leave with the code. The TC-195 tests exercise `negotiate_ieee`, which is runtime-owned and stays (FR-275-AC-19, FR-009-AC-5). |
