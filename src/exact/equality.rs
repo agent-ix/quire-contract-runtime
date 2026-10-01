@@ -15,21 +15,18 @@
 
 use alloc::vec;
 
-use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
-use super::comparison::{ComparisonOperator, IllTyped, IllTypedCause};
-use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
-use super::decimal::{
-    compare_shifted, evaluate_decimal, power_of_ten_bits, shifted_bits, shifted_digits, Decimal,
-    DecimalOperation, DecimalType,
+use quire_exact::{
+    compare_shifted, compare_text, evaluate_decimal, power_of_ten_bits, sbits as shifted_bits,
+    sdigits as shifted_digits, Charge, ChargePoint, ComparisonOperator, Decimal, DecimalOperation,
+    DecimalType, IllTyped, IllTypedCause, Integer, LimitKind, Meter, Outcome, Rational, Refusal,
 };
+
+use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
 use super::enumeration::compare_enum;
-use super::integer::Integer;
-use super::outcome::{Outcome, Refusal, Stop};
 use super::quantity::{
     compare_quantity, convert_quantity, ConvertedValue, Quantity, QuantityTarget,
 };
-use super::rational::Rational;
-use super::text::compare_text;
+use super::stop::{OutcomeStop, Stop};
 
 /// The grammar's equality operators.
 #[non_exhaustive]
@@ -287,7 +284,10 @@ pub(crate) fn plan_pairs(left: &Value, right: &Value) -> Result<PlannedPairs, Re
             }
             (Value::Reference(l), Value::Reference(r)) => {
                 if l.universe() != r.universe() {
-                    return Err(Refusal::ForeignReference);
+                    return Err(Refusal::ForeignReference {
+                        required: l.universe(),
+                        supplied: r.universe(),
+                    });
                 }
                 l == r
             }

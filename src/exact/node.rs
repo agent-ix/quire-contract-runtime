@@ -11,7 +11,7 @@
 use alloc::collections::BTreeSet;
 use core::fmt;
 
-use super::integer::Integer;
+use quire_exact::Integer;
 
 /// Digest domain of every checked semantic node key.
 pub const NODE_KEY_DOMAIN: &str = "quire.checked-semantic-node/v1";

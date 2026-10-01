@@ -168,6 +168,7 @@ exact:
       equality: [CheckedEquality, EqualityOperand, EqualityOperator, EqualitySchedule]
       enumeration: [EnumValue]
       quantity: [QuantityOperation, QuantityTarget, QuantityUnit, Conversion, evaluate_quantity, convert_quantity]
+      boolean: [evaluate_boolean_short_circuit, ShortCircuitConnective]  # no lazy-right connective in quire-exact
     negotiation:
       rule: the negotiate_* predicates AD-016 WP7 selects
       operations: [negotiate_integer_division, negotiate_ieee]  # today
@@ -180,6 +181,30 @@ exact:
     - quire-contract-codegen and generated oracles -> quire_contract_runtime::exact
     - quire-contract-codegen -> quire-exact (normal; ADR-011 X-1)
 ```
+
+The scalar kernel, `Meter` and `Outcome` moved to `quire-exact` in IR-349 part 1, slice 1, and
+consumers adapt to the shapes it carries. The differences from the runtime's former definitions
+that a consumer can see are:
+
+- `Refusal` is `Clone` and not `Copy`, and most of its variants carry the target they refused
+  (`Refusal::IntegerOutOfDomain { target }`, `InexactDecimal { target: InexactTarget }`,
+  `ForeignReference { required, supplied }` with `UniverseId`s, and so on). `Undefined` gains
+  `SumOutOfDomain`. `Outcome` and `Undefined` are no longer `#[non_exhaustive]`, and
+  `Outcome<bool>` is not `From<bool>`: the runtime does not own the type and cannot add the impl, so
+  `operators::and_short_circuit`, `or_short_circuit` and `implies_short_circuit` stay generic over
+  any `R: From<bool>`, and a right operand that may stop uses `evaluate_boolean_short_circuit`.
+- `ChargePoint::ALL` has 62 points (ten more than before: the lookup, population, dispatch,
+  declaration-check, graph and model points), and `InjectedDenial::occurrence` is a plain `u64`.
+- `Meter` has no `charge_log_truncated`, and no `CHARGE_LOG_CAPACITY` is exported: a production
+  meter keeps `admission_count`, and the ordered `admitted_charges` log exists only under
+  `quire-exact`'s `test-support` feature, which only a dev dependency may enable.
+- `Integer`, `Rational`, `Decimal` and `Text` are `quire-exact`'s types, so their constructors,
+  accessors and `Debug` renderings are its; `IeeeValue` and `ScalarLimits` keep their shapes.
+- `ObjectReference::new` takes a `UniverseId` (a 32-byte digest) instead of the runtime's
+  `UniverseIdentity` byte string, which no longer exists; `ObjectReference::universe` returns it by
+  value.
+- The runtime's `exact::Origin` and `exact::Location` are the function-application expression path,
+  not `quire-exact`'s same-named provenance pair, which is not exposed yet (FR-275, Open questions).
 
 The table below records, for every interim-residue `exact` operation that evaluates a
 `quire-exact`-exported counterpart today, which `quire-exact` operation it calls

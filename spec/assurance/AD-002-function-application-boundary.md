@@ -57,5 +57,6 @@ Two more representation rules on this crate's Kani proof surface have no owning 
 own, same as the layout rules above: `CheckedPackage::enter` returns `Option<DepthGuard>` rather than
 `Result<DepthGuard, Stop>`, because `Stop`'s niche is where CBMC cannot fold a written discriminant
 back (`src/exact/expression.rs`); a signature check next to `enter` pins its exact return type.
-`evaluate_integer_arithmetic` builds its `Outcome<Integer>` directly rather than through an inner
-`Result<Integer, Stop>` round-trip, for the same reason (`src/exact/numeric.rs`).
+`evaluate_integer_arithmetic` built its `Outcome<Integer>` directly rather than through an inner
+`Result<Integer, Stop>` round-trip, for the same reason; it is `quire-exact`'s now (IR-349 part 1,
+slice 1) and the rule is that crate's to keep.

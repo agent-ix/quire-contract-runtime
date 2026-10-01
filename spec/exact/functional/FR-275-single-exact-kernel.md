@@ -26,7 +26,15 @@ that module is only the backend negotiators, which are runtime-owned (below); th
 The end state is delivered in two steps:
 
 1. **Step 1, the `quire-exact` exports now (IR-349 part 1).** Everything `quire-exact` exports today
-   is deleted from the runtime and consumed from `quire-exact`.
+   is deleted from the runtime and consumed from `quire-exact`. Step 1 is delivered in slices.
+   Slice 1 deleted the scalar families (integer, rational, decimal, text, IEEE values and
+   operations, division and ordering), `Meter` with its charge points and `ScalarLimits`, and
+   `Outcome` with `Undefined` and `Refusal`, and `CardinalityBound` and `CollectionKind`, which
+   `Refusal` carries. Until the later slices land, the runtime still defines kernel-exported items
+   built over those: `Value` and `ValueType`, collections and their key, `NodeKey`,
+   `ObjectReference` (which already holds `quire-exact`'s `UniverseId`, because
+   `Refusal::ForeignReference` carries one), `Quantity` and equality. They are not residue; they are
+   deleted by the remaining slices of part 1.
 2. **Step 2, the residue after QSL-358 phase 2.** QSL says (as relayed by the team leader, from the
    IR planner) that QSL-358 moves the residue (function application, checking environments,
    containment and unit graphs, enumeration declarations and the carried compiler vocabulary) into a
@@ -178,6 +186,7 @@ residue item is listed: the exported item is deleted in step 1. The negotiators 
 | Checking environments: `TypeEnvironment`, composite declarations, `ObjectEnvironment`, `CheckedEquality` | FR-008 | `src/exact/composite.rs` (declarations and `TypeEnvironment`, not `Value`/`ValueType`), `reference.rs` (`ObjectEnvironment` and its refusal types only; the identities and `ObjectReference` are exported by `quire-exact` and are deleted in step 1), `equality.rs` (`CheckedEquality`, not the equality plan) |
 | Containment and unit graphs, enumeration declarations | FR-008, FR-007 | `src/exact/containment.rs`, `unit.rs`, `enumeration.rs` |
 | Carried compiler vocabulary | FR-012 | `src/exact/definition.rs`, `node.rs` (`SemanticGraphCause` and `InvalidSemanticGraph` only; `NodeKey` is exported by `quire-exact` and is deleted in step 1) |
+| Stop-carrying short-circuit Boolean connective: `evaluate_boolean_short_circuit`, `ShortCircuitConnective` (added when IR-349 part 1, slice 1 re-measured the list: `quire-exact` exports the eager `evaluate_boolean` and `retain_boolean` but no connective whose right operand is lazy and may stop; generated oracles call it) | FR-011, FR-007 | `src/exact/boolean.rs` |
 
 The list is a classification aid, not a frozen record; an item `quire-exact` exports is not residue
 and is deleted in step 1.
@@ -197,6 +206,14 @@ and is deleted in step 1.
   upstream" status; leaving rows stay "planned" with a reason (FR-275-AC-15).
 - **`quire-semantic-value` waits on the owner's FB-05 ruling** (QSL-358 slices 1 to 5, as relayed);
   the dependency spelling and one-copy rules above apply to it once it exists.
+- **`Origin` and `Location` name two different things (open, found by IR-349 part 1, slice 1).**
+  `quire-exact` exports `Origin` and `Location` as the kernel provenance pair (a node key and an
+  occurrence key), and says its pair is a fresh design unrelated to QSL's expression-tree path of the
+  same names. The runtime's `exact::Origin` and `exact::Location` are that expression-tree path, used by
+  function application. interface-001-AC-3 and AC-5 give the names to the kernel, so the runtime's
+  residue types need other names before the kernel's can be exposed; slice 1 exposes neither pair at
+  the `exact` path's kernel names and leaves the residue pair as it was. The new names are a decision
+  for the owner and QSL-358.
 - **Kernel shape change.** `quire-exact`'s `Value` is not the runtime's today (it shares through
   `Arc`, carries no object graph, and lacks cross-unit quantity arithmetic and the equality
   conversion table). QSL-358 slice 0 gives it an iterative `Value` (as relayed). Adapting the

@@ -12,8 +12,8 @@ use quire_contract_runtime::exact::{
     IeeeItemRequirement, IeeeOperationKind, IeeeUnsupportedCause, IeeeWidth, InputRefusal, Integer,
     IntegerDivisionConsumer, IntegerDivisionDisposition, LimitKind, Location, Meter, NodeKey,
     ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin, Outcome,
-    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, TypeEnvironment, UniverseIdentity,
-    Value, ValueType, MAX_CALL_DEPTH,
+    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, TypeEnvironment, UniverseId, Value,
+    ValueType, MAX_CALL_DEPTH,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -56,7 +56,7 @@ fn key(byte: u8) -> NodeKey {
 
 fn a_reference() -> ObjectReference {
     ObjectReference::new(
-        UniverseIdentity::new(b"u").unwrap(),
+        UniverseId::from_digest([0x75; 32]),
         key(9),
         ObjectIdentity::new(b"o").unwrap(),
     )
@@ -529,7 +529,7 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     let mut meter =
         Meter::new(UNLIMITED).with_injected_denial(quire_contract_runtime::exact::InjectedDenial {
             point: ChargePoint::FunctionCall,
-            occurrence: std::num::NonZeroU64::new(1).unwrap(),
+            occurrence: 1,
         });
     let evaluation = package.call("f", Vec::new(), &objects, &mut meter).unwrap();
     assert!(matches!(evaluation.outcome, Outcome::Incomplete(_)));

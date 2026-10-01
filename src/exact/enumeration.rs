@@ -12,10 +12,12 @@ use alloc::collections::BTreeSet;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
-use super::comparison::{ComparisonOperator, IllTyped, IllTypedCause};
+use quire_exact::{
+    Charge, ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, LimitKind, Meter, Outcome,
+};
+
 use super::node::{is_identifier, refuse, InvalidSemanticGraph, NodeKey, SemanticGraphCause};
-use super::outcome::{Outcome, Stop};
+use super::stop::{OutcomeStop, Stop};
 
 /// An admitted enum declaration node.
 #[derive(Clone, Debug, Eq, PartialEq)]
