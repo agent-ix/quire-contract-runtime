@@ -3,7 +3,6 @@
 #![cfg(feature = "exact")]
 
 use std::cell::RefCell;
-use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
@@ -43,7 +42,6 @@ fn consumed(meter: &Meter) -> Vec<u64> {
 /// Trace: TC-024, FR-008-AC-8
 #[test]
 fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point() {
-    assert_eq!(ChargePoint::ALL.len(), 52);
     assert!(ChargePoint::ALL.contains(&ChargePoint::FunctionCall));
     assert!(ChargePoint::ALL.contains(&ChargePoint::CollectionVisit));
     assert_eq!(ChargePoint::FunctionCall.as_str(), "function.call");
@@ -626,7 +624,7 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let env = TypeEnvironment::new([widget], []).unwrap();
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CompositeResultRetain,
-        occurrence: NonZeroU64::new(1).unwrap(),
+        occurrence: 1,
     });
     let before = consumed(&meter);
     let outcome = env

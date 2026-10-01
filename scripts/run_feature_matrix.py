@@ -71,7 +71,7 @@ FEATURE_SETS = (
     # The exact oracle tests are `#![cfg(feature = "exact")]`, so no other row runs
     # them. The QSL shared-corpus agreement oracle is removed from this repository; recreating
     # it in agent-ix/quire-integration is planned under Linear IR-430.
-    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_arithmetic", "--test", "exact_allocation"], ["TC-016", "TC-017", "TC-023", "FR-006", "FR-007"], True),
+    ("test-exact", ["--locked", "--no-default-features", "--features", "exact", "--test", "exact_outcomes", "--test", "exact_meter_state"], ["TC-031", "TC-032", "FR-006", "FR-007"], True),
 )
 
 # Actual no_std-target library builds, not host tests that can obtain std through

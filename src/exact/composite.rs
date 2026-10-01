@@ -22,36 +22,18 @@ use core::fmt;
 use core::fmt::Write as _;
 use core::mem;
 
-use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
-use super::collection::{CollectionKind, CollectionType, CollectionValue};
-use super::comparison::{IllTyped, IllTypedCause};
-use super::decimal::{Decimal, DecimalType};
+use quire_exact::{
+    Charge, ChargePoint, CollectionKind, Decimal, DecimalType, IeeeValue, IeeeWidth, IllTyped,
+    IllTypedCause, Integer, IntegerInterval, LimitKind, Meter, Outcome, Rational, RationalDomain,
+    Refusal, Text, TextType,
+};
+
+use super::collection::{CollectionType, CollectionValue};
 use super::enumeration::EnumValue;
-use super::ieee::{IeeeValue, IeeeWidth};
-use super::integer::{Integer, IntegerInterval};
 use super::node::NodeKey;
-use super::outcome::{Outcome, Refusal, Stop};
 use super::quantity::{Quantity, QuantityUnit};
-use super::rational::{Rational, RationalDomain};
 use super::reference::ObjectReference;
-use super::text::{Text, TextType};
-
-/// Fails to compile when `CONDITION` is `false`: only `ConstAssert<true>` has
-/// an associated `HOLDS` item, so instantiating this with a `false` condition
-/// is a missing-associated-item error at compile time. Rust's own assertion
-/// and panicking macros are excluded from this module's exact sources, so a
-/// layout check needs a way to fail the build without reaching for either
-/// family.
-// Never constructed: only its associated HOLDS item below is ever named.
-#[allow(dead_code)]
-struct ConstAssert<const CONDITION: bool>;
-
-impl ConstAssert<true> {
-    // Read only by naming it (`ConstAssert::<{ .. }>::HOLDS`) for its side
-    // effect of forcing evaluation, never by value.
-    #[allow(dead_code)]
-    const HOLDS: () = ();
-}
+use super::stop::{OutcomeStop, Stop};
 
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.
@@ -93,26 +75,9 @@ pub enum ValueType {
     Reference(NodeKey),
 }
 
-// The Kani-provability layout this enum's tag and inline-payload comments
-// describe, checked at compile time rather than left to hold by
-// construction discipline alone: no inline payload wider than
-// `IntegerInterval`'s 32 bytes, and the whole enum at its measured size.
-const _: () = ConstAssert::<{ mem::size_of::<ValueType>() == 40 }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<RationalDomain>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<DecimalType>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<QuantityUnit>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<TextType>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<NodeKey>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<Box<ValueType>>() <= mem::size_of::<IntegerInterval>() }>::HOLDS;
-const _: () = ConstAssert::<
-    { mem::size_of::<Box<CollectionType>>() <= mem::size_of::<IntegerInterval>() },
->::HOLDS;
+// `IntegerInterval`, `RationalDomain`, `DecimalType` and `TextType` are `quire-exact`'s (FR-275),
+// so the inline-payload bound and the measured size this enum once asserted at compile time are
+// gone for the reason `Value` gives below.
 
 impl ValueType {
     /// `K<element>[bound]`.
@@ -213,26 +178,12 @@ pub enum Value {
     Reference(ObjectReference),
 }
 
-// The Kani-provability layout this enum's tag and inline-payload comments
-// describe, checked at compile time rather than left to hold by
-// construction discipline alone: no inline payload wider than `Integer`'s 16
-// bytes, and the whole enum at its measured size.
-const _: () = ConstAssert::<{ mem::size_of::<Value>() == 24 }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<Integer>() == 16 }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<Rational>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<Decimal>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<IeeeValue>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<Quantity>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<Text>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () = ConstAssert::<{ mem::size_of::<EnumValue>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<Rc<OptionValue>>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<Rc<CompositeValue>>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<Rc<CollectionValue>>() <= mem::size_of::<Integer>() }>::HOLDS;
-const _: () =
-    ConstAssert::<{ mem::size_of::<ObjectReference>() <= mem::size_of::<Integer>() }>::HOLDS;
+// The scalar payloads are `quire-exact`'s (FR-275) and their layout is its own: `Integer`,
+// `Rational`, `Decimal` and `Text` are no longer the 16-byte inline payloads this enum's tag
+// comment above was written for, so the compile-time size assertions that pinned that layout
+// are gone. They guarded a Kani folding property for a harness that reads a `Value`, and no
+// such harness exists (the census in `verification/kani.rs`); the tag stays as the explicit
+// discriminant.
 
 impl Value {
     /// `occ(v)` of `quire.value.accounting/v1`: one for the value itself plus

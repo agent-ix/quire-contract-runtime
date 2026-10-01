@@ -113,20 +113,28 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
 }
 
 /// `and_short_circuit`/`or_short_circuit`/`implies_short_circuit` are generic over what `right`
-/// returns (`R: From<bool>`): a plain `bool` for an ordinary generated expression, or a
-/// stop-carrying type such as `exact::Outcome<bool>` when the right operand may itself be
-/// undefined, refused or incomplete. `quire-contract-codegen`'s oracle renderer calls these three
-/// functions by name for `BooleanOperator::ShortCircuitAnd`/`ShortCircuitOr`/`Implication`
+/// returns (`R: From<bool>`): a plain `bool` for an ordinary generated expression, or any
+/// stop-carrying type that is `From<bool>`. `quire-contract-codegen`'s oracle renderer calls these
+/// three functions by name for `BooleanOperator::ShortCircuitAnd`/`ShortCircuitOr`/`Implication`
 /// (`agent-ix/quire-contract-runtime#27`), so this crate must be able to carry a stop through them
-/// without the caller deciding it outside the connective.
+/// without the caller deciding it outside the connective. The kernel's `Outcome<bool>` is not
+/// `From<bool>` and the runtime cannot add the impl, so the test carries its stop in a local type.
 ///
 /// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
-#[cfg(feature = "exact")]
 #[test]
 fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {
-    use quire_contract_runtime::exact::{Outcome, Refusal};
+    #[derive(Clone, Debug, PartialEq)]
+    enum Carried {
+        Completed(bool),
+        Stopped,
+    }
+    impl From<bool> for Carried {
+        fn from(value: bool) -> Self {
+            Self::Completed(value)
+        }
+    }
 
-    let stop: Outcome<bool> = Outcome::Refused(Refusal::InexactDecimal);
+    let stop = Carried::Stopped;
 
     // The right operand decides the result and stops: the stop returns unchanged.
     assert_eq!(and_short_circuit(true, || stop.clone()), stop);
@@ -140,27 +148,27 @@ fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {
         calls.set(calls.get() + 1);
         stop.clone()
     };
-    assert_eq!(and_short_circuit(false, right), Outcome::Completed(false));
-    assert_eq!(or_short_circuit(true, right), Outcome::Completed(true));
+    assert_eq!(and_short_circuit(false, right), Carried::Completed(false));
+    assert_eq!(or_short_circuit(true, right), Carried::Completed(true));
     assert_eq!(
         implies_short_circuit(false, right),
-        Outcome::Completed(true)
+        Carried::Completed(true)
     );
     assert_eq!(calls.get(), 0);
 
-    // The right operand decides the result and completes: the plain bool it produces propagates
-    // unchanged, wrapped as a completed outcome.
+    // The right operand decides the result and completes: the value it produces propagates
+    // unchanged.
     assert_eq!(
-        and_short_circuit(true, || Outcome::Completed(false)),
-        Outcome::Completed(false)
+        and_short_circuit(true, || Carried::Completed(false)),
+        Carried::Completed(false)
     );
     assert_eq!(
-        or_short_circuit(false, || Outcome::Completed(true)),
-        Outcome::Completed(true)
+        or_short_circuit(false, || Carried::Completed(true)),
+        Carried::Completed(true)
     );
     assert_eq!(
-        implies_short_circuit(true, || Outcome::Completed(false)),
-        Outcome::Completed(false)
+        implies_short_circuit(true, || Carried::Completed(false)),
+        Carried::Completed(false)
     );
 }
 

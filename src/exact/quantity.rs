@@ -8,12 +8,14 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::cmp::Ordering;
 
-use super::accounting::{Charge, ChargePoint, LimitKind, Meter};
-use super::comparison::{ComparisonOperator, IllTyped, IllTypedCause};
-use super::decimal::{DecimalLoss, DecimalResult, DecimalType, Placed, RoundingMode};
-use super::integer::{BoundedInteger, Integer, IntegerInterval};
-use super::outcome::{Outcome, Refusal, Stop, Undefined};
-use super::rational::{Rational, RationalArithmetic};
+use quire_exact::{
+    rational_arithmetic_bits, sbits, sdigits, BoundedInteger, Charge, ChargePoint,
+    ComparisonOperator, DecimalLoss, DecimalResult, DecimalType, IllTyped, IllTypedCause,
+    InexactTarget, Integer, IntegerInterval, LimitKind, Meter, Outcome, Placed, Rational,
+    RationalArithmetic, Refusal, RoundingMode, Undefined,
+};
+
+use super::stop::{OutcomeStop, Stop};
 use super::unit::{CompoundUnit, Dimension, Unit, UnitEdge};
 
 /// The unit of a quantity: an admitted declared unit or a compound unit
@@ -283,22 +285,25 @@ fn read_identities(operands: &[&Quantity], meter: &mut Meter) -> Result<(), Stop
 /// One scheduled exact rational event `left op right`, charged from the
 /// operands' parts before the result is computed. A zero divisor is refused
 /// before the charge.
-fn rational_event(
-    operation: RationalArithmetic,
-    left: &Rational,
-    right: &Rational,
-    meter: &mut Meter,
-) -> Result<Rational, Stop> {
-    if operation == RationalArithmetic::Divide && right.is_zero() {
-        return Err(Stop::Undefined(Undefined::DivisionByZero));
+fn rational_event(operation: RationalArithmetic<'_>, meter: &mut Meter) -> Result<Rational, Stop> {
+    if let RationalArithmetic::Divide(_, right) = operation {
+        if right.is_zero() {
+            return Err(Stop::Undefined(Undefined::DivisionByZero));
+        }
     }
-    meter.charge(Charge::new(ChargePoint::UnitRationalArithmetic).size(
-        LimitKind::IntegerBits,
-        operation.charge_bits(left.parts(), right.parts()),
-    ))?;
-    operation
-        .apply(left, right)
-        .ok_or(Stop::Undefined(Undefined::DivisionByZero))
+    meter.charge(
+        Charge::new(ChargePoint::UnitRationalArithmetic)
+            .exact_size(LimitKind::IntegerBits, rational_arithmetic_bits(operation)),
+    )?;
+    match operation {
+        RationalArithmetic::Add(left, right) => Ok(left.add(right)),
+        RationalArithmetic::Subtract(left, right) => Ok(left.sub(right)),
+        RationalArithmetic::Multiply(left, right) => Ok(left.mul(right)),
+        RationalArithmetic::Divide(left, right) => left
+            .div(right)
+            .ok_or(Stop::Undefined(Undefined::DivisionByZero)),
+        RationalArithmetic::Negate(operand) => Ok(operand.neg()),
+    }
 }
 
 /// The direction an edge is traversed.
@@ -406,11 +411,11 @@ fn evaluate(operation: QuantityOperation<'_>, meter: &mut Meter) -> Result<Quant
     check_undefined(operation)?;
     let result = match operation {
         QuantityOperation::Add(a, b) => Quantity::new(
-            rational_event(RationalArithmetic::Add, &a.0.value, &b.0.value, meter)?,
+            rational_event(RationalArithmetic::Add(&a.0.value, &b.0.value), meter)?,
             a.0.unit.clone(),
         ),
         QuantityOperation::Subtract(a, b) => Quantity::new(
-            rational_event(RationalArithmetic::Subtract, &a.0.value, &b.0.value, meter)?,
+            rational_event(RationalArithmetic::Subtract(&a.0.value, &b.0.value), meter)?,
             a.0.unit.clone(),
         ),
         QuantityOperation::Multiply(a, b) | QuantityOperation::Divide(a, b) => {
@@ -422,12 +427,12 @@ fn evaluate(operation: QuantityOperation<'_>, meter: &mut Meter) -> Result<Quant
                 (a.0.unit.canonical_compound(), b.0.unit.canonical_compound());
             if matches!(operation, QuantityOperation::Multiply(..)) {
                 Quantity::new(
-                    rational_event(RationalArithmetic::Multiply, &left, &right, meter)?,
+                    rational_event(RationalArithmetic::Multiply(&left, &right), meter)?,
                     QuantityUnit::Compound(left_unit.multiply(&right_unit)),
                 )
             } else {
                 Quantity::new(
-                    rational_event(RationalArithmetic::Divide, &left, &right, meter)?,
+                    rational_event(RationalArithmetic::Divide(&left, &right), meter)?,
                     QuantityUnit::Compound(left_unit.divide(&right_unit)),
                 )
             }
@@ -458,14 +463,14 @@ fn events(
         current = match direction {
             Direction::Forward => {
                 let scaled =
-                    rational_event(RationalArithmetic::Multiply, &current, edge.scale(), meter)?;
-                rational_event(RationalArithmetic::Add, &scaled, edge.offset(), meter)?
+                    rational_event(RationalArithmetic::Multiply(&current, edge.scale()), meter)?;
+                rational_event(RationalArithmetic::Add(&scaled, edge.offset()), meter)?
             }
             Direction::Reverse => {
                 let shifted =
-                    rational_event(RationalArithmetic::Subtract, &current, edge.offset(), meter)?;
+                    rational_event(RationalArithmetic::Subtract(&current, edge.offset()), meter)?;
                 // Admitted scales are nonzero.
-                rational_event(RationalArithmetic::Divide, &shifted, edge.scale(), meter)?
+                rational_event(RationalArithmetic::Divide(&shifted, edge.scale()), meter)?
             }
         };
     }
@@ -521,17 +526,25 @@ fn convert(
             ConvertedValue::Exact(exact)
         }
         Target::Decimal(decimal) => {
-            let placed = place(&exact, decimal, Retained::Decimal, meter)?;
-            placed.check_membership(decimal).map_err(Stop::Refused)?;
+            let admitted = place(&exact, decimal, Retained::Decimal, meter)?
+                .admit()
+                .map_err(Stop::Refused)?;
             charge_retain(meter)?;
-            ConvertedValue::Decimal(placed.retain(decimal))
+            ConvertedValue::Decimal(admitted.retain())
         }
         Target::Integer { placement, domain } => {
-            let (coefficient, loss) =
-                place(&exact, placement, Retained::Integer, meter)?.into_integer();
-            let value = domain
-                .admit(coefficient)
-                .map_err(|_| Stop::Refused(Refusal::IntegerOutOfDomain))?;
+            let out_of_domain = || {
+                Stop::Refused(Refusal::IntegerOutOfDomain {
+                    target: Box::new((*domain).clone()),
+                })
+            };
+            // The scale-zero placement's membership is the integer domain.
+            let (coefficient, loss) = place(&exact, placement, Retained::Integer(domain), meter)?
+                .admit()
+                .map_err(|_| out_of_domain())?
+                .into_integer()
+                .ok_or(Stop::Refused(Refusal::CheckedInvariant))?;
+            let value = domain.admit(coefficient).map_err(|_| out_of_domain())?;
             charge_retain(meter)?;
             ConvertedValue::Integer { value, loss }
         }
@@ -547,11 +560,11 @@ fn convert(
 /// The representation a placed coefficient is retained as, which selects the
 /// size amounts of its `unit.target-domain` charge.
 #[derive(Clone, Copy)]
-enum Retained {
+enum Retained<'a> {
     /// A decimal: `integer_bits` and `decimal_digits` of the coefficient.
     Decimal,
-    /// An integer: `integer_bits` of the rounded integer only.
-    Integer,
+    /// An integer of the declared domain: `integer_bits` of the rounded integer only.
+    Integer(&'a IntegerInterval),
 }
 
 /// Place `exact = a/b` at the decimal target's scale `T` and charge
@@ -561,18 +574,31 @@ enum Retained {
 fn place(
     exact: &Rational,
     decimal: &DecimalType,
-    retained: Retained,
+    retained: Retained<'_>,
     meter: &mut Meter,
 ) -> Result<Placed, Stop> {
-    let placement = decimal.placement(exact).map_err(Stop::Refused)?;
-    let (bits, digits) = placement.retained_sizes(decimal);
-    let charge =
-        Charge::new(ChargePoint::UnitTargetDomain).exact_size(LimitKind::IntegerBits, bits.clone());
+    // An integer target's strict-`exact` refusal names the declared `Int[..]`, not the
+    // scale-zero placement type (FR-096).
+    let refuse = |refusal: Refusal| match (refusal, retained) {
+        (Refusal::InexactDecimal { .. }, Retained::Integer(domain)) => {
+            Stop::Refused(Refusal::InexactDecimal {
+                target: InexactTarget::Integer(Box::new(domain.clone())),
+            })
+        }
+        (refusal, _) => Stop::Refused(refusal),
+    };
+    let placement = decimal.placement(exact).map_err(refuse)?;
+    // Sized from the reduced exact numerator `a`, before placement materializes any coefficient:
+    // `(sbits(a,T), sdigits(a,T))`, which is `bits(a)` for an integer target (scale zero).
+    let numerator = exact.numerator();
+    let scale = u64::from(decimal.max_scale());
+    let charge = Charge::new(ChargePoint::UnitTargetDomain)
+        .exact_size(LimitKind::IntegerBits, sbits(numerator, scale));
     meter.charge(match retained {
-        Retained::Decimal => charge.exact_size(LimitKind::DecimalDigits, digits.clone()),
-        Retained::Integer => charge,
+        Retained::Decimal => charge.exact_size(LimitKind::DecimalDigits, sdigits(numerator, scale)),
+        Retained::Integer(_) => charge,
     })?;
-    placement.materialize(decimal).map_err(Stop::Refused)
+    placement.materialize().map_err(refuse)
 }
 
 /// The top-level equality and ordering schedule: both root paths, left then
