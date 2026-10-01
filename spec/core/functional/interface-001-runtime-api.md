@@ -86,7 +86,7 @@ invariants:
 compatibility:
   enums: non-exhaustive; consumers must preserve future unknown states
   const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at the runtime's Rust floor
-  msrv: Rust 1.82
+  msrv: Rust 1.98.1
   licensing: AGPL-3.0-or-later
   publication: disabled (`publish = false`)
 ```
@@ -191,9 +191,8 @@ The table below records, for every interim-residue `exact` operation that evalua
 
 **Open issue.** The upstream `quire-exact` crate is now `#![no_std]` plus `alloc` and builds for
 `thumbv7em-none-eabi` in its own repository's gate (QSL-357), so the `no_std` half of the earlier
-conflict is resolved. The Rust floor is decided and was confirmed by the owner on 2026-10-01: `quire-exact`
-needs Rust 1.82 (as relayed), and the runtime takes one floor, 1.82, for all features, the IR
-planner's call under IR-18 (as relayed).
+conflict is resolved. The Rust floor is the owner's decision of 2026-10-01: the runtime takes one floor,
+Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relayed).
 `compatibility.msrv` below states it. The end state (no ported QSL code in the runtime) and the `deny.toml` guard on QSL crates are
 [FR-275](../../exact/functional/FR-275-single-exact-kernel.md).
 

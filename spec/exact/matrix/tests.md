@@ -38,9 +38,9 @@ type: TestMatrix
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
 | FR-273 | FR-273-AC-5 | TC-194 | 🚧 partly evidenced: the QSL shared-corpus half is removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430; the runtime-only ordering tests remain. AC-5 quantifies over shared-corpus function-application vectors only, and the shared corpus agrees on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (the removed QSL shared-corpus vectors; see Evidence Locations) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
 | FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `negotiate_ieee(&[IeeeItemRequirement], &IeeeBackendCapabilities)` receives no `Meter` at all, so no application-time charge is reachable from it by construction — the evidence is that signature plus the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) proving no conversion path from a disposition into `Outcome`/`InputRefusal` exists. `tc_195_negotiate_ieee_takes_no_meter_by_signature` inspects that signature and confirms negotiation still runs and reports one disposition per requirement; it carries no `Meter` assertion of its own, since a `Meter` never passed to `negotiate_ieee` cannot be evidence of anything the call did |
-| FR-275 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | TC-197 | 🚧 planned (Linear IR-349; AC-16 and AC-18 also need QSL-358 phase 2): the runtime still holds its own copy of the kernel and of the residue. IR-349 part 1 made AC-3 to AC-6 true (the optional `quire-exact` git dependency at `branch = "main"`, one lock entry, `make deny`'s one-copy check); AC-1, AC-2, AC-12, AC-13 and AC-17 need the copy deleted |
-| FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | ✅ implemented (IR-349 part 1): `deny.toml` bans every listed QSL crate, and `make deny-mutations` (`scripts/check_deny_bans.sh`) adds `qsl-eval`, `qsl-replay`, `qsl-semantics` and `quire-spec-language` as normal and as dev dependencies in a scratch copy and requires cargo-deny's `banned` error for each |
-| FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | ✅ implemented (IR-349 part 1): `make test-features` row `build-exact-no-std-msrv` builds `exact` without `std` for `thumbv7em-none-eabi` on 1.82 with `quire-exact` in the graph; `make msrv` and `make size` run on 1.82; the footprint graph holds no `quire-exact`; `make size` measures 913 bytes |
+| FR-275 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | TC-197 | 🚧 planned (Linear IR-349; AC-16 and AC-18 also need QSL-358 phase 2): the runtime still holds its own copy of the kernel and of the residue. The IR-349 foundation slice (floor, dependency, bans, one copy; it deletes nothing) made AC-3 to AC-6 true (the optional `quire-exact` git dependency at `branch = "main"`, one lock entry, `make deny`'s one-copy check); AC-1, AC-2, AC-12, AC-13 and AC-17 need the copy deleted |
+| FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | ✅ implemented (IR-349 foundation slice; evidence is a gate script, not a `tc_NNN` test): `deny.toml` bans every listed QSL crate, and `make deny-mutations` (`scripts/check_deny_bans.sh`) adds `qsl-eval`, `qsl-replay`, `qsl-semantics` and `quire-spec-language` as normal and as dev dependencies in a scratch copy and requires cargo-deny's `banned` error for each |
+| FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | ✅ implemented (IR-349 foundation slice; evidence is gate targets, not a `tc_NNN` test): `make test-features` row `build-exact-no-std-msrv` builds `exact` without `std` for `thumbv7em-none-eabi` on 1.98.1 with `quire-exact` in the graph; `make msrv` and `make size` run on 1.98.1; `make size` fails when the footprint graph holds `quire-exact` and when the linked size leaves the band |
 
 ## Test Case Summary
 
@@ -66,12 +66,14 @@ type: TestMatrix
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
 | TC-197 | Inspect that the runtime holds one kernel and no copy | Integration | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | 🚧 planned (Linear IR-349): the kernel copy is deleted in part 1 and the residue in part 2, after QSL-358 phase 2 |
-| TC-198 | Fail the build on a dependency on a guarded QSL crate | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | ✅ implemented (IR-349 part 1): `deny.toml` entries and `make deny-mutations` |
-| TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | ✅ implemented (IR-349 part 1): the exact profile builds on 1.82 with `quire-exact` in the graph; the runtime's own copy is still deleted by later parts |
+| TC-198 | Fail the build on a dependency on a guarded QSL crate | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | ✅ implemented (IR-349 foundation slice): `deny.toml` entries and `make deny-mutations` |
+| TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | ✅ implemented (IR-349 foundation slice): the exact profile builds on 1.98.1 with `quire-exact` in the graph and the footprint graph holds none; the runtime's own copy is still deleted by later parts |
 
-FR-009-AC-5, FR-010-AC-6 and FR-273-AC-4 are verified by `compile_fail` doctests. Every other row
-is backed by a `tc_NNN` Rust test; executable semantic claims retain direct acceptance-criterion
-trace tags. Rows marked planned or partly evidenced above are the exceptions.
+FR-009-AC-5, FR-010-AC-6 and FR-273-AC-4 are verified by `compile_fail` doctests, and TC-198 and
+TC-199 by gate targets (`make deny-mutations`, `make test-features`, `make msrv`, `make size`;
+see Evidence Locations). Every other row is backed by a `tc_NNN` Rust test; executable semantic
+claims retain direct acceptance-criterion trace tags. Rows marked planned or partly evidenced above
+are the exceptions.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
 (`tc_031_further_charges_after_the_injected_denial_meter_normally`,
@@ -83,7 +85,8 @@ trace tags. Rows marked planned or partly evidenced above are the exceptions.
 ## Evidence at the kernel move
 
 FR-275 moves the exact value kernel to `quire-exact` and deletes the runtime's copy in two steps
-(code steps IR-349 part 1 and part 2). Nothing in this matrix is deleted by either step
+(code steps IR-349 part 1 and part 2, after the foundation slice that adds the dependency, the
+bans and the one-copy check and deletes nothing). Nothing in this matrix is deleted by either step
 (FR-275-AC-14). Until IR-349 lands every row above keeps its status; when the files below are
 deleted, IR-349 sets each affected row to planned with the reason in the last column, never removes
 it. A leaving row will never be backed by RT: its evidence lives in the QSL repository. The matrix
@@ -115,6 +118,12 @@ QSL kernel, holds no ported code and guards its edges.
 
 ## Evidence Locations
 
+- TC-198: `deny.toml` (the `[bans]` list and `[graph] all-features = true`) and
+  `scripts/check_deny_bans.sh`, run by `make deny-mutations`, which adds each banned crate to a
+  scratch copy of the tracked files and requires cargo-deny's `banned` error. TC-199:
+  `scripts/run_feature_matrix.py` (row `build-exact-no-std-msrv`, `make test-features`),
+  `make msrv` and `make size` (linked band, panic relocations and the footprint-graph check that
+  `quire-exact` is absent). Neither has a Rust test.
 - TC-194, TC-195: `tests/exact_function_application.rs` (`--features exact`), landed under
   agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
   `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.

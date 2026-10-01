@@ -90,7 +90,7 @@ pub const MAX_CALL_DEPTH: u64 = 128;
 /// The source of [`CheckedPackage::id`]: a monotonic counter stamped once per
 /// [`PackageDeclarations::check`] call. `thumbv7em-none-eabi` has
 /// compare-and-swap, so `AtomicUsize` is available at this crate's MSRV
-/// (1.82) on the governed target; `Ordering::Relaxed` is enough because the
+/// (1.98.1) on the governed target; `Ordering::Relaxed` is enough because the
 /// property this counter needs is "does not race across concurrent `check`
 /// calls," not any cross-thread happens-before relationship with other
 /// state. `fetch_add` wraps silently on overflow rather than panicking, and

@@ -21,7 +21,7 @@ make test             # the full test suite with all features
 make test-features    # the crate's feature matrix
 make doc              # warning-denied docs for runtime and footprint
 make msrv             # all-target MSRV compatibility check
-make size             # thumbv7em linked footprint and panic-relocation gate
+make size             # thumbv7em linked footprint and panic-relocation gate; footprint graph holds no quire-exact
 make spec             # Quire validation and coverage
 make build            # release build
 make clean            # cargo clean

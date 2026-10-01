@@ -12,7 +12,7 @@ LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 PYTHON ?= python3
 QUIRE ?= quire
 
-MSRV := 1.82.0
+MSRV := 1.98.1
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
 
@@ -90,6 +90,13 @@ size:
 	$(CARGO) +$(MSRV) build $(LOCKED) --release --manifest-path measurement/footprint/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(FOOTPRINT_TARGET_DIR)
 	bash scripts/check_linked_footprint.sh
+	@# FR-275-AC-10: the footprint graph must not resolve `quire-exact`. The size band alone
+	@# would not catch a regression that enabled `exact` there, so the graph is checked directly.
+	@set -e; graph=$$($(CARGO) tree $(LOCKED) -p quire-contract-runtime-footprint \
+		--target $(FOOTPRINT_TARGET) --edges normal,build,dev --prefix none); \
+	if printf '%s\n' "$$graph" | grep -q '^quire-exact '; then \
+		echo "footprint graph resolves quire-exact (FR-275-AC-10)" >&2; exit 1; \
+	fi; echo "footprint graph holds no quire-exact"
 
 .PHONY: spec
 spec:

@@ -10,10 +10,16 @@ relationships:
 
 ## Description
 
-Verify the Rust 1.82 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte
+Verify the Rust 1.98.1 `thumbv7em-none-eabi` footprint consumer remains between the 500-byte
 population floor and 4 KiB ceiling for linked `.text` plus `.rodata` and retains no runtime/harness
-panic-path reference. IR-349 part 1 moved this from Rust 1.75 to 1.82 and re-measured it
-(FR-275-AC-20, AC-21).
+panic-path reference (FR-275-AC-20, AC-21).
+
+Measured values (informational; the band above is the criterion): 973 bytes on Rust 1.98.1, 0
+panic references, taken by the IR-349 foundation slice. The same population measured 907 bytes on
+Rust 1.75 and 913 on 1.82. Unmodified, the population folds to 126 bytes on 1.98.1 (the compiler
+removes the verdict data the entry point never returns), so the footprint crate keeps those
+values opaque with `core::hint::black_box`; the band's floor exists to prove the population is
+linked.
 
 ## Test Procedure
 

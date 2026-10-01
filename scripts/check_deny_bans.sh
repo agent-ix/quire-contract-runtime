@@ -4,7 +4,8 @@
 # For each guarded crate, in a scratch copy of the workspace that is never committed, add the
 # crate as a normal dependency and as a dev dependency, run `cargo deny`, and require both a
 # non-zero exit and cargo-deny's `banned` diagnostic naming the crate. A licence or source
-# failure alone does not count. The unmodified tree must pass first.
+# failure alone does not count. The unmodified tree must pass first. Scratch copies hold the
+# tracked files only, so a local `make use-local` patch never reaches them.
 #
 # Usage: scripts/check_deny_bans.sh [crate ...]   (default: the TC-198 step 3 crates)
 set -uo pipefail
@@ -23,7 +24,10 @@ trap 'rm -rf "$scratch"' EXIT
 copy_workspace() {
   local dest="$1"
   mkdir -p "$dest"
-  (cd "$root" && tar --exclude=./target --exclude=./.git --exclude='*-target' -cf - .) |
+  # Tracked files only (their working-tree content): untracked and ignored files, such as the
+  # `.cargo/config.toml` that `make use-local` writes, would patch the very git source the bans
+  # guard and so hide a real failure. Each copy tests the committed dependency graph.
+  (cd "$root" && git ls-files -z --cached | tar --null -T - -cf -) |
     (cd "$dest" && tar -xf -)
 }
 

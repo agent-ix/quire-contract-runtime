@@ -15,12 +15,14 @@ Check that the runtime with `exact` and without `std` builds for `thumbv7em-none
 
 ## Test Procedure
 
-0. Read `Cargo.toml`; expect `rust-version = "1.82"` (FR-275-AC-20).
+0. Read `Cargo.toml`; expect `rust-version = "1.98.1"` (FR-275-AC-20).
 1. Run the `make test-features` row `build-exact-no-std-msrv` (`exact`, no `std`, target
-   `thumbv7em-none-eabi`) on Rust 1.82; expect success (FR-275-AC-9). The row builds with
-   `+1.82.0` (IR-349 part 1 moved it from `+1.75.0`, which cargo refuses against `quire-exact`). Run `make msrv` and expect it to use Rust 1.82 (FR-275-AC-21).
-2. Run `cargo tree -p quire-contract-runtime-footprint --target thumbv7em-none-eabi -i quire-exact`;
-   expect cargo to report that the package is not in the graph (FR-275-AC-10).
+   `thumbv7em-none-eabi`) on Rust 1.98.1; expect success (FR-275-AC-9). The row builds with
+   `+1.98.1`. Run `make msrv` and expect it to use Rust 1.98.1 (FR-275-AC-21).
+2. Run `make size`: after the build it lists the footprint graph with `cargo tree -p
+   quire-contract-runtime-footprint --target thumbv7em-none-eabi` and fails when `quire-exact`
+   is in it; expect it to report that the graph holds no `quire-exact` (FR-275-AC-10). Enabling
+   `exact` on the footprint dependency in a scratch copy makes that listing contain `quire-exact`.
 3. Run `make size`; expect `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band and no
    panic relocation (FR-275-AC-11).
 

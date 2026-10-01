@@ -78,7 +78,7 @@ FEATURE_SETS = (
 # dev dependencies. No linked-footprint claim is made for either feature.
 NO_STD_BUILDS = (
     ("build-snapshot-json-no-std-msrv", "snapshot-json", ["TC-015", "NFR-001"]),
-    ("build-exact-no-std-msrv", "exact", ["TC-016", "FR-006", "NFR-001"]),
+    ("build-exact-no-std-msrv", "exact", ["TC-016", "TC-199", "FR-006", "FR-275", "NFR-001"]),
 )
 
 
@@ -95,7 +95,7 @@ def environment() -> dict[str, str]:
 
 def no_std_row(symbol: str, feature: str, traces: list[str], available: bool) -> dict[str, Any]:
     native_flags = [
-        "+1.82.0", "build", "--locked", "--lib", "--no-default-features",
+        "+1.98.1", "build", "--locked", "--lib", "--no-default-features",
         "--features", feature, "--target", "thumbv7em-none-eabi",
         "--message-format=json",
     ]
