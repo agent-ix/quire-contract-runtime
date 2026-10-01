@@ -122,7 +122,7 @@ The function-application surface (`Frame`, `Body`, `CheckedPackage`, `Evaluation
 not in `quire-exact` today. Under [FR-275](./FR-275-single-exact-kernel.md) the runtime's copy of it
 is part of the residue: ported QSL code that is not authorized, with no exception, no expiry and no
 approval. It runs over the `quire-exact` `Value`, `Meter` and `Outcome`. It is to be deleted; QSL
-owns it (QSL-358) and the runtime consumes it. How the runtime handles the copy until then is an open
+is to own it (QSL-358, as relayed) and the runtime is to consume it. How the runtime handles the copy until then is an open
 owner decision. The "port of the authority" wording above describes that source.
 
 ## Dependencies

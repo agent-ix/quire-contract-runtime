@@ -20,8 +20,8 @@ collection and equality operators. The runtime is no second semantic authority f
 the authority's `PackageDeclarations::check` proves purity, termination and definedness once, statically, and
 `CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`. That port is not
 authorized: FR-275 records it as residue, vendored code that violates the no-vendoring rule, with no
-exception, no expiry and no approval. It is to be deleted; QSL owns it in `quire-semantic-value`
-(QSL-358) and this crate consumes it. How this crate handles its copy until then is an open owner
+exception, no expiry and no approval. It is to be deleted; QSL is to own it in `quire-semantic-value`
+(QSL-358, as relayed) and this crate is to consume it. How this crate handles its copy until then is an open owner
 decision.
 
 ## Views

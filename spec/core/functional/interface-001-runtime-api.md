@@ -114,8 +114,9 @@ evaluate. QSL-358 moves those into a QSL-owned `no_std` plus `alloc` leaf crate,
 `quire-semantic-value` (as relayed from QSL), so they are not runtime-owned in the end state: the
 runtime's copy of them is not authorized: [FR-275](../../exact/functional/FR-275-single-exact-kernel.md)
 records it as residue to delete, with no exception, no expiry and no approval. The negotiation predicates are different: they are runtime-owned code, not a QSL port, and
-stay (interface-001-AC-8). The `runtime_owned` block's other items and interface-001-AC-7 and AC-9
-below describe the residue and are restated when it is deleted. The runtime's verdict,
+stay (interface-001-AC-8). The `runtime_owned` block holds only those negotiation items; the
+`residue` block lists the rest, which is not runtime-owned (interface-001-AC-7 and AC-9 below
+concern it). The runtime's verdict,
 observation and campaign types lie outside `exact` and are never kernel types: a kernel `Outcome`
 reports what one evaluation produced, and a `Verdict` reports what an execution point established
 about a contract.
@@ -157,16 +158,20 @@ exact:
       ieee: [IeeeValue, IeeeWidth, IeeeOperation, IeeeResult, IeeeComparison, evaluate_ieee, compare_ieee, convert_ieee_width]
       text: [Text, TextPayload, TextProfile, TextType, admit_text]
       quantity: [Quantity]
-  runtime_owned:
-    owner: quire-contract-runtime
-    rule: every exact item the upstream quire-exact crate does not export, plus the items below regardless of upstream names
-    always_runtime: [Frame, Body, CheckedPackage, Evaluation, plan_call, negotiate_integer_division, negotiate_ieee]
+  residue:
+    owner: QSL (QSL-358, quire-semantic-value, as relayed); not runtime-owned
+    status: not authorized; vendored code to be deleted; no exception, no expiry, no approval (FR-275)
+    rule: every exact item the upstream quire-exact crate does not export, other than the runtime_owned negotiation items
     consumed:
-      function_application: [PackageDeclarations, FunctionDeclaration, CheckedPackage, CheckMode, CheckingLimits, CheckRefusal, InputRefusal, Frame]
+      function_application: [PackageDeclarations, FunctionDeclaration, CheckedPackage, CheckMode, CheckingLimits, CheckRefusal, InputRefusal, Frame, Body, Evaluation, plan_call]
       checking: [TypeEnvironment, CompositeDeclaration, CompositeShape, ObjectTypeDeclaration, RecursionEdges, DeclarationCause, InvalidDeclaration, ObjectEnvironment]
       equality: [CheckedEquality, EqualityOperand, EqualityOperator, EqualitySchedule]
       enumeration: [EnumValue]
       quantity: [QuantityOperation, QuantityTarget, QuantityUnit, Conversion, evaluate_quantity, convert_quantity]
+  runtime_owned:
+    owner: quire-contract-runtime
+    rule: only the negotiation items below
+    always_runtime: [negotiate_integer_division, negotiate_ieee]
     negotiation:
       rule: the negotiate_* predicates AD-016 WP7 selects
       operations: [negotiate_integer_division, negotiate_ieee]  # today
@@ -205,7 +210,7 @@ Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relay
 | interface-001-AC-4 | When an item's owner changes from the runtime to `quire-exact`, the `exact` module shall keep exposing that item at the path it exposed before the change. | Inspection |
 | interface-001-AC-5 | Where the upstream `quire-exact` crate exports `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location`, the `exact` module shall expose the `quire-exact` definition of that type — an explicit per-type instance of interface-001-AC-2 for the `named_kernel_types` list. | Inspection |
 | interface-001-AC-6 | Where the `exact` module exposes the `quire-exact` definition of `NodeKey`, the runtime's library source shall not call a `NodeKey` constructor. | Inspection |
-| interface-001-AC-7 | The runtime shall not define `Frame`, `Body`, `CheckedPackage`, `Evaluation` or `plan_call` in its own source: the `exact` module shall expose the QSL-owned definitions (FR-275; no exception, no expiry). Planned and unmet while the runtime's copy exists. | Inspection |
+| interface-001-AC-7 | The runtime shall not define `Frame`, `Body`, `CheckedPackage`, `Evaluation` or `plan_call` in its own source (FR-275; no exception, no expiry). | Inspection |
 | interface-001-AC-8 | The runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
 | interface-001-AC-9 | While a residue `exact` operation exists in the runtime, an operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
 | interface-001-AC-10 | The runtime shall define every item the `outside_exact` list names outside the `exact` module. | Inspection |

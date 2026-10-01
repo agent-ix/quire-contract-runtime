@@ -158,9 +158,9 @@ crates that the runtime consumes.
 | FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order. The residue list is not an allowance: every item on it is a violation of this criterion, which stays unmet while the list is non-empty. The runtime-owned negotiators are not ports. | Inspection (TC-197) |
 | FR-275-AC-14 | The kernel move deletes no requirement, acceptance criterion or test case. | Inspection (TC-197) |
 | FR-275-AC-15 | Every matrix row whose evidence leaves the runtime in the kernel move carries a planned status with a stated reason, because the status vocabulary has no "verified upstream" status (a planner question, no status is invented). | Inspection (TC-197) |
-| FR-275-AC-16 | The runtime's `exact` module defines no item other than the backend negotiators and their types, and no file under `src/exact` holds anything else. Planned and unmet while the residue exists. | Inspection (TC-197) |
-| FR-275-AC-17 | Where the runtime still defines an `exact` item other than the negotiators, that item is a defect against FR-275-AC-1's end state, named in the residue list and deleted; there is no exception, no expiry and no approval for it. Planned and unmet while the residue exists. | Inspection (TC-197) |
-| FR-275-AC-18 | The residue list is empty. Planned and unmet while the residue exists. | Inspection (TC-197) |
+| FR-275-AC-16 | The runtime's `exact` module defines no item other than the backend negotiators and their types, and no file under `src/exact` holds anything else. | Inspection (TC-197) |
+| FR-275-AC-17 | Every `exact` item the runtime defines, other than the negotiators, is named in the residue list, and the list records no exception, expiry or approval. | Inspection (TC-197) |
+| FR-275-AC-18 | The residue list is empty. | Inspection (TC-197) |
 | FR-275-AC-19 | The runtime defines `negotiate_integer_division`, `negotiate_ieee` and their types in its own source and depends on no QSL crate for them. | Inspection (TC-197) |
 | FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
 | FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |

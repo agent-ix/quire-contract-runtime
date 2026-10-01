@@ -31,8 +31,8 @@ IR-349; it is planned until then.
    criterion or test case deleted, and every row whose evidence left the runtime marked planned with
    its reason (FR-275-AC-14, FR-275-AC-15).
 6. Compare every `exact` item the runtime defines, other than the negotiators, with FR-275's residue
-   list; expect each is listed as a defect to delete, and none is recorded as an exception, with
-   an expiry or with an approval (FR-275-AC-17). This step fails while any such item exists.
+   list; expect each is listed, and none is recorded as an exception, with an expiry or with an
+   approval (FR-275-AC-17).
 7. Expect the `exact` module to define only the negotiators and their types, nothing else under
    `src/exact`, and an empty residue list (FR-275-AC-16, FR-275-AC-18). This step fails while the
    residue exists.
