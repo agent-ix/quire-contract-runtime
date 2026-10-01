@@ -63,6 +63,10 @@ type: TestMatrix
 | TC-194 | Apply checked functions totally, before any charge | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7 | ✅ implemented |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
 
+FR-009-AC-5, FR-010-AC-6 and FR-273-AC-4 are verified by `compile_fail` doctests. Every other row
+is backed by a `tc_NNN` Rust test; executable semantic claims retain direct acceptance-criterion
+trace tags. Rows marked planned or partly evidenced above are the exceptions.
+
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
 (`tc_031_further_charges_after_the_injected_denial_meter_normally`,
 `tc_031_work_accounting_is_correct_before_and_after_the_injected_denial`) and

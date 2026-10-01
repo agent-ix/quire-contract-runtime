@@ -21,6 +21,9 @@ type: TestMatrix
 | TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-8 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 
+Every row is backed by a `tc_NNN` Rust test; executable semantic claims retain direct
+acceptance-criterion trace tags.
+
 ## Evidence Locations
 
 - TC-006: `tests/integration.rs`.

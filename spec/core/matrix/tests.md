@@ -37,6 +37,9 @@ row `build-exact-no-std-msrv`; none of them has a test case. Every other row is 
 Rust test, a Kani harness or a `compile_fail` doctest; executable semantic claims retain direct
 acceptance-criterion trace tags.
 
+The seven Kani harnesses tagged to TC-001 through TC-003 (`verification/kani.rs`) also prove
+accounting and exact behaviour; retagging them to the owning subsystem's test cases is a follow-up.
+
 ## Evidence Locations
 
 - TC-001: `tests/integration.rs`.
