@@ -82,3 +82,12 @@ What was checked and found sound:
 Routing note, not a finding: draft PR #95 rewrites spec/exact/matrix/tests.md and still carries
 the `Coverage Status` header. When it rebases, it must take `Status`, or it reintroduces the
 validation failure. #95 and #78 already conflict with main in the same files regardless of this PR.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | deferred | IR-499: the remaining strict-coverage red is beyond a header-only fix and needs an upstream quire evidence channel or new tagged tests. IR-499 records the 56 unbacked and 5 contradicted rows, the registry probe result and the honest options, and states that it blocks the M5 gate. The PR body now points the red at IR-499. Measured at 7b0b410: validate 0 failed; strict 92/148 backed, 56 unbacked, 5 contradicted (unchanged). |
+| FND-002 | deferred | IR-499: it names all 5 contradicted rows (exact :42, :43, :69, :70 and proptest_adapter :14). It records that the FR-003-AC-2 trace at src/lib.rs:22 binds to nothing and should move to a tagged evidence symbol, and it forbids flipping delivered rows to 🚧. The fix needs code or quire upstream work, which is out of scope for this spec-only PR. |
+| FND-003 | fixed | 7b0b410: the interface-001 AC table header now reads `| ID | Criteria | Verification |`. `make spec` shows 0 `obligation-row-states-nothing` notes (13 before), strict coverage is unchanged, and the PR body attributes the notes correctly. |
+| FND-004 | deferred | IR-499: it records the 5 FR relationships (FR-001/002/003/004/275 line 8) that target `interface-001` against the `interface_001` id, to be decided once across RT and CG. Validate does not resolve the targets, so nothing breaks today. |
