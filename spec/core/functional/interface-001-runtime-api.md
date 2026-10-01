@@ -220,7 +220,7 @@ Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relay
 
 ### Acceptance criteria
 
-| ID | Criterion | Verification |
+| ID | Criteria | Verification |
 | --- | --- | --- |
 | interface-001-AC-1 | The `exact` module shall expose every item that generated oracle source or `quire-contract-codegen` imports from it at the path `quire_contract_runtime::exact::<Name>`. | Inspection |
 | interface-001-AC-2 | Where the upstream `quire-exact` crate exports an item whose name the `exact` module exposes, the `exact` module shall expose that `quire-exact` item unchanged. | Inspection |
