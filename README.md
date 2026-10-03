@@ -1,6 +1,6 @@
 # Quire Contract Runtime
 
-[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/6qsdhSPE)
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/k8DVhuYBR2)
 
 `quire-contract-runtime` is the small `no_std` support library linked by generated contract oracles.
 It keeps successful checks, failed postconditions, and rejected preconditions distinct and observable.
