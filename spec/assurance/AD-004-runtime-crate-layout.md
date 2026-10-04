@@ -158,11 +158,17 @@ decision F says the same. QSL defines the same names in `qsl-package`, `qsl-sema
 which this crate may not depend on. Their end is the evaluation leaf crate QSL provides in its own
 repository (Q-1, IR-583): this crate depends on it, deletes the items and keeps no second version.
 
-Interim. Until IR-583 lands the items stay in the tree only as the defect FR-275 already records
-(AC-13 unmet, residue list non-empty). This AD grants no exception and sets no expiry, and asks for none.
-No step adds behaviour to them: steps 3 and 4 only repoint what they must to keep the crate compiling, and
-no consumer is given a new use of them. They are deleted in step 5, in the PR that adds the dependency
-on the leaf.
+Interim. What this crate does with these items before IR-583 lands is not ruled by the owner: FR-275's
+Open questions record it as open ("how the runtime handles its residue copy until QSL-358 lands (open,
+owner decision) ... no interim policy is stated"), and the owner's Q-1 answer (option (a): QSL provides
+evaluation, this crate depends on it and deletes its copy) says nothing about interim handling or early
+deletion. The rest of this paragraph is this AD's inference from that answer, not a ruling. Inference:
+the items stay in the tree until IR-583 lands, only as the defect FR-275 already records (AC-13 unmet,
+residue list non-empty); no step adds behaviour to them; steps 3 and 4 only repoint what they must to keep
+the crate compiling; no consumer is given a new use of them; they are deleted in step 5, in the PR that
+adds the dependency on the leaf. This AD grants no exception, sets no expiry, and asks for none.
+Alternative, if the owner rules otherwise: delete them early (in step 3 or 4), at the cost that CG's
+function oracles lose their runtime call surface until IR-583 lands.
 
 Deleted outright: everything else in `src/exact`, `mod.rs` included (`CHARGE_LOG_CAPACITY` and
 `charge_log_truncated` have no counterpart and go with `Meter`; R-4), with its tests (`src/exact_*_tests.rs` and the
@@ -182,11 +188,14 @@ records the gap.
   former `expression` items, once each, optional, enabled only by `exact`. It contains no second
   implementation of any item they define, and its `expression` bucket is deleted once IR-583 lands:
   no keep, no exception, no copy without an expiry.
-- No re-export shim: there is no `quire_contract_runtime::exact` module, no `pub use` of either crate,
-  no alias, wrapper, feature or legacy reader. Consumers import `quire_exact::` and
-  `quire_semantic_value::` paths. A kept item that must name a shared type names it in its own
+- No re-export shim: there is no `quire_contract_runtime::exact` module, no `pub use` of any of the
+  three shared crates (`quire-exact`, `quire-semantic-value`, the evaluation leaf), no alias, wrapper,
+  feature or legacy reader. Consumers import the owner crates' own paths (`quire_exact::`,
+  `quire_semantic_value::`, the leaf's). A kept item that must name a shared type names it in its own
   signature, which is a dependency, not a re-export.
-- Merged statements this AD contradicts (step 1 amends every one of them; Q-2, decided):
+- Merged statements this AD contradicts, in three groups. Each statement is amended, relied on, or
+  amended conditionally, as stated; none is left to a step that does not name it.
+- Group 1, the no-shim and kernel statements (Q-2, decided; hold today; amended in step 1):
   FR-275 Description ("Its `exact` module is a re-export of those QSL-owned crates at the
   `quire_contract_runtime::exact` path"), Outputs ("a runtime `exact` module that defines only the
   runtime-owned negotiators and otherwise only re-exports QSL-owned crates"), Behavior "The residue"
@@ -195,20 +204,32 @@ records the gap.
   `quire-exact` exports": vacuous without the module, and the criterion that stops a kept module
   redefining kernel items, so it is restated over the kept modules), AC-16 and AC-17 ("The runtime's
   `exact` module defines no item other than the backend negotiators", which move to `scalar`); the
-  Open question on the interim copy (see Interim above); interface-001 prose of the exact kernel
+  Open question on the interim copy (left open: see Interim above); interface-001 prose of the exact kernel
   surface ("That path is the path the runtime guarantees stays available", "it keeps its `exact`
   path"), its contract yaml (`module: quire_contract_runtime::exact`, `runtime_role: re-export
-  unchanged at the same exact path`, the `residue` block, the `runtime_owned` and `outside_exact` blocks,
-  and the `dependencies` lines "generated oracles -> quire_contract_runtime::exact" and "runtime ->
-  quire-exact" alone), and interface-001-AC-1, AC-2, AC-3, AC-4, AC-5 and AC-6, which name the
-  `exact` module and become vacuous without it; AC-9 (residue operations that call a `quire-exact`
-  operation; the residue ends), AC-10 (names the `exact` module and the `outside_exact` block), AC-11
-  and AC-14 (the dependency on `quire-exact` alone, which becomes `quire-exact` and
-  `quire-semantic-value`).
+  unchanged at the same exact path`, the `runtime_owned` and `outside_exact` blocks, and the
+  `dependencies` line "generated oracles -> quire_contract_runtime::exact"), and interface-001-AC-1,
+  AC-2, AC-3, AC-4, AC-5 and AC-6, which name the `exact` module and become vacuous without it; AC-10
+  (names the `exact` module and the `outside_exact` block).
+- Group 2, the statements naming the shared crates' repositories and the bans (Q-6, decided; they
+  hold today and break only when the dependency moves, so they are amended in step 2, in the PR that
+  needs IR-582 and changes the dependency): FR-275 Dependency spelling, "One copy" (`deny.toml` admits
+  the QSL repository as the one git source), Guarded edges (the 14 name bans), FR-275-AC-4, AC-7 and AC-8, the
+  Open question "Upkeep of the ban list" (moot once the bans go); interface-001 AC-11 and AC-14 and the
+  `dependencies` line "runtime -> quire-exact" alone (which gain `quire-semantic-value`); and the
+  checks that enforce the bans: `scripts/check_deny_bans.sh` (`make deny-mutations`), TC-198, and the
+  `CLAUDE.md` description of `deny.toml`.
+- Group 3, the evaluation-item statements (Q-1, decided as option (a); amended conditionally): FR-273
+  and AD-002 (they describe the ported surface), the residue list and the interface-001 `residue`
+  block and AC-9 (their deletion tracker names QSL-358, and the list stays non-empty until step 5).
+  What they are amended to depends on the surface IR-583 states, whose size and shape (a relocated
+  mechanism, or QSL's own evaluator) are being put to the owner and are not decided here; these
+  amendments wait on that statement and land with or before step 5.
 - Merged statements this AD relies on and must not weaken: FR-275-AC-13 (no port of QSL code, a port
-  being code that keeps the authority's item names), FR-275's residue list and the owner ruling it
-  quotes, AC-18 (the residue list is empty; step 1 leaves it as written), AD-003 decision F, and
-  interface-001-AC-7 (the runtime defines none of the call-surface items).
+  being code that keeps the authority's item names), the owner ruling the residue list quotes, AC-18
+  (the residue list is empty), AD-003 decision F, and interface-001-AC-7 (the runtime defines none
+  of the call-surface items), which option (a) already satisfies and which needs no change unless the
+  leaf's surface turns out to reuse one of its names.
 - Direct dependencies `num-bigint`, `num-integer`, `num-traits` and `unicode-normalization` are
   named today only by `integer.rs`, `rational.rs`, `ieee.rs` and `text.rs`, none of which keeps code that
   names them (the negotiators do not); they are removed in the step that deletes those files.
@@ -288,10 +309,11 @@ QSL lane), so the end state names those repositories, not the QSL repository.
 - B. No re-export shim and no compatibility layer, at any step: a step that deletes an item changes its CG
   users in the same step.
 - C. The module for the kept scalar items is `scalar`; there is no `expression` module (Q-1);
-  the feature stays `exact`, because the feature is what pulls in the two crates and generated manifests
+  the feature stays `exact`, because the feature is what pulls in the shared crates and generated manifests
   already request it. The module names `text`, `composite` and `outcome` are not created: nothing is left to
   put in them.
-- D. Dependency spelling is FR-275's, extended to `quire-semantic-value`: git, `branch = "main"`, optional,
+- D. Dependency spelling is FR-275's, applied to each of the three shared crates and naming that crate's own
+  repository (FR-275's text names the QSL repository; step 2 amends it): git, `branch = "main"`, optional,
   no `rev`, `tag` or `path`, no committed `[patch]`, one lock entry.
 - E. Tests follow the code: a test of a deleted item is deleted with it; a test of a kept item stays; a
   matrix row whose evidence leaves keeps a planned status with the reason (FR-275-AC-15).
@@ -300,7 +322,7 @@ QSL lane), so the end state names those repositories, not the QSL repository.
 
 Local labels; the repository assigns requirement ids when one is authored.
 
-- L-1. No file under `src/exact`, no `pub use` of `quire_exact` or `quire_semantic_value`, and no
+- L-1. No file under `src/exact`, no `pub use` of `quire_exact`, `quire_semantic_value` or the evaluation leaf, and no
   `pub` item named in the 124 shared names (inspection; a name list is a gate input, not a record).
 - L-2. `quire-exact`, `quire-semantic-value` and the evaluation leaf each appear once in `Cargo.lock`
   (extends FR-275-AC-5), and no crate of the QSL repository appears (`unknown-git = "deny"` with no
@@ -352,11 +374,11 @@ CG PR that adopts the new paths.
 
 | Step | RT change | CG, same step | Gate |
 | --- | --- | --- | --- |
-| 1 | Spec only: amend every statement listed under the end state: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", step 2, the Open question on the interim copy, AC-1, AC-16, AC-17; AC-18 and AC-13 stay), interface-001 (prose, contract yaml including `residue`, `runtime_owned`, `outside_exact` and `dependencies`, AC-1 to AC-6, AC-9, AC-10, AC-11, AC-14) and AD-002, to this AD (no re-export, Q-2; the extracted repositories, Q-6: FR-275 Dependency spelling, Guarded edges, AC-4, AC-7 and AC-8 name the QSL repository and its bans). The amendments that name the evaluation items (FR-273, AD-002, interface-001-AC-7, the residue list) need the surface IR-583 provides; the rest need no ticket | none | `make spec` not above baseline |
-| 2 | Needs IR-582 (the repositories must exist). Add `quire-semantic-value` and re-point `quire-exact` at the extracted repositories: `Cargo.toml`, `deny.toml` (`allow-git` for the extracted repositories and `quire-canonical`, licence exceptions; the QSL-repository `allow-git` and the 14 name bans removed), lock; no deletion | none | G; `make deny` fails on a git source outside the allow-list |
+| 1 | Spec only; needs no ticket. Amend Group 1 only, the statements that hold today: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", step 2, AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim-copy Open question stays open (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
+| 2 | Needs IR-582 (the repositories must exist). In one PR: add `quire-semantic-value` and re-point `quire-exact` at the extracted repositories (`Cargo.toml`, lock); `deny.toml` (`allow-git` for the extracted repositories and `quire-canonical`, licence exceptions; the QSL-repository `allow-git` and the 14 name bans removed); amend Group 2 (FR-275 Dependency spelling, "One copy", Guarded edges, AC-4, AC-7, AC-8, the ban-list Open question; interface-001 AC-11, AC-14 and the `quire-exact` dependency line); rewrite `scripts/check_deny_bans.sh` so `make deny-mutations` asserts cargo-deny's sources rejection for a crate added from the QSL repository, where it now asserts `error[banned]`; change TC-198 and the `CLAUDE.md` `deny.toml` description to match; no deletion | none | G, with `deny-mutations` green on the rewritten script; the script proves a git source outside the allow-list is rejected |
 | 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `scripts/check_kani_mutations.py` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4) | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
 | 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, `NodeKey` construction (Q-5), the three serializable mirrors | G; Q-5 answered |
-| 5 | Needs IR-583. Function application: add the dependency on the evaluation leaf, delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure` | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors | G; needs IR-583 and, through step 2, IR-582 |
+| 5 | Needs IR-583 stating the leaf's surface, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the stated surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G; needs IR-583 and IR-582 |
 | 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
 
 Why step 4 is one step: `Value` holds `Quantity`, `EnumValue`, `ObjectReference` and `NodeKey`, whose
@@ -386,17 +408,17 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 
 Q-1 to Q-4 and Q-6 are answered. The answers are the owner's, given in the IR planner's session on
 2026-10-04 and recorded verbatim by the planner on IR-349 (Q-1 to Q-4), IR-346 and IR-582 (Q-6), with the
-work for Q-1 on IR-583; this AD records them as recorded there and measures nothing in them. Q-5 stays open
-and is routed to QSL.
+work for Q-1 on IR-583; this AD records them as recorded there and measures nothing in them. Q-5 stays open,
+routed to QSL by this lane, with no owner answer recorded.
 
 | Question | Owner | Answer (source) | Consequence in this AD |
 | --- | --- | --- | --- |
-| Q-1. What replaces the ported function-application call mechanism (the 15 `expression` items)? | owner | decided, option (a): QSL provides evaluation in a `no_std` plus `alloc` leaf crate in its own repository (IR-349 answer; work IR-583); this crate depends on it and deletes its ported copy, with no second version. IR-349 is blocked by IR-583 for these items | the `expression` bucket is deleted when IR-583 lands (step 5); no keep, no exception, no copy without an expiry; Interim above; steps 1 (for the items it names) and 5 need IR-583 |
-| Q-2. No `exact` re-export path | owner | decided: confirmed (IR-349 answer): step 1 amends FR-275 and interface-001, and CG changes in the same step | Decision B stands; the contradiction list under the end state is unchanged and its amendments are decided |
+| Q-1. What replaces the ported function-application call mechanism (the 15 `expression` items)? | owner | decided, option (a): QSL provides evaluation in a `no_std` plus `alloc` leaf crate in its own repository (IR-349 answer; work IR-583); this crate depends on it and deletes its ported copy, with no second version. IR-349 is blocked by IR-583 for these items | the `expression` bucket is deleted when IR-583 lands (step 5); no keep, no exception, no copy without an expiry; Interim above; step 5 and the Group 3 amendments need IR-583, step 1 does not |
+| Q-2. No `exact` re-export path | owner | decided: confirmed (IR-349 answer): step 1 amends FR-275 and interface-001, and CG changes in the same step | Decision B stands; the Group 1 amendments under the end state are decided and land in step 1 |
 | Q-3. Kani against the shared `Integer` | owner | decided: prove against the shared type (IR-349 answer) | the proofs run against the shared `Integer`, with no RT-local shadow type; stated in step 3 |
 | Q-4. `#[non_exhaustive]` on shared enums | owner | decided: follow the shared crate, none (IR-349 answer): this crate drops its 66 attributes in `src/exact` and matches are exhaustive | stated in step 3; the five kept `scalar` enums that carry it drop it; the 6 sites outside `exact` are not part of this answer |
-| Q-5. May a consumer crate construct a `NodeKey` at all, and under what precondition? `decode_admitted` is for bytes of an admitted package under QSL's allow-list; CG emits literal keys and decodes hex (`from_hex`, absent from QSL), which neither the allow-list nor, shown here, the precondition covers. RT library code constructs none | QSL | open, routed to QSL (IR-349 answer): QSL states which constructor a generator or an emitted oracle may use and where hex decoding lives | the CG paths that build keys stay unresolved in step 4 until QSL answers |
-| Q-6. Where do `quire-exact` and `quire-semantic-value` live (O-1 of AD-007)? | owner | decided: extract both into their own repositories (IR-346 and IR-582; work IR-582, QSL lane); IR-349 is blocked by IR-582 | the end state and step 2 depend on the extracted repositories |
+| Q-5. May a consumer crate construct a `NodeKey` at all, and under what precondition? `decode_admitted` is for bytes of an admitted package under QSL's allow-list; CG emits literal keys and decodes hex (`from_hex`, absent from QSL), which neither the allow-list nor, shown here, the precondition covers. RT library code constructs none | QSL | open, routed to QSL by this lane; no owner answer is recorded (the IR-349 answer covers Q-1 to Q-4 only): QSL states which constructor a generator or an emitted oracle may use and where hex decoding lives | the CG paths that build keys stay unresolved in step 4 until QSL answers |
+| Q-6. Where do `quire-exact` and `quire-semantic-value` live (O-1 of AD-007)? | owner | decided: extract both into their own repositories (IR-346 and IR-582; work IR-582, QSL lane); IR-349 is blocked by IR-582 | the end state depends on the extracted repositories; step 2, with the Group 2 amendments, needs IR-582 |
 
 ### Routed gaps
 
