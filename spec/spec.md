@@ -65,10 +65,10 @@ matrix and the test cases that matrix declares. Interface requirements live in `
 
 | Subsystem | Path | Role | Owning crates/modules | ADs | Owner |
 | --- | --- | --- | --- | --- | --- |
-| Core | `spec/core/` | Verdict, identity and observation types; panic-free operators; the runtime API contract; the `no_std` footprint and panic/license quality requirements | `quire-contract-runtime`: `verdict`, `identity`, `observation`, `operators`, `kani_proofs` (`verification/kani.rs`, `cfg(kani)`); `quire-contract-runtime-footprint` | AD-001, AD-003 | runtime-maintainers |
-| Accounting | `spec/accounting/` | Complete campaign counters and the bounded immutable campaign snapshot transport | `quire-contract-runtime`: `accounting` (including its snapshot transport, `src/snapshot_json.rs`) | AD-001, AD-003 | runtime-maintainers |
-| Proptest adapter | `spec/proptest_adapter/` | Adaptation of verdicts to the proptest framework | `quire-contract-runtime`: `proptest_adapter` | AD-001, AD-003 | runtime-maintainers |
-| Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` (to shrink to the runtime-owned backend negotiators: the value kernel is the `quire-exact` crate and the residue, which is not authorized and is to be deleted, is to be placed in QSL's `quire-semantic-value`, FR-275) | AD-001, AD-002, AD-003 | runtime-maintainers |
+| Core | `spec/core/` | Verdict, identity and observation types; panic-free operators; the runtime API contract; the `no_std` footprint and panic/license quality requirements | `quire-contract-runtime`: `verdict`, `identity`, `observation`, `operators`, `kani_proofs` (`verification/kani.rs`, `cfg(kani)`); `quire-contract-runtime-footprint` | AD-001, AD-003, AD-004 | runtime-maintainers |
+| Accounting | `spec/accounting/` | Complete campaign counters and the bounded immutable campaign snapshot transport | `quire-contract-runtime`: `accounting` (including its snapshot transport, `src/snapshot_json.rs`) | AD-001, AD-003, AD-004 | runtime-maintainers |
+| Proptest adapter | `spec/proptest_adapter/` | Adaptation of verdicts to the proptest framework | `quire-contract-runtime`: `proptest_adapter` | AD-001, AD-003, AD-004 | runtime-maintainers |
+| Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` today; the end state is AD-004 (proposed): no `exact` module, the value kernel is `quire-exact` and `quire-semantic-value` (FR-275), this crate keeps the backend negotiators and the lazy connective in `scalar`, and the ported function-application code is not authorized and is replaced or deleted per AD-004 Q-1 | AD-001, AD-002, AD-003, AD-004 | runtime-maintainers |
 
 ## Requirements Architecture
 
@@ -83,3 +83,4 @@ TC-035 (TC-027–TC-029 unused), TC-194–TC-195 and TC-197–TC-199 provide the
 - [Program umbrella](https://github.com/agent-ix/quire-contract-ir/issues/1).
 - [Runtime epic](https://github.com/agent-ix/quire-contract-runtime/issues/4).
 - [Codegen to runtime seam](assurance/AD-003-codegen-runtime-seam.md).
+- [Runtime crate layout](assurance/AD-004-runtime-crate-layout.md).
