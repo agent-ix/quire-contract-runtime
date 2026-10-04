@@ -63,7 +63,7 @@ edges and the consumer's paths follow from that.
 ### Current layout
 
 Measured: 34 files and 13,791 lines under `src/`; `exact/` is 23 files and 12,080 lines. Outside
-`src/`: `verification/kani.rs` 295, `measurement/footprint` 124, `tests/` 16 files and 9,591 lines
+`src/`: `verification/kani.rs` 295, `measurement/footprint` 124 (`wc -l` over its `.rs` files; 137 with the manifest), `tests/` 16 files and 9,591 lines
 (12 `exact_*` files, 8,686 lines).
 
 Core, accounting, snapshot, adapter (no `exact` dependency; unchanged by this AD):
@@ -88,11 +88,11 @@ item once this AD is realized):
 | text | `enumeration` 189 | enumeration declarations and values | `quire-semantic-value` (`enumeration`) |
 | composite | `composite` 1,585, `collection` 387, `equality` 573, `key` 125 | `Value`, `ValueType`, declarations, `TypeEnvironment`, collections, canonical key, equality plan, `CheckedEquality` | `quire-exact` (`value`, `collection`, `equality`, `key`) and `quire-semantic-value` (`declaration`) |
 | composite | `containment` 226, `reference` 253, `node` 170, `definition` 144 | value graph, object references and environment, `NodeKey`, graph and package refusal vocabulary | `quire-semantic-value` (`containment`, `object_closure`, `semantic_node`, `definition`) and `quire-exact` (`reference`, `identity`, `node`) |
-| expression | `expression` 978 | function application (AD-002, FR-273) | vocabulary (about 215 lines) to `quire-semantic-value` (`checking`, `call`, `loss`, `location`); the call mechanism (about 760 lines) has no home outside this crate: Q-1 |
+| expression | `expression` 978 | function application (AD-002, FR-273) | vocabulary (about 215 lines) to `quire-semantic-value` (`checking`, `call`, `loss`, `location`); the call mechanism (about 760 lines) is a port by its own header and has no home in a crate this one may depend on: Q-1 |
 | outcome | `outcome` 222, `accounting` 685 | `Outcome`, `Undefined`, `Refusal`, `Meter`, charge points, limits | `quire-exact` (`outcome`, `accounting`) |
 | (root) | `mod.rs` 159 | the `pub use` list of every item above | deleted |
 
-The three line sums by target are 5,845 (scalar), 728 (text), 3,463 (composite), 978 (expression)
+The five line sums by target are 5,845 (scalar), 728 (text), 3,463 (composite), 978 (expression)
 and 907 (outcome), plus `mod.rs`: 12,080. `src/exact_accounting_tests.rs` (232) and
 `src/exact_integer_tests.rs` (23) test the deleted `Meter` and `Integer` and are not counted in it.
 
@@ -110,17 +110,18 @@ those six, so "same declaration" is a candidate for "same semantics", settled by
 | --- | --- | --- | --- |
 | Same declaration | 49 | delete, depend on the shared crate | e.g. `BoundViolation`, `BoundedInteger`, `ScalarLimits`, `Incomplete`, `IntegerInterval`, `NodeKey`, `ValueGraph`, `GraphRefusal`, `EnumDeclaration`, `PackageRefusal`, `DecimalLoss`, `IeeeValue` |
 | Same declaration except RT adds `#[non_exhaustive]` | 45 | delete; consumers lose `#[non_exhaustive]` (see Risks) | e.g. `Outcome`, `LimitKind`, `RoundingMode`, `IeeeWidth`, `IllTypedCause`, `ComparisonOperator`, `ValueLoss`, `CheckMode`, `Component` |
-| Same fields, boxed in RT | 8 | delete; representation only | `Integer`, `Decimal`, `DecimalType`, `Rational`, `RationalDomain`, `Text`, `EnumValue`, `CompoundUnit` |
+| Same fields, boxed in RT | 7 | delete; representation only | `Decimal`, `DecimalType`, `Rational`, `RationalDomain`, `Text`, `EnumValue`, `CompoundUnit` |
+| Same value, different representation | 1 | delete; layout only | `Integer` (RT `{small: i64, big: Option<Box<BigInt>>}`, QSL `(BigInt)`) |
 | Same name, different declaration | 22 | delete after the adapter in the step | `Meter`, `ChargePoint`, `InjectedDenial`, `Refusal`, `Undefined`, `Value`, `ValueType`, `Quantity`, `QuantityOperation`, `ObjectReference`, `ObjectTypeDeclaration`, `FieldDeclaration`, `TypeEnvironment`, `CheckedEquality`, `DeclarationCause`, `CollectionType`, `UnitGraph`, `CheckingLimits`, `InputRefusal`, `PackageCause`, `Origin`, `Location` |
-| RT-only | 27 types, 7 free items | keep, or delete per Q-1 and the successors below | see What this crate keeps |
+| RT-only | 27 types, 7 free items and the alias `Body` | keep (the 11 `scalar` items), resolve per Q-1 (the `expression` items), or delete with a successor (below) | see What this crate keeps |
 
 The six read in full:
 
 | Name | Finding |
 | --- | --- |
-| `Integer` | same public methods (`zero`, `one`, `is_zero`, `is_negative`, `magnitude_bits`, `decimal_digits`, `to_u64`, `is_even`), `From<i64>`, `From<i128>`, `From<u64>`, `FromStr`, `Display`, and the same `Debug` text. RT holds an inline `i64` that promotes to a boxed `BigInt` (laid out for CBMC, `verification/kani.rs`); QSL wraps a `BigInt`. QSL adds `From<usize>` and makes the arithmetic methods public. Same semantics, different layout (class 3) |
+| `Integer` | same public methods (`zero`, `one`, `is_zero`, `is_negative`, `magnitude_bits`, `decimal_digits`, `to_u64`, `is_even`), `From<i64>`, `From<i128>`, `From<u64>`, `FromStr`, `Display`, and the same `Debug` text. RT holds an inline `i64` that promotes to a boxed `BigInt` (laid out for CBMC, `verification/kani.rs`); QSL wraps a `BigInt`. QSL adds `From<usize>` and makes the arithmetic methods public. Same semantics, different layout |
 | `Decimal` | same constructors and accessors, same `evaluate_decimal` signature; RT boxes its two fields. QSL adds the typestate `Placement`, `Placed`, `Admitted` and drops `#[non_exhaustive]` on `RoundingMode` and `DecimalOperation`. Same semantics, different layout |
-| `Outcome` | the enum is the same four variants; RT adds `#[non_exhaustive]`, `#[repr(u64)]` and `From<T>`. The payloads differ: `Undefined` gains `SumOutOfDomain` and loses `Copy`; `Refusal` is a unit-variant `Copy` enum in RT and carries its targets in QSL (`IntegerOutOfDomain { target }`, `ForeignReference { required, supplied }`, and so on) with different `code()` and `cause()` results. Different |
+| `Outcome` | the enum is the same four variants; RT adds `#[non_exhaustive]`, `#[repr(u64)]` and `From<T>`. The payloads differ: `Undefined` gains `SumOutOfDomain` and loses `Copy`; `Refusal` is a `Copy` enum in RT whose only fields are `would_be`, the two admitted flags and the cardinality record, and carries its targets in QSL (`IntegerOutOfDomain { target }`, `ForeignReference { required, supplied }`, and so on) with different `code()` and `cause()` results. Different |
 | `Meter` | RT: ten counters, injected denial, an always-on admitted-charge log capped at `CHARGE_LOG_CAPACITY`, `charge_log_truncated`; QSL: counters, a `Cancel` handle, the log only under `test-support`, `Charge` and `charge` public, 62 charge points against 52 (ten more: `DeclarationCheck`, `DispatchSelect`, `GraphEdge`, `GraphExpand`, `GraphResultRetain`, `LookupKey`, `LookupResultRetain`, `ModelDeref`, `ModelNavigate`, `PopulationVisit`), `InjectedDenial::occurrence` is `u64` (RT `NonZeroU64`). Read from `check_injected`: the denial is matched on the count of admissions and never cleared, and a denied charge does not advance that count, so every later charge at the denied point is denied again (FR-010-AC-5 says single-shot; not executed). Different |
 | `NodeKey` | same 32 bytes, `Display` and `Debug`. Constructors differ: RT `from_bytes` (`const`) and `from_hex`; QSL `from_digest` and `decode_admitted`. Same semantics, different constructors; `from_hex` has no QSL counterpart |
 | `ObjectClosure` | no RT type has the name. RT's `ObjectEnvironment` is the same algorithm (admit objects, fill slots, check every reference is a member, same four cause variants). QSL's `new` takes a `tolerated_dangling` list, adds `find`, and `attribute` takes a `FieldRef` where RT takes a `&str`; the refusal boxes its object. Successor under another name, different signatures |
@@ -138,7 +139,7 @@ Modules of this crate after the steps below (one feature `exact`; no `exact` mod
 | `text` | none | module not created | `text`, `enumeration`: 728 lines |
 | `composite` | none | module not created | `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`: 3,463 lines |
 | `outcome` | none | module not created | `outcome`, `accounting`: 907 lines |
-| `expression` (`exact`) | `expression` | `Body`, `Frame`, `FunctionDeclaration`, `PackageDeclarations`, `CheckedPackage`, `CheckedExpression`, `CheckRefusal`, `CheckCause`, `CallPlan`, `plan_call`, `plan_evaluation`, `Evaluation`, `EvaluationRefusal`, `DepthAboveMaximum`, `MAX_CALL_DEPTH` (15 items; FR-273), over the shared crates' values | the vocabulary (`CheckMode`, `CheckingLimits`, `Origin`, `Location`, `InputRefusal`, `ValueLoss`, `LocatedLoss`) to `quire-semantic-value`. The module exists only if Q-1 is answered as recommended |
+| `expression` (`exact`) | `expression` | none is decided. The 15 current items (`Body`, `Frame`, `FunctionDeclaration`, `PackageDeclarations`, `CheckedPackage`, `CheckedExpression`, `CheckRefusal`, `CheckCause`, `CallPlan`, `plan_call`, `plan_evaluation`, `Evaluation`, `EvaluationRefusal`, `DepthAboveMaximum`, `MAX_CALL_DEPTH`; FR-273) are a port and are not carried over. The module exists only if Q-1 is answered with option (b), under names and a shape that FR-273 states afresh | the vocabulary (`CheckMode`, `CheckingLimits`, `Origin`, `Location`, `InputRefusal`, `ValueLoss`, `LocatedLoss`) to `quire-semantic-value`; under option (a) or (c) the whole file |
 
 ### What this crate keeps, and what it deletes
 
@@ -146,13 +147,26 @@ Modules of this crate after the steps below (one feature `exact`; no `exact` mod
 | --- | --- |
 | core, accounting, snapshot, adapter, `verification/kani.rs`, footprint crate | not QSL code |
 | the 11 `scalar` items | absent from both shared crates (measured: no `negotiate_*` and no lazy-right connective in either); QSL deleted its negotiators on purpose (FR-275, as relayed by QSL) |
-| the 15 `expression` items (pending Q-1) | absent from both shared crates; the QSL types of the same names live in `qsl-semantics`, `qsl-package` and `qsl-eval`, which this crate may not depend on (FR-275 bans) |
+
+Not kept by this AD: the 15 `expression` items. Absence from both shared crates does not make them
+runtime-owned. `src/exact/mod.rs` calls the module "a `no_std + alloc` port ... every type, field and variant
+keeps the authority's name and order" and `expression.rs` says it ports the authority's call surface;
+FR-275-AC-13 defines a port as code that keeps the QSL authority's item names, FR-275's residue list names
+function application as vendored code with no exception, no expiry and no approval, and AD-003
+decision F says the same. QSL defines the same names in `qsl-package`, `qsl-semantics` and `qsl-eval`,
+which this crate may not depend on. Their end is Q-1.
+
+Interim, until Q-1 is answered and step 5 lands: the items stay in the tree as the defect FR-275 already
+records (AC-13 unmet, residue list non-empty). This AD grants no exception and sets no expiry; it asks for
+none. No step adds behaviour to them: steps 3 and 4 only repoint what they must to keep the crate
+compiling, and no consumer is given a new use of them.
 
 Deleted outright: everything else in `src/exact`, `mod.rs` included (`CHARGE_LOG_CAPACITY` and
 `charge_log_truncated` have no counterpart and go with `Meter`; R-4), with its tests (`src/exact_*_tests.rs` and the
 kernel halves of `tests/exact_*.rs`). No test comparing this crate's output with a second
 implementation is kept (FR-275). RT-only names with a successor in the shared crates under another
-name: `UniverseIdentity` to `UniverseId`, `ObjectIdentity` to `ObjectId`, `ObjectEnvironment`,
+name, each with a changed representation (`UniverseIdentity` is a `Box<[u8]>`, `UniverseId` a 32-byte
+digest; `ObjectIdentity` is bytes, `ObjectId` a string): `UniverseIdentity` to `UniverseId`, `ObjectIdentity` to `ObjectId`, `ObjectEnvironment`,
 `ObjectEnvironmentCause`, `ObjectEnvironmentRefusal` to `ObjectClosure`, `ObjectClosureCause`,
 `ObjectClosureRefusal`. `InvalidObjectIdentity`, `InvalidTextLiteral` and `UnitDeclaration` have no same-named
 item in either crate and were not traced further: the step that meets them finds their successor or
@@ -166,9 +180,20 @@ records the gap.
   no alias, wrapper, feature or legacy reader. Consumers import `quire_exact::` and
   `quire_semantic_value::` paths. A kept item that must name a shared type names it in its own
   signature, which is a dependency, not a re-export.
-- FR-275's Description ("Its `exact` module is a re-export of those QSL-owned crates at the
-  `quire_contract_runtime::exact` path") and interface-001-AC-1, AC-2, AC-4 and AC-5 say the opposite.
-  This AD follows the owner decision as stated in the IR-345 assignment; step 1 amends them (Q-2).
+- Merged statements this AD contradicts (step 1 amends every one of them; Q-2):
+  FR-275 Description ("Its `exact` module is a re-export of those QSL-owned crates at the
+  `quire_contract_runtime::exact` path"), Outputs ("a runtime `exact` module that defines only the
+  runtime-owned negotiators and otherwise only re-exports QSL-owned crates"), Behavior "The residue"
+  ("keeps the `exact` path") and "The end state" (`exact` "re-exports `quire-exact` and
+  `quire-semantic-value`"), AC-16 and AC-17 ("The runtime's `exact` module defines no item other than
+  the backend negotiators", which move to `scalar`); interface-001 prose of the exact kernel surface ("it
+  keeps its `exact` path"), its contract yaml (`module: quire_contract_runtime::exact`, `runtime_role:
+  re-export unchanged at the same exact path`, and the `runtime_owned` and `outside_exact` blocks), and
+  interface-001-AC-1, AC-2, AC-3, AC-4, AC-5 and AC-6, which name the `exact` module and become
+  vacuous without it; AC-10 names the same blocks.
+- Merged statements this AD relies on and must not weaken: FR-275-AC-13 (no port of QSL code, a port
+  being code that keeps the authority's item names), FR-275's residue list and the owner ruling it
+  quotes, AC-18 (the residue list is empty), and AD-003 decision F.
 - Direct dependencies `num-bigint`, `num-integer`, `num-traits` and `unicode-normalization` are
   named today only by `integer.rs`, `rational.rs`, `ieee.rs` and `text.rs`, none of which keeps code that
   names them (the negotiators do not); they are removed in the step that deletes those files.
@@ -180,22 +205,29 @@ crate by git URL and branch (`src/core/profile.rs`).
 
 | CG path | Names `quire_contract_runtime::exact` as | Count |
 | --- | --- | --- |
-| `src/oracle/scalar/mod.rs` | generator import (`:58`) and emitted `use quire_contract_runtime::exact as rt;` (`:2396`) | 105 `rt::` refs, 47 distinct |
-| `src/oracle/equality/mod.rs` | generator import (`:79`) and emitted alias (`:1417`); serializable mirrors of `IllTypedCause`, `RecursionEdges`, `DeclarationCause` (`:194-271`) | 112 refs, 31 distinct |
-| `src/oracle/function/mod.rs` | generator alias (`:145`) and emitted alias (`:1452`); mirrors of `Origin`, `Location` (`:413-429`) | 90 refs, 20 distinct |
-| `src/kani/generate/scalar.rs` | `rt::Integer` in generated Kani text (`:23`, `:82`) | 9 refs, 4 distinct |
-| `src/core/profile.rs` | emitted `Cargo.toml` (`oracle_crate_manifest`): one `quire-contract-runtime` dependency, `features = ["exact"]` and the Kani metadata | the manifest must also name `quire-exact` and `quire-semantic-value` |
-| `Cargo.toml` (`:22`, `:38`) | CG's own dependency, features `exact` and `proptest` | none changes except new edges |
+| `src/oracle/scalar/mod.rs` | the generator's `use quire_contract_runtime::exact::{..}` and the emitted `use quire_contract_runtime::exact as rt;` | 105 `rt::` refs, 47 distinct |
+| `src/oracle/equality/mod.rs` | the same import and emitted alias; serializable mirrors of `IllTypedCause`, `RecursionEdges`, `DeclarationCause` | 112 refs, 31 distinct |
+| `src/oracle/function/mod.rs` | the same two aliases; mirrors of `Origin`, `Location` | 90 refs, 20 distinct |
+| `src/kani/generate/scalar.rs` | `rt::Integer` in the generated Kani harness text (its doc comments also name the path) | 9 refs, 4 distinct |
+| `src/core/profile.rs` | `oracle_crate_manifest`, the emitted `Cargo.toml`: one `quire-contract-runtime` dependency, `features = ["exact"]` and the Kani metadata | the manifest must also name `quire-exact` and `quire-semantic-value` |
+| CG `Cargo.toml` | CG's own dependency, features `exact` and `proptest` | no change except new edges |
 
-The 78 distinct names those emitters use from `exact` split as: 50 same-declaration and 8 boxed-only
-(path change only), 14 different-declaration (path and possibly use-site change: `Meter`, `Refusal`,
-`Value`, `ValueType`, `Quantity`, `QuantityOperation`, `TypeEnvironment`, `CheckedEquality`,
-`CheckingLimits`, `CollectionType`, `DeclarationCause`, `FieldDeclaration`, `InputRefusal`,
-`ObjectTypeDeclaration`), and 6 RT-only (`PackageDeclarations`, `CheckedPackage`, `CheckRefusal`, `Frame`,
-`FunctionDeclaration`, `ObjectEnvironment`: kept or replaced per Q-1). The use sites of the 14 were not
-read beyond one: emitted code builds `Refusal::CheckedInvariant`, a unit variant the shared enum keeps.
-Two uses have no counterpart in the shared crates: the generator calls `NodeKey::from_hex`
-(`src/oracle/equality/mod.rs:1034`) and emits `rt::NodeKey::from_bytes([..])` (`:1887`). CG uses neither
+The 79 distinct names those emitters use from `exact` split as: 16 same-declaration (path change only);
+23 same except `#[non_exhaustive]` (path change, and every wildcard or `unreachable!` arm over them
+becomes a dead pattern); 12 free functions (path change, except `convert_quantity`, whose first parameter
+changed from `&Quantity` to `UnitQuantity<'_>`; the other eleven signatures were not compared); 8 with a
+changed layout only (`Integer` and the seven boxed names; path change); 14 different-declaration
+(`Meter`, `Refusal`, `Value`, `ValueType`, `Quantity`, `QuantityOperation`, `TypeEnvironment`,
+`CheckedEquality`, `CheckingLimits`, `CollectionType`, `DeclarationCause`, `FieldDeclaration`,
+`InputRefusal`, `ObjectTypeDeclaration`); and 6 RT-only (`PackageDeclarations`, `CheckedPackage`,
+`CheckRefusal`, `Frame`, `FunctionDeclaration`, `ObjectEnvironment`: Q-1). The 14 change more than the
+path. The shared `ValueType` has `Enum(EnumShape)`, `Float(FloatType)`, `Quantity(UnitId)`,
+`Reference(EffectiveId)` and a new `Population(Option<u64>)`; the shared `Value` has `Enum(EnumMember)` and a
+new `Population(PopulationId)`; CG's exhaustive renderers of both meet all of these. Other use sites of the
+14 were not read; one is known: emitted code builds `Refusal::CheckedInvariant`, a unit variant the shared
+enum keeps.
+Two uses have no counterpart in the shared crates: the generator decodes hex with `NodeKey::from_hex` in
+`oracle/equality` and emits `rt::NodeKey::from_bytes([..])` literals. CG uses neither
 the charge log, `charge_log_truncated` nor `CHARGE_LOG_CAPACITY` (grep). The harness and verdict paths
 (`quire_contract_runtime::{Verdict, CampaignReport, ...}` in `src/strategy/` and
 `src/oracle/boolean_v1.rs`) name the core, not `exact`, and do not change.
@@ -204,10 +236,10 @@ the charge log, `charge_log_truncated` nor `CHARGE_LOG_CAPACITY` (grep). The har
 
 | Piece | Verified at QSL `origin/main` | Result |
 | --- | --- | --- |
-| H3, `NodeKey::decode_admitted` (QSL-479, #590) | `quire-exact/src/node.rs` defines it; PR state MERGED | present. It is the constructor for an admitted key; `from_digest` stays check-only (QSL T-12). RT's `from_bytes` calls and CG's emitted `from_bytes` become `decode_admitted` |
+| H3, `NodeKey::decode_admitted` (QSL-479, #590) | `quire-exact/src/node.rs` defines it; PR state MERGED | present, but not a rename of `from_bytes`: it ships with QSL's T12-F call-site allow-list and the precondition that the bytes come from a package that passed the admitted-package identity check, and the type itself accepts any 32 bytes. `from_digest` is check-only (T12-B). RT library code calls no `NodeKey` constructor today (every call is in a test); CG's emitted literals and its hex-decode path are covered by neither the allow-list nor, shown here, the precondition: Q-5 |
 | H2, `ObjectClosure` (QSL-478, #608) | `quire-semantic-value/src/object_closure.rs`; PR state MERGED | present; signatures differ from RT's `ObjectEnvironment` (above) |
 | QSL-358 residue slices | `quire-semantic-value` holds `stop`, `quantity`, `unit`, `declaration`, `containment`, `enumeration`, `definition`, `semantic_node`, `checking`, `call`, `loss`, `location`, `object_closure` | present; QSL-358 is Done |
-| FR-275 step 2 (the residue) | the 15 `expression` items and the lazy connective | not delivered: no QSL crate this crate may depend on defines them |
+| FR-275 step 2 (the residue) | the 15 `expression` items and the lazy connective | not delivered, although interface-001 and FR-275 expect QSL-358 to move function application: no QSL crate this crate may depend on defines it. QSL-358 is Done. The lazy connective is absent from both crates |
 
 Still missing for this crate, each stated to QSL below: the call mechanism (Q-1); `CheckingLimits`
 carries no call-depth field (RT's `depth`, which `DepthAboveMaximum` and `MAX_CALL_DEPTH` serve);
@@ -241,7 +273,8 @@ repository go with it; nothing else here depends on where the crates live.
   keeps and none other.
 - B. No re-export shim and no compatibility layer, at any step: a step that deletes an item changes its CG
   users in the same step.
-- C. The module for the kept scalar items is `scalar` and for function application `expression` (if Q-1);
+- C. The module for the kept scalar items is `scalar`, and for a function-application surface, if Q-1 yields one,
+  `expression`;
   the feature stays `exact`, because the feature is what pulls in the two crates and generated manifests
   already request it. The module names `text`, `composite` and `outcome` are not created: nothing is left to
   put in them.
@@ -270,7 +303,8 @@ What is measured today, the migration that removes it, what is open and with who
 
 - The kernel is two implementations today, and `quire-exact` is declared but unused. The draft PR #95
   (slice 1, open) is the first move; see Migration.
-- `#[non_exhaustive]` leaves with the kernel: this crate has 66 sites in `src/exact`, the two QSL crates 1.
+- `#[non_exhaustive]` leaves with the kernel: this crate has 66 `#[non_exhaustive]` sites in `src/exact`; the two QSL crates have no such
+  attribute (their one textual hit is a `finish_non_exhaustive()` call).
   AD-003 states 72 sites for the whole crate. A kernel enum gaining a variant then breaks CG's
   `match` arms (compile error, not a silent default), and CG's `unreachable!` arms over `non_exhaustive`
   enums (IR-352) become dead patterns for the shared enums. Whether QSL intends the shared enums to
@@ -293,23 +327,31 @@ Each step is one coherent PR with its gate. Gate G for a step: `make fmt-check l
 msrv size deny deny-mutations test kani kani-mutations` (`make ci` stops at `spec`, so run them as the
 foundation slice did), plus `make spec` with no more than 56 unbacked and 5 contradicted. CG gate: CG's tests
 build every generator's output against the RT head (T-2). A step that deletes an item has a paired CG
-PR for the same item; with no shim the two merge back to back (their order is the team leaders'), the CG one
-developed against the RT branch with `make use-local`.
+PR for the same item, and the order is forced, not chosen. CG builds `--locked` against this crate's
+`branch = "main"` unless a local patch is active (its Makefile drops `--locked` when `.cargo/config.toml`
+exists), so a CG PR cannot lock to an RT commit that is not yet on RT main. The RT PR therefore merges
+first; CG main stays on its old lock and stays green; the paired CG PR is developed and gated against the
+RT branch with `make use-local` (patch active, no `--locked`), then lands after the RT merge with its lock
+bumped. No shim is involved: CG never consumes a half-migrated RT main, because its lock only moves in the
+CG PR that adopts the new paths.
 
 | Step | RT change | CG, same step | Gate |
 | --- | --- | --- | --- |
-| 1 | Spec only: amend FR-275 (Description, step 2, AC-16 to AC-18), interface-001-AC-1, AC-2, AC-4, AC-5, AC-7 and AD-002 to this AD (no re-export; the residue list; the Q-1 answer) | none | `make spec` not above baseline |
+| 1 | Spec only: amend every statement listed under the end state: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", step 2, AC-16 to AC-18), interface-001 (prose, contract yaml, AC-1 to AC-7 and AC-10) and AD-002, to this AD (no re-export; the residue list; the Q-1 answer). Blocked by Q-1 and Q-2 | none | `make spec` not above baseline |
 | 2 | Add `quire-semantic-value`: `Cargo.toml`, `deny.toml` (`allow-git`, licence exceptions, ban list gains `qsl-analyze` and `qsl-walk-grow`), lock; no deletion | none | G; `make deny-mutations` bans each listed crate |
-| 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates | G |
-| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, `NodeKey` constructor, the three serializable mirrors | G; Kani decision (Q-3) |
-| 5 | Function application: vocabulary to `quire-semantic-value`; `ObjectEnvironment` to `ObjectClosure`; `expression` over the shared values (or deleted per Q-1) | `PackageDeclarations`, `CheckedPackage` emitters, `Origin` and `Location` mirrors | G |
+| 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `scripts/check_kani_mutations.py` repoint | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome` | G; Q-3 answered |
+| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, `NodeKey` construction (Q-5), the three serializable mirrors | G; Q-5 answered |
+| 5 | Function application, per the Q-1 answer: vocabulary to `quire-semantic-value`; `ObjectEnvironment` to `ObjectClosure`; the ported call mechanism deleted under (a) or (c), or replaced under (b) | the `PackageDeclarations`, `CheckedPackage` emitters, `Origin` and `Location` mirrors | G; Q-1 answered |
 | 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
 
-Why steps 3 and 4 are separate and 4 is one: the measured blockers are that `Value` holds `Quantity`,
-`EnumValue`, `ObjectReference` and `NodeKey`, whose shared forms use `UnitId`, `EnumMember`, `UniverseId`
-and `EffectiveId`, and that `ValueType::Reference` names a `NodeKey` where the shared one names an
-`EffectiveId` (PR #95's own finding, re-read in both sources). A step cannot move part of that set without
-a shim. IR-349 may split step 4 only along an edge where this crate still compiles with each half owned once.
+Why step 4 is one step: `Value` holds `Quantity`, `EnumValue`, `ObjectReference` and `NodeKey`, whose
+shared forms use `UnitId`, `EnumMember`, `UniverseId` and `EffectiveId`, and `ValueType::Reference` names a
+`NodeKey` where the shared one names an `EffectiveId` (PR #95's own finding, re-read in both sources).
+Step 3 is not clean of that set: the shared `Refusal::ForeignReference` is `{ required, supplied:
+UniverseId }`, so the one reference-type change above (the universe, and no more) belongs to step 3, as
+PR #95 did. What stays in step 4 is the rest: `Quantity`, `EnumValue`, `NodeKey`, object identity and the
+`EffectiveId` registry change. IR-349 may split step 4 only along an edge where this crate still compiles
+with each half owned once.
 
 Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files, +579, -10,056):
 
@@ -318,6 +360,7 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 | deletes `integer`, `rational`, `comparison`, `numeric`, `decimal`, `text`, `accounting`, `outcome` whole and reduces `division` and `ieee` to the negotiators | yes: this is step 3 | rebase onto step 2; remove four direct dependencies |
 | `mod.rs` ends with `pub use quire_exact::{..}` of 83 names at the `exact` path | no: this is the shim decision B refuses | delete the block; CG imports the owner paths in the same step |
 | `src/exact/stop.rs` (56 lines): a private `Stop` and conversion trait | no: it is a copy of `quire_semantic_value::stop` (`Stop`, `outcome_from_stop`, `outcome_into_stop`, same three variants) | consume `quire-semantic-value` (step 2) |
+| `src/exact/reference.rs`: `ObjectReference` universe changed to `UniverseId`, `UniverseIdentity` deleted | yes: this is the reference-type change step 3 needs | keep it in step 3 and nothing more of the reference set |
 | `src/exact/boolean.rs` keeps the lazy connective | yes (kept, in `scalar`) | move to `scalar` |
 | dev-dependency on `quire-exact` with `test-support` | yes, for tests of kept code only | keep only if a kept test needs the charge log |
 | no CG change | no | paired CG PR |
@@ -328,11 +371,11 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 
 | Question | Owner | Recommendation | Cost of the alternative |
 | --- | --- | --- | --- |
-| Q-1. Who owns the function-application call mechanism (`Body`, `Frame`, `CheckedPackage::call`, `plan_call`, 15 items)? FR-275-AC-16 to AC-18 and interface-001-AC-7 say this crate defines none; QSL's classification (relayed, untrusted) says it is runtime-owned; measured: neither shared crate has it | owner | this crate keeps it (`expression`), amending those criteria in step 1: bodies are host closures a generated oracle supplies (FR-273), which no QSL crate may own below layer 5 | deleting it leaves CG's function oracles with no runtime call surface until QSL builds one |
+| Q-1. What replaces the ported function-application call mechanism (the 15 `expression` items)? It is a port by its own headers and by FR-275-AC-13, the residue list and AD-003 decision F; neither shared crate has it (QSL's classification of it as runtime-owned is relayed and untrusted). Options, each compliant: (a) QSL provides it in a crate this one may depend on, and this crate deletes its copy; (b) this crate writes its own call surface that is not a port (names and shape not the authority's; FR-273 restated to say why it is runtime-owned: bodies are host closures); (c) delete it, and CG's function oracles (`src/oracle/function`) lose their runtime call surface | owner, with QSL for (a) | none between (a) and (b) until QSL states whether (a) is feasible; (c) only if neither is. Keeping the existing code is not an option and is not proposed | (a) waits on QSL; (b) is new code and a rewritten FR-273 and AD-002; (c) removes FR-273's behaviour |
 | Q-2. Confirm no `exact` re-export path (AD-016 owner decision 2 as stated in the IR-345 assignment) against FR-275's current text | owner | confirm; amend FR-275 and interface-001 in step 1 | a re-export is the shim this AD excludes |
-| Q-3. Kani: do kernel proofs live in QSL, and are RT's two removed mutation rows retired? | owner | RT proves and mutates only code it owns; kernel proofs are QSL's | RT keeps harnesses over code it no longer holds |
+| Q-3. Kani (needed at step 3: `verification/kani.rs` imports `compare_ieee`, `IeeeValue`, `Meter`, `Outcome` and `ScalarLimits`, all deleted there, and CG's Kani generator emits `rt::Integer`): do kernel proofs live in QSL, and are RT's two mutation rows whose target file leaves retired? | owner | RT proves and mutates only code it owns; kernel proofs are QSL's | RT keeps harnesses over code it no longer holds |
 | Q-4. Do the shared enums stay without `#[non_exhaustive]`? | QSL | state the policy; CG matches exhaustively either way | silent breakage on a new variant |
-| Q-5. Where does `NodeKey::from_hex` belong? | QSL | QSL adds it to `quire-exact`, or CG decodes hex and calls `decode_admitted` | a decoder copied into CG |
+| Q-5. May a consumer crate construct a `NodeKey` at all, and under what precondition? `decode_admitted` is for bytes of an admitted package under QSL's allow-list; CG emits literal keys and decodes hex (`from_hex`, absent from QSL), which neither the allow-list nor, shown here, the precondition covers. RT library code constructs none | QSL | QSL states which constructor a generator or an emitted oracle may use and where hex decoding lives; until then the CG paths that build keys stay unresolved in step 4 | a decoder copied into CG, or an emitted oracle calling a constructor outside QSL's rule |
 | Q-6. Where do `quire-exact` and `quire-semantic-value` live (O-1 of AD-007)? | owner | not this crate's: no change to this layout | none here |
 
 ### Routed gaps
@@ -341,7 +384,7 @@ To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldD
 `quire-exact` and `quire-semantic-value`; R-2 a call-depth field in `CheckingLimits` or the statement that
 the depth guard is the host's; R-3 the `PackageCause` variants, or their retirement; R-4 the injected denial
 single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
-behaviour is the specification; R-5 Q-4 and Q-5.
+behaviour is the specification; R-5 Q-4 and Q-5; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (Q-1 option (a)).
 
 To CG: the paired PR for each of steps 3 to 5 (the table above); mirrors of `DeclarationCause`, `Origin` and
 `Location` follow the shared definitions (AD-003 R3-C8).
