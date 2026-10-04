@@ -156,10 +156,14 @@ function application as vendored code with no exception, no expiry and no approv
 decision F says the same. QSL defines the same names in `qsl-package`, `qsl-semantics` and `qsl-eval`,
 which this crate may not depend on. Their end is Q-1.
 
-Interim, until Q-1 is answered and step 5 lands: the items stay in the tree as the defect FR-275 already
-records (AC-13 unmet, residue list non-empty). This AD grants no exception and sets no expiry; it asks for
-none. No step adds behaviour to them: steps 3 and 4 only repoint what they must to keep the crate
-compiling, and no consumer is given a new use of them.
+Interim. What this crate does with these items before Q-1 is answered is itself an open owner decision:
+FR-275's Open questions record it ("how the runtime handles its residue copy until QSL-358 lands (open,
+owner decision) ... no interim policy is stated"), and this AD does not decide it. It states two
+alternatives. Default, which applies only if the owner rules nothing else: the items stay in the tree as
+the defect FR-275 already records (AC-13 unmet, residue list non-empty), no step adds behaviour to them,
+and steps 3 and 4 only repoint what they must to keep the crate compiling. This AD grants no exception and
+sets no expiry, and asks for none. Alternative, Q-1 option (c) taken early: delete them in step 3 or 4 with
+the CG cost stated in Q-1. Step 5 or the earlier deletion is the end of the default.
 
 Deleted outright: everything else in `src/exact`, `mod.rs` included (`CHARGE_LOG_CAPACITY` and
 `charge_log_truncated` have no counterpart and go with `Meter`; R-4), with its tests (`src/exact_*_tests.rs` and the
@@ -185,15 +189,24 @@ records the gap.
   `quire_contract_runtime::exact` path"), Outputs ("a runtime `exact` module that defines only the
   runtime-owned negotiators and otherwise only re-exports QSL-owned crates"), Behavior "The residue"
   ("keeps the `exact` path") and "The end state" (`exact` "re-exports `quire-exact` and
-  `quire-semantic-value`"), AC-16 and AC-17 ("The runtime's `exact` module defines no item other than
-  the backend negotiators", which move to `scalar`); interface-001 prose of the exact kernel surface ("it
-  keeps its `exact` path"), its contract yaml (`module: quire_contract_runtime::exact`, `runtime_role:
-  re-export unchanged at the same exact path`, and the `runtime_owned` and `outside_exact` blocks), and
-  interface-001-AC-1, AC-2, AC-3, AC-4, AC-5 and AC-6, which name the `exact` module and become
-  vacuous without it; AC-10 names the same blocks.
+  `quire-semantic-value`"), AC-1 ("the runtime's `exact` module defines no public item that
+  `quire-exact` exports": vacuous without the module, and the criterion that stops a kept module
+  redefining kernel items, so it is restated over the kept modules), AC-16 and AC-17 ("The runtime's
+  `exact` module defines no item other than the backend negotiators", which move to `scalar`); the
+  Open question on the interim copy (see Interim above); interface-001 prose of the exact kernel
+  surface ("That path is the path the runtime guarantees stays available", "it keeps its `exact`
+  path"), its contract yaml (`module: quire_contract_runtime::exact`, `runtime_role: re-export
+  unchanged at the same exact path`, the `residue` block, the `runtime_owned` and `outside_exact` blocks,
+  and the `dependencies` lines "generated oracles -> quire_contract_runtime::exact" and "runtime ->
+  quire-exact" alone), and interface-001-AC-1, AC-2, AC-3, AC-4, AC-5 and AC-6, which name the
+  `exact` module and become vacuous without it; AC-9 (residue operations that call a `quire-exact`
+  operation; the residue ends), AC-10 (names the `exact` module and the `outside_exact` block), AC-11
+  and AC-14 (the dependency on `quire-exact` alone, which becomes `quire-exact` and
+  `quire-semantic-value`).
 - Merged statements this AD relies on and must not weaken: FR-275-AC-13 (no port of QSL code, a port
   being code that keeps the authority's item names), FR-275's residue list and the owner ruling it
-  quotes, AC-18 (the residue list is empty), and AD-003 decision F.
+  quotes, AC-18 (the residue list is empty; step 1 leaves it as written), AD-003 decision F, and
+  interface-001-AC-7 (the runtime defines none of the call-surface items) unless Q-1 yields option (b).
 - Direct dependencies `num-bigint`, `num-integer`, `num-traits` and `unicode-normalization` are
   named today only by `integer.rs`, `rational.rs`, `ieee.rs` and `text.rs`, none of which keeps code that
   names them (the negotiators do not); they are removed in the step that deletes those files.
@@ -337,7 +350,7 @@ CG PR that adopts the new paths.
 
 | Step | RT change | CG, same step | Gate |
 | --- | --- | --- | --- |
-| 1 | Spec only: amend every statement listed under the end state: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", step 2, AC-16 to AC-18), interface-001 (prose, contract yaml, AC-1 to AC-7 and AC-10) and AD-002, to this AD (no re-export; the residue list; the Q-1 answer). Blocked by Q-1 and Q-2 | none | `make spec` not above baseline |
+| 1 | Spec only: amend every statement listed under the end state: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", step 2, the Open question on the interim copy, AC-1, AC-16, AC-17; AC-18 and AC-13 stay), interface-001 (prose, contract yaml including `residue`, `runtime_owned`, `outside_exact` and `dependencies`, AC-1 to AC-6, AC-9, AC-10, AC-11, AC-14; AC-7 per Q-1) and AD-002, to this AD (no re-export; the Q-1 answer). Blocked by Q-1 and Q-2 | none | `make spec` not above baseline |
 | 2 | Add `quire-semantic-value`: `Cargo.toml`, `deny.toml` (`allow-git`, licence exceptions, ban list gains `qsl-analyze` and `qsl-walk-grow`), lock; no deletion | none | G; `make deny-mutations` bans each listed crate |
 | 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `scripts/check_kani_mutations.py` repoint | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome` | G; Q-3 answered |
 | 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, `NodeKey` construction (Q-5), the three serializable mirrors | G; Q-5 answered |
