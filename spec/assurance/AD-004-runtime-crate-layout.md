@@ -203,8 +203,8 @@ records the gap.
   `quire-semantic-value`"), AC-1 ("the runtime's `exact` module defines no public item that
   `quire-exact` exports": vacuous without the module, and the criterion that stops a kept module
   redefining kernel items, so it is restated over the kept modules), AC-16 and AC-17 ("The runtime's
-  `exact` module defines no item other than the backend negotiators", which move to `scalar`); the
-  Open question on the interim copy (left open: see Interim above); interface-001 prose of the exact kernel
+  `exact` module defines no item other than the backend negotiators", which move to `scalar`);
+  interface-001 prose of the exact kernel
   surface ("That path is the path the runtime guarantees stays available", "it keeps its `exact`
   path"), its contract yaml (`module: quire_contract_runtime::exact`, `runtime_role: re-export
   unchanged at the same exact path`, the `runtime_owned` and `outside_exact` blocks, and the
@@ -222,9 +222,8 @@ records the gap.
 - Group 3, the evaluation-item statements (Q-1, decided as option (a); amended conditionally): FR-273
   and AD-002 (they describe the ported surface), the residue list and the interface-001 `residue`
   block and AC-9 (their deletion tracker names QSL-358, and the list stays non-empty until step 5).
-  What they are amended to depends on the surface IR-583 states, whose size and shape (a relocated
-  mechanism, or QSL's own evaluator) are being put to the owner and are not decided here; these
-  amendments wait on that statement and land with or before step 5.
+  What they are amended to depends on the surface IR-583 states. IR-583 has not yet stated it, and this AD
+  does not decide its size or shape; these amendments wait on that statement and land with or before step 5.
 - Merged statements this AD relies on and must not weaken: FR-275-AC-13 (no port of QSL code, a port
   being code that keeps the authority's item names), the owner ruling the residue list quotes, AC-18
   (the residue list is empty), AD-003 decision F, and interface-001-AC-7 (the runtime defines none
