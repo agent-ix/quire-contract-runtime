@@ -18,10 +18,13 @@ Where the `exact` feature is enabled, the runtime shall take the exact value ker
 `quire-exact` crate (the QSL repository's kernel crate, QSL ADR-011 X-1) and shall hold no copy,
 port or re-implementation of any item `quire-exact` exports. The end state is that the runtime holds
 no ported QSL code at all: it is reached via `quire-exact` and via `quire-semantic-value` (QSL-358).
-Its `exact` module is a re-export of those QSL-owned crates at the
-`quire_contract_runtime::exact` path generated oracles already import. The runtime's own code in
-that module is only the backend negotiators, which are runtime-owned (below); the rest of its
-`src/exact` source copy (23 files, about 12,000 lines) is deleted.
+The runtime has no `quire_contract_runtime::exact` module: it re-exports
+no item of those QSL-owned crates (no `pub use`, alias, wrapper, feature or compatibility layer), and
+generated oracles and the code generator name the owning crates' own paths. Under the `exact` feature
+the runtime's own code is only the `scalar` module: the backend negotiators and the lazy Boolean
+connective, which are runtime-owned (below; AD-004). The rest of its `src/exact` source copy (23 files,
+about 12,000 lines) is deleted. This is the end state; the criteria below that assert it are planned
+until the IR-349 code steps land.
 
 The end state is delivered in two steps:
 
@@ -62,8 +65,9 @@ crates that the runtime consumes.
 
 ## Outputs
 
-- A build graph in which `quire-exact` resolves once, and (after step 2) a runtime `exact` module
-  that defines only the runtime-owned negotiators and otherwise only re-exports QSL-owned crates.
+- A build graph in which `quire-exact` resolves once, and (after step 2) a runtime with no `exact`
+  module whose `exact`-feature code defines only the runtime-owned `scalar` items and re-exports no
+  QSL-owned crate.
 - A build that fails when a QSL crate other than `quire-exact` enters the runtime's dependency graph.
 
 ## Behavior
@@ -81,11 +85,14 @@ crates that the runtime consumes.
   no-vendoring rule, with no exception, no expiry and no approval. Each is a defect against
   FR-275-AC-1's end state, recorded in the residue list below, and is to be deleted. Where they
   consume `quire-exact`, they use its `Value`, `Meter`, `Outcome` and `ScalarLimits` and define no
-  second one. The code that replaces them keeps the `exact` path (interface-001-AC-4).
-- **The end state.** The runtime defines no `exact` item except the
-  runtime-owned negotiators: the rest of `src/exact` is deleted, `exact` re-exports `quire-exact` and
-  `quire-semantic-value`, and no compatibility layer keeps the old source reachable. The runtime then
-  depends on each of those crates once, by the same spelling rule as `quire-exact`.
+  second one. Nothing replaces them under an `exact` path: consumers name the owning crates' own
+  paths (interface-001-AC-4).
+- **The end state.** There is no `exact` module. The runtime defines under the `exact` feature only the
+  runtime-owned `scalar` items (the negotiators and their types, and `evaluate_boolean_short_circuit`
+  with `ShortCircuitConnective`): the rest of `src/exact` is deleted, no `pub use`, alias or wrapper
+  re-exports `quire-exact`, `quire-semantic-value` or the evaluation leaf crate (IR-583), and no
+  compatibility layer keeps the old source reachable. The runtime then depends on each of those crates
+  once, by the same spelling rule as `quire-exact`.
 - **Runtime-owned negotiators.** `negotiate_integer_division`, `negotiate_ieee` and their requirement,
   capability and disposition types are defined in the runtime's own source (interface-001-AC-8). They
   are not a port and not vendoring, and they are outside QSL-358 and the residue list. They
@@ -143,7 +150,7 @@ crates that the runtime consumes.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-275-AC-1 | With `exact` enabled, the runtime's `exact` module defines no public item that `quire-exact` exports. | Inspection (TC-197) |
+| FR-275-AC-1 | With `exact` enabled, no public item the runtime defines (in `scalar` or any other module) has the name of an item that `quire-exact` or `quire-semantic-value` exports. PLANNED (IR-349). | Inspection (TC-197) |
 | FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The `quire-exact` dependency is a git source on the QSL repository with `branch = "main"` and with no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
@@ -158,8 +165,8 @@ crates that the runtime consumes.
 | FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order. The residue list is not an allowance: every item on it is a violation of this criterion, which stays unmet while the list is non-empty. The runtime-owned negotiators are not ports. | Inspection (TC-197) |
 | FR-275-AC-14 | The kernel move deletes no requirement, acceptance criterion or test case. | Inspection (TC-197) |
 | FR-275-AC-15 | Every matrix row whose evidence leaves the runtime in the kernel move carries a planned status with a stated reason, because the status vocabulary has no "verified upstream" status (a planner question, no status is invented). | Inspection (TC-197) |
-| FR-275-AC-16 | The runtime's `exact` module defines no item other than the backend negotiators and their types, and no file under `src/exact` holds anything else. | Inspection (TC-197) |
-| FR-275-AC-17 | Every `exact` item the runtime defines, other than the negotiators, is named in the residue list, and the list records no exception, expiry or approval. | Inspection (TC-197) |
+| FR-275-AC-16 | The runtime has no `quire_contract_runtime::exact` module and no `pub use` of `quire-exact`, `quire-semantic-value` or the evaluation leaf crate; the only items it defines under the `exact` feature are the `scalar` items (the backend negotiators and their types, `evaluate_boolean_short_circuit` and `ShortCircuitConnective`), and no file under `src/exact` exists. PLANNED (IR-349): unmet while the residue exists. | Inspection (TC-197) |
+| FR-275-AC-17 | Every item the runtime defines under the `exact` feature, other than the `scalar` items, is named in the residue list, and the list records no exception, expiry or approval. PLANNED (IR-349). | Inspection (TC-197) |
 | FR-275-AC-18 | The residue list is empty. | Inspection (TC-197) |
 | FR-275-AC-19 | The runtime defines `negotiate_integer_division`, `negotiate_ieee` and their types in its own source and depends on no QSL crate for them. | Inspection (TC-197) |
 | FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
