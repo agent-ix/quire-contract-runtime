@@ -65,3 +65,10 @@ by the RT #97 header repair, not by the version change.
 FND-001 is pre-existing and needs an owner decision, so it does not block this approved edit.
 FND-002 is a body-text correction. The PR is mergeable as the approved change. A dispatched CI run
 would still fail at install until FND-001 is resolved.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | d5e3cb6: `.github/workflows/ci.yml:33` now installs `@agent-ix/ix-flow@0.2.3`, which is published on registry.npmjs.org with bin `ix-flow`; no other workflow line changed |
+| FND-002 | fixed | d5e3cb6 (PR body edited on GitHub, not in git): every caveat now matches measurement (npmjs publishes quire-cli 0.33.0, quoin 0.24.1 and @agent-ix/ix-flow 0.2.3; unscoped ix-flow is absent; make spec is red with 0.31.0 too; dispatch-only, so `gh pr checks` shows only CLA) |
