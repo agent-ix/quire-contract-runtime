@@ -16,9 +16,9 @@ IR-349; it is planned until then.
 
 ## Test Procedure
 
-1. List the public items the runtime defines under the `exact` feature and the items `quire-exact`
-   and `quire-semantic-value` export (`cargo doc` or `cargo public-api` over each); expect no name
-   defined in the runtime that either crate exports (FR-275-AC-1, FR-275-AC-2), none defined twice
+1. List every public item the runtime defines with `exact` enabled, in every module, and the items
+   `quire-exact` and `quire-semantic-value` export (`cargo doc` or `cargo public-api` over each); expect
+   no name defined in the runtime that either crate exports (FR-275-AC-1, FR-275-AC-2), none defined twice
    under an alias, no `exact` module and no `pub use` of `quire-exact`, `quire-semantic-value` or the
    evaluation leaf crate (FR-275-AC-16).
 2. Read `Cargo.toml`; expect `quire-exact` optional, enabled only by `exact`, with a git source on the

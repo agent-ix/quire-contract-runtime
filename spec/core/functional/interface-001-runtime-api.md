@@ -111,17 +111,18 @@ The interface's features in declaration order: every operation the contract abov
 
 ## Exact kernel surface
 
-Generated oracles and `quire-contract-codegen` reach exact semantic values through the owning
-crates' own paths (`quire_exact::`, `quire_semantic_value::`), which generated source names directly.
-In the end state the runtime defines no `quire_contract_runtime::exact` module and re-exports nothing
-from those crates (FR-275; planned until the IR-349 code steps land); `quire-contract-codegen` also
-depends on `quire-exact` directly (ADR-011 X-1). The runtime operators that generated code and the code
-generator call are the IR build-plan seam S4 (runtime operators); the runtime's own such items are in
-its `scalar` module. That name is unrelated to ADR-011's stage-DAG entry S4 (Linked checked package) or
+Today generated oracles and `quire-contract-codegen` reach exact semantic values through
+`quire_contract_runtime::exact`. The target end state (FR-275; planned, IR-349) is that they reach them
+through the owning crates' own paths (`quire_exact::`, `quire_semantic_value::`), which generated source
+names directly; the runtime then defines no `quire_contract_runtime::exact` module and re-exports nothing
+from those crates, and its own kept items are in a `scalar` module, which does not exist yet.
+`quire-contract-codegen` also depends on `quire-exact` directly (ADR-011 X-1). The runtime operators
+that generated code and the code generator call are the IR build-plan seam S4 (runtime operators). That
+name is unrelated to ADR-011's stage-DAG entry S4 (Linked checked package) or
 its migration path SEAM-4. This section fixes which items the seam carries, who owns each one, and
-which way the crate dependencies point, so that replacing the runtime's own kernel implementation
-with the upstream `quire-exact` crate changes where kernel items are defined and leaves the seam
-itself unchanged.
+which way the crate dependencies point. Replacing the runtime's own kernel implementation with the
+upstream `quire-exact` crate leaves the seam's items and their ownership as stated here and moves the
+paths consumers name to the owning crates.
 
 Ownership follows QSL ADR-013 O-13 and O-16 and ADR-011 X-1. `quire-exact` is the one owner of the
 exact value kernel: values and value types, the kernel evaluation `Outcome` with its `Undefined`,
@@ -156,7 +157,7 @@ against what the upstream `quire-exact` crate exports; they illustrate the rule 
 
 ```yaml
 exact:
-  module: none  # the runtime defines no exact module in the end state (FR-275; planned until IR-349 lands); its kept items are in the scalar module
+  module: none  # target end state (FR-275; planned, IR-349): no exact module; the kept items are in a scalar module that does not exist yet
   feature: exact
   consumers: [generated oracle source, quire-contract-codegen host code]
   kernel:
@@ -180,7 +181,7 @@ exact:
   residue:
     owner: QSL (QSL-358, quire-semantic-value, as relayed); not runtime-owned
     status: not authorized; vendored code to be deleted; no exception, no expiry, no approval (FR-275)
-    rule: every exact item the upstream quire-exact crate does not export, other than the runtime_owned negotiation items
+    rule: every exact item the upstream quire-exact crate does not export, other than the runtime_owned items
     consumed:
       function_application: [PackageDeclarations, FunctionDeclaration, CheckedPackage, CheckMode, CheckingLimits, CheckRefusal, InputRefusal, Frame, Body, Evaluation, plan_call]
       checking: [TypeEnvironment, CompositeDeclaration, CompositeShape, ObjectTypeDeclaration, RecursionEdges, DeclarationCause, InvalidDeclaration, ObjectEnvironment]
@@ -189,7 +190,7 @@ exact:
       quantity: [QuantityOperation, QuantityTarget, QuantityUnit, Conversion, evaluate_quantity, convert_quantity]
   runtime_owned:
     owner: quire-contract-runtime
-    module: scalar
+    module: scalar  # target: the module does not exist yet; today these items are in the exact module
     rule: only the negotiation items and the lazy Boolean connective below
     always_runtime: [negotiate_integer_division, negotiate_ieee]
     connective:
@@ -227,16 +228,16 @@ Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relay
 
 | ID | Criteria | Verification |
 | --- | --- | --- |
-| interface-001-AC-1 | The runtime shall define no `quire_contract_runtime::exact` module, and generated oracle source and `quire-contract-codegen` shall name the owning crates' own paths (`quire_exact::<Name>`, `quire_semantic_value::<Name>`) for every kernel item. PLANNED (IR-349). | Inspection |
-| interface-001-AC-2 | The runtime shall not re-export, by `pub use`, alias, wrapper or feature, any item that `quire-exact`, `quire-semantic-value` or the evaluation leaf crate exports. PLANNED (IR-349). | Inspection |
-| interface-001-AC-3 | Where the upstream `quire-exact` crate exports an item name, the runtime shall contain no public item definition with that name. PLANNED (IR-349). | Inspection |
-| interface-001-AC-4 | When an item's owner changes from the runtime to `quire-exact`, the runtime shall keep no path for that item. PLANNED (IR-349). | Inspection |
-| interface-001-AC-5 | The runtime shall define none of `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location` (the `named_kernel_types` list): an explicit per-type instance of interface-001-AC-3. PLANNED (IR-349). | Inspection |
-| interface-001-AC-6 | The runtime's library source shall not call a `NodeKey` constructor. PLANNED (IR-349). | Inspection |
+| interface-001-AC-1 | The runtime shall define no `quire_contract_runtime::exact` module. | Inspection |
+| interface-001-AC-2 | The runtime shall not re-export, by `pub use`, alias, wrapper or feature, any item that `quire-exact`, `quire-semantic-value` or the evaluation leaf crate exports. | Inspection |
+| interface-001-AC-3 | Where the upstream `quire-exact` crate exports an item name, the runtime shall contain no public item definition with that name. | Inspection |
+| interface-001-AC-4 | The runtime shall expose no item named in the `kernel.consumed` lists of the `exact` contract block at any `quire_contract_runtime` path, whether defined or re-exported there. | Inspection |
+| interface-001-AC-5 | The runtime shall define none of `Value`, `ValueType`, `Outcome`, `Refusal`, `Undefined`, `BoundViolation`, `Meter`, `ChargePoint`, `Incomplete`, `ScalarLimits`, `NodeKey`, `Origin` or `Location` (the `named_kernel_types` list): an explicit per-type instance of interface-001-AC-3. | Inspection |
+| interface-001-AC-6 | The runtime's library source shall not call a `NodeKey` constructor. | Inspection |
 | interface-001-AC-7 | The runtime shall not define `Frame`, `Body`, `CheckedPackage`, `Evaluation` or `plan_call` in its own source (FR-275; no exception, no expiry). | Inspection |
 | interface-001-AC-8 | The runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
 | interface-001-AC-9 | While a residue `exact` operation exists in the runtime, an operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
-| interface-001-AC-10 | The runtime shall define every item the `core_items` list names in its core modules. | Inspection |
+| interface-001-AC-10 | The runtime shall define every item the `core_items` list names in its `verdict`, `observation` and `accounting` modules. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
 | interface-001-AC-13 | While the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
 | interface-001-AC-14 | The runtime's normal dependencies shall include no crate published from agent-ix/quire-spec-language other than `quire-exact`. | Inspection |
