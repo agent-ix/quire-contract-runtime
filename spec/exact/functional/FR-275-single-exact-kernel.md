@@ -15,7 +15,7 @@ relationships:
 ## Description
 
 Where the `exact` feature is enabled, the runtime shall take the exact value kernel from the one
-`quire-exact` crate (the QSL repository's kernel crate, QSL ADR-011 X-1) and shall hold no copy,
+`quire-exact` crate (the kernel crate, QSL ADR-011 X-1, now in the `agent-ix/quire-exact` repository) and shall hold no copy,
 port or re-implementation of any item `quire-exact` exports. The end state is that the runtime holds
 no ported QSL code at all: it is reached via `quire-exact` and via `quire-semantic-value` (QSL-358).
 The runtime has no `quire_contract_runtime::exact` module: it re-exports
@@ -154,7 +154,7 @@ crates that the runtime consumes.
 | FR-275-AC-1 | With `exact` enabled, no public item the runtime defines (in `scalar` or any other module) has the name of an item that `quire-exact` or `quire-semantic-value` exports. | Inspection (TC-197) |
 | FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
-| FR-275-AC-4 | The `quire-exact` dependency is a git source on the QSL repository with `branch = "main"` and with no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
+| FR-275-AC-4 | The `quire-exact` dependency is a git source on the `agent-ix/quire-exact` repository with `branch = "main"` and with no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one `quire-exact` entry. | Test (TC-197, `make deny`) |
 | FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second `quire-exact` entry. | Test (TC-197) |
 | FR-275-AC-7 | `deny.toml` carries a `[bans]` `deny` entry for each QSL workspace crate listed under Guarded edges, which includes `qsl-eval`, `qsl-replay` and `quire-spec-language`. | Inspection (TC-198) |
