@@ -10,8 +10,9 @@
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{
-    CompoundUnit, EnumDeclaration, NodeKey, ObjectIdentity, ObjectReference, UniverseId,
+    CompoundUnit, EnumDeclaration, NodeKey, ObjectIdentity, ObjectReference,
 };
+use quire_exact::UniverseId;
 
 /// Trace: TC-035, FR-007-AC-13
 ///

@@ -10,13 +10,15 @@
 use std::collections::BTreeSet;
 
 use quire_contract_runtime::exact::{
-    compare_enum, construct_collection, evaluate_quantity, CardinalityBound, ChargePoint,
-    CheckMode, CheckingLimits, CollectionKind, CollectionType, ComparisonOperator,
-    CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration, EqualityOperand,
-    EqualityOperator, FunctionDeclaration, Incomplete, InjectedDenial, Integer, LimitKind, Meter,
-    NodeKey, ObjectEnvironment, Outcome, PackageDeclarations, Quantity, QuantityOperation,
-    QuantityUnit, Rational, ScalarLimits, TypeEnvironment, UnitDeclaration, UnitGraph, Value,
-    ValueType,
+    compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
+    CollectionType, CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration,
+    EqualityOperand, EqualityOperator, FunctionDeclaration, NodeKey, ObjectEnvironment,
+    PackageDeclarations, Quantity, QuantityOperation, QuantityUnit, TypeEnvironment,
+    UnitDeclaration, UnitGraph, Value, ValueType,
+};
+use quire_exact::{
+    CardinalityBound, ChargePoint, CollectionKind, ComparisonOperator, Incomplete, InjectedDenial,
+    Integer, LimitKind, Meter, Outcome, Rational, ScalarLimits,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);

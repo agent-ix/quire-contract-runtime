@@ -6,9 +6,10 @@
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{
-    evaluate_quantity, IllTypedCause, Integer, Meter, NodeKey, Quantity, QuantityOperation,
-    QuantityUnit, Rational, ScalarLimits, UnitDeclaration, UnitGraph,
+    evaluate_quantity, NodeKey, Quantity, QuantityOperation, QuantityUnit, UnitDeclaration,
+    UnitGraph,
 };
+use quire_exact::{IllTypedCause, Integer, Meter, Rational, ScalarLimits};
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
 

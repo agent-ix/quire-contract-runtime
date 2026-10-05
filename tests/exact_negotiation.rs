@@ -7,10 +7,10 @@ use std::collections::BTreeSet;
 
 use quire_contract_runtime::exact::{
     negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,
-    IeeeItemRequirement, IeeeOperationKind, IeeeUnsupportedCause, IeeeWidth, Integer,
-    IntegerDivisionBounds, IntegerDivisionConsumer, IntegerDivisionDisposition, IntegerInterval,
-    RoundingMode,
+    IeeeItemRequirement, IeeeUnsupportedCause, IntegerDivisionBounds, IntegerDivisionConsumer,
+    IntegerDivisionDisposition,
 };
+use quire_exact::{IeeeOperationKind, IeeeWidth, Integer, IntegerInterval, RoundingMode};
 
 fn int(value: i128) -> Integer {
     Integer::from(value)

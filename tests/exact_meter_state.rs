@@ -11,11 +11,13 @@
 use std::cell::Cell;
 
 use quire_contract_runtime::exact::{
-    evaluate_boolean_short_circuit, evaluate_quantity, ChargePoint, CompoundUnit,
-    CompoundUnitCause, Incomplete, Integer, InvalidCompoundUnit, InvalidSemanticGraph, LimitKind,
-    Meter, NodeKey, Outcome, Quantity, QuantityOperation, QuantityUnit, Rational, Refusal,
-    ScalarLimits, SemanticGraphCause, ShortCircuitConnective, Undefined, UnitDeclaration,
-    UnitGraph,
+    evaluate_boolean_short_circuit, evaluate_quantity, CompoundUnit, CompoundUnitCause,
+    InvalidCompoundUnit, InvalidSemanticGraph, NodeKey, Quantity, QuantityOperation, QuantityUnit,
+    SemanticGraphCause, ShortCircuitConnective, UnitDeclaration, UnitGraph,
+};
+use quire_exact::{
+    ChargePoint, Incomplete, Integer, LimitKind, Meter, Outcome, Rational, Refusal, ScalarLimits,
+    Undefined,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);

@@ -6,11 +6,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
-    construct_collection, form_collection, BoundViolation, CardinalityBound, ChargePoint,
-    CollectionKind, CollectionType, Component, CompositeDeclaration, CompositeShape,
-    ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue, Incomplete,
-    InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome, Presence, Refusal, ScalarLimits,
-    TypeEnvironment, Undefined, Value, ValueType,
+    construct_collection, form_collection, CollectionType, Component, CompositeDeclaration,
+    CompositeShape, ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue,
+    NodeKey, Presence, TypeEnvironment, Value, ValueType,
+};
+use quire_exact::{
+    BoundViolation, CardinalityBound, ChargePoint, CollectionKind, Incomplete, InjectedDenial,
+    Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {

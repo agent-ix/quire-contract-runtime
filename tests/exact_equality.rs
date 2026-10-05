@@ -4,14 +4,17 @@
 
 use proptest::prelude::*;
 use quire_contract_runtime::exact::{
-    admit_text, CardinalityBound, ChargePoint, CollectionKind, CollectionType, Component,
-    CompositeDeclaration, CompositeShape, ConstructionCause, ConstructionRefusal, DecimalType,
-    EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule, FieldDeclaration,
-    FieldValue, IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer,
-    IntegerInterval, LimitKind, Meter, NodeKey, ObjectIdentity, ObjectReference,
-    ObjectTypeDeclaration, OptionValue, Outcome, Presence, Quantity, QuantityUnit, Rational,
-    Refusal, RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType, TypeEnvironment,
-    UnitDeclaration, UnitGraph, UniverseId, Value, ValueType,
+    CollectionType, Component, CompositeDeclaration, CompositeShape, ConstructionCause,
+    ConstructionRefusal, EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule,
+    FieldDeclaration, FieldValue, NodeKey, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
+    OptionValue, Presence, Quantity, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph,
+    Value, ValueType,
+};
+use quire_exact::{
+    admit_text, CardinalityBound, ChargePoint, CollectionKind, DecimalType, IeeeWidth, IllTyped,
+    IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerInterval, LimitKind, Meter, Outcome,
+    Rational, Refusal, RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType,
+    UniverseId,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {

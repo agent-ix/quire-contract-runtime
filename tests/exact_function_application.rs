@@ -6,14 +6,16 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
-    negotiate_ieee, negotiate_integer_division, plan_call, plan_evaluation, ChargePoint,
-    CheckCause, CheckMode, CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum,
-    EvaluationRefusal, FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition,
-    IeeeItemRequirement, IeeeOperationKind, IeeeUnsupportedCause, IeeeWidth, InputRefusal, Integer,
-    IntegerDivisionConsumer, IntegerDivisionDisposition, LimitKind, Location, Meter, NodeKey,
-    ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin, Outcome,
-    PackageDeclarations, Refusal, RoundingMode, ScalarLimits, TypeEnvironment, UniverseId, Value,
-    ValueType, MAX_CALL_DEPTH,
+    negotiate_ieee, negotiate_integer_division, plan_call, plan_evaluation, CheckCause, CheckMode,
+    CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum, EvaluationRefusal,
+    FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
+    IeeeUnsupportedCause, InputRefusal, IntegerDivisionConsumer, IntegerDivisionDisposition,
+    Location, NodeKey, ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
+    Origin, PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
+};
+use quire_exact::{
+    ChargePoint, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter, Outcome, Refusal,
+    RoundingMode, ScalarLimits, UniverseId,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -133,10 +135,7 @@ fn tc_194_arity_mismatch_refuses_before_any_charge() {
     assert_eq!(refusal.code(), "invalid_runtime_input");
     assert_eq!(refusal.cause(), "wrong-value-kind");
     assert!(meter.admitted_charges().is_empty());
-    assert_eq!(
-        meter.consumed(quire_contract_runtime::exact::LimitKind::WorkUnits),
-        0
-    );
+    assert_eq!(meter.consumed(quire_exact::LimitKind::WorkUnits), 0);
 }
 
 /// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
@@ -479,7 +478,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
                     (Some(Value::Boolean(a)), Some(Value::Boolean(b))) => {
                         Outcome::Completed(Value::Boolean(a && b))
                     }
-                    _ => Outcome::Refused(quire_contract_runtime::exact::Refusal::CheckedInvariant),
+                    _ => Outcome::Refused(quire_exact::Refusal::CheckedInvariant),
                 }
             }),
         )
@@ -526,11 +525,10 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
     let objects = ObjectEnvironment::default();
-    let mut meter =
-        Meter::new(UNLIMITED).with_injected_denial(quire_contract_runtime::exact::InjectedDenial {
-            point: ChargePoint::FunctionCall,
-            occurrence: 1,
-        });
+    let mut meter = Meter::new(UNLIMITED).with_injected_denial(quire_exact::InjectedDenial {
+        point: ChargePoint::FunctionCall,
+        occurrence: 1,
+    });
     let evaluation = package.call("f", Vec::new(), &objects, &mut meter).unwrap();
     assert!(matches!(evaluation.outcome, Outcome::Incomplete(_)));
     assert!(!ran.get());
@@ -1068,7 +1066,7 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(quire_contract_runtime::exact::Refusal::CheckedInvariant)
+        Outcome::Refused(quire_exact::Refusal::CheckedInvariant)
     ));
 }
 

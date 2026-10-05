@@ -1,45 +1,39 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Complete-V1 exact scalar oracle operators and typed runtime outcomes.
+//! Runtime-owned negotiation and temporary exact-semantic residue.
 //!
-//! Implements: FR-006, FR-007, FR-008, FR-273, FR-275.
+//! Implements: FR-009, FR-012, FR-143, FR-144, FR-146, FR-149, FR-273.
 //!
-//! The exact scalar kernel, the kernel `Outcome` and the charge-before-work `Meter` are the
-//! `quire-exact` crate's (FR-275): this module re-exports them at the path generated oracles
-//! already import and defines none of them. What this module still defines is
+//! Exact scalar values, operations, outcomes and metering belong to `quire-exact` (FR-275).
+//! Consumers import those directly from the kernel. This module still defines
 //!
 //! - the runtime-owned I13 negotiators ([`negotiate_integer_division`], [`negotiate_ieee`] and
 //!   their types; FR-009, interface-001-AC-8), and
-//! - the interim residue, kept only under the temporary exception FR-275 records (expiry:
-//!   QSL-358 phase 2 merged): the composite, collection, equality, quantity, unit, enumeration,
-//!   containment, expression and carried-vocabulary modules, which are built over the kernel
-//!   scalars and `Meter`. They are consumed by [`Value`], and the kernel's own `Value` is not
-//!   yet adopted (IR-349 part 1b).
+//! - the remaining ported QSL code, pending removal under QSL-358: the composite, collection,
+//!   equality, quantity, unit, enumeration, containment, expression and carried-vocabulary
+//!   modules. This residue is an open FR-275 defect, not an approved exception. It is built over
+//!   kernel scalars and metering and is consumed by [`Value`].
+//!
+//! Trace: interface-001-AC-2, interface-001-AC-4
+//!
+//! ```compile_fail
+//! use quire_contract_runtime::exact::Integer;
+//! ```
 //!
 //! Layers:
 //!
-//! 1. kernel scalars (from `quire-exact`): [`Integer`], [`IntegerInterval`]/[`BoundedInteger`],
-//!    [`Rational`], [`Decimal`], [`IeeeValue`], [`Text`], and the explicit operation tables
-//!    [`evaluate_integer_arithmetic`], [`evaluate_rational_arithmetic`], [`order_numbers`],
-//!    [`evaluate_boolean`], [`evaluate_decimal`], [`divide`], [`modulo`], [`evaluate_ieee`],
-//!    [`compare_ieee`], [`convert_ieee_width`], [`ieee_to_exact`], [`exact_to_ieee`],
-//!    [`admit_text`] and [`compare_text`], each after its static [`IllTyped`] refusal;
-//! 2. the runtime's residue over them: [`EnumValue`] and [`Quantity`] over a [`UnitGraph`]
+//! 1. the runtime's residue over kernel scalars: [`EnumValue`] and [`Quantity`] over a [`UnitGraph`]
 //!    ([`compare_enum`], [`evaluate_quantity`], [`compare_quantity`], [`convert_quantity`]),
 //!    and [`evaluate_boolean_short_circuit`], the stop-carrying lazy-right connective the
 //!    kernel does not export;
-//! 3. quire-specification/FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
+//! 2. quire-specification/FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
 //!    and the [`ValueGraph`] finite-value constructor, over terminal
 //!    [`ObjectReference`] identities;
-//! 4. quire-specification/FR-144 collections: [`CollectionType`], [`CollectionValue`] and
+//! 3. quire-specification/FR-144 collections: [`CollectionType`], [`CollectionValue`] and
 //!    [`construct_collection`]/[`form_collection`], keyed by the quire-specification/FR-144
 //!    canonical key that [`CheckedEquality`] and collection membership share;
-//! 5. the quire-specification/FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
+//! 4. the quire-specification/FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
 //!    [`CheckedEquality::evaluate`];
-//! 6. the distinct evaluator [`Outcome`] (the kernel's) with typed [`Undefined`], [`Refusal`]
-//!    and [`Incomplete`] reasons;
-//! 7. `quire.value.accounting/v1` charge-before-work metering through the kernel's
-//!    [`Meter`];
-//! 8. the quire-specification/FR-146 function-application surface:
+//! 5. the quire-specification/FR-146 function-application surface:
 //!    [`PackageDeclarations::check`] and [`CheckedPackage::call`]/
 //!    [`CheckedPackage::evaluate`], ported to the boundary AD-002 sets.
 //!
@@ -125,25 +119,4 @@ pub use reference::{
 pub use unit::{
     CompoundUnit, CompoundUnitCause, Dimension, InvalidCompoundUnit, Unit, UnitDeclaration,
     UnitEdge, UnitGraph, COMPOUND_UNIT_DOMAIN,
-};
-
-// The kernel items this module no longer defines (FR-275): re-exported unchanged at the path
-// generated oracles import (interface-001-AC-1, AC-2, AC-4). Not an alias layer: these are
-// `quire-exact`'s own definitions and the runtime owns no copy of any of them.
-pub use quire_exact::{
-    admit_text, compare_ieee, compare_text, convert_ieee_width, divide, evaluate_boolean,
-    evaluate_decimal, evaluate_ieee, evaluate_integer_arithmetic, evaluate_rational_arithmetic,
-    exact_to_ieee, ieee_intrinsic_identities, ieee_to_exact, modulo, order_numbers,
-    BooleanConnective, BoundViolation, BoundedInteger, CardinalityBound, ChargePoint,
-    CollectionKind, ComparisonOperator, Decimal, DecimalLoss, DecimalOperation,
-    DecimalRepresentation, DecimalResult, DecimalType, DivisionProfile, EmptyCardinalityBound,
-    EmptyInterval, EmptyTextBounds, ExactScalar, IeeeComparison, IeeeExact, IeeeExactLoss,
-    IeeeExactTarget, IeeeFlag, IeeeFlags, IeeeOperand, IeeeOperation, IeeeOperationKind,
-    IeeeProvenance, IeeeResult, IeeeValue, IeeeWidth, IllTyped, IllTypedCause, Incomplete,
-    InexactTarget, InjectedDenial, Integer, IntegerArithmetic, IntegerDomain, IntegerInterval,
-    InvalidUtf8, LimitKind, Meter, NonCanonicalInteger, NonPositiveDenominatorBound,
-    NormalizationForm, OrderedOperands, OrderingOperator, OutOfDomain, Outcome, QuotientRemainder,
-    Rational, RationalArithmetic, RationalDomain, Refusal, RoundingMode, ScalarLimits, Text,
-    TextPayload, TextProfile, TextProvenance, TextType, Undefined, UniverseId, ZeroDenominator,
-    IEEE_DEFINITION, UNICODE_TEXT_DEFINITION, UNICODE_VERSION,
 };

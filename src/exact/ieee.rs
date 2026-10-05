@@ -63,8 +63,9 @@ pub enum IeeeUnsupportedCause {
 ///
 /// ```compile_fail
 /// use quire_contract_runtime::exact::{
-///     IeeeDisposition, IeeeUnsupportedCause, IeeeWidth, Outcome, Value,
+///     IeeeDisposition, IeeeUnsupportedCause, Value,
 /// };
+/// use quire_exact::{IeeeWidth, Outcome};
 /// let disposition = IeeeDisposition::Unsupported(IeeeUnsupportedCause::Width(IeeeWidth::Binary64));
 /// let _: Outcome<Value> = disposition.into();
 /// ```

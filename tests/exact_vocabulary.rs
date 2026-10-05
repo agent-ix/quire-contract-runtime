@@ -3,10 +3,11 @@
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{
-    CompoundUnit, Dimension, EnumDeclaration, EnumValue, Integer, InvalidSemanticGraph, NodeKey,
-    PackageRefusalCode, Rational, SelectionRefusalCode, SemanticGraphCause, UnitDeclaration,
-    UnitGraph, COMPOUND_UNIT_DOMAIN, NODE_KEY_DOMAIN,
+    CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, NodeKey,
+    PackageRefusalCode, SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph,
+    COMPOUND_UNIT_DOMAIN, NODE_KEY_DOMAIN,
 };
+use quire_exact::{Integer, Rational};
 
 fn key(byte: u8) -> NodeKey {
     NodeKey::from_bytes([byte; 32])
