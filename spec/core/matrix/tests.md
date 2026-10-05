@@ -20,7 +20,7 @@ type: TestMatrix
 
 | Interface | Acceptance Criteria | Test Cases | Status |
 |---|---|---|---|
-| interface-001 | interface-001-AC-1, interface-001-AC-3, interface-001-AC-4, interface-001-AC-5, interface-001-AC-7, interface-001-AC-9 | — | 🚧 pending adoption (IR-349): the runtime still defines an `exact` module and ported residue; the kernel definitions and re-export have been removed in part 1 |
+| interface-001 | interface-001-AC-1, interface-001-AC-3, interface-001-AC-4, interface-001-AC-5, interface-001-AC-7, interface-001-AC-9 | — | 🚧 pending adoption (IR-349): the runtime still defines an `exact` module and shared value shapes as well as ported residue; scalar kernel definitions and the public kernel re-export have been removed in slice 1 |
 | interface-001 | interface-001-AC-2, interface-001-AC-6, interface-001-AC-8, interface-001-AC-10, interface-001-AC-11, interface-001-AC-14 | — | 🚧 partly adopted: part 1 imports `quire_exact` directly and exposes no kernel re-export; runtime-owned negotiators and core items remain. The other listed criteria require separate end-state inspection under IR-349 |
 
 ## Test Case Summary
