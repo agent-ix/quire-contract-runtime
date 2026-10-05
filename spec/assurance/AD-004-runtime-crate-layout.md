@@ -295,7 +295,7 @@ QSL lane), so the end state names those repositories, not the QSL repository.
 
 | Edge | Kind | Today | End |
 | --- | --- | --- | --- |
-| RT to `quire-exact` | normal, optional (`exact`), git `branch = "main"` on its own repository | declared on the QSL repository, named by no `src/` file | used; one lock entry |
+| RT to `quire-exact` | normal, optional (`exact`), git `branch = "main"` on its own repository | declared on the `agent-ix/quire-exact` repository, named by no `src/` file | used; one lock entry |
 | RT to `quire-semantic-value` | same, own repository | absent | added; one lock entry |
 | RT to the evaluation leaf crate | same, own repository (Q-1, IR-583) | absent | added in step 5 with the deletion of the `expression` items; one lock entry |
 | RT to `quire-canonical` | transitive, through `quire-semantic-value` (git, own repository, adds `sha2`, `ryu-js`, `serde`, `thiserror`) | absent | `deny.toml` needs `allow-git` for that repository and licence exceptions for `quire-semantic-value`, `quire-canonical`, `quire-canonical-derive` and the evaluation leaf; the new third-party crates must pass `make deny` (not measured) |
