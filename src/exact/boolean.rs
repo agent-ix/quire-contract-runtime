@@ -3,8 +3,8 @@
 //!
 //! `quire-exact` exports the eager connectives (`evaluate_boolean`) and `retain_boolean`, but no
 //! connective whose right operand is lazy and may itself stop. Generated oracles call this one
-//! (FR-014-AC-35 of the code generator), so it is an `exact` item the kernel does not export and
-//! stays in the runtime as interim residue until QSL-358 phase 2 (FR-275).
+//! (FR-014-AC-35 of the code generator), so it is a runtime-owned `exact` item that stays under
+//! FR-275's `scalar` surface after the ported residue is removed.
 
 use quire_exact::{retain_boolean, Meter, Outcome};
 
