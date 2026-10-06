@@ -150,6 +150,16 @@ impl CollectionType {
     pub fn bound(&self) -> CardinalityBound {
         self.bound
     }
+
+    /// Detach the one recursive child before an owning `ValueType` is dropped.
+    pub(super) fn take_element(&mut self) -> ValueType {
+        mem::replace(&mut self.element, ValueType::Boolean)
+    }
+
+    /// Borrow the fields for the iterative `ValueType` debug renderer.
+    pub(super) fn debug_fields(&self) -> (&CollectionKind, &ValueType, &CardinalityBound) {
+        (&self.kind, &self.element, &self.bound)
+    }
 }
 
 /// A completed collection value.

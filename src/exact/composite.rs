@@ -56,7 +56,6 @@ impl ConstAssert<true> {
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.
 #[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
 // An explicit tag rather than a niche encoding: CBMC cannot constant-fold a
 // niche-encoded discriminant read back from the heap, so a `ValueType` in a
 // `Vec` or `Box` sends Kani down this type's recursive drop glue without
@@ -91,6 +90,125 @@ pub enum ValueType {
     Collection(Box<CollectionType>),
     /// `Reference<T>` to an object of the model object type with this key.
     Reference(NodeKey),
+}
+
+impl Clone for ValueType {
+    fn clone(&self) -> Self {
+        // A type has at most one recursive child. Save its ancestors, clone the leaf,
+        // then rebuild the path from the bottom without host-stack recursion.
+        let mut ancestors = Vec::new();
+        let mut current = self;
+        let mut copy = loop {
+            match current {
+                Self::Option(child) => {
+                    ancestors.push(current);
+                    current = child;
+                }
+                Self::Collection(collection) => {
+                    ancestors.push(current);
+                    current = collection.element();
+                }
+                Self::Boolean => break Self::Boolean,
+                Self::Integer => break Self::Integer,
+                Self::Int(value) => break Self::Int(value.clone()),
+                Self::Rational(value) => break Self::Rational(value.clone()),
+                Self::Decimal(value) => break Self::Decimal(value.clone()),
+                Self::Float(value) => break Self::Float(*value),
+                Self::Quantity(value) => break Self::Quantity(value.clone()),
+                Self::Text(value) => break Self::Text(*value),
+                Self::Enum(value) => break Self::Enum(*value),
+                Self::Composite(value) => break Self::Composite(*value),
+                Self::Reference(value) => break Self::Reference(*value),
+            }
+        };
+        while let Some(parent) = ancestors.pop() {
+            copy =
+                match parent {
+                    Self::Option(_) => Self::Option(Box::new(copy)),
+                    Self::Collection(collection) => Self::Collection(Box::new(
+                        CollectionType::new(collection.kind(), copy, collection.bound()),
+                    )),
+                    Self::Boolean
+                    | Self::Integer
+                    | Self::Int(_)
+                    | Self::Rational(_)
+                    | Self::Decimal(_)
+                    | Self::Float(_)
+                    | Self::Quantity(_)
+                    | Self::Text(_)
+                    | Self::Enum(_)
+                    | Self::Composite(_)
+                    | Self::Reference(_) => copy,
+                };
+        }
+        copy
+    }
+}
+
+impl PartialEq for ValueType {
+    fn eq(&self, other: &Self) -> bool {
+        let mut pending = vec![(self, other)];
+        while let Some((left, right)) = pending.pop() {
+            match (left, right) {
+                (Self::Boolean, Self::Boolean) | (Self::Integer, Self::Integer) => {}
+                (Self::Int(a), Self::Int(b)) if a == b => {}
+                (Self::Rational(a), Self::Rational(b)) if a == b => {}
+                (Self::Decimal(a), Self::Decimal(b)) if a == b => {}
+                (Self::Float(a), Self::Float(b)) if a == b => {}
+                (Self::Quantity(a), Self::Quantity(b)) if a == b => {}
+                (Self::Text(a), Self::Text(b)) if a == b => {}
+                (Self::Enum(a), Self::Enum(b)) if a == b => {}
+                (Self::Option(a), Self::Option(b)) => pending.push((a, b)),
+                (Self::Composite(a), Self::Composite(b)) if a == b => {}
+                (Self::Collection(a), Self::Collection(b))
+                    if a.kind() == b.kind() && a.bound() == b.bound() =>
+                {
+                    pending.push((a.element(), b.element()));
+                }
+                (Self::Reference(a), Self::Reference(b)) if a == b => {}
+                _ => return false,
+            }
+        }
+        true
+    }
+}
+
+impl Eq for ValueType {}
+
+impl fmt::Debug for ValueType {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        render_debug(formatter, Task::Type(self, 0))
+    }
+}
+
+impl Drop for ValueType {
+    fn drop(&mut self) {
+        let mut pending = Vec::new();
+        drain_type_child(self, &mut pending);
+        while let Some(mut next) = pending.pop() {
+            drain_type_child(&mut next, &mut pending);
+        }
+    }
+}
+
+fn drain_type_child(value_type: &mut ValueType, pending: &mut Vec<ValueType>) {
+    match value_type {
+        ValueType::Option(child) => pending.push(mem::replace(&mut **child, ValueType::Boolean)),
+        ValueType::Collection(collection) => {
+            pending.push(collection.take_element());
+        }
+        ValueType::Boolean
+        | ValueType::Integer
+        | ValueType::Int(_)
+        | ValueType::Rational(_)
+        | ValueType::Decimal(_)
+        | ValueType::Float(_)
+        | ValueType::Quantity(_)
+        | ValueType::Text(_)
+        | ValueType::Enum(_)
+        | ValueType::Composite(_)
+        | ValueType::Reference(_) => {}
+    }
 }
 
 // The Kani-provability layout this enum's tag and inline-payload comments
@@ -280,7 +398,7 @@ impl fmt::Debug for Value {
     /// variant rather than pre-pushing a whole slice) would close this remaining gap; not
     /// attempted here.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        render_value(f, self)
+        render_debug(f, Task::Value(self, 0))
     }
 }
 
@@ -409,6 +527,8 @@ impl fmt::Write for Reindent<'_> {
 /// into the worklist first.
 enum Task<'a> {
     Value(&'a Value, usize),
+    Type(&'a ValueType, usize),
+    CollectionType(&'a CollectionType, usize),
     FieldSlot(&'a FieldValue, usize),
     Raw(&'static str),
     Leaf(&'a dyn fmt::Debug, usize),
@@ -518,10 +638,10 @@ fn push_scalar<'a>(
 /// governed target treats a stack overflow as silent corruption, so nothing in `src/exact` may
 /// carry a panic path, and nothing here needs to reach for one in the first place: every task this
 /// walk ever pushes is one this match already knows how to pop.
-fn render_value(f: &mut fmt::Formatter<'_>, root: &Value) -> fmt::Result {
+fn render_debug(f: &mut fmt::Formatter<'_>, root: Task<'_>) -> fmt::Result {
     let alternate = f.alternate();
     let mut writer = Writer { out: f, alternate };
-    let mut stack: Vec<Task<'_>> = vec![Task::Value(root, 0)];
+    let mut stack: Vec<Task<'_>> = vec![root];
     while let Some(task) = stack.pop() {
         match task {
             Task::Raw(text) => writer.raw(text)?,
@@ -529,6 +649,55 @@ fn render_value(f: &mut fmt::Formatter<'_>, root: &Value) -> fmt::Result {
             Task::Open(kind, depth) => writer.open(kind, depth)?,
             Task::Between(depth) => writer.between(depth)?,
             Task::Close(kind, depth) => writer.close(kind, depth)?,
+
+            Task::Type(ValueType::Boolean, _) => writer.raw("Boolean")?,
+            Task::Type(ValueType::Integer, _) => writer.raw("Integer")?,
+            Task::Type(ValueType::Int(v), depth) => push_scalar(&mut stack, "Int", depth, v),
+            Task::Type(ValueType::Rational(v), depth) => {
+                push_scalar(&mut stack, "Rational", depth, v);
+            }
+            Task::Type(ValueType::Decimal(v), depth) => {
+                push_scalar(&mut stack, "Decimal", depth, v);
+            }
+            Task::Type(ValueType::Float(v), depth) => push_scalar(&mut stack, "Float", depth, v),
+            Task::Type(ValueType::Quantity(v), depth) => {
+                push_scalar(&mut stack, "Quantity", depth, v);
+            }
+            Task::Type(ValueType::Text(v), depth) => push_scalar(&mut stack, "Text", depth, v),
+            Task::Type(ValueType::Enum(v), depth) => push_scalar(&mut stack, "Enum", depth, v),
+            Task::Type(ValueType::Composite(v), depth) => {
+                push_scalar(&mut stack, "Composite", depth, v);
+            }
+            Task::Type(ValueType::Reference(v), depth) => {
+                push_scalar(&mut stack, "Reference", depth, v);
+            }
+            Task::Type(ValueType::Option(child), depth) => {
+                push_tuple1(&mut stack, "Option", depth, |stack| {
+                    stack.push(Task::Type(child, depth.saturating_add(1)));
+                });
+            }
+            Task::Type(ValueType::Collection(collection), depth) => {
+                push_tuple1(&mut stack, "Collection", depth, |stack| {
+                    stack.push(Task::CollectionType(collection, depth.saturating_add(1)));
+                });
+            }
+            Task::CollectionType(collection, depth) => {
+                let (kind, element, bound) = collection.debug_fields();
+                push_struct3(
+                    &mut stack,
+                    "CollectionType",
+                    depth,
+                    ("kind", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                        stack.push(Task::Leaf(kind, fd));
+                    }),
+                    ("element", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                        stack.push(Task::Type(element, fd));
+                    }),
+                    ("bound", |stack: &mut Vec<Task<'_>>, fd: usize| {
+                        stack.push(Task::Leaf(bound, fd));
+                    }),
+                );
+            }
 
             Task::Value(Value::Boolean(v), depth) => push_scalar(&mut stack, "Boolean", depth, v),
             Task::Value(Value::Integer(v), depth) => push_scalar(&mut stack, "Integer", depth, v),
