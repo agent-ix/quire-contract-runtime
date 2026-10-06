@@ -775,6 +775,14 @@ fn tc_024_p9_value_type_operations_are_iterative() {
         ValueType::Integer,
         CardinalityBound::new(0, 2).unwrap(),
     ));
+    assert_eq!(
+        format!("{first:?}"),
+        "Collection(CollectionType { kind: Sequence, element: Integer, bound: CardinalityBound { minimum: 0, maximum: 2 } })"
+    );
+    assert_eq!(
+        format!("{first:#?}"),
+        "Collection(\n    CollectionType {\n        kind: Sequence,\n        element: Integer,\n        bound: CardinalityBound {\n            minimum: 0,\n            maximum: 2,\n        },\n    },\n)"
+    );
     let other_kind = ValueType::collection(CollectionType::new(
         CollectionKind::Bag,
         ValueType::Integer,
