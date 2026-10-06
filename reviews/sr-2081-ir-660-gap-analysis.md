@@ -31,3 +31,13 @@ The computed matrix tags FR-008-AC-13 to `tc_024_p9_value_type_operations_are_it
 ## Coverage
 
 Plan completion: not assessed. `quire matrix --scope . --format json` reports FR-008-AC-13 tagged by `tests/exact_composite.rs:725`. Its exact string assertions at lines 763–767 exercise only nested Option; the Collection path at lines 712–718 checks only a prefix and leaf substring. The inequality assertions do cover leaf, kind and bound. Reverse code ownership is FR-008-AC-13 for the changed operations. Existing unrelated strict-matrix gaps are outside this PR diff.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | a94d414ac969cb9ae35a21a26e252db04317d0d7 — TC-024 p9 now pins compact and alternate Collection Debug text exactly at tests/exact_composite.rs:778–785. |
+
+## Disposition verdict
+
+**PASS at a94d414ac969cb9ae35a21a26e252db04317d0d7.** The same tagged test now asserts exact compact and alternate literal output for a shallow `Collection(CollectionType { kind: Sequence, element: Integer, bound: CardinalityBound { minimum: 0, maximum: 2 } })`. No new finding arose from the eight-line test-only fix.
