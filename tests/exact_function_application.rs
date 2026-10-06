@@ -527,7 +527,7 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     let objects = ObjectEnvironment::default();
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(quire_exact::InjectedDenial {
         point: ChargePoint::FunctionCall,
-        occurrence: 1,
+        occurrence: std::num::NonZeroU64::MIN,
     });
     let evaluation = package.call("f", Vec::new(), &objects, &mut meter).unwrap();
     assert!(matches!(evaluation.outcome, Outcome::Incomplete(_)));

@@ -558,7 +558,7 @@ fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
     for (point, expected_consumed, next_charge) in cases {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: std::num::NonZeroU64::MIN,
         });
         let outcome = checked.evaluate(&int_value(1), &int_value(1), &mut meter);
         let Outcome::Incomplete(record) = outcome else {

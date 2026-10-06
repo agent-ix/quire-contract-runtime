@@ -3,6 +3,7 @@
 #![cfg(feature = "exact")]
 
 use std::cell::RefCell;
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
@@ -380,7 +381,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
 
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CollectionElement,
-        occurrence: 1,
+        occurrence: NonZeroU64::MIN,
     });
     let before = consumed(&meter);
     let elements: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
@@ -426,7 +427,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     ] {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::MIN,
         });
         let outcome = form_collection(
             &collection_type,

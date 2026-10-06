@@ -8,6 +8,7 @@
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
+use std::num::NonZeroU64;
 
 use quire_contract_runtime::exact::{
     compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
@@ -250,7 +251,7 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
     for (point, drive) in drivers {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: 1,
+            occurrence: NonZeroU64::MIN,
         });
         let record = drive(&mut meter);
         assert_eq!(record.limit_kind, LimitKind::WorkUnits, "{point:?}");

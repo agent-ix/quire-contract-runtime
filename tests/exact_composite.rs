@@ -3,6 +3,7 @@
 #![cfg(feature = "exact")]
 
 use std::cell::RefCell;
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
@@ -626,7 +627,7 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let env = TypeEnvironment::new([widget], []).unwrap();
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CompositeResultRetain,
-        occurrence: 1,
+        occurrence: NonZeroU64::MIN,
     });
     let before = consumed(&meter);
     let outcome = env

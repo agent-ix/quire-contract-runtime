@@ -192,6 +192,35 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
         assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
     }
+
+    // The runtime-owned lazy connective also retains no result when its own charge is denied,
+    // whether the left operand short-circuits or the right operand completes.
+    let mut limits = UNLIMITED;
+    limits.work_units = 0;
+    for (connective, left) in [
+        (ShortCircuitConnective::And, false),
+        (ShortCircuitConnective::And, true),
+    ] {
+        let mut meter = Meter::new(limits);
+        let outcome = evaluate_boolean_short_circuit(
+            connective,
+            left,
+            || Outcome::Completed(true),
+            &mut meter,
+        );
+        assert_eq!(
+            outcome,
+            Outcome::Incomplete(Incomplete {
+                limit_kind: LimitKind::WorkUnits,
+                limit: 0,
+                consumed: 0,
+                next_charge: int(1),
+                charge_point: ChargePoint::BooleanResultRetain,
+            })
+        );
+        assert!(meter.admitted_charges().is_empty());
+        assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
+    }
 }
 
 /// `unit.identity-read` attaches `value_occurrences` then `integer_bits` (the reverse of
