@@ -38,6 +38,10 @@ Check `TypeEnvironment` admission, `record`/`tuple`/`evaluate_record`/`evaluate_
    past typical host recursion limits and check `build` completes with no stack overflow.
 6. Inject a denial at `composite.result-retain`; check the `Incomplete` record and that no counter
    changed.
+7. On a bounded small-stack thread and a default-stack child process, construct an under-source-cap
+   deeply nested `ValueType` through `Option` and `Collection`, then clone, compare, format and
+   drop it. Check a shallow value's compact and alternate `Debug` output against exact literals,
+   and distinguish unequal leaves, collection kinds and bounds.
 
 ## Expected Results
 
@@ -45,3 +49,4 @@ Every declaration and construction refusal names its typed cause and originating
 evaluation follows declaration order and stops at the first non-completing member; containment
 graphs build bottom-up with sharing and no recursion-depth failure; the injected denial fires with no
 partial value, and `CheckedInvariant` is unreachable from every vector in this test's corpus.
+Deep type metadata survives cloning, comparison, formatting and freeing without host-stack recursion.

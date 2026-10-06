@@ -692,3 +692,107 @@ fn tc_024_p8_debug_exact_string_both_forms() {
         "Composite(\n    CompositeValue {\n        declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303),\n        slots: [\n            Present(\n                Composite(\n                    CompositeValue {\n                        declaration: NodeKey(0303030303030303030303030303030303030303030303030303030303030303),\n                        slots: [\n                            Absent,\n                        ],\n                        occ: Integer(\n                            1,\n                        ),\n                    },\n                ),\n            ),\n        ],\n        occ: Integer(\n            2,\n        ),\n    },\n)"
     );
 }
+
+fn exercise_deep_value_type(depth: usize, alternating_collections: bool) {
+    let bound = CardinalityBound::new(0, 2).unwrap();
+    let mut value_type = ValueType::Boolean;
+    for level in 0..depth {
+        value_type = if !alternating_collections || level % 2 == 0 {
+            ValueType::option(value_type)
+        } else {
+            ValueType::collection(CollectionType::new(
+                CollectionKind::Sequence,
+                value_type,
+                bound,
+            ))
+        };
+    }
+    let copy = value_type.clone();
+    assert_eq!(copy, value_type);
+    let rendered = format!("{copy:?}");
+    assert!(rendered.starts_with(if alternating_collections {
+        "Collection("
+    } else {
+        "Option("
+    }));
+    assert!(rendered.contains("Boolean"));
+    drop(copy);
+    drop(value_type);
+}
+
+/// Trace: TC-024, FR-008-AC-13
+#[test]
+fn tc_024_p9_value_type_operations_are_iterative() {
+    const CHILD_ENV: &str = "QUIRE_RT_IR660_DEEP_VALUE_TYPE_CHILD";
+    if std::env::var_os(CHILD_ENV).is_some() {
+        // The CG reproducer used 94,252 source bytes for 2,048 Option levels; 20,000
+        // levels at that measured density remain below its existing one-megabyte cap.
+        // A recursive derived Clone/Eq/Debug/Drop overflows the
+        // test harness's default stack here. The parent sees the process status, even when
+        // that old implementation aborts instead of returning a Rust test failure.
+        exercise_deep_value_type(20_000, false);
+        std::thread::Builder::new()
+            .stack_size(64 * 1024)
+            .spawn(|| {
+                let mut value_type = ValueType::Boolean;
+                for _ in 0..20_001 {
+                    value_type = ValueType::option(value_type);
+                }
+                drop(value_type);
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+        return;
+    }
+
+    std::thread::Builder::new()
+        .stack_size(64 * 1024)
+        .spawn(|| exercise_deep_value_type(2_048, true))
+        .unwrap()
+        .join()
+        .unwrap();
+
+    let child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "tc_024_p9_value_type_operations_are_iterative"])
+        .env(CHILD_ENV, "1")
+        .status()
+        .unwrap();
+    assert!(child.success(), "deep ValueType child failed: {child}");
+
+    let shallow = ValueType::option(ValueType::option(ValueType::Integer));
+    assert_eq!(format!("{shallow:?}"), "Option(Option(Integer))");
+    assert_eq!(
+        format!("{shallow:#?}"),
+        "Option(\n    Option(\n        Integer,\n    ),\n)"
+    );
+    assert_ne!(
+        shallow,
+        ValueType::option(ValueType::option(ValueType::Boolean))
+    );
+    let first = ValueType::collection(CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::Integer,
+        CardinalityBound::new(0, 2).unwrap(),
+    ));
+    assert_eq!(
+        format!("{first:?}"),
+        "Collection(CollectionType { kind: Sequence, element: Integer, bound: CardinalityBound { minimum: 0, maximum: 2 } })"
+    );
+    assert_eq!(
+        format!("{first:#?}"),
+        "Collection(\n    CollectionType {\n        kind: Sequence,\n        element: Integer,\n        bound: CardinalityBound {\n            minimum: 0,\n            maximum: 2,\n        },\n    },\n)"
+    );
+    let other_kind = ValueType::collection(CollectionType::new(
+        CollectionKind::Bag,
+        ValueType::Integer,
+        CardinalityBound::new(0, 2).unwrap(),
+    ));
+    let other_bound = ValueType::collection(CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::Integer,
+        CardinalityBound::new(0, 3).unwrap(),
+    ));
+    assert_ne!(first, other_kind);
+    assert_ne!(first, other_bound);
+}

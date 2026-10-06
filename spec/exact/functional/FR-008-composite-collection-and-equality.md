@@ -107,6 +107,10 @@ name and order; and no operator here decides anything the authority does not.
   and free without recursing, in time and allocation proportional to the value's size. The
   hand-written `Debug` output is pinned by an exact literal string, in both compact and alternate
   form, on small fixed composite and collection values.
+- `ValueType`'s `Clone`, `PartialEq`, `Debug` and `Drop` traverse `Option` and `Collection`
+  nesting with heap worklists, never a recursive host-stack walk. The same rule applies when an
+  enclosing declaration or collection type invokes those operations on its `ValueType` member.
+  The declared type keeps its exact equality and debug representation at every depth.
 - The runtime reports a closed compiler or evaluator refusal vocabulary (`InvalidDeclaration`,
   `ConstructionRefusal`, `GraphRefusal`, `IllTyped`, the extended `Refusal` and `Undefined`) exactly
   as the authority names it; it never re-derives, renames or infers a refusal the authority does not
@@ -154,6 +158,7 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 52 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-9 | `Value`'s `Debug` and `Drop` are hand-written and iterative: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and the hand-written `Debug` output is an exact literal string, in both compact and alternate form, on a small fixed value. | Test (TC-024, TC-025) |
+| FR-008-AC-13 | For an `Option`/`Collection`-nested `ValueType` whose depth exceeds a recursive host-stack walk under the admitted source-size cap, `Clone`, `PartialEq`, `Debug` and `Drop` complete on a small-stack thread and a default-stack child process without host-stack overflow; unequal leaf, collection kind and bound remain unequal, and the shallow compact and alternate `Debug` output matches the derived representation exactly. | Test (TC-024) |
 
 ## Kernel ownership
 
