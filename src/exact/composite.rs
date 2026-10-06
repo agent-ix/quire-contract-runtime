@@ -38,8 +38,9 @@ use super::stop::{OutcomeStop, Stop};
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.
 #[non_exhaustive]
-// Retain the explicit discriminant used by Kani instead of a heap-read niche encoding.
-// Scalar payload layouts belong to `quire-exact`; the tag does not impose a payload size.
+// The explicit tag remains from the earlier CBMC-oriented representation.
+// Kernel-owned payload types changed size; no inline-size bound is asserted
+// here, and no current Kani harness reads a heap-stored `ValueType`.
 #[repr(u64)]
 pub enum ValueType {
     /// `Boolean`.
@@ -189,9 +190,6 @@ fn drain_type_child(value_type: &mut ValueType, pending: &mut Vec<ValueType>) {
     }
 }
 
-// The scalar type payloads are owned by `quire-exact` (FR-275). Their layout is not
-// constrained by this enum, so the assertions tied to the former local scalar types are removed.
-
 impl ValueType {
     /// `K<element>[bound]`.
     pub fn collection(collection_type: CollectionType) -> Self {
@@ -257,8 +255,9 @@ impl ValueType {
 /// `src/exact/mod.rs`).
 #[non_exhaustive]
 #[derive(Clone)]
-// Retain an explicit discriminant for the same reason as `ValueType`.
-// The kernel owns scalar payload layouts; no local inline-payload size is required.
+// The explicit tag remains from the earlier CBMC-oriented representation.
+// Kernel-owned scalars no longer satisfy its former inline-size bound, and no
+// current Kani harness reads a heap-stored `Value`.
 #[repr(u64)]
 pub enum Value {
     /// A Boolean.
@@ -286,9 +285,6 @@ pub enum Value {
     /// A terminal object reference.
     Reference(ObjectReference),
 }
-
-// The scalar payloads are owned by `quire-exact` (FR-275), so the size assertions tied
-// to the former local scalar layout are removed. The explicit discriminant remains.
 
 impl Value {
     /// `occ(v)` of `quire.value.accounting/v1`: one for the value itself plus

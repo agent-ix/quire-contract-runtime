@@ -1,4 +1,3 @@
-use quire_exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, ScalarLimits};
 use crate::{
     operators::{
         and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem,
@@ -8,6 +7,7 @@ use crate::{
     ClauseId, ClauseKind, ClauseOutcome, ContractIdentity, ExecutionPoint, FailureDetail,
     FailureKind, Observation, RequirementId, RevisionId, Verdict, VerdictContext, VerdictKind,
 };
+use quire_exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, ScalarLimits};
 
 // `quire-contract-codegen`'s generated exact-scalar oracles call
 // `quire_contract_runtime::exact` operators directly (`quire-contract-codegen`

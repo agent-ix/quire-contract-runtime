@@ -49,15 +49,16 @@ The termination and definedness proof burden for every applied function lives en
 depends on that upstream proof rather than reproducing it. The call surface follows
 quire-spec-language, so a later quire-spec-language release that changes
 `CheckedPackage`'s signature requires a coordinated re-port, the same dependency FR-008
-already carries for composite, collection and equality evaluation. `Value` and `ValueType`'s layout
-on this crate's own Kani proof surface (an explicit tag, and no inline payload wider than `Integer`
-or `IntegerInterval`) is guarded by compile-time assertions in `src/exact/composite.rs`, not by
-construction discipline alone.
+already carries for composite, collection and equality evaluation. `Value` and `ValueType` retain
+explicit tags, but `quire-exact` changed the scalar payload layouts and IR-349 part 1, slice 1
+removed their compile-time size assertions from `src/exact/composite.rs`. No current Kani harness
+reads either enum from heap storage (`verification/kani.rs`); a future proof must measure the
+current representation rather than assume the former inline-size bound.
 
-Two more representation rules on this crate's Kani proof surface have no owning FR or NFR of their
-own, same as the layout rules above: `CheckedPackage::enter` returns `Option<DepthGuard>` rather than
+`CheckedPackage::enter` retains one CBMC-oriented representation rule with no owning FR or NFR:
+it returns `Option<DepthGuard>` rather than
 `Result<DepthGuard, Stop>`, because `Stop`'s niche is where CBMC cannot fold a written discriminant
 back (`src/exact/expression.rs`); a signature check next to `enter` pins its exact return type.
-`evaluate_integer_arithmetic` built its `Outcome<Integer>` directly rather than through an inner
-`Result<Integer, Stop>` round-trip, for the same reason; it is `quire-exact`'s now (IR-349 part 1,
-slice 1) and the rule is that crate's to keep.
+`evaluate_integer_arithmetic` also built its `Outcome<Integer>` directly rather than through an
+inner `Result<Integer, Stop>` round-trip, for the same reason. That operator now belongs to
+`quire-exact` (IR-349 part 1, slice 1), which owns any corresponding representation rule.
