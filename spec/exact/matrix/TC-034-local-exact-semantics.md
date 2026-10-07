@@ -15,6 +15,15 @@ decimal normalized-versus-retained, Euclidean `mod` and quantity type-fault orde
 the runtime, independently of the shared-corpus agreement suites. Evidence:
 `tests/exact_semantics.rs` (`--features exact`).
 
+## Ownership and evidence
+
+`ix://agent-ix/quire-exact/FR-365-AC-1` and `FR-365-AC-2` test rounding ties and default;
+`FR-366-AC-1` through `FR-366-AC-4` test IEEE NaNs, signed zero and total order;
+`FR-362-AC-12` and `FR-362-AC-13` test rational canonical form and membership; and
+`FR-363-AC-6` and `FR-363-AC-7` test decimal normalized values versus retained charges.
+Those are kernel subsets only. The RT quantity type-fault ordering and any RT/QSL agreement
+remain separate obligations. This spec-only change leaves the current local tests in place.
+
 ## Test Procedure
 
 1. Round exact ties in every one of the six spellings, for a positive and a negative value, and

@@ -10,9 +10,10 @@ type: TestMatrix
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |---|---|---|---|
-| FR-006 | FR-006-AC-1, FR-006-AC-6 | TC-016 | ✅ implemented |
+| FR-006 | FR-006-AC-1 | TC-016 | ✅ current local kernel evidence; owner FR-362-AC-11 tests scalar outcome stops |
+| FR-006 | FR-006-AC-6 | TC-016 | 🚧 planned RT refusal-record handling; owner FR-096-AC-8 tests kernel code and cause only; the stale local four-code test does not bind the amended criterion |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
-| FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
+| FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ current local kernel evidence; owner FR-368-AC-1/2 and FR-359-AC-6/7 test matching vocabulary and meter subsets |
 | FR-006 | FR-006-AC-4 | TC-017 | ✅ implemented |
 | FR-007 | FR-007-AC-1 | TC-018 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done) |
 | FR-007 | FR-007-AC-2 | TC-019 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done) |
@@ -20,7 +21,7 @@ type: TestMatrix
 | FR-007 | FR-007-AC-4 | TC-021 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-007 | FR-007-AC-5 | TC-022 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-007 | FR-007-AC-6 | TC-018, TC-019, TC-020, TC-021, TC-022 | 🚧 partly evidenced: the runtime-side Debug pins remain (TC-035); the QSL Debug-parity half is removed from this repository, recreation in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done) |
-| FR-007 | FR-007-AC-7 | TC-023 | ✅ implemented |
+| FR-007 | FR-007-AC-7 | TC-023 | 🚧 partly evidenced: current local kernel tests and owner FR-362-AC-1..9/11..18 cover tested atoms; owner FR-362-AC-10 remains partial and untagged (IR-667), and two-sided QSL agreement remains IR-669 work |
 | FR-008 | FR-008-AC-1, FR-008-AC-2 | TC-024 | ✅ implemented |
 | FR-008 | FR-008-AC-3, FR-008-AC-4 | TC-025 | ✅ implemented |
 | FR-008 | FR-008-AC-5, FR-008-AC-6 | TC-026 | ✅ implemented |
@@ -28,12 +29,14 @@ type: TestMatrix
 | FR-008 | FR-008-AC-9 | TC-024, TC-025 | ✅ implemented |
 | FR-008 | FR-008-AC-13 | TC-024 | ✅ implemented: deep metadata clone, equality, formatting and drop in a small-stack thread and default-stack child process |
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-025 | 🚧 sequence and ordered-set cases not yet in tests/exact_collection.rs |
-| FR-007 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | TC-034 | ✅ implemented |
+| FR-007 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | TC-034 | ✅ current local tests; owner FR-365-AC-1/2, FR-366-AC-1..4, FR-362-AC-12/13 and FR-363-AC-6/7 test only matching kernel subsets; RT quantity checks remain local |
 | FR-007 | FR-007-AC-13 | TC-035 | ✅ implemented |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
 | FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented (compile_fail doctest on `IeeeDisposition`, `src/exact/ieee.rs`) |
-| FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ implemented |
-| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ implemented |
+| FR-010 | FR-010-AC-1, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | TC-031 | ✅ current local evidence; owner FR-358-AC-1..3 tests matching named-denial, retry and nonzero-type subsets |
+| FR-010 | FR-010-AC-2, FR-010-AC-3 | TC-031 | 🚧 partly evidenced (IR-676): current RT tests cover an ordinary point and one competing short counter; owner FR-358-AC-1/2 do not test the equality.plan reservation amount or simultaneous-limit precedence |
+| FR-011 | FR-011-AC-1, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6 | TC-032 | ✅ current local evidence; owner FR-362-AC-11, FR-359-AC-1..7 and FR-358-AC-8..11 cover matching kernel subsets |
+| FR-011 | FR-011-AC-2, FR-011-AC-3, FR-011-AC-7, FR-011-AC-8 | TC-032 | ✅ current local RT quantity, lazy connective and order tests remain; owner FR-364-AC-1 covers the IEEE flag subset of AC-7 |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | TC-033 | ✅ implemented |
 | FR-273 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6 | TC-194 | ✅ implemented: AC-1's linked-only application is proved by `tc_194_kernel_check_is_refused_so_no_kernel_package_is_applicable` (a package `check` rejects under `CheckMode::Kernel` is never applicable — that is AC-6's inspection too) together with `tc_194_linked_package_applies_every_declared_function` and the rest of this corpus's `Linked`-application tests, which call only a package `check` admitted under `CheckMode::Linked`. AC-2/AC-3's "arity before any per-argument check, all before the `function.call` charge, before the body" ordering is covered for both `call` and `Frame::call` |
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
@@ -47,19 +50,19 @@ type: TestMatrix
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 |---|---|---|---|---|---|
-| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
+| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | 🚧 partly evidenced: current kernel test covers old vocabulary; amended AC-6 RT refusal-record handling is planned |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
 | TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done) |
 | TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done) |
 | TC-020 | Agree with the authority on IEEE profile vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-3, FR-007-AC-6 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, no test evidences it here |
 | TC-021 | Agree with the authority on text and enum vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-4, FR-007-AC-6 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, no test evidences it here |
 | TC-022 | Agree with the authority on quantity and unit vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-5, FR-007-AC-6 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, no test evidences it here |
-| TC-023 | Meter integer, rational, ordering and Boolean operations | Property | P0 | FR-007-AC-7 | ✅ implemented |
+| TC-023 | Meter integer, rational, ordering and Boolean operations | Property | P0 | FR-007-AC-7 | 🚧 partly evidenced: owner FR-362-AC-10 is partial and untagged (IR-667); shared-authority work remains IR-669 |
 | TC-024 | Construct composite values and their declaration environment | Unit | P0 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-13 | ✅ implemented |
 | TC-025 | Construct collections and order them by the canonical key | Property | P0 | FR-008-AC-3, FR-008-AC-4, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | 🚧 steps 1–2 and 4–7 implemented in `tests/exact_collection.rs`; steps 3 and 5 cover the set and bag only, so FR-008-AC-10 through FR-008-AC-12's sequence and ordered-set cases are not yet tested |
 | TC-026 | Evaluate the equality matrix and terminal references | Unit | P0 | FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8 | ✅ implemented |
 | TC-030 | Dispose negotiation items independently and in input order | Unit | P0 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | ✅ implemented |
-| TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | ✅ implemented |
+| TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | 🚧 partly evidenced: AC-2/3 owner gaps remain IR-676 |
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | ✅ implemented |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | ✅ implemented |
 | TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | ✅ implemented |
@@ -72,9 +75,9 @@ type: TestMatrix
 
 FR-009-AC-5, FR-010-AC-6 and FR-273-AC-4 are verified by `compile_fail` doctests, and TC-198 and
 TC-199 by gate targets (`make deny-mutations`, `make test-features`, `make msrv`, `make size`;
-see Evidence Locations). Every other row is backed by a `tc_NNN` Rust test; executable semantic
-claims retain direct acceptance-criterion trace tags. Rows marked planned or partly evidenced above
-are the exceptions.
+see Evidence Locations). Rows marked planned or partly evidenced above are not established by
+their current local tags or by one-crate owner tests. The old FR-006-AC-6 tag asserts a retired
+four-code census, and FR-010-AC-2/3 tags cover only named subsets.
 
 `FR-010-AC-5` is verified at both `check_injected` call sites: `Meter::charge`
 (`tc_031_further_charges_after_the_injected_denial_meter_normally`,
@@ -89,24 +92,26 @@ FR-275 requires RT to consume `quire-exact` directly and remove its local kernel
 IR-349, followed by RT evaluation-residue deletion owned by open IR-349 step 2 and backlog IR-583.
 QSL-358 is Done and covered QSL-side extraction. This amendment is spec-only:
 all current test files and production definitions remain present. The status columns describe
-current evidence only. TC-016/017/023 and their local kernel criteria remain implemented;
+current evidence only. TC-017 and its local kernel criteria remain implemented;
 TC-018/019 and FR-007-AC-1/2 are partly evidenced because their allocation checks exist but
 the shared-corpus agreement oracle is absent. Future deletion does not change those statuses
-before the code PR removes the tests.
+before the code PR removes the tests. The amended FR-006-AC-6 is planned for RT record handling;
+TC-016 and TC-023 are partial. FR-010-AC-2/3 and FR-007-AC-7 remain partial for IR-676 and
+IR-667 respectively.
 The existing vocabulary has no "verified upstream" status; no such status or upstream pass is
 claimed. Requirements, criteria and TC IDs remain, including obligations not yet mapped to an
 exact owner criterion. The computed `quire matrix` still finds current local trace binders;
 `tagged` reports their presence, not a semantic pass or future ownership. TC-032 is not a
 binder for FR-007-AC-7: its retained lazy connective evidence is directly tagged only to
 FR-011-AC-3/AC-8, which own the permanent lazy behavior. FR-007-AC-7 owns kernel
-operations and keeps TC-023's current evidence disposition; it has no permanent lazy clause.
+operations but retains TC-023's partial evidence disposition; it has no permanent lazy clause.
 
-When code PR #95 removes the local kernel tests, its matrix update shall mark the affected
-rows planned with a stated reason under FR-275-AC-15, keeping any remaining partial evidence
-explicit. The file dispositions below describe that future state; no deletion or upstream
-verification is claimed by this amendment.
+When code PR #95 removes the local kernel tests, its matrix update shall mark affected RT
+rows planned or partial with a stated reason under FR-275-AC-15, keeping owner evidence and
+RT-specific gaps explicit. The file dispositions below describe that future state; no deletion
+or two-sided agreement verification is claimed by this amendment.
 
-The owner mappings in TC-016/017/018/019/023 identify only matching contracts in
+The owner mappings in TC-016/017/018/019/023/031/032/034 identify only matching contracts in
 `ix://agent-ix/quire-exact`. RT shall retain no substitute kernel tests, copied vectors or
 agreement tests (FR-275-AC-12). The lazy connective in TC-032 is RT-owned behavior, with
 FR-011-AC-3/AC-8 evidence retained; already-decided Boolean truth tables are kernel-owned.

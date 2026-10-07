@@ -97,6 +97,14 @@ This requirement stays in force and binds the `exact` feature as a whole; where 
 moves to the kernel's repository the matrix says so and keeps the row, without deleting any
 acceptance criterion.
 
+`ix://agent-ix/quire-exact/FR-362-AC-11` covers scalar stop prefixes;
+`FR-359-AC-6` and `FR-359-AC-7` cover meter scan order and consumed readers;
+`FR-358-AC-8` through `FR-358-AC-11` cover the bounded test-support log after its cap;
+`FR-359-AC-1` through `FR-359-AC-5` cover cumulative boundaries and atomicity; and
+`FR-364-AC-1` covers IEEE flag order. These do not cover the RT quantity stop in AC-2,
+the lazy invocation and stop propagation in AC-3/AC-8, or RT dimension, compound-unit and
+graph orders in AC-7. The RT portions remain required and retain their own evidence in TC-032.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);

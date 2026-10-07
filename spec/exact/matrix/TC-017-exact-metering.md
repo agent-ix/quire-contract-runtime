@@ -16,9 +16,10 @@ the public meter. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 ## Ownership and evidence
 
 Kernel-owned after IR-349 removes the local copy. The evidence path above remains present
-in this spec-only amendment. `ix://agent-ix/quire-exact/FR-358` owns step 5's one-shot denial
-and step 6's diagnostic-log bound under `test-support`; `ix://agent-ix/quire-exact/FR-359`
-owns cumulative-boundary and atomic-refusal checks, not the entire step 3 counter census.
+in this spec-only amendment. `ix://agent-ix/quire-exact/FR-358-AC-1` and `FR-358-AC-2` own
+named denial subsets; `FR-358-AC-8` through `FR-358-AC-11` own the post-cap test-support log;
+`FR-359-AC-1` through `FR-359-AC-6` own cumulative-boundary and first-short-counter checks;
+`FR-368-AC-1` and `FR-368-AC-2` own the spelling census.
 No reference is a claim that every procedure step is mapped or verified upstream.
 
 ## Test Procedure

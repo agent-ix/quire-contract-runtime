@@ -17,9 +17,10 @@ upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 ## Ownership and evidence
 
 Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Step 5 currently has RT allocation
-coverage, which leaves in IR-349. `ix://agent-ix/quire-exact/FR-361-AC-6` owns that denied
-retain-upscale allocation bound; FR-361-AC-4/AC-5 cover scale-expansion/arithmetic denial.
-`ix://agent-ix/quire-exact/FR-363` owns retained-representation decimal ordering only.
+coverage, which leaves in IR-349. `ix://agent-ix/quire-exact/FR-361-AC-6` and
+`FR-361-AC-9` own tested denied retain-upscale cases; `FR-361-AC-4` and `FR-361-AC-5`
+cover scale-expansion/arithmetic denial. `FR-363-AC-1` through `FR-363-AC-7` own tested
+retained-representation decimal ordering subsets.
 Neither contract establishes TC-185 agreement or all rounding/arithmetic cases in step 4.
 No local allocation check constitutes an agreement pass. D24 (rational-to-decimal conversion)
 has no agreement evidence here and remains unavailable pending IR-669's two-sided run.

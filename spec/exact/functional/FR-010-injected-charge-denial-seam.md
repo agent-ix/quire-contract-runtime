@@ -82,6 +82,13 @@ This requirement stays in force and binds the `exact` feature as a whole; where 
 moves to the kernel's repository the matrix says so and keeps the row, without deleting any
 acceptance criterion.
 
+`ix://agent-ix/quire-exact/FR-358-AC-1` tests named admitted occurrences and one-shot
+behavior; `FR-358-AC-2` tests denial and retry at `equality.plan`; `FR-358-AC-3` fixes the
+nonzero occurrence type. These are partial owner evidence for FR-010. In particular, they do not
+test FR-010-AC-2's `equality.plan` reservation `next_charge = pairs + 2` or
+FR-010-AC-3's precedence when an injected denial and a real limit would both deny the same
+charge. Keep both assertions and their partial status; IR-676 tracks the owner evidence gap.
+
 ## Dependencies
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md), [FR-011](./FR-011-meter-state-at-a-stop.md);

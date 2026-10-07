@@ -34,14 +34,11 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 
 - A completed `false` is a value, never a refusal. `Undefined`, `Refused` and `Incomplete` carry
   closed, typed reasons; no variant carries a message string.
-- A `Refusal` carries a normative `refused { code }` spelling exactly where the language
-  defines one. The language defines four — `ieee_nan_payload_not_representable`,
-  `ieee_rational_out_of_domain`, `foreign_reference` (FR-149) and `cardinality_out_of_bound`
-  (FR-272) — and `Refusal::code()` is `Some` for exactly those four variants and `None` for every
-  other. `None` means "the language names no code for this refusal", not "this refusal has no
-  reason": the typed variant is always the reason. An oracle that must emit `refused { code }` for
-  a variant the language does not spell shall report the absence rather than invent a code, and
-  the normative vocabulary remains an obligation when kernel evidence leaves RT.
+- The kernel's code and cause spellings are specified by
+  `ix://agent-ix/quire-exact/FR-096-AC-8`. The runtime shall carry them into its refusal record
+  without inventing a code or cause when the kernel returns none, and shall preserve the caller's
+  category and locus. A kernel `CheckedInvariant` returns neither code nor cause; the runtime
+  shall handle that absence as an internal fault rather than fabricate a language refusal.
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
 - The kernel owns meter storage and accounting. Its bounded diagnostic charge log is exposed
@@ -71,7 +68,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
-| FR-006-AC-6 | `Refusal::code()` is `Some` for exactly `IeeeNanPayloadNotRepresentable`, `IeeeRationalOutOfDomain`, `ForeignReference` and `CardinalityOutOfBound` with their normative spellings, and `None` for all nine other variants. | Test (TC-016) |
+| FR-006-AC-6 | For every kernel refusal in `ix://agent-ix/quire-exact/FR-096-AC-8`, the runtime carries the returned code and cause into its refusal record with the caller's category and locus; when the kernel returns neither for `CheckedInvariant`, the runtime handles the internal fault without inventing a language code or cause. | Test (TC-016) |
 
 ## Kernel ownership
 
@@ -81,12 +78,14 @@ The criteria above remain obligations on that consumed behavior. They do not req
 kernel tests. [The exact matrix](../matrix/tests.md) records current local evidence separately
 from its disposition after the implementation removes the copy.
 
-Owner references cover only matching subsets: `ix://agent-ix/quire-exact/FR-358` owns one-shot
-injected denial and the bounded test-support log; `ix://agent-ix/quire-exact/FR-359` owns
-cumulative-counter boundary refusal and atomicity; `ix://agent-ix/quire-exact/FR-361` owns the
-specified allocation bounds on denied large work. These references do not establish the full
-outcome/reason vocabulary, every charge spelling, or the ill-typed agreement claim. Unmapped
-obligations remain explicit in TC-016/TC-017; no upstream verification status is inferred.
+Owner evidence covers only matching subsets: `ix://agent-ix/quire-exact/FR-096-AC-8` owns
+kernel refusal codes and causes; `FR-362-AC-11` covers public scalar outcome stops;
+`FR-368-AC-1` and `FR-368-AC-2` cover the charge and limit vocabularies;
+`FR-359-AC-6` and `FR-359-AC-7` cover counter order and consumption;
+`FR-358-AC-1`, `FR-358-AC-2` and `FR-358-AC-8` through `FR-358-AC-11` cover named denial
+and the bounded test-support log. `FR-361-AC-7` through `FR-361-AC-9` cover the specified
+large-work allocation cases. These one-crate tests do not establish runtime record handling,
+ill-typed caller behavior, or RT/QSL agreement; those remain explicit in the matrix.
 
 This amendment deletes no implementation or test. The remaining local kernel copy is IR-349
 work; remaining RT evaluation-residue deletion is open IR-349 step 2 and IR-583 (backlog) work. QSL-358 is

@@ -19,7 +19,8 @@ arithmetic allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Steps 4–5 currently have RT allocation
 coverage; that local kernel evidence leaves in IR-349, without replacement tests in RT.
 `ix://agent-ix/quire-exact/FR-361-AC-3` owns injected division/modulus denial before large
-allocation only. It does not establish the generated sweep, exact/one-under amounts or
+allocation. `FR-361-AC-7` and `FR-361-AC-8` test the large floor quotient at the exact and
+one-under bit limit. These one-crate cases do not establish the generated sweep or
 TC-192 agreement; those remaining obligations require their own evidence mapping.
 
 ## Test Procedure

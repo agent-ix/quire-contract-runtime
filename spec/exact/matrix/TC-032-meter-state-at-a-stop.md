@@ -21,10 +21,14 @@ when the left decides, propagating each right-operand stop unchanged with no ret
 retaining a completed connective result exactly once. Current evidence is
 `tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once` in the file above
 (FR-011-AC-3 and FR-011-AC-8). Its future API home is `scalar`, as interface-001 requires.
-The already-decided truth-table test is kernel-owned; `ix://agent-ix/quire-exact/FR-362`
-does not test lazy closure invocation. Steps 1–3 and 6–8 and the kernel part of step 9 leave
+The already-decided truth-table test is kernel-owned under
+`ix://agent-ix/quire-exact/FR-362-AC-9`, which does not test lazy closure invocation.
+`FR-362-AC-11` covers scalar stop prefixes; `FR-359-AC-6` and `FR-359-AC-7` cover scan order
+and consumed readers; `FR-358-AC-8` through `FR-358-AC-11` cover post-cap accounting;
+`FR-359-AC-1` through `FR-359-AC-5` cover cumulative boundaries and atomicity; and
+`FR-364-AC-1` covers IEEE flag order. Steps 1–3 and 6–8 and the kernel part of step 9 leave
 with the kernel copy; the quantity/environment parts of steps 4 and 9 remain RT evaluation residue
-owned by open IR-349 step 2 and backlog IR-583 until removed; QSL-358's QSL-side extraction is Done. This amendment changes no test or implementation.
+owned by open IR-349 step 2 and backlog IR-583 until removed; QSL-358's QSL-side extraction is Done. Owner tests do not close the RT quantity, lazy connective or graph duties. This amendment changes no test or implementation.
 
 ## Test Procedure
 
