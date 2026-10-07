@@ -23,12 +23,12 @@ make test             # the full test suite with all features
 make test-features    # the crate's feature matrix
 make doc              # warning-denied docs for runtime and footprint
 make msrv             # all-target MSRV compatibility check
-make size             # thumbv7em linked footprint and panic-relocation gate; footprint graph holds no quire-exact
+make size             # thumbv7em linked footprint and panic-relocation gate; footprint graph holds no shared exact dependency
 make spec             # Quire validation and coverage
 make build            # release build
 make clean            # cargo clean
 make deny             # cargo deny licenses and one-copy bans
-make deny-mutations   # each banned QSL crate added in a scratch copy must fail cargo-deny with `banned`
+make deny-mutations   # QSL Git dependencies in scratch copies must fail cargo-deny with a source rejection
 make use-local        # patch first-party git deps to sibling checkouts via a gitignored .cargo/config.toml (none today); snapshots Cargo.lock to .cargo/Cargo.lock.pre-local; fails if cargo metadata fails or a patch is unused
 make use-remote       # delete the patch config and restore Cargo.lock from that snapshot (no snapshot: lock untouched)
 make kani             # the proofs; an absent toolchain fails
@@ -39,7 +39,7 @@ make ci               # all mandatory local gates; never dispatches hosted CI
 ## Safety scaffolding
 
 - `clippy.toml` caps cognitive complexity / arg count
-- `deny.toml` allow-lists licenses and denies unknown registries/git sources, and `make deny` fails if any agent-ix git crate resolves more than once in a Cargo.lock (`scripts/check_one_copy.awk`); it bans every QSL workspace crate except `quire-exact` by name (FR-275)
+- `deny.toml` allow-lists licenses and the three shared Git repositories, denies unknown registries/git sources (including the QSL repository), and `make deny` fails if any agent-ix git crate resolves more than once in a Cargo.lock (`scripts/check_one_copy.awk`) (FR-275)
 - `rustfmt.toml` uses stable rustfmt settings with a 100-char width. CI fails on drift.
 - `verification/kani.rs` is compiled under `cfg(kani)`. Stable Clippy does not type-check that
   configuration; rustfmt and `make kani` are the controls for this boundary.

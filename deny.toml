@@ -1,5 +1,4 @@
-# Every feature is in the graph: `quire-exact` is optional and enabled only by `exact`, so
-# without this the licence, ban and source checks would not see it (FR-275-AC-8).
+# Every feature is in the graph: the shared leaves are optional and enabled only by `exact`.
 [graph]
 all-features = true
 
@@ -23,31 +22,14 @@ exceptions = [
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-footprint" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-exact" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-semantic-value" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-canonical" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-canonical-derive" },
 ]
 
 [bans]
 multiple-versions = "allow"
 wildcards = "warn"
-# FR-275 Guarded edges: the runtime depends on no crate of the QSL repository other than
-# `quire-exact`. `allow-git` below admits the whole repository, so every other QSL workspace
-# crate is banned by name. This is a snapshot of QSL's workspace members: a crate QSL adds later
-# is not banned until it is listed here (FR-275 Open questions).
-deny = [
-    { crate = "quire-spec-language" },
-    { crate = "qsl-attrs" },
-    { crate = "qsl-bench" },
-    { crate = "qsl-cst" },
-    { crate = "qsl-eval" },
-    { crate = "qsl-foundation" },
-    { crate = "qsl-forms" },
-    { crate = "qsl-package" },
-    { crate = "qsl-replay" },
-    { crate = "qsl-route" },
-    { crate = "qsl-semantics" },
-    { crate = "qsl-source" },
-    { crate = "xtask" },
-    { crate = "arch-lint" },
-]
 
 # One copy of every first-party crate is enforced by scripts/check_one_copy.awk
 # (run from `make deny`), which reads every tracked Cargo.lock.
@@ -58,10 +40,9 @@ version = 2
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-# First-party git sources: the quire-exact repository, which `quire-exact` resolves from, and
-# the QSL repository, which no RT crate resolves from now (FR-275; the bans above guard its
-# crates and keep it admitted so a banned crate fails as `banned`, not as an unknown source).
+# Only the shared first-party repositories are admitted. QSL's monorepo source is denied.
 allow-git = [
     "https://github.com/agent-ix/quire-exact",
-    "https://github.com/agent-ix/quire-spec-language",
+    "https://github.com/agent-ix/quire-semantic-value",
+    "https://github.com/agent-ix/quire-canonical",
 ]

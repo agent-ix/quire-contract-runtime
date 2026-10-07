@@ -211,14 +211,14 @@ records the gap.
   `dependencies` line "generated oracles -> quire_contract_runtime::exact"), and interface-001-AC-1,
   AC-2, AC-3, AC-4, AC-5 and AC-6, which name the `exact` module and become vacuous without it; AC-10
   (names the `exact` module and the `outside_exact` block).
-- Group 2, the statements naming the shared crates' repositories and the bans (Q-6, decided; they
-  hold today and break only when the dependency moves, so they are amended in step 2, in the PR that
-  needs IR-582 and changes the dependency): FR-275 Dependency spelling, "One copy" (`deny.toml` admits
-  the QSL repository as the one git source), Guarded edges (the 14 name bans), FR-275-AC-4, AC-7 and AC-8, the
-  Open question "Upkeep of the ban list" (moot once the bans go); interface-001 AC-11 and AC-14 and the
-  `dependencies` line "runtime -> quire-exact" alone (which gain `quire-semantic-value`); and the
-  checks that enforce the bans: `scripts/check_deny_bans.sh` (`make deny-mutations`), TC-198, and the
-  `CLAUDE.md` description of `deny.toml`.
+- Group 2, the shared crates' repository sources and source guard (Q-6, decided):
+  `quire-exact` already uses its own repository. The dependency step adds the optional
+  own-repository `quire-semantic-value` edge and transitive `quire-canonical` graph, then
+  removes the QSL repository allow-list entry and the stale 14 name bans. FR-275 Dependency
+  spelling, One copy, Guarded edges, AC-4, AC-7, AC-8 and AC-10, interface-001 AC-11 and AC-14,
+  TC-197 through TC-199, `scripts/check_deny_bans.sh` (`make deny-mutations`), the footprint
+  graph check, and `CLAUDE.md` state that source policy. This dependency step does not delete
+  the runtime's remaining semantic-value source or establish behavior parity.
 - Group 3, the evaluation-item statements (Q-1, decided as option (a); amended conditionally): FR-273
   and AD-002 (they describe the ported surface), the function-application clause of FR-275's step 2 (it
   says QSL-358 places function application in `quire-semantic-value`; under Q-1 it goes to the IR-583
@@ -295,11 +295,11 @@ QSL lane), so the end state names those repositories, not the QSL repository.
 
 | Edge | Kind | Today | End |
 | --- | --- | --- | --- |
-| RT to `quire-exact` | normal, optional (`exact`), git `branch = "main"` on its own repository | declared on the `agent-ix/quire-exact` repository, named by no `src/` file | used; one lock entry |
-| RT to `quire-semantic-value` | same, own repository | absent | added; one lock entry |
+| RT to `quire-exact` | normal, optional (`exact`), git `branch = "main"` on its own repository | declared on the `agent-ix/quire-exact` repository and used by `src/exact` | retained; one lock entry |
+| RT to `quire-semantic-value` | same, own repository | added as an unused optional edge under `exact`; one lock entry | consumed after owner API/evidence work |
 | RT to the evaluation leaf crate | same, own repository (Q-1, IR-583) | absent | added in step 5 with the deletion of the `expression` items; one lock entry |
-| RT to `quire-canonical` | transitive, through `quire-semantic-value` (git, own repository, adds `sha2`, `ryu-js`, `serde`, `thiserror`) | absent | `deny.toml` needs `allow-git` for that repository and licence exceptions for `quire-semantic-value`, `quire-canonical`, `quire-canonical-derive` and the evaluation leaf; the new third-party crates must pass `make deny` (not measured) |
-| RT to the QSL repository | none | `quire-exact` only, 14 crates banned by name | none: the `allow-git` entry for it and the 14 name bans are removed in step 2, and `unknown-git = "deny"` is then the guard |
+| RT to `quire-canonical` | transitive, through `quire-semantic-value` (git, own repository, adds `sha2`, `ryu-js`, `serde`, `thiserror`) | resolved under `exact`; own-repository source and licence exceptions admitted | retained while semantic-value is consumed |
+| RT to the QSL repository | none | none: its `allow-git` entry and 14 name bans were removed in step 2; `unknown-git = "deny"` is the guard | none |
 | footprint crate to any of them | none | none | none (FR-275-AC-10, extended to every shared crate) |
 | RT to IR, CG | none | none | none |
 
@@ -313,8 +313,8 @@ QSL lane), so the end state names those repositories, not the QSL repository.
   the feature stays `exact`, because the feature is what pulls in the shared crates and generated manifests
   already request it. The module names `text`, `composite` and `outcome` are not created: nothing is left to
   put in them.
-- D. Dependency spelling is FR-275's, applied to each of the three shared crates and naming that crate's own
-  repository (FR-275's text names the QSL repository; step 2 amends it): git, `branch = "main"`, optional,
+- D. Dependency spelling is FR-275's, applied to each of the three direct shared crates and naming that crate's own
+  repository: git, `branch = "main"`, optional,
   no `rev`, `tag` or `path`, no committed `[patch]`, one lock entry.
 - E. Tests follow the code: a test of a deleted item is deleted with it; a test of a kept item stays; a
   matrix row whose evidence leaves keeps a planned status with the reason (FR-275-AC-15).
@@ -328,7 +328,8 @@ Local labels; the repository assigns requirement ids when one is authored.
 - L-2. `quire-exact`, `quire-semantic-value` and the evaluation leaf each appear once in `Cargo.lock`
   (extends FR-275-AC-5), and no crate of the QSL repository appears (`unknown-git = "deny"` with no
   `allow-git` for it).
-- L-3. The footprint graph holds none of the three crates (extends the `make size` check).
+- L-3. The footprint graph holds none of the direct shared crates or their transitive canonical crates
+  (extends the `make size` check).
 - L-4. Every public item defined under the `exact` feature is in the keep table.
 - L-5. CG's compile tests build every generator's output against this crate's head (AD-003 T-2).
 
@@ -376,7 +377,7 @@ CG PR that adopts the new paths.
 | Step | RT change | CG, same step | Gate |
 | --- | --- | --- | --- |
 | 1 | Spec only; needs no ticket. Amend Group 1 only, the statements that hold today: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim-copy Open question stays open (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
-| 2 | Needs IR-582 (the repositories must exist). In one PR: add `quire-semantic-value` and re-point `quire-exact` at the extracted repositories (`Cargo.toml`, lock); `deny.toml` (`allow-git` for the extracted repositories and `quire-canonical`, licence exceptions; the QSL-repository `allow-git` and the 14 name bans removed); amend Group 2 (FR-275 Dependency spelling, "One copy", Guarded edges, AC-4, AC-7, AC-8, the ban-list Open question; interface-001 AC-11, AC-14 and the `quire-exact` dependency line); rewrite `scripts/check_deny_bans.sh` so `make deny-mutations` asserts cargo-deny's sources rejection for a crate added from the QSL repository, where it now asserts `error[banned]`; change TC-198 and the `CLAUDE.md` `deny.toml` description to match; no deletion | none | G, with `deny-mutations` green on the rewritten script; the script proves a git source outside the allow-list is rejected |
+| 2 | IR-582 delivered the repositories and `quire-exact` already uses its own repository. Add optional `quire-semantic-value` under `exact` (`Cargo.toml`, lock); admit the three own-repository Git sources and their scoped licences in `deny.toml`; remove the QSL-repository `allow-git` and the 14 name bans; amend Group 2, TC-197 through TC-199 and `CLAUDE.md`; require the QSL source rejection in `make deny-mutations` and keep the footprint graph free of the shared crates. No runtime source deletion or semantic behavior claim | none | G, with `deny-mutations` green; the script proves the QSL Git source is rejected |
 | 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `scripts/check_kani_mutations.py` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4), and interface-001's `compatibility.enums: non-exhaustive` statement is amended in this step to match | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
 | 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, `NodeKey` construction (Q-5), the three serializable mirrors | G; Q-5 answered |
 | 5 | Needs IR-583 stating the leaf's surface, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the stated surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G; needs IR-583 and IR-582 |
