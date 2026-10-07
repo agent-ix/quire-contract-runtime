@@ -6,7 +6,7 @@ analysis: base
 scope: "agent-ix/quire-contract-runtime@b81def151ee556aa69e1313eccf51097a35e3107; spec/exact/functional/FR-006-exact-outcomes-and-accounting.md, spec/exact/functional/FR-007-exact-scalar-families.md, spec/exact/matrix/TC-016-exact-outcome-envelope.md, spec/exact/matrix/TC-017-exact-metering.md, spec/exact/matrix/TC-018-integer-division-agreement.md, spec/exact/matrix/TC-019-decimal-agreement.md, spec/exact/matrix/TC-023-metered-arithmetic.md, spec/exact/matrix/TC-032-meter-state-at-a-stop.md"
 review_set: subset
 ---
- 
+
 ## Summary
 
 Ticket: IR-647. Reviewed every changed requirement, criterion, test case and matrix paragraph for ID validity, observable conditions, truthful current status and owner mapping. Owner references FR-358, FR-359, FR-360, FR-361, FR-362 and FR-363 were read on agent-ix/quire-exact main and each RT citation matches the subset it names (all six upstream FRs are Planned; RT claims no upstream pass). `evaluate_boolean_short_circuit`, `ShortCircuitConnective` and `tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once` exist at the reviewed sha. Sub-analyses run: ears-conformance (SR-2382), integrity (SR-2383), matrix (SR-2384).

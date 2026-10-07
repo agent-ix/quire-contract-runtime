@@ -21,11 +21,17 @@ coverage, which leaves in IR-349. `ix://agent-ix/quire-exact/FR-361-AC-6` owns t
 retain-upscale allocation bound; FR-361-AC-4/AC-5 cover scale-expansion/arithmetic denial.
 `ix://agent-ix/quire-exact/FR-363` owns retained-representation decimal ordering only.
 Neither contract establishes TC-185 agreement or all rounding/arithmetic cases in step 4.
-No local allocation check constitutes an agreement pass.
+No local allocation check constitutes an agreement pass. D24 (rational-to-decimal conversion)
+has no agreement evidence here and remains unavailable pending IR-669's two-sided run.
+D25 (contextual decimal typing) belongs to caller/type admission, not a scalar runtime call;
+classify it admission-only and require the authority's admitted/refused results as separate
+evidence. That admission evidence is absent here and remains planned under IR-669.
 
 ## Test Procedure
 
-1. Check the evaluated list equals D01–D23.
+1. Check that the evaluated, admission-only and unavailable lists form a disjoint census
+   equal to QSpec TC-185 D01–D25 (25 vectors). Name the evidence and reason for each
+   classification; no vector may be omitted or counted as executed without a run.
 2. For every vector with an authority run, compare value and outcome kind on both sides; for
    vectors whose charges the authority meters, also compare charges, counters and every injected
    denial.
@@ -43,11 +49,19 @@ No local allocation check constitutes an agreement pass.
 4. Check each operand-derived decimal amount exact and one under: add alignment, subtract
    cancellation, multiply, divide, negate with rounding and retain upscale.
 5. Deny the digits charge of a `2^20` scale upscale and check no allocation reaches 4096 bytes.
+6. Include D24 in the conversion agreement run when both sides can execute it: compare
+   its result and typed rounding-loss record, point sequence, amounts and counters with
+   TC-185, including its short-limit and strict-exact refusal cases. Any mismatch fails;
+   until such a run exists, report it unavailable rather than successful.
+7. For admission-only D25, require the caller/type authority's admission/refusal results
+   and pre-evaluation charge behavior to match TC-185 for each subcase. Do not substitute
+   a runtime arithmetic result for contextual typing evidence or count admission-only
+   evidence as a two-sided scalar evaluation pass. Missing admission evidence remains a gap.
 
 ## Expected Results
 
-The planned agreement run shall account for all 23 vectors and name every admission-only,
-unmetered or unavailable authority case, including D23. Value/outcome and charge agreement
+The planned agreement run shall account for all 25 vectors D01–D25 and name every
+admission-only, unmetered or unavailable authority case, including D23, D24 and D25. Value/outcome and charge agreement
 shall be claimed only for vectors actually executed on both sides. Step 3 fails on any
 local TC-185 charge/counter mismatch or any mismatch in an executed authority comparison. Local allocation evidence
 alone does not meet this expected result (Linear IR-669, open quire-integration owner).

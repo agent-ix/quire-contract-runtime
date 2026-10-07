@@ -6,7 +6,7 @@ analysis: base
 scope: "agent-ix/quire-contract-runtime@b81def151ee556aa69e1313eccf51097a35e3107; spec/exact/functional/FR-007-exact-scalar-families.md, spec/exact/functional/FR-011-meter-state-at-a-stop.md, spec/exact/matrix/TC-023-metered-arithmetic.md, spec/exact/matrix/TC-032-meter-state-at-a-stop.md, spec/exact/matrix/tests.md"
 review_set: subset
 ---
- 
+
 ## Summary
 
 Ticket: IR-647. Read-only matrix pass (spec-matrix adds no tags here: the candidate is frozen and spec-only). Compared the changed status cells and evidence paragraphs with the tagged tests at the reviewed sha and with `quire coverage --scope . --strict`; that gate reports 56 unbacked rows and 5 contradicted statuses at both base and head, differing only in shifted line numbers, so the amendment adds no coverage regression. TC-016/017/023 stay ✅ implemented and their tests are present; FR-007-AC-1/2 and TC-018/019 "partly evidenced" matches present allocation tests and the removed agreement oracle.
