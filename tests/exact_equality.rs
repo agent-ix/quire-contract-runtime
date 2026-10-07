@@ -916,8 +916,9 @@ proptest! {
         let mut meter = Meter::new(UNLIMITED);
         let outcome = checked.evaluate(&left, &right, &mut meter);
         prop_assert!(matches!(outcome, Outcome::Completed(_)), "unlimited meter, got {outcome:?}");
-        // The kernel's test-support charge log is unbounded, so every admitted
-        // `equality.pair` charge is in `admitted_charges`.
+        // The kernel's test-support log retains only the first 4096 admissions.
+        // This depth-3, width-4-bounded generator stays below that capacity,
+        // so every admitted `equality.pair` charge is in `admitted_charges`.
         let admitted_pairs = meter
             .admitted_charges()
             .iter()
