@@ -19,21 +19,23 @@ Kernel-owned after IR-349 removes the local copy. The evidence path above is cur
 RT evidence, not a retained RT kernel test obligation. Kernel refusal code and cause spellings
 are tested by `ix://agent-ix/quire-exact/FR-096-AC-8`; public scalar outcome stops by
 `FR-362-AC-11`; charge and limit spellings by `FR-368-AC-1` and `FR-368-AC-2`.
-FR-006-AC-6 now requires RT refusal-record handling of the returned code and cause, including
-the absent-code internal fault, which those one-crate tests do not execute. That RT evidence is
-planned after the kernel copy leaves.
+FR-006-AC-6 is an ownership inspection, not a TC-016 test criterion. Current
+`tc_016_refusal_codes_are_closed` and
+`tc_016_refusal_code_is_some_for_exactly_four_named_variants` assert the retired code
+vocabulary; their tags remain present until RT #95 removes the local kernel tests. They do
+not prove the amended ownership criterion or the closed-enum part of FR-006-AC-1.
 
 ## Test Procedure
 
 1. Build one outcome of each disposition, including completed `true` and `false`; compare every
    pair for equality and check that only completed outcomes yield a value.
-2. For each kernel refusal covered by FR-096-AC-8, construct the RT refusal record and check
-   its code, cause, category and locus; check `CheckedInvariant` takes the internal-fault path.
+2. Inspect the `Outcome::Refused(Refusal)` and `Outcome::Undefined(Undefined)` reason types
+   for distinct typed variants (`src/exact/outcome.rs:21-29,70-91`); do not infer the kernel
+   code/cause census from the retired local four-code tests.
 3. Round-trip every `ChargePoint` and `LimitKind` through its spelling; check the eleven QSpec
    families are present and `equality.plan-form` is absent.
 
 ## Expected Results
 
-Four distinct dispositions and closed vocabularies matching QSpec. RT records carry the
-kernel's code and cause with the caller's category and locus, while an internal fault receives
-no invented language refusal.
+Four distinct dispositions and typed reasons; the charge and limit spellings match QSpec.
+FR-006-AC-6's kernel code/cause ownership is inspected separately under FR-275.

@@ -34,11 +34,11 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 
 - A completed `false` is a value, never a refusal. `Undefined`, `Refused` and `Incomplete` carry
   closed, typed reasons; no variant carries a message string.
-- The kernel's code and cause spellings are specified by
-  `ix://agent-ix/quire-exact/FR-096-AC-8`. The runtime shall carry them into its refusal record
-  without inventing a code or cause when the kernel returns none, and shall preserve the caller's
-  category and locus. A kernel `CheckedInvariant` returns neither code nor cause; the runtime
-  shall handle that absence as an internal fault rather than fabricate a language refusal.
+- When the `exact` feature consumes `quire-exact` under FR-275, the runtime SHALL consume its
+  typed `Outcome::Refused(Refusal)` directly and SHALL define no separate refusal record or
+  code/cause mapping. The current typed surface is `src/exact/outcome.rs:21-29` and
+  `src/exact/mod.rs:141`; FR-275 defines the direct-consumption end state. The kernel owns
+  `Refusal::code()` and `Refusal::cause()` under `ix://agent-ix/quire-exact/FR-096-AC-8`.
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
 - The kernel owns meter storage and accounting. Its bounded diagnostic charge log is exposed
@@ -68,7 +68,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
-| FR-006-AC-6 | For every kernel refusal in `ix://agent-ix/quire-exact/FR-096-AC-8`, the runtime carries the returned code and cause into its refusal record with the caller's category and locus; when the kernel returns neither for `CheckedInvariant`, the runtime handles the internal fault without inventing a language code or cause. | Test (TC-016) |
+| FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping (current typed surface: `src/exact/outcome.rs:21-29`, `src/exact/mod.rs:141`). | Inspection |
 
 ## Kernel ownership
 
@@ -84,8 +84,9 @@ kernel refusal codes and causes; `FR-362-AC-11` covers public scalar outcome sto
 `FR-359-AC-6` and `FR-359-AC-7` cover counter order and consumption;
 `FR-358-AC-1`, `FR-358-AC-2` and `FR-358-AC-8` through `FR-358-AC-11` cover named denial
 and the bounded test-support log. `FR-361-AC-7` through `FR-361-AC-9` cover the specified
-large-work allocation cases. These one-crate tests do not establish runtime record handling,
-ill-typed caller behavior, or RT/QSL agreement; those remain explicit in the matrix.
+large-work allocation cases. The kernel code/cause mapping belongs to that owner AC; the
+diagnostic record belongs to `ix://agent-ix/quire-spec-language/FR-096`. These one-crate tests
+do not establish ill-typed caller behavior or RT/QSL agreement; those remain explicit in the matrix.
 
 This amendment deletes no implementation or test. The remaining local kernel copy is IR-349
 work; remaining RT evaluation-residue deletion is open IR-349 step 2 and IR-583 (backlog) work. QSL-358 is

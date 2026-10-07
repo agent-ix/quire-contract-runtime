@@ -114,7 +114,7 @@ remain obligations on consumed behavior; they do not require RT to retest the ke
 
 For FR-007-AC-7, `ix://agent-ix/quire-exact/FR-362-AC-1` through `FR-362-AC-9` and
 `FR-362-AC-11` through `FR-362-AC-18` own the tested integer/rational values, atom charges,
-stops and already-decided Boolean truth tables. `FR-362-AC-10` is partial and untagged:
+stops and already-decided Boolean truth tables. `FR-362-AC-10` is planned and untagged:
 the rational-normalize bit amount cannot be observed independently through the public meter;
 IR-667 tracks that owner evidence gap. `FR-363-AC-1` through `FR-363-AC-7` own tested decimal
 ordering subsets, and `FR-361-AC-1` through `FR-361-AC-9` own specified denied-work allocation
@@ -126,7 +126,10 @@ propagation required by FR-011-AC-3 and FR-011-AC-8 and evidenced by TC-032, not
 kernel's already-decided Boolean tests.
 
 FR-007-AC-1's large floor-division subset maps to `ix://agent-ix/quire-exact/FR-361-AC-7`
-and `FR-361-AC-8`; its injected division/modulus subset maps to `FR-361-AC-3`.
+and `FR-361-AC-8` at `integer-division.operands`; its injected division/modulus subset maps
+to `FR-361-AC-3`. None of these tests establishes AC-1's exact and one-under
+`max(bits(a), bits(b))` charge at `integer-division.arithmetic` or
+`integer-modulus.arithmetic`.
 FR-007-AC-2's decimal allocation subset maps to `FR-361-AC-4` through `FR-361-AC-6` and
 `FR-361-AC-9`, and its metered ordering subset to `FR-363-AC-1` through `FR-363-AC-7`.
 These owner contracts do not prove QSpec/QSL shared-corpus agreement or the whole decimal

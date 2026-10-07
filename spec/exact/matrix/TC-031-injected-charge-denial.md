@@ -15,8 +15,9 @@ behavior. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 
 ## Ownership and evidence
 
-`ix://agent-ix/quire-exact/FR-358-AC-1` through `FR-358-AC-3` test named occurrence,
-one-shot retry, `equality.plan` denial and the nonzero type. They leave the AC-2
+`ix://agent-ix/quire-exact/FR-358-AC-1` and `FR-358-AC-2` test named occurrence,
+one-shot retry and `equality.plan` denial; `FR-358-AC-3` specifies the nonzero type by
+Inspection. They leave the AC-2
 `pairs + 2` reservation amount and AC-3 simultaneous-limit precedence unproved by owner
 tests; IR-676 tracks both. The current RT test for AC-2 covers an ordinary point only.
 The current RT test for AC-3 covers one short size counter, not every competing limit.
