@@ -24,9 +24,9 @@ dependency graph. The negative cases run in a scratch copy of the workspace that
    the QSL Git source. A licence error alone does not satisfy this step: that source's diagnostic
    must be present. Repeat with
    `qsl-replay`, `qsl-semantics` and `quire-spec-language`. Each failure is FR-275-AC-8.
-4. Repeat step 3 with each of those crates as a dev dependency; expect the same source error.
-   `make deny-mutations` (`scripts/check_deny_bans.sh`) runs steps 2 to 4 in a scratch copy and
-   requires the QSL source diagnostic for each case.
+4. Repeat step 3 with each of those crates as a dev dependency and as a build dependency; expect
+   the same source error. `make deny-mutations` (`scripts/check_deny_bans.sh`) runs steps 2 to 4
+   in scratch copies and requires the QSL source diagnostic for each case.
 
 ## Expected Results
 

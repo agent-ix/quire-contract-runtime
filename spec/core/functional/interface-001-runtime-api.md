@@ -242,4 +242,4 @@ Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relay
 | interface-001-AC-10 | The runtime shall define every item the `core_items` list names in its `verdict`, `observation` and `accounting` modules. | Inspection |
 | interface-001-AC-11 | The runtime shall depend on `quire-exact` and `quire-semantic-value` only through the `exact` feature. | Inspection |
 | interface-001-AC-13 | While the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
-| interface-001-AC-14 | The runtime's normal and dev dependency graphs shall include no crate from the `agent-ix/quire-spec-language` Git repository. | Inspection |
+| interface-001-AC-14 | The runtime's normal, build and dev dependency graphs shall include no crate from the `agent-ix/quire-spec-language` Git repository. | Inspection |
