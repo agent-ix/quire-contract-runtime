@@ -82,7 +82,7 @@ and what the meter holds at all is what this requirement fixes.
 |----|----------|--------------|
 | FR-011-AC-1 | For each of `Undefined`, `Refused` and `Incomplete`, the meter after the stop holds exactly the charges admitted before it: an `Undefined` division by zero retains the operands charge and no arithmetic charge; a refused result retains the arithmetic charge and no result unit; a denied charge retains neither. | Test (TC-032) |
 | FR-011-AC-2 | A quantity `power` with zero base and negative exponent is `Undefined::DivisionByZero`, and a divide by zero is reported in preference to it when both hold. | Test (TC-032) |
-| FR-011-AC-3 | A connective that short-circuits admits exactly one `boolean.result-retain` charge, for every connective kind and every decided operand pair. | Test (TC-032) |
+| FR-011-AC-3 | A lazy connective skips its right operand when the left decides the result; for every connective kind and every decided operand pair, its completed result admits exactly one `boolean.result-retain` charge. | Test (TC-032) |
 | FR-011-AC-4 | A charge whose second-scanned counter is short writes no counter, appends no log entry and advances no occurrence counter; and a charge presented with its size vector in either order reports the same first short counter in `ScalarLimitsV1` field order. | Test (TC-032) |
 | FR-011-AC-5 | Past `CHARGE_LOG_CAPACITY` admitted charges the log holds exactly the first 4096 points in admission order, `charge_log_truncated()` is true, and the counters are still exact and still enforced. | Test (TC-032) |
 | FR-011-AC-6 | A cumulative counter at `u64::MAX - 1` denies rather than wraps; a derived amount that exceeds `u64::MAX` saturates and the resulting charge is denied rather than admitted. | Test (TC-032) |

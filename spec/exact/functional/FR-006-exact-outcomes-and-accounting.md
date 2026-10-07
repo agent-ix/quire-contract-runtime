@@ -11,10 +11,11 @@ relationships:
 ## Description
 
 When a generated oracle evaluates a complete-V1 scalar operator through the optional `exact`
-feature, the runtime shall return one typed outcome and meter every charge named by
+feature, the runtime shall consume the authoritative `quire-exact` outcome and metering
+contracts for every charge named by
 `quire.value.accounting/v1` in agent-ix/quire-specification
-(`proposals/quire-v1/definitions/value-accounting.md`). The runtime is an implementation of that
-definition, not a second semantic authority: values and outcome kinds agree with the
+(`proposals/quire-v1/definitions/value-accounting.md`). The runtime consumes the kernel
+implementation of that definition: values and outcome kinds agree with the
 quire-spec-language authority (FR-007), and charge schedules are taken from the QSpec definition.
 
 ## Inputs
@@ -40,11 +41,14 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
   other. `None` means "the language names no code for this refusal", not "this refusal has no
   reason": the typed variant is always the reason. An oracle that must emit `refused { code }` for
   a variant the language does not spell shall report the absence rather than invent a code, and
-  this set is pinned so that a language change is a test failure here.
+  the normative vocabulary remains an obligation when kernel evidence leaves RT.
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
-- The meter's memory is bounded: the admitted-charge log is capped at `CHARGE_LOG_CAPACITY` and
-  reports truncation, while every counter stays exact.
+- The kernel owns meter storage and accounting. Its bounded diagnostic charge log is exposed
+  under `quire-exact`'s `test-support` feature. Until IR-349 removes the local meter, its
+  admitted-charge sequence and `CHARGE_LOG_CAPACITY` remain governed by FR-011-AC-5. After
+  that removal, RT shall consume the kernel's test-support diagnostic log rather than require
+  a production log or define a local capacity constant. Consumed counters remain exact.
 - Size counters are high-water marks; `work_units` and `result_units` are cumulative. The
   `Incomplete` record names the first unavailable counter in field order, its limit, the consumed
   amount before the charge, the exact denied amount (a mathematical integer) and the charge point.
@@ -71,11 +75,24 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 
 ## Kernel ownership
 
-The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
-behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
-This requirement stays in force and binds the `exact` feature as a whole; where its evidence
-moves to the kernel's repository the matrix says so and keeps the row, without deleting any
-acceptance criterion.
+The runtime shall consume `quire-exact` directly for kernel outcomes, charges and scalar
+operations; it shall define no replacement kernel or re-export path ([FR-275](./FR-275-single-exact-kernel.md)).
+The criteria above remain obligations on that consumed behavior. They do not require RT-local
+kernel tests. [The exact matrix](../matrix/tests.md) records current local evidence separately
+from its disposition after the implementation removes the copy.
+
+Owner references cover only matching subsets: `ix://agent-ix/quire-exact/FR-358` owns one-shot
+injected denial and the bounded test-support log; `ix://agent-ix/quire-exact/FR-359` owns
+cumulative-counter boundary refusal and atomicity; `ix://agent-ix/quire-exact/FR-361` owns the
+specified allocation bounds on denied large work. These references do not establish the full
+outcome/reason vocabulary, every charge spelling, or the ill-typed agreement claim. Unmapped
+obligations remain explicit in TC-016/TC-017; no upstream verification status is inferred.
+
+This amendment deletes no implementation or test. The remaining local kernel copy is IR-349
+work; remaining RT evaluation-residue deletion is open IR-349 step 2 and IR-583 (backlog) work. QSL-358 is
+Done and covered QSL-side extraction, not the remaining RT deletion. Neither copy is RT-owned
+by remaining present. IR-430 is Done and covered removal of RT agreement tests; the remaining
+quire-integration agreement work has open quire-integration ticket IR-669.
 
 ## Dependencies
 

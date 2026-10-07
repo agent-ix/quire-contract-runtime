@@ -11,25 +11,57 @@ relationships:
 ## Description
 
 Execute every QSpec TC-185 vector on the runtime and on quire-spec-language.
-Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. Step 5 keeps evidence in the
+Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done). Step 5 keeps evidence in the
 upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
+
+## Ownership and evidence
+
+Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Step 5 currently has RT allocation
+coverage, which leaves in IR-349. `ix://agent-ix/quire-exact/FR-361-AC-6` owns that denied
+retain-upscale allocation bound; FR-361-AC-4/AC-5 cover scale-expansion/arithmetic denial.
+`ix://agent-ix/quire-exact/FR-363` owns retained-representation decimal ordering only.
+Neither contract establishes TC-185 agreement or all rounding/arithmetic cases in step 4.
+No local allocation check constitutes an agreement pass. D24 (rational-to-decimal conversion)
+has no agreement evidence here and remains unavailable pending IR-669's two-sided run.
+D25 (contextual decimal typing) belongs to caller/type admission, not a scalar runtime call;
+classify it admission-only and require the authority's admitted/refused results as separate
+evidence. That admission evidence is absent here and remains planned under IR-669.
 
 ## Test Procedure
 
-1. Check the evaluated list equals D01–D23.
+1. Check that the evaluated, admission-only and unavailable lists form a disjoint census
+   equal to QSpec TC-185 D01–D25 (25 vectors). Name the evidence and reason for each
+   classification; no vector may be omitted or counted as executed without a run.
 2. For every vector with an authority run, compare value and outcome kind on both sides; for
    vectors whose charges the authority meters, also compare charges, counters and every injected
    denial.
-3. For D09, D13 and D20–D23, meter the runtime alone at the exact QSpec limit tuple and one
-   under the first short counter, and check the runtime's charges and counters agree with the
-   authority like every other vector. D20–D21 short `integer_bits` at `ordering.arithmetic`; D22–D23
-   charge the result-retain upscale before materialization, and D23 has no authority run.
+3. For D09, D13 and D20–D23, check the runtime's admitted point sequence, charge amounts
+   and consumed counters against the QSpec TC-185 expectations at the exact limit tuple;
+   repeat one under the first short counter and require `Incomplete` with that counter,
+   exact denied amount and charge point, with no later charge or retained result.
+   D20–D21 must short `integer_bits` at `ordering.arithmetic`; D22–D23 must charge
+   result-retain upscale before materialization. For every authority-metered vector, also
+   require equal value, outcome kind, charge sequence and consumed counters on both sides;
+   any difference fails. D23 currently has no authority run: its local QSpec charge check
+   remains mandatory, while its two-sided agreement is unavailable and cannot count as a pass.
+   Name any other unavailable or unmetered authority case; it remains an agreement gap,
+   not permission to omit the local QSpec assertions.
 4. Check each operand-derived decimal amount exact and one under: add alignment, subtract
    cancellation, multiply, divide, negate with rounding and retain upscale.
 5. Deny the digits charge of a `2^20` scale upscale and check no allocation reaches 4096 bytes.
+6. Include D24 in the conversion agreement run when both sides can execute it: compare
+   its result and typed rounding-loss record, point sequence, amounts and counters with
+   TC-185, including its short-limit and strict-exact refusal cases. Any mismatch fails;
+   until such a run exists, report it unavailable rather than successful.
+7. For admission-only D25, require the caller/type authority's admission/refusal results
+   and pre-evaluation charge behavior to match TC-185 for each subcase. Do not substitute
+   a runtime arithmetic result for contextual typing evidence or count admission-only
+   evidence as a two-sided scalar evaluation pass. Missing admission evidence remains a gap.
 
 ## Expected Results
 
-23 vectors agree in value, outcome kind and charges, D09, D13 and D20–D23 included: QSL
-`quire-spec-language#119` is fixed, so every vector's charges are asserted against the authority
-like every other vector.
+The planned agreement run shall account for all 25 vectors D01–D25 and name every
+admission-only, unmetered or unavailable authority case, including D23, D24 and D25. Value/outcome and charge agreement
+shall be claimed only for vectors actually executed on both sides. Step 3 fails on any
+local TC-185 charge/counter mismatch or any mismatch in an executed authority comparison. Local allocation evidence
+alone does not meet this expected result (Linear IR-669, open quire-integration owner).

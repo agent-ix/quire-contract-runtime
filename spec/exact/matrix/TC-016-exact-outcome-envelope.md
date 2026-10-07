@@ -13,6 +13,13 @@ relationships:
 Check the typed outcome envelope and the closed reason and vocabulary enums of the `exact`
 surface. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 
+## Ownership and evidence
+
+Kernel-owned after IR-349 removes the local copy. The evidence path above is current
+RT evidence, not a retained RT test obligation. The outcome envelope, reason variants and
+spelling census remain required; FR-359–363 do not establish them. An exact owner criterion
+mapping for those checks remains to be identified; no upstream pass is claimed.
+
 ## Test Procedure
 
 1. Build one outcome of each disposition, including completed `true` and `false`; compare every

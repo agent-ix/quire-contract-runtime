@@ -10,9 +10,19 @@ relationships:
 
 ## Description
 
-The quire-spec-language authority does not meter these families yet (quire-spec-language#119), so charges are
-checked against QSpec and values against an independent `i128` oracle. Evidence:
+The local kernel tests check charges against QSpec and values against an independent `i128`
+oracle. They do not establish quire-spec-language shared-corpus agreement (Linear IR-669, open quire-integration owner; IR-430 removal is Done). Evidence:
 `tests/exact_arithmetic.rs` and `tests/exact_allocation.rs` (`--features exact`).
+
+## Ownership and evidence
+
+Kernel arithmetic, ordering, atom charges and already-decided Boolean retention leave RT
+in IR-349: `ix://agent-ix/quire-exact/FR-362` owns those subsets; decimal ordering belongs to
+`ix://agent-ix/quire-exact/FR-363`, and the specified denied-work allocation bounds to
+`ix://agent-ix/quire-exact/FR-361`. These are owner references, not copied tests or a claim
+that the P11/Q11 expression workloads have been evaluated upstream. Lazy operand evaluation
+is RT-owned and remains in TC-032; step 3's caller simulation in this file is not its retained
+evidence. Shared-authority agreement remains separate, with open quire-integration ticket IR-669; IR-430 removal is Done.
 
 ## Test Procedure
 
