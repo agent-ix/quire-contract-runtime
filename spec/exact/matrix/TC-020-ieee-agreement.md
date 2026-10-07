@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Execute every QSpec TC-193 vector on the runtime and on quire-spec-language.
-Evidence: none in this repository. The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430.
+Evidence: none in this repository. The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with **UNRESOLVED OPEN OWNER — planner ticket ID pending** (IR-430 removal is Done).
 
 ## Test Procedure
 

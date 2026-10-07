@@ -45,8 +45,10 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
 - The kernel owns meter storage and accounting. Its bounded diagnostic charge log is exposed
-  under `quire-exact`'s `test-support` feature; RT shall not require a production log or define a
-  local `CHARGE_LOG_CAPACITY`. Consumed counters remain exact.
+  under `quire-exact`'s `test-support` feature. Until IR-349 removes the local meter, its
+  admitted-charge sequence and `CHARGE_LOG_CAPACITY` remain governed by FR-011-AC-5. After
+  that removal, RT shall consume the kernel's test-support diagnostic log rather than require
+  a production log or define a local capacity constant. Consumed counters remain exact.
 - Size counters are high-water marks; `work_units` and `result_units` are cumulative. The
   `Incomplete` record names the first unavailable counter in field order, its limit, the consumed
   amount before the charge, the exact denied amount (a mathematical integer) and the charge point.
@@ -87,8 +89,10 @@ outcome/reason vocabulary, every charge spelling, or the ill-typed agreement cla
 obligations remain explicit in TC-016/TC-017; no upstream verification status is inferred.
 
 This amendment deletes no implementation or test. The remaining local kernel copy is IR-349
-work; non-kernel evaluation residue is QSL-358 work. Neither is RT-owned by remaining present.
-The missing QSL agreement evidence stays separate under IR-430.
+work; remaining RT evaluation-residue deletion is IR-583 (open backlog) work. QSL-358 is
+Done and covered QSL-side extraction, not the remaining RT deletion. Neither copy is RT-owned
+by remaining present. IR-430 is Done and covered removal of RT agreement tests; the remaining
+quire-integration agreement work has **UNRESOLVED OPEN OWNER — planner ticket ID pending**.
 
 ## Dependencies
 
