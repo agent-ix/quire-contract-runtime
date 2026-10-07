@@ -11,14 +11,15 @@ relationships:
 ## Description
 
 Execute every QSpec TC-192 vector on the runtime and on quire-spec-language.
-Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done). Steps 4-5 keep evidence in the
-arithmetic allocation bound in `tests/exact_allocation.rs` (`--features exact`).
+Evidence: The QSL agreement oracle is removed from this repository; recreating it in
+agent-ix/quire-integration is planned under IR-669. The RT-local allocation test was
+removed with the copied kernel; owner evidence covers only matching kernel cases.
 
 ## Ownership and evidence
 
 Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Local RT
-allocation checks cover subsets of steps 4–5; that kernel evidence leaves in IR-349, without
-replacement tests in RT.
+allocation checks covered subsets of steps 4–5; that kernel evidence left with the RT copy,
+without replacement tests in RT.
 `ix://agent-ix/quire-exact/FR-361-AC-3` owns injected division/modulus denial before large
 allocation. `FR-361-AC-7` and `FR-361-AC-8` test the large floor quotient at the exact and
 one-under dividend-bit limit at `integer-division.operands`. They do not test step 5's

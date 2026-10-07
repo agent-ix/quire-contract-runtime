@@ -20,8 +20,8 @@ use core::cmp::Ordering;
 use core::mem;
 
 use quire_exact::{
-    length_amount, BoundViolation, CardinalityBound, Charge, ChargePoint, CollectionKind, Integer,
-    LimitKind, Meter, Outcome, Refusal,
+    length_amount, CardinalityBound, Charge, ChargePoint, CollectionKind, Integer, LimitKind,
+    Meter, Outcome, Refusal,
 };
 
 use super::composite::{
@@ -30,17 +30,6 @@ use super::composite::{
 use super::equality::plan_pairs;
 use super::key::compare_keys;
 use super::stop::{OutcomeStop, Stop};
-
-/// Which side of `bound`, if any, `count` falls outside. The kernel's own check is private.
-fn bound_violation(bound: CardinalityBound, count: u64) -> Option<BoundViolation> {
-    if count < bound.minimum() {
-        Some(BoundViolation::BelowMinimum)
-    } else if count > bound.maximum() {
-        Some(BoundViolation::AboveMaximum)
-    } else {
-        None
-    }
-}
 
 /// A collection type `K<T>[min, max]`. Two collection types are the same type
 /// exactly when kind, element type and bound are all equal.
@@ -225,7 +214,7 @@ fn bound_and_retain(
     meter.charge(
         Charge::new(ChargePoint::CollectionBound).size(LimitKind::ValueOccurrences, count),
     )?;
-    if let Some(violation) = bound_violation(collection_type.bound, count) {
+    if let Some(violation) = collection_type.bound.violation(count) {
         return Err(Stop::Refused(Refusal::CardinalityOutOfBound {
             violation,
             kind,

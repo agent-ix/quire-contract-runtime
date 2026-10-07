@@ -36,8 +36,8 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
   closed, typed reasons; no variant carries a message string.
 - When the `exact` feature consumes `quire-exact` under FR-275, the runtime SHALL consume its
   typed `Outcome::Refused(Refusal)` directly and SHALL define no separate refusal record or
-  code/cause mapping. The current typed surface is `src/exact/outcome.rs:21-29` and
-  `src/exact/mod.rs:141`; FR-275 defines the direct-consumption end state. The kernel owns
+  code/cause mapping. RT imports the typed kernel outcome directly in its consumers;
+  FR-275 defines that boundary. The kernel owns
   `Refusal::code()` and `Refusal::cause()` under `ix://agent-ix/quire-exact/FR-096-AC-8`.
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
@@ -68,7 +68,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
-| FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping (current typed surface: `src/exact/outcome.rs:21-29`, `src/exact/mod.rs:141`). | Inspection |
+| FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
 
 ## Kernel ownership
 

@@ -13,13 +13,14 @@ relationships:
 Check `TypeEnvironment` admission, `record`/`tuple`/`evaluate_record`/`evaluate_tuple` construction,
 `ValueGraph`/`build` containment, and selected accounting vocabulary. Evidence:
 `tests/exact_composite.rs` (`--features exact`). The kernel-wide 62-point census and spelling
-round-trip obligation has no current RT evidence after IR-349; owner evidence remains
-pending IR-673. The retained tests establish only selected spellings and residue behavior.
+round-trip obligation has no local RT census after IR-349; quire-exact FR-368-AC-1/2
+tests all 62 spellings and round trips. The retained RT tests establish selected
+spellings and residue behavior.
 
 ## Test Procedure
 
-1. Require owner evidence for the full 62-member `ChargePoint` census and spelling round trips;
-   that evidence remains pending IR-673. Locally check `function.call` and `collection.visit`
+1. Check owner FR-368-AC-1/2 for the full 62-member `ChargePoint` census and spelling
+   round trips. Locally check `function.call` and `collection.visit`
    spellings and that neither appears in this construction test's charge sequence. Function
    application charges `function.call` in TC-194; do not infer a global absence from this test.
 2. Admit a declaration set with a duplicate key, a duplicate field/attribute name, an unnamed-edge

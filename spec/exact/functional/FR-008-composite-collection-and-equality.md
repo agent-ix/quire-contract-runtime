@@ -164,9 +164,10 @@ name and order; and no operator here decides anything the authority does not.
 
 The consumed kernel exposes 62 charge points. The former RT-wide census assertion was
 removed in IR-349; the retained TC-024/025/026 tests cover selected spellings and residue
-charge denials, not the full census. FR-008-AC-8 therefore remains partly evidenced pending
-owner census/round-trip evidence under IR-673. Measuring the count alone does not establish
-that evidence or an upstream verification pass.
+charge denials, not the full census. Quire-exact FR-368-AC-1/2 now tests the full
+62-member vocabulary and round trips. FR-008-AC-8 combines that owner evidence with
+retained RT tests of the twelve added charge-point denials. The owner tests do not
+establish RT/QSL agreement.
 
 The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
 behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).

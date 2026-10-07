@@ -11,16 +11,16 @@ relationships:
 ## Description
 
 Check charge ordering, counter semantics, first-short-counter reporting and injected denials on
-the public meter. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
+the public meter. The former RT-local kernel tests left with the copied implementation.
 
 ## Ownership and evidence
 
-Kernel-owned after IR-349 removes the local copy. The evidence path above remains present
-in this spec-only amendment. `ix://agent-ix/quire-exact/FR-358-AC-1` and `FR-358-AC-2` own
+Kernel-owned after IR-349 removes the local copy. `ix://agent-ix/quire-exact/FR-358-AC-1` and `FR-358-AC-2` own
 named denial subsets; `FR-358-AC-8` through `FR-358-AC-11` own the post-cap test-support log;
 `FR-359-AC-1` through `FR-359-AC-6` own cumulative-boundary and first-short-counter checks;
 `FR-368-AC-1` and `FR-368-AC-2` own the spelling census.
-No reference is a claim that every procedure step is mapped or verified upstream.
+The RT residue charge-point driver remains in `tests/exact_outcomes.rs` under TC-031.
+No reference establishes the untested FR-010-AC-2/3 amount and precedence details.
 
 ## Test Procedure
 

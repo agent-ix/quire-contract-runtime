@@ -19,8 +19,8 @@ behavior. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 one-shot retry and `equality.plan` denial; `FR-358-AC-3` specifies the nonzero type by
 Inspection. They leave the AC-2
 `pairs + 2` reservation amount and AC-3 simultaneous-limit precedence unproved by owner
-tests; IR-676 tracks both. The current RT test for AC-2 covers an ordinary point only.
-The current RT test for AC-3 covers one short size counter, not every competing limit.
+tests; IR-676 tracks both. RT retains the AC-1 residue charge-point driver, but no direct
+AC-2/3 test after the local kernel tests leave.
 
 ## Test Procedure
 
