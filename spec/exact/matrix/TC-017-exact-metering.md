@@ -13,6 +13,14 @@ relationships:
 Check charge ordering, counter semantics, first-short-counter reporting and injected denials on
 the public meter. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
 
+## Ownership and evidence
+
+Kernel-owned after IR-349 removes the local copy. The evidence path above remains present
+in this spec-only amendment. `ix://agent-ix/quire-exact/FR-358` owns step 5's one-shot denial
+and step 6's diagnostic-log bound under `test-support`; `ix://agent-ix/quire-exact/FR-359`
+owns cumulative-boundary and atomic-refusal checks, not the entire step 3 counter census.
+No reference is a claim that every procedure step is mapped or verified upstream.
+
 ## Test Procedure
 
 1. Multiply `2^64 × 2^64` under `integer_bits` 128; expect `Incomplete` at

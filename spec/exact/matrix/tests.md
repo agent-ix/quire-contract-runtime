@@ -14,8 +14,8 @@ type: TestMatrix
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ implemented |
 | FR-006 | FR-006-AC-4 | TC-017 | ✅ implemented |
-| FR-007 | FR-007-AC-1 | TC-018 | ✅ implemented |
-| FR-007 | FR-007-AC-2 | TC-019 | ✅ implemented |
+| FR-007 | FR-007-AC-1 | TC-018 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-430) |
+| FR-007 | FR-007-AC-2 | TC-019 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-430) |
 | FR-007 | FR-007-AC-3 | TC-020 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-007 | FR-007-AC-4 | TC-021 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-007 | FR-007-AC-5 | TC-022 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, and its evidence with it |
@@ -49,8 +49,8 @@ type: TestMatrix
 |---|---|---|---|---|---|
 | TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3, FR-006-AC-6 | ✅ implemented |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ implemented |
-| TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 steps 4-5 implemented (`tests/exact_allocation.rs`); steps 1-3, the QSL agreement half, are removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430 |
-| TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | 🚧 steps 4-5 implemented (`tests/exact_allocation.rs`); steps 1-3, the QSL agreement half, are removed from this repository, recreation in agent-ix/quire-integration is planned under Linear IR-430 |
+| TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-430) |
+| TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | 🚧 partly evidenced: local allocation checks are implemented; QSL shared-corpus agreement remains planned (Linear IR-430) |
 | TC-020 | Agree with the authority on IEEE profile vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-3, FR-007-AC-6 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, no test evidences it here |
 | TC-021 | Agree with the authority on text and enum vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-4, FR-007-AC-6 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, no test evidences it here |
 | TC-022 | Agree with the authority on quantity and unit vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-5, FR-007-AC-6 | 🚧 planned (Linear IR-430): the QSL agreement oracle is removed from this repository, no test evidences it here |
@@ -85,19 +85,33 @@ are the exceptions.
 
 ## Evidence at the kernel move
 
-FR-275 moves the exact value kernel to `quire-exact` and deletes the runtime's copy in two steps
-(code steps IR-349 part 1 and part 2, after the foundation slice that adds the dependency, the
-bans and the one-copy check and deletes nothing). Nothing in this matrix is deleted by either step
-(FR-275-AC-14). Until IR-349 lands every row above keeps its status; when the files below are
-deleted, IR-349 sets each affected row to planned with the reason in the last column, never removes
-it. A leaving row will never be backed by RT: its evidence lives in the QSL repository. The matrix
-status vocabulary in use here has no "verified upstream" status, and none is invented; the row
-stays "planned" with the reason stated, and whether the vocabulary should gain one is a planner
-question (raised in the PR). The runtime keeps no substitute test: no agreement test and no vendored vectors, and no test that
-calls a QSL crate other than `quire-exact` (FR-275-AC-12). A test of an item `quire-exact` exports
-leaves in step 1. A test of a residue item leaves with the code to QSL (FR-275-AC-16); the residue is not
-runtime-owned and not authorized (FR-275: no exception, no expiry, no approval). Whether such a
-test stays in the runtime until the code is deleted is an open owner decision, not stated here.
+FR-275 requires RT to consume `quire-exact` directly and remove its local kernel copy in
+IR-349, followed by evaluation-residue removal tracked under QSL-358. This amendment is spec-only:
+all current test files and production definitions remain present. The status columns describe
+current evidence only. TC-016/017/023 and their local kernel criteria remain implemented;
+TC-018/019 and FR-007-AC-1/2 are partly evidenced because their allocation checks exist but
+the shared-corpus agreement oracle is absent. Future deletion does not change those statuses
+before the code PR removes the tests.
+The existing vocabulary has no "verified upstream" status; no such status or upstream pass is
+claimed. Requirements, criteria and TC IDs remain, including obligations not yet mapped to an
+exact owner criterion. The computed `quire matrix` still finds current local trace binders;
+`tagged` reports their presence, not a semantic pass or future ownership. TC-032 is not a
+binder for FR-007-AC-7: its retained lazy connective evidence is directly tagged only to
+FR-011-AC-3/AC-8. The FR-007-AC-7 matrix row retains TC-023 until test-source changes
+establish a different direct binding.
+
+When code PR #95 removes the local kernel tests, its matrix update shall mark the affected
+rows planned with a stated reason under FR-275-AC-15, keeping any remaining partial evidence
+explicit. The file dispositions below describe that future state; no deletion or upstream
+verification is claimed by this amendment.
+
+The owner mappings in TC-016/017/018/019/023 identify only matching contracts in
+`ix://agent-ix/quire-exact`. RT shall retain no substitute kernel tests, copied vectors or
+agreement tests (FR-275-AC-12). The lazy connective in TC-032 is RT-owned behavior, with
+FR-011-AC-3/AC-8 evidence retained; already-decided Boolean truth tables are kernel-owned.
+QSL-358 concerns evaluation residue, not lazy connective ownership. IR-430 concerns the missing
+QSL agreement oracle in `quire-integration`; an upstream arithmetic or allocation test does not
+close it. Kernel ownership mappings leave both workstreams distinct.
 
 | Test file | Test cases | Disposition | Reason |
 |---|---|---|---|
@@ -109,13 +123,14 @@ test stays in the runtime until the code is deleted is an open owner decision, n
 | `tests/exact_arithmetic.rs`, `tests/exact_allocation.rs` | TC-016, TC-017, TC-018, TC-019, TC-023 | leaves in step 1 | the files test kernel behaviour (they also use `CHARGE_LOG_CAPACITY`, which `quire-exact` does not export, so that constant's assertions go with the kernel's accounting evidence): evidence belongs to the QSL repository, which this repository does not track |
 | `tests/exact_outcomes.rs` | TC-016, TC-017, TC-031 | splits | the kernel `Meter`, `Outcome` and injected-denial tests leave in step 1; the cases that use `TypeEnvironment`, `CheckedEquality`, `CheckedPackage`, `ObjectEnvironment`, `UnitGraph`, `EnumDeclaration` and `evaluate_quantity`, which `quire-exact` does not export, leave with the residue |
 | `tests/exact_collection.rs` | TC-025 | splits | the collection-algebra and canonical-key cases leave in step 1; the cases built on `TypeEnvironment` and `CompositeDeclaration` leave with the residue |
-| `tests/exact_meter_state.rs` | TC-032 | splits | `UnitGraph::admit`, `CompoundUnit` and `evaluate_quantity` cases (FR-011-AC-7) leave with the residue; the rest leave in step 1 |
+| `tests/exact_meter_state.rs` | TC-032 | splits | `evaluate_boolean_short_circuit` lazy invocation/stop propagation (FR-011-AC-3/AC-8, step 5) stays in RT; already-decided Boolean and meter cases leave in step 1; `UnitGraph::admit`, `CompoundUnit` and `evaluate_quantity` cases leave with QSL-358 residue |
 | `tests/exact_semantics.rs` | TC-034 | splits | the `UnitGraph`, `Dimension` and `evaluate_quantity` cases leave with the residue; the rest leave in step 1 |
 | `tests/exact_debug_parity.rs` | TC-035 | splits | the `CompoundUnit`, `Dimension` and `EnumDeclaration` Debug pins leave with the residue; the rest leave in step 1 |
-| `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | leaves in step 1 | in-crate tests of kernel `Meter` and `Integer` internals the runtime no longer defines |
+| `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | leaves in step 1 | current in-crate tests of kernel `Meter` and `Integer` internals that IR-349 will remove |
 
-The runtime keeps, in the end state, only the consumption checks TC-197 to TC-199: that it uses the
-QSL kernel, holds no ported code and guards its edges.
+For the kernel, RT keeps the consumption checks TC-197 to TC-199 in the end state: direct
+consumption, no copied code and guarded edges. RT also keeps evidence of its own lazy connective
+in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not remove those checks.
 
 ## Evidence Locations
 
@@ -150,7 +165,7 @@ QSL kernel, holds no ported code and guards its edges.
   over shared-corpus function-application vectors only, so neither the check-ordering gap nor the
   absent body-semantics corpus is a gap in AC-5 itself — the corpus agrees on every vector it
   supplies, which is all AC-5 claims — and AC-5 is recorded as fully implemented.
-- TC-030: `tests/exact_negotiation.rs`; TC-032: `tests/exact_meter_state.rs` and the in-crate
+- TC-030: `tests/exact_negotiation.rs`; TC-032 (current evidence; lazy FR-011-AC-3/AC-8 stays): `tests/exact_meter_state.rs` and the in-crate
   `src/exact_accounting_tests.rs` for the cumulative-counter boundary no public operator can
   reach;
   TC-033: `tests/exact_vocabulary.rs`; TC-034: `tests/exact_semantics.rs`; TC-035:
@@ -163,6 +178,7 @@ QSL kernel, holds no ported code and guards its edges.
   `--features exact`. FR-010-AC-6's evidence is a `compile_fail` doctest on `InjectedDenial`
   (`src/exact/accounting.rs`): `occurrence: 0` does not compile, so the malformed request cannot be
   written.
-- TC-018 through TC-022: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. Only TC-018/TC-019's allocation-bound steps keep evidence here.
+- TC-018 through TC-022: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned under Linear IR-430. TC-018/TC-019 currently retain only local allocation-bound evidence; it leaves in IR-349
+  and does not close the IR-430 agreement gap. Owner mappings are in the individual TC documents.
 - TC-024: `tests/exact_composite.rs`; TC-025: `tests/exact_collection.rs`; TC-026:
   `tests/exact_equality.rs`. All run with `--features exact`.

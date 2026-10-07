@@ -10,7 +10,8 @@ relationships:
 
 ## Description
 
-When the `exact` feature is enabled, the runtime shall evaluate the scalar operator families of
+When the `exact` feature is enabled, the runtime shall consume `quire-exact` for kernel-owned
+operations in the scalar families of
 complete V1 in agent-ix/quire-specification with values and outcome kinds equal to the
 quire-spec-language authority on every shared-corpus vector, and charges equal to the QSpec
 accounting schedule.
@@ -97,21 +98,38 @@ accounting schedule.
 | FR-007-AC-4 | Text and enum operations agree with QSpec TC-186. | Test (TC-021) |
 | FR-007-AC-5 | Quantity and unit-graph operations agree with QSpec TC-187. | Test (TC-022) |
 | FR-007-AC-6 | Every evaluated shared-corpus vector is executed on both the runtime and the quire-spec-language authority with equal Debug renderings; admission-only vectors and charges not yet metered by the authority are listed by name. | Test (TC-018, TC-019, TC-020, TC-021, TC-022) |
-| FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec TC-191 P11 and TC-190 Q11 atom charges, with short-circuit and denial behavior at every point; operand-derived arithmetic and normalize amounts are charged before any intermediate or result is allocated. | Test (TC-023) |
+| FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec TC-191 P11 and TC-190 Q11 atom charges, with denial behavior at every kernel point; RT-owned lazy connectives skip the right operand when the left decides the result and propagate a right-operand stop unchanged without retention; operand-derived arithmetic and normalize amounts are charged before any intermediate or result is allocated. | Test (TC-023) |
 | FR-007-AC-8 | The six rounding spellings round every exact tie to the stated neighbour for both signs; an omitted spelling is `Exact` and refuses a discarded nonzero digit. | Test (TC-034) |
 | FR-007-AC-9 | IEEE NaN propagation is leftmost-wins with sign and payload preserved and the result quieted; `invalid` is raised when any operand is signaling; an unrepresentable NaN payload is refused, never truncated; `-0.0` and `+0.0` convert to the same exact value with `discarded_negative_zero` reported; `total_order_key` totally orders every bit pattern including both zeros and NaNs. | Test (TC-034) |
 | FR-007-AC-10 | `Rational` membership admits exactly the reduced pairs inside both intervals — including refusing a value whose numeric magnitude is inside the numerator interval but whose reduced denominator is outside the denominator interval — an absent domain decides no membership and retains, and every exposed rational is in canonical form with zero as `0/1`. | Test (TC-034) |
 | FR-007-AC-11 | `Decimal` value comparison is on the normalized representation and charges are sized on the retained one, demonstrated by a pair equal in value whose ordering and retain charges differ. | Test (TC-034) |
 | FR-007-AC-12 | `mod` returns the Euclidean remainder for every operand sign whatever `div`/`rem` law is selected; a quotient/remainder pair outside the consumer domain is refused as a pair naming which members were admitted, exposing neither; quantity `IllTyped` causes appear in the stated per-operation order with zero charges, and `Multiply`/`Divide`/`Power` raise no dimension fault. | Test (TC-034) |
-| FR-007-AC-13 | Every hand-written `Debug` impl for a boxed value or type struct (`Rational`, `RationalDomain`, `Decimal`, `DecimalType`, `Quantity`, `Text`, `EnumValue`, `ObjectReference`, `CompoundUnit`) renders exactly the fields its `*Fields` struct declares, in declaration order, against a fixed pinned string. | Test (TC-035) |
+| FR-007-AC-13 | Every hand-written `Debug` impl for a boxed value or type struct (`Rational`, `RationalDomain`, `Decimal`, `DecimalType`, `Quantity`, `Text`, `EnumValue`, `ObjectReference`, `CompoundUnit`) renders exactly the fields its `*Fields` struct declares, in declaration order, against a fixed expected string. | Test (TC-035) |
 
 ## Kernel ownership
 
-The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
-behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
-This requirement stays in force and binds the `exact` feature as a whole; where its evidence
-moves to the kernel's repository the matrix says so and keeps the row, without deleting any
-acceptance criterion.
+The runtime shall consume kernel scalar operations directly from `quire-exact`, without a
+local implementation or re-export ([FR-275](./FR-275-single-exact-kernel.md)). The criteria
+remain obligations on consumed behavior; they do not require RT to retest the kernel.
+
+For FR-007-AC-7, `ix://agent-ix/quire-exact/FR-362` owns integer/rational arithmetic and
+ordering, atom charges and Boolean truth tables over already-decided operands;
+`ix://agent-ix/quire-exact/FR-363` owns retained-representation decimal ordering; and
+`ix://agent-ix/quire-exact/FR-361` owns the specified denied-work allocation bounds.
+`FR-362` explicitly leaves expression evaluation and the decision to skip a right operand to
+the caller. RT therefore retains `evaluate_boolean_short_circuit` and `ShortCircuitConnective`,
+with lazy invocation and stop propagation evidenced by TC-032 (FR-011-AC-3 and FR-011-AC-8),
+not by the kernel's already-decided Boolean tests.
+
+FR-007-AC-1's division/modulus allocation subset maps to `ix://agent-ix/quire-exact/FR-361-AC-3`;
+FR-007-AC-2's decimal allocation subset maps to `FR-361-AC-4` through `FR-361-AC-6`, and
+its metered ordering subset to `ix://agent-ix/quire-exact/FR-363`. These owner contracts do not
+prove QSpec/QSL shared-corpus agreement or the whole decimal family. `FR-360` concerns
+`Integer::abs(i64::MIN)` only and is not evidence for those broader claims.
+
+[The exact matrix](../matrix/tests.md) separates current RT evidence, future kernel-owned
+evidence, IR-430 agreement gaps and QSL-358 evaluation residue. This spec amendment removes
+no code or tests and does not claim IR-349's implementation is complete.
 
 ## Dependencies
 
