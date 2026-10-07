@@ -41,7 +41,7 @@ type: TestMatrix
 | FR-010 | FR-010-AC-4 | TC-031 | 🚧 owner-backed by quire-exact FR-358-AC-1 for named admitted occurrence; RT-local kernel test removed |
 | FR-010 | FR-010-AC-5 | TC-031 | 🚧 owner-backed by quire-exact FR-358-AC-1/2 for one-shot retry; RT-local kernel test removed |
 | FR-010 | FR-010-AC-6 | TC-031 | ✅ owner-backed by quire-exact FR-358-AC-3 Inspection of nonzero occurrence type |
-| FR-010 | FR-010-AC-2 | TC-031 | 🚧 planned RT-owned gap (IR-676): no direct RT assertion for `equality.plan` `pairs + 2` reservation after kernel-test removal; owner FR-358-AC-2 tests only a narrower denial |
+| FR-010 | FR-010-AC-2 | TC-031 | 🚧 partly evidenced: the retained RT charge-point driver asserts `equality.plan` reports `next_charge = 3` for one pair (`pairs + 2`); it does not test independence from different configured `work_units` limits, and owner FR-358-AC-2 tests a narrower denial (IR-676) |
 | FR-010 | FR-010-AC-3 | TC-031 | 🚧 planned RT-owned gap (IR-676): simultaneous injected-versus-real-limit precedence lacks a direct assertion; owner FR-358-AC-1/2 does not close it |
 | FR-011 | FR-011-AC-1 | TC-032 | 🚧 owner-backed by quire-exact FR-362-AC-11 for scalar stop prefixes; RT-local kernel test removed |
 | FR-011 | FR-011-AC-4 | TC-032 | ✅ retained RT field-order test; owner-backed by quire-exact FR-359-AC-6 for complete meter scan |
@@ -53,7 +53,7 @@ type: TestMatrix
 | FR-273 | FR-273-AC-7 | TC-194 | ✅ implemented: re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by `CheckingLimits::depth` on a shared counter — not only `Frame::call` — including the direct-re-entry attack a body holding its own `Rc<CheckedPackage>` could otherwise use to bypass it, proved by `tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal`, `tc_194_direct_reentrant_package_call_is_bounded_like_frame_call` and `tc_194_checking_limits_refuses_a_depth_above_the_maximum`. The bound is per-`CheckedPackage`, not universal: a host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still overflow the host stack — but so does a body that recurses without touching this crate's runtime at all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern, not this crate's |
 | FR-273 | FR-273-AC-5 | TC-194 | 🚧 partly evidenced: the QSL shared-corpus half is removed from this repository, recreation in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done); the runtime-only ordering tests remain. AC-5 quantifies over shared-corpus function-application vectors only, and the removed shared corpus historically agreed on all five of them — the closed `InputRefusal` vocabulary (with codes and causes), the charge count of one admitted call, and — via AP01–AP04's `charges == 0` assertions on each refusal path (the removed QSL shared-corpus vectors; see Evidence Locations) — that every refusal precedes the `function.call` charge, agreed on both sides. Relative order *among* the four checks themselves (arity, value kind, dangling reference, unknown function) is not something any vector needs to discriminate for AC-5 to be met, since each corpus vector isolates exactly one violation by design; that ordering is instead verified by the runtime-only tests in `tests/exact_function_application.rs` (see Evidence Locations), which AC-2/AC-3 already cover. Body semantics have no shared corpus either, for the same reason: AC-5 does not claim them. |
 | FR-273 | FR-273-AC-4 | TC-195 | ✅ implemented: `negotiate_ieee(&[IeeeItemRequirement], &IeeeBackendCapabilities)` receives no `Meter` at all, so no application-time charge is reachable from it by construction — the evidence is that signature plus the `compile_fail` doctest on `IeeeDisposition` (`src/exact/ieee.rs`) proving no conversion path from a disposition into `Outcome`/`InputRefusal` exists. `tc_195_negotiate_ieee_takes_no_meter_by_signature` inspects that signature and confirms negotiation still runs and reports one disposition per requirement; it carries no `Meter` assertion of its own, since a `Meter` never passed to `negotiate_ieee` cannot be evidence of anything the call did |
-| FR-275 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | TC-197 | 🚧 planned (Linear IR-349; AC-16 and AC-18 are unmet while the residue exists, and the residue is not authorized: no exception, no expiry, no approval; AC-17 can be checked today): the runtime still holds its own copy of the kernel and of the residue. The IR-349 foundation slice (floor, dependency, bans, one copy; it deletes nothing) made AC-3 to AC-6 true (the optional `quire-exact` git dependency at `branch = "main"`, one lock entry, `make deny`'s one-copy check); AC-1, AC-2, AC-12 and AC-13 need the copy deleted; interface-001-AC-7 is likewise unmet while the runtime's copy of `Frame`, `Body`, `CheckedPackage`, `Evaluation` and `plan_call` exists. AC-1 and AC-16 now assert the end state of no `exact` module and no re-export (AD-004 step 1) and are unmet today, planned until the IR-349 code steps land; AC-17 restates its exception as the `scalar` items and stays checkable today. Per interface-001 criterion, see the interface-001 rows in the core matrix |
+| FR-275 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | TC-197 | 🚧 planned (Linear IR-349): the foundation slice established the optional `quire-exact` dependency, one lock entry and one-copy gate (AC-3 to AC-6); this code slice removes the duplicate scalar, Meter and Outcome kernel definitions and tests. RT evaluation and function-package residue remains under open IR-349 step 2 and IR-583, with no exception, expiry or approval. AC-1, AC-2, AC-13, AC-16 and AC-18 remain unmet while that residue and the `exact` module remain; interface-001-AC-7 is likewise unmet while RT defines `Frame`, `Body`, `CheckedPackage`, `Evaluation` and `plan_call`. AC-12, AC-14, AC-15, AC-17 and AC-19 require current-tree inspection; AC-17 names only `scalar` as the permitted exception. See the interface-001 rows in the core matrix |
 | FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | ✅ implemented (IR-349 foundation slice; evidence is a gate script, not a `tc_NNN` test): `deny.toml` bans every listed QSL crate, and `make deny-mutations` (`scripts/check_deny_bans.sh`) adds `qsl-eval`, `qsl-replay`, `qsl-semantics` and `quire-spec-language` as normal and as dev dependencies in a scratch copy and requires cargo-deny's `banned` error for each |
 | FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | ✅ gate targets use the manifest-declared toolchain, build the exact profile with quire-exact and exclude it from the footprint graph |
 
@@ -84,12 +84,15 @@ type: TestMatrix
 | TC-198 | Fail the build on a dependency on a guarded QSL crate | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | ✅ implemented (IR-349 foundation slice): `deny.toml` entries and `make deny-mutations` |
 | TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | ✅ exact profile and footprint gates use the manifest-declared toolchain; the footprint graph excludes quire-exact |
 
-FR-009-AC-5, FR-010-AC-6 and FR-273-AC-4 use `compile_fail` doctests. TC-198 and
+FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 uses owner
+FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and
 TC-199 use the gate targets named under Evidence Locations. The retired TC-016 four-code
 Rust tests and tags are absent. FR-006-AC-6 is an ownership inspection of the direct
 typed kernel outcome boundary; quire-exact FR-096-AC-8 owns the kernel code/cause census.
 `quire matrix` reports trace presence, not semantic coverage across repositories. The
-retained RT charge-point driver binds FR-010-AC-1 only; FR-010-AC-2/3 remain IR-676 gaps.
+retained RT charge-point driver binds FR-010-AC-1 and checks one-pair `pairs + 2` for
+FR-010-AC-2; AC-2's configured-limit independence and AC-3's simultaneous-limit
+precedence remain IR-676 gaps.
 
 ## Evidence at the kernel move
 
@@ -97,8 +100,10 @@ FR-275 requires RT to consume `quire-exact` directly. This code slice removes th
 local scalar kernel and its duplicate tests. RT evaluation residue remains for open IR-349
 step 2 and IR-583. The status rows above describe the current tree: owner tests bind
 matching kernel behaviors in quire-exact, while the RT coverage matrix only counts local
-trace tags. FR-010-AC-2/3 lack their exact owner assertions (IR-676), FR-362-AC-10 remains
-planned and untagged (IR-667), and QSL two-sided agreement remains IR-669 work.
+trace tags. FR-010-AC-2 has only the RT one-pair reservation assertion, while AC-2's
+configured-limit independence and AC-3's precedence lack direct evidence (IR-676).
+FR-362-AC-10 remains planned and untagged (IR-667), and QSL two-sided agreement
+remains IR-669 work.
 
 The retained TC-032 lazy connective test is RT-owned under FR-011-AC-3/AC-8. RT also
 retains quantity, graph, declaration and function-package residue pending its assigned
