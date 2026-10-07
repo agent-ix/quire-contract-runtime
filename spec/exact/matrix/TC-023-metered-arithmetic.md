@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 The local kernel tests check charges against QSpec and values against an independent `i128`
-oracle. They do not establish quire-spec-language shared-corpus agreement (OPEN OWNER UNRESOLVED — planner ticket ID pending; IR-430 removal is Done). Evidence:
+oracle. They do not establish quire-spec-language shared-corpus agreement (Linear IR-669, open quire-integration owner; IR-430 removal is Done). Evidence:
 `tests/exact_arithmetic.rs` and `tests/exact_allocation.rs` (`--features exact`).
 
 ## Ownership and evidence
@@ -22,7 +22,7 @@ in IR-349: `ix://agent-ix/quire-exact/FR-362` owns those subsets; decimal orderi
 `ix://agent-ix/quire-exact/FR-361`. These are owner references, not copied tests or a claim
 that the P11/Q11 expression workloads have been evaluated upstream. Lazy operand evaluation
 is RT-owned and remains in TC-032; step 3's caller simulation in this file is not its retained
-evidence. Shared-authority agreement remains separate, with **UNRESOLVED OPEN OWNER — planner ticket ID pending**; IR-430 removal is Done.
+evidence. Shared-authority agreement remains separate, with open quire-integration ticket IR-669; IR-430 removal is Done.
 
 ## Test Procedure
 

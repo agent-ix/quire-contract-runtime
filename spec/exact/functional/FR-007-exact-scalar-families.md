@@ -129,7 +129,7 @@ prove QSpec/QSL shared-corpus agreement or the whole decimal family. `FR-360` co
 `Integer::abs(i64::MIN)` only and is not evidence for those broader claims.
 
 [The exact matrix](../matrix/tests.md) separates current RT evidence, future kernel-owned
-evidence, the unresolved agreement-work owner and IR-583 RT evaluation residue. This spec amendment removes
+evidence, IR-669 agreement work and RT evaluation residue under IR-349 step 2 and IR-583. This spec amendment removes
 no code or tests and does not claim IR-349's implementation is complete.
 
 ## Dependencies

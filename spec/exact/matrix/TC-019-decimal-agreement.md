@@ -11,12 +11,12 @@ relationships:
 ## Description
 
 Execute every QSpec TC-185 vector on the runtime and on quire-spec-language.
-Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with **UNRESOLVED OPEN OWNER — planner ticket ID pending** (IR-430 removal is Done). Step 5 keeps evidence in the
+Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done). Step 5 keeps evidence in the
 upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
 
 ## Ownership and evidence
 
-Steps 1–3 remain a QSL agreement gap with **UNRESOLVED OPEN OWNER — planner ticket ID pending**. Step 5 currently has RT allocation
+Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Step 5 currently has RT allocation
 coverage, which leaves in IR-349. `ix://agent-ix/quire-exact/FR-361-AC-6` owns that denied
 retain-upscale allocation bound; FR-361-AC-4/AC-5 cover scale-expansion/arithmetic denial.
 `ix://agent-ix/quire-exact/FR-363` owns retained-representation decimal ordering only.
@@ -50,4 +50,4 @@ The planned agreement run shall account for all 23 vectors and name every admiss
 unmetered or unavailable authority case, including D23. Value/outcome and charge agreement
 shall be claimed only for vectors actually executed on both sides. Step 3 fails on any
 local TC-185 charge/counter mismatch or any mismatch in an executed authority comparison. Local allocation evidence
-alone does not meet this expected result (OPEN OWNER UNRESOLVED — planner ticket ID pending).
+alone does not meet this expected result (Linear IR-669, open quire-integration owner).

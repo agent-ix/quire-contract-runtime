@@ -24,7 +24,7 @@ retaining a completed connective result exactly once. Current evidence is
 The already-decided truth-table test is kernel-owned; `ix://agent-ix/quire-exact/FR-362`
 does not test lazy closure invocation. Steps 1–3 and 6–8 and the kernel part of step 9 leave
 with the kernel copy; the quantity/environment parts of steps 4 and 9 remain RT evaluation residue
-owned by open backlog IR-583 until removed; QSL-358's QSL-side extraction is Done. This amendment changes no test or implementation.
+owned by open IR-349 step 2 and backlog IR-583 until removed; QSL-358's QSL-side extraction is Done. This amendment changes no test or implementation.
 
 ## Test Procedure
 

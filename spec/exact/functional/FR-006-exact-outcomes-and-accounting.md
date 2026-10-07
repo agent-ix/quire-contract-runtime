@@ -89,10 +89,10 @@ outcome/reason vocabulary, every charge spelling, or the ill-typed agreement cla
 obligations remain explicit in TC-016/TC-017; no upstream verification status is inferred.
 
 This amendment deletes no implementation or test. The remaining local kernel copy is IR-349
-work; remaining RT evaluation-residue deletion is IR-583 (open backlog) work. QSL-358 is
+work; remaining RT evaluation-residue deletion is open IR-349 step 2 and IR-583 (backlog) work. QSL-358 is
 Done and covered QSL-side extraction, not the remaining RT deletion. Neither copy is RT-owned
 by remaining present. IR-430 is Done and covered removal of RT agreement tests; the remaining
-quire-integration agreement work has **UNRESOLVED OPEN OWNER — planner ticket ID pending**.
+quire-integration agreement work has open quire-integration ticket IR-669.
 
 ## Dependencies
 
