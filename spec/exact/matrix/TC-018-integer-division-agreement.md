@@ -24,8 +24,8 @@ without replacement tests in RT.
 allocation. `FR-361-AC-7` and `FR-361-AC-8` test the large floor quotient at the exact and
 one-under dividend-bit limit at `integer-division.operands`. They do not test step 5's
 `max(bits(a), bits(b))` arithmetic charge at exact and one-under limits for division or
-modulus. These one-crate cases also do not establish the generated sweep or TC-192 agreement;
-those remaining obligations require their own evidence mapping.
+modulus; quire-exact IR-678 tracks that owner evidence gap. These one-crate cases also do
+not establish the generated sweep or TC-192 agreement; IR-669 tracks the two-sided agreement.
 
 ## Test Procedure
 
