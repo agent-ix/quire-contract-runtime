@@ -148,14 +148,14 @@ crates that the runtime consumes.
 | FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
-| FR-275-AC-5 | `Cargo.lock` holds exactly one `quire-exact` entry. | Test (TC-197, `make deny`) |
-| FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second `quire-exact` entry. | Test (TC-197) |
+| FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`. | Test (TC-197, `make deny`) |
+| FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second entry for any first-party Git crate. | Test (TC-197) |
 | FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and keeps `unknown-git = "deny"`; it does not admit the QSL Git repository. | Inspection (TC-198) |
 | FR-275-AC-8 | `make deny` reports cargo-deny's `source-not-allowed` error for the QSL Git repository, and exits non-zero, when a normal or dev dependency resolves from it; a licence failure alone does not satisfy this. | Test (TC-198) |
 | FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor. | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
 | FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`. | Test (TC-199) |
 | FR-275-AC-11 | `make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band. | Test (TC-199, `make size`) |
-| FR-275-AC-12 | The runtime has no test that compares its output with a second implementation of the kernel or that depends on a QSL crate other than `quire-exact`. | Inspection (TC-197) |
+| FR-275-AC-12 | The runtime has no test that compares its output with a second implementation of the kernel or that depends on a crate from the QSL Git repository. | Inspection (TC-197) |
 | FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order. The residue list is not an allowance: every item on it is a violation of this criterion, which stays unmet while the list is non-empty. The runtime-owned negotiators are not ports. | Inspection (TC-197) |
 | FR-275-AC-14 | The kernel move deletes no requirement, acceptance criterion or test case. | Inspection (TC-197) |
 | FR-275-AC-15 | Every matrix row whose evidence leaves the runtime in the kernel move carries a planned status with a stated reason, because the status vocabulary has no "verified upstream" status (a planner question, no status is invented). | Inspection (TC-197) |
