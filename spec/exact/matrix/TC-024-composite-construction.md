@@ -11,14 +11,18 @@ relationships:
 ## Description
 
 Check `TypeEnvironment` admission, `record`/`tuple`/`evaluate_record`/`evaluate_tuple` construction,
-`ValueGraph`/`build` containment, and the accounting vocabulary at 52 points. Evidence:
-`tests/exact_composite.rs` (`--features exact`).
+`ValueGraph`/`build` containment, and selected accounting vocabulary. Evidence:
+`tests/exact_composite.rs` (`--features exact`). The kernel-wide 62-point census and spelling
+round-trip obligation has no local RT census after IR-349; quire-exact FR-368-AC-1/2
+tests all 62 spellings and round trips. The retained RT tests establish selected
+spellings and residue behavior.
 
 ## Test Procedure
 
-1. Round-trip all 52 `ChargePoint` spellings; check `function.call` and `collection.visit` are
-   present in the vocabulary but appear in no charge sequence this slice admits, since no evaluator
-   this crate exposes yet charges them.
+1. Check owner FR-368-AC-1/2 for the full 62-member `ChargePoint` census and spelling
+   round trips. Locally check `function.call` and `collection.visit`
+   spellings and that neither appears in this construction test's charge sequence. Function
+   application charges `function.call` in TC-194; do not infer a global absence from this test.
 2. Admit a declaration set with a duplicate key, a duplicate field/attribute name, an unnamed-edge
    cycle and a non-escaping-edge cycle; check each refuses at its originating declaration with the
    named `DeclarationCause` and, for the two recursion cases, the exact offending cycle.

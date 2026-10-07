@@ -129,7 +129,7 @@ FR-007-AC-1's large floor-division subset maps to `ix://agent-ix/quire-exact/FR-
 and `FR-361-AC-8` at `integer-division.operands`; its injected division/modulus subset maps
 to `FR-361-AC-3`. None of these tests establishes AC-1's exact and one-under
 `max(bits(a), bits(b))` charge at `integer-division.arithmetic` or
-`integer-modulus.arithmetic`.
+`integer-modulus.arithmetic`; quire-exact IR-678 tracks that owner evidence gap.
 FR-007-AC-2's decimal allocation subset maps to `FR-361-AC-4` through `FR-361-AC-6` and
 `FR-361-AC-9`, and its metered ordering subset to `FR-363-AC-1` through `FR-363-AC-7`.
 These owner contracts do not prove QSpec/QSL shared-corpus agreement or the whole decimal

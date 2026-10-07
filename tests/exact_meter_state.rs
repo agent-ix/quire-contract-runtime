@@ -1,18 +1,23 @@
 //! FR-011 the determinate `Meter` state at an `Undefined`, `Refused` or
-//! `Incomplete` stop, through the public `exact` surface.
+//! `Incomplete` stop, through the public `exact` surface, for the operations the runtime still
+//! defines (the interim residue of FR-275): quantity arithmetic, the stop-carrying
+//! short-circuit connective and the unit graph's ordering rules.
+//!
+//! The cases whose subject is the kernel `Meter` or a kernel scalar operation (the charge log
+//! cap, the injected-denial occurrence counter, the scan order over integer, decimal and
+//! division counters, IEEE flag order) left with the kernel to `quire-exact` (FR-275).
 #![cfg(feature = "exact")]
 
 use std::cell::Cell;
-use std::num::NonZeroU64;
 
 use quire_contract_runtime::exact::{
-    divide, evaluate_boolean, evaluate_boolean_short_circuit, evaluate_integer_arithmetic,
-    evaluate_quantity, order_numbers, BooleanConnective, ChargePoint, CompoundUnit,
-    CompoundUnitCause, Decimal, DivisionProfile, IeeeFlag, IeeeFlags, Incomplete, InjectedDenial,
-    Integer, IntegerArithmetic, IntegerDomain, IntegerInterval, InvalidCompoundUnit,
-    InvalidSemanticGraph, LimitKind, Meter, NodeKey, OrderedOperands, OrderingOperator, Outcome,
-    Quantity, QuantityOperation, QuantityUnit, Rational, Refusal, ScalarLimits, SemanticGraphCause,
-    ShortCircuitConnective, Undefined, UnitDeclaration, UnitGraph, CHARGE_LOG_CAPACITY,
+    evaluate_boolean_short_circuit, evaluate_quantity, CompoundUnit, CompoundUnitCause,
+    InvalidCompoundUnit, InvalidSemanticGraph, NodeKey, Quantity, QuantityOperation, QuantityUnit,
+    SemanticGraphCause, ShortCircuitConnective, UnitDeclaration, UnitGraph,
+};
+use quire_exact::{
+    ChargePoint, Incomplete, Integer, LimitKind, Meter, Outcome, Rational, Refusal, ScalarLimits,
+    Undefined,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -41,80 +46,6 @@ fn key(byte: u8) -> NodeKey {
     let mut bytes = [0_u8; 32];
     bytes[31] = byte;
     NodeKey::from_bytes(bytes)
-}
-
-/// `evaluate_integer_arithmetic` takes an optional result bound rather than
-/// `IntegerDomain`; `Mathematical` is no bound at all.
-fn integer_bound(domain: &IntegerDomain) -> Option<&IntegerInterval> {
-    match domain {
-        IntegerDomain::Mathematical => None,
-        IntegerDomain::Bounded(interval) => Some(interval),
-        // `IntegerDomain` is `#[non_exhaustive]` (NFR-002). A future
-        // domain kind may carry no `&IntegerInterval` at all, so there is no
-        // safe default here.
-        _ => unreachable!("IntegerDomain gained a variant with no known bound representation"),
-    }
-}
-
-/// Trace: TC-032, FR-011-AC-1
-#[test]
-fn tc_032_ac1_undefined_division_by_zero_retains_operands_only() {
-    let mut meter = Meter::new(UNLIMITED);
-    let outcome = divide(
-        DivisionProfile::Truncating,
-        &int(5),
-        &int(0),
-        &IntegerDomain::Mathematical,
-        &mut meter,
-    );
-    assert_eq!(outcome, Outcome::Undefined(Undefined::DivisionByZero));
-    assert_eq!(
-        meter.admitted_charges(),
-        [ChargePoint::IntegerDivisionOperands]
-    );
-    // `max(bits(5), bits(0)) = max(3, 1) = 3`; the arithmetic charge never
-    // lands, so the counter it would have raised stays untouched.
-    assert_eq!(meter.consumed(LimitKind::IntegerBits), 3);
-    assert_eq!(meter.consumed(LimitKind::ValueOccurrences), 2);
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
-    assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
-}
-
-/// Trace: TC-032, FR-011-AC-1
-#[test]
-fn tc_032_ac1_refused_result_retains_arithmetic_not_result_unit() {
-    let domain = IntegerDomain::Bounded(IntegerInterval::new(int(0), int(10)).unwrap());
-    let mut meter = Meter::new(UNLIMITED);
-    let outcome = evaluate_integer_arithmetic(
-        IntegerArithmetic::Add(&int(7), &int(5)),
-        integer_bound(&domain),
-        &mut meter,
-    );
-    assert_eq!(outcome, Outcome::Refused(Refusal::IntegerOutOfDomain));
-    assert_eq!(
-        meter.admitted_charges(),
-        [
-            ChargePoint::IntegerArithmeticOperands,
-            ChargePoint::IntegerArithmeticArithmetic,
-        ]
-    );
-    assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
-}
-
-/// Trace: TC-032, FR-011-AC-1
-#[test]
-fn tc_032_ac1_incomplete_denied_charge_retains_nothing() {
-    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
-        point: ChargePoint::BooleanResultRetain,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    });
-    let outcome = evaluate_boolean(BooleanConnective::Not(true), &mut meter);
-    assert!(matches!(outcome, Outcome::Incomplete(_)));
-    assert!(meter.admitted_charges().is_empty());
-    assert!(!meter.charge_log_truncated());
-    for kind in LimitKind::ALL {
-        assert_eq!(meter.consumed(kind), 0);
-    }
 }
 
 /// Trace: TC-032, FR-011-AC-2
@@ -162,34 +93,6 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
     assert_eq!(powered, Outcome::Undefined(Undefined::DivisionByZero));
 }
 
-/// `evaluate_boolean` guarantees, for any decided operand pair on any connective kind, that the
-/// terminal charge is admitted exactly once. Its operands are always plain, already-decided
-/// `bool`s; `evaluate_boolean_short_circuit` (below) is the exact/metered subsystem's
-/// stop-carrying connective, for a right operand that may itself stop.
-///
-/// Trace: TC-032, FR-011-AC-3
-#[test]
-fn tc_032_ac3_evaluate_boolean_retains_exactly_once() {
-    let connectives = [
-        (BooleanConnective::And(true, true), true),
-        (BooleanConnective::And(false, true), false),
-        (BooleanConnective::Or(false, false), false),
-        (BooleanConnective::Or(true, false), true),
-        (BooleanConnective::Implies(true, false), false),
-        (BooleanConnective::Implies(false, true), true),
-        (BooleanConnective::Not(true), false),
-        (BooleanConnective::Not(false), true),
-    ];
-    for (connective, expected) in connectives {
-        let mut meter = Meter::new(UNLIMITED);
-        let outcome = evaluate_boolean(connective, &mut meter);
-        assert_eq!(outcome, Outcome::Completed(expected));
-        assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
-        assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
-        assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
-    }
-}
-
 /// `evaluate_boolean_short_circuit` is the exact/metered subsystem's stop-carrying connective
 /// (`agent-ix/quire-contract-runtime#27`). Two halves:
 ///
@@ -207,7 +110,7 @@ fn tc_032_ac3_evaluate_boolean_retains_exactly_once() {
 fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
     let stops = [
         Outcome::Undefined(Undefined::DivisionByZero),
-        Outcome::Refused(Refusal::InexactDecimal),
+        Outcome::Refused(Refusal::CheckedInvariant),
         Outcome::Incomplete(Incomplete {
             limit_kind: LimitKind::WorkUnits,
             limit: 0,
@@ -289,45 +192,40 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
         assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
     }
+
+    // The runtime-owned lazy connective also retains no result when its own charge is denied,
+    // whether the left operand short-circuits or the right operand completes.
+    let mut limits = UNLIMITED;
+    limits.work_units = 0;
+    for (connective, left) in [
+        (ShortCircuitConnective::And, false),
+        (ShortCircuitConnective::And, true),
+    ] {
+        let mut meter = Meter::new(limits);
+        let outcome = evaluate_boolean_short_circuit(
+            connective,
+            left,
+            || Outcome::Completed(true),
+            &mut meter,
+        );
+        assert_eq!(
+            outcome,
+            Outcome::Incomplete(Incomplete {
+                limit_kind: LimitKind::WorkUnits,
+                limit: 0,
+                consumed: 0,
+                next_charge: int(1),
+                charge_point: ChargePoint::BooleanResultRetain,
+            })
+        );
+        assert!(meter.admitted_charges().is_empty());
+        assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
+    }
 }
 
-/// Trace: TC-032, FR-011-AC-4
-#[test]
-fn tc_032_ac4_second_scanned_counter_short_writes_nothing() {
-    let mut tuple = [u64::MAX; 10];
-    tuple[1] = 5; // decimal_digits
-    let mut meter = Meter::new(limits(tuple));
-    let (a, b) = (Decimal::new(int(0), 5), Decimal::new(int(0), 0));
-    let outcome = order_numbers(
-        OrderingOperator::GreaterOrEqual,
-        OrderedOperands::Decimals(&a, &b),
-        &mut meter,
-    );
-    // `ordering.arithmetic`'s sorted sizes are `integer_bits = 18` (passes),
-    // then `decimal_digits = 6` (fails at limit 5): the second-scanned
-    // counter in field order.
-    assert_eq!(
-        outcome,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::DecimalDigits,
-            limit: 5,
-            consumed: 1,
-            next_charge: int(6),
-            charge_point: ChargePoint::OrderingArithmetic,
-        })
-    );
-    assert_eq!(meter.admitted_charges(), [ChargePoint::OrderingOperands]);
-    // The passing integer_bits amount (18) is never committed: the whole
-    // charge stays at whatever the earlier operands charge left behind.
-    assert_eq!(meter.consumed(LimitKind::IntegerBits), 1);
-    assert_eq!(meter.consumed(LimitKind::DecimalDigits), 1);
-    assert_eq!(meter.consumed(LimitKind::ScaleExpansion), 0);
-}
-
-/// `integer-arithmetic.operands` attaches `integer_bits` then
-/// `value_occurrences` (already ascending field order); `unit.identity-read`
-/// attaches `value_occurrences` then `integer_bits` (the reverse relative
-/// order). Both report the same field-order-first short counter.
+/// `unit.identity-read` attaches `value_occurrences` then `integer_bits` (the reverse of
+/// field order), and still reports the field-order-first short counter. The scan-order cases of
+/// the kernel's own charge points left with the kernel.
 ///
 /// Trace: TC-032, FR-011-AC-4
 #[test]
@@ -335,22 +233,6 @@ fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     let mut tuple = [u64::MAX; 10];
     tuple[0] = 0; // integer_bits
     tuple[7] = 0; // value_occurrences
-
-    let ascending = evaluate_integer_arithmetic(
-        IntegerArithmetic::Negate(&int(5)),
-        None,
-        &mut Meter::new(limits(tuple)),
-    );
-    assert_eq!(
-        ascending,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::IntegerBits,
-            limit: 0,
-            consumed: 0,
-            next_charge: int(3),
-            charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
-    );
 
     let unit = QuantityUnit::Compound(CompoundUnit::dimensionless());
     let a = Quantity::new(Rational::from_integer(int(5)), unit.clone());
@@ -372,126 +254,6 @@ fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     );
 }
 
-/// Trace: TC-032, FR-011-AC-4
-#[test]
-fn tc_032_ac4_denied_charge_leaves_occurrence_counter_unchanged() {
-    let mut tuple = [u64::MAX; 10];
-    tuple[0] = 0; // integer_bits: every attempt below is size-denied here
-    let mut meter = Meter::new(limits(tuple));
-    for _ in 0..3 {
-        let outcome =
-            evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);
-        assert!(matches!(
-            outcome,
-            Outcome::Incomplete(Incomplete {
-                limit_kind: LimitKind::IntegerBits,
-                ..
-            })
-        ));
-    }
-    assert!(meter.admitted_charges().is_empty());
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 0);
-
-    // Arm an injected denial for the *first* occurrence of the same point.
-    // If any of the three size-denied attempts above had advanced the
-    // point's occurrence counter, this would never fire, and the next call
-    // would report the same size denial instead.
-    let mut meter = meter.with_injected_denial(InjectedDenial {
-        point: ChargePoint::IntegerArithmeticOperands,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    });
-    let outcome =
-        evaluate_integer_arithmetic(IntegerArithmetic::Add(&int(1), &int(1)), None, &mut meter);
-    assert_eq!(
-        outcome,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::WorkUnits,
-            limit: 0,
-            consumed: 0,
-            next_charge: int(1),
-            charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
-    );
-}
-
-const NEGATE_POINTS: [ChargePoint; 3] = [
-    ChargePoint::IntegerArithmeticOperands,
-    ChargePoint::IntegerArithmeticArithmetic,
-    ChargePoint::IntegerArithmeticResultRetain,
-];
-
-/// Trace: TC-032, FR-011-AC-5
-#[test]
-fn tc_032_ac5_log_holds_first_4096_in_admission_order() {
-    let iterations = 1400_u64;
-    let mut meter = Meter::new(UNLIMITED);
-    for _ in 0..iterations {
-        assert!(
-            evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter)
-                .completed()
-                .is_some()
-        );
-    }
-    let total_charges = iterations * 3;
-    assert!(total_charges > u64::try_from(CHARGE_LOG_CAPACITY).unwrap());
-    assert_eq!(meter.admitted_charges().len(), CHARGE_LOG_CAPACITY);
-    assert!(meter.charge_log_truncated());
-    for (index, point) in meter.admitted_charges().iter().enumerate() {
-        assert_eq!(*point, NEGATE_POINTS[index % 3]);
-    }
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), total_charges);
-    assert_eq!(meter.consumed(LimitKind::ResultUnits), iterations);
-}
-
-/// Trace: TC-032, FR-011-AC-5
-#[test]
-fn tc_032_ac5_limits_still_enforced_past_the_cap() {
-    let iterations = 1400_u64;
-    let total_charges = iterations * 3;
-    assert!(total_charges > u64::try_from(CHARGE_LOG_CAPACITY).unwrap());
-    let mut tuple = [u64::MAX; 10];
-    tuple[8] = total_charges - 1; // work_units: one short of every charge admitted
-    let mut meter = Meter::new(limits(tuple));
-    for _ in 0..iterations - 1 {
-        assert!(
-            evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter)
-                .completed()
-                .is_some()
-        );
-    }
-    let last = evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(3)), None, &mut meter);
-    assert_eq!(
-        last,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::WorkUnits,
-            limit: total_charges - 1,
-            consumed: total_charges - 1,
-            next_charge: int(1),
-            charge_point: ChargePoint::IntegerArithmeticResultRetain,
-        })
-    );
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), total_charges - 1);
-    assert_eq!(meter.admitted_charges().len(), CHARGE_LOG_CAPACITY);
-    assert!(meter.charge_log_truncated());
-}
-
-/// `quire.value.accounting/v1` derived amounts saturate toward denial rather
-/// than wrap. `Quantity` `power`'s bits amount is an unbounded `Integer` (a
-/// unit integer power can require more than `u64::MAX`, per
-/// [`Incomplete::next_charge`]'s own doc), so a modest exponent whose *own*
-/// magnitude is unremarkable can still produce a derived amount that no
-/// longer fits `u64` once multiplied by the base's part width, and
-/// `Meter::charge` denies it outright rather than admitting it.
-///
-/// FR-011-AC-6 also asks for a *cumulative* counter (`work_units` or
-/// `result_units`) driven to `u64::MAX - 1` and shown to deny rather than
-/// wrap. That half is not reachable through the public surface: every named
-/// charge point in this crate admits exactly one work unit (or a small fixed
-/// result-unit amount) per call, `Charge`'s builders are `pub(crate)`, and
-/// `Meter` exposes no way to preset its counters — reaching `u64::MAX - 1`
-/// through real charges would take on the order of 10^19 operations. This
-/// test backs only the derived-amount half of AC-6.
-///
 /// Trace: TC-032, FR-011-AC-6
 #[test]
 fn tc_032_ac6_derived_amount_past_u64_max_is_denied_not_admitted() {
@@ -515,43 +277,6 @@ fn tc_032_ac6_derived_amount_past_u64_max_is_denied_not_admitted() {
         other => panic!("expected Incomplete, got {other:?}"),
     }
     assert_eq!(meter.admitted_charges(), [ChargePoint::UnitIdentityRead]);
-}
-
-/// Trace: TC-032, FR-011-AC-7
-#[test]
-fn tc_032_ac7_consumed_is_total_for_every_limit_kind() {
-    let fresh = Meter::new(UNLIMITED);
-    for kind in LimitKind::ALL {
-        assert_eq!(fresh.consumed(kind), 0);
-    }
-    let mut meter = Meter::new(UNLIMITED);
-    assert!(evaluate_boolean(BooleanConnective::Not(true), &mut meter)
-        .completed()
-        .is_some());
-    for kind in LimitKind::ALL {
-        let _ = meter.consumed(kind);
-    }
-    assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
-}
-
-/// Trace: TC-032, FR-011-AC-7
-#[test]
-fn tc_032_ac7_ieee_flags_iterate_in_all_order() {
-    let permutations = [
-        [IeeeFlag::Inexact, IeeeFlag::Invalid, IeeeFlag::Overflow],
-        [IeeeFlag::Overflow, IeeeFlag::Inexact, IeeeFlag::Invalid],
-        [IeeeFlag::Invalid, IeeeFlag::Overflow, IeeeFlag::Inexact],
-    ];
-    for permutation in permutations {
-        let flags: IeeeFlags = permutation.into_iter().collect();
-        let order: Vec<IeeeFlag> = flags.iter().collect();
-        assert_eq!(
-            order,
-            [IeeeFlag::Invalid, IeeeFlag::Overflow, IeeeFlag::Inexact]
-        );
-    }
-    let reversed: IeeeFlags = IeeeFlag::ALL.into_iter().rev().collect();
-    assert_eq!(reversed.iter().collect::<Vec<_>>(), IeeeFlag::ALL.to_vec());
 }
 
 /// Trace: TC-032, FR-011-AC-7

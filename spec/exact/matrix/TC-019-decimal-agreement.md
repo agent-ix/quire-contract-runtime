@@ -11,13 +11,14 @@ relationships:
 ## Description
 
 Execute every QSpec TC-185 vector on the runtime and on quire-spec-language.
-Evidence: The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done). Step 5 keeps evidence in the
-upscale allocation bound in `tests/exact_allocation.rs` (`--features exact`).
+Evidence: The QSL agreement oracle is removed from this repository; recreating it in
+agent-ix/quire-integration is planned under IR-669. The RT-local allocation test was
+removed with the copied kernel; owner FR-361-AC-9 tests the matching upscale denial.
 
 ## Ownership and evidence
 
-Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Step 5 currently has RT allocation
-coverage, which leaves in IR-349. `ix://agent-ix/quire-exact/FR-361-AC-6` and
+Steps 1–3 remain a QSL agreement gap under IR-669. Step 5's RT allocation
+coverage left with the RT copy. `ix://agent-ix/quire-exact/FR-361-AC-6` and
 `FR-361-AC-9` own tested denied retain-upscale cases; `FR-361-AC-4` and `FR-361-AC-5`
 cover scale-expansion/arithmetic denial. `FR-363-AC-1` through `FR-363-AC-7` own tested
 retained-representation decimal ordering subsets.

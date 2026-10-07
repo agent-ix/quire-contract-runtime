@@ -87,7 +87,10 @@ behavior; `FR-358-AC-2` tests denial and retry at `equality.plan`; `FR-358-AC-3`
 nonzero occurrence type. These are partial owner evidence for FR-010. In particular, they do not
 test FR-010-AC-2's `equality.plan` reservation `next_charge = pairs + 2` or
 FR-010-AC-3's precedence when an injected denial and a real limit would both deny the same
-charge. Keep both assertions and their partial status; IR-676 tracks the owner evidence gap.
+charge. RT's retained charge-point driver asserts `limit = consumed` and the reservation is 3
+for one pair, but does not compare different configured `work_units` limits; it has no AC-3
+precedence assertion. Keep both criteria and their partial status; IR-676 tracks the remaining
+owner evidence gap.
 
 ## Dependencies
 

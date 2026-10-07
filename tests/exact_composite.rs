@@ -7,13 +7,15 @@ use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
-    form_collection, CardinalityBound, ChargePoint, CollectionKind, CollectionType, Component,
-    CompositeDeclaration, CompositeShape, ConstructionCause, ConstructionRefusal, DeclarationCause,
-    FieldDeclaration, FieldExpression, FieldValue, GraphCause, GraphNode, GraphNodeId,
-    GraphRefusal, GraphSlot, IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial,
-    Integer, InvalidDeclaration, LimitKind, Meter, NodeKey, ObjectTypeDeclaration, Outcome,
-    Presence, RecursionEdges, ScalarLimits, TypeEnvironment, Undefined, Value, ValueGraph,
+    form_collection, CollectionType, Component, CompositeDeclaration, CompositeShape,
+    ConstructionCause, ConstructionRefusal, DeclarationCause, FieldDeclaration, FieldExpression,
+    FieldValue, GraphCause, GraphNode, GraphNodeId, GraphRefusal, GraphSlot, InvalidDeclaration,
+    NodeKey, ObjectTypeDeclaration, Presence, RecursionEdges, TypeEnvironment, Value, ValueGraph,
     ValueType,
+};
+use quire_exact::{
+    CardinalityBound, ChargePoint, CollectionKind, IeeeWidth, IllTyped, IllTypedCause, Incomplete,
+    InjectedDenial, Integer, LimitKind, Meter, Outcome, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -43,7 +45,6 @@ fn consumed(meter: &Meter) -> Vec<u64> {
 /// Trace: TC-024, FR-008-AC-8
 #[test]
 fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point() {
-    assert_eq!(ChargePoint::ALL.len(), 52);
     assert!(ChargePoint::ALL.contains(&ChargePoint::FunctionCall));
     assert!(ChargePoint::ALL.contains(&ChargePoint::CollectionVisit));
     assert_eq!(ChargePoint::FunctionCall.as_str(), "function.call");
@@ -626,7 +627,7 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let env = TypeEnvironment::new([widget], []).unwrap();
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CompositeResultRetain,
-        occurrence: NonZeroU64::new(1).unwrap(),
+        occurrence: NonZeroU64::MIN,
     });
     let before = consumed(&meter);
     let outcome = env

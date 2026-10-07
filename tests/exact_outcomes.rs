@@ -1,23 +1,25 @@
-//! FR-006 typed exact outcomes and `quire.value.accounting/v1` metering, through
-//! the public `exact` surface.
+//! FR-006 typed exact outcomes and `quire.value.accounting/v1` metering of the operations the
+//! runtime still defines (the interim residue of FR-275), through the public `exact` surface.
+//!
+//! The kernel `Outcome`, `Refusal`, `Meter` and injected-denial tests left with the kernel to the
+//! `quire-exact` crate (FR-275; the matrix section "Evidence at the kernel move"). What stays is
+//! what only this crate defines: the charge schedules of `CheckedEquality`, `CheckedPackage`,
+//! collection and composite construction, enumeration comparison and quantity arithmetic.
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
 use std::num::NonZeroU64;
 
 use quire_contract_runtime::exact::{
-    admit_text, compare_enum, compare_text, construct_collection, divide, evaluate_boolean,
-    evaluate_decimal, evaluate_ieee, evaluate_integer_arithmetic, evaluate_quantity,
-    evaluate_rational_arithmetic, modulo, order_numbers, BooleanConnective, BoundViolation,
-    CardinalityBound, ChargePoint, CheckMode, CheckingLimits, CollectionKind, CollectionType,
-    ComparisonOperator, CompositeDeclaration, CompositeShape, Decimal, DecimalOperation,
-    DecimalType, Deferred, DivisionProfile, EnumDeclaration, EqualityOperand, EqualityOperator,
-    FunctionDeclaration, IeeeFlags, IeeeOperation, IeeeValue, IllTyped, IllTypedCause, Incomplete,
-    InjectedDenial, Integer, IntegerArithmetic, IntegerDomain, IntegerInterval, LimitKind, Meter,
-    NodeKey, ObjectEnvironment, OrderedOperands, OrderingOperator, Outcome, PackageDeclarations,
-    Quantity, QuantityOperation, QuantityUnit, Rational, RationalArithmetic, Refusal, RoundingMode,
-    ScalarLimits, TextPayload, TextProfile, TextType, TypeEnvironment, UnitDeclaration, UnitGraph,
-    Value, ValueType,
+    compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
+    CollectionType, CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration,
+    EqualityOperand, EqualityOperator, FunctionDeclaration, NodeKey, ObjectEnvironment,
+    PackageDeclarations, Quantity, QuantityOperation, QuantityUnit, TypeEnvironment,
+    UnitDeclaration, UnitGraph, Value, ValueType,
+};
+use quire_exact::{
+    CardinalityBound, ChargePoint, CollectionKind, ComparisonOperator, Incomplete, InjectedDenial,
+    Integer, LimitKind, Meter, Outcome, Rational, ScalarLimits,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -37,305 +39,8 @@ const fn limits(v: [u64; 10]) -> ScalarLimits {
     }
 }
 
-fn consumed(meter: &Meter) -> Vec<u64> {
-    LimitKind::ALL
-        .iter()
-        .map(|kind| meter.consumed(*kind))
-        .collect()
-}
-
 fn int(value: i128) -> Integer {
     Integer::from(value)
-}
-
-/// Trace: TC-016, FR-006-AC-1
-#[test]
-fn tc_016_outcomes_are_four_distinct_dispositions_and_false_is_a_value() {
-    let incomplete = Incomplete {
-        limit_kind: LimitKind::WorkUnits,
-        limit: 0,
-        consumed: 0,
-        next_charge: int(1),
-        charge_point: ChargePoint::BooleanResultRetain,
-    };
-    let outcomes: [Outcome<bool>; 5] = [
-        Outcome::Completed(false),
-        Outcome::Completed(true),
-        Outcome::Undefined(quire_contract_runtime::exact::Undefined::DivisionByZero),
-        Outcome::Refused(Refusal::IntegerOutOfDomain),
-        Outcome::Incomplete(incomplete.clone()),
-    ];
-    let completed: Vec<Option<bool>> = outcomes.iter().cloned().map(Outcome::completed).collect();
-    assert_eq!(completed, [Some(false), Some(true), None, None, None]);
-    for (i, left) in outcomes.iter().enumerate() {
-        for (j, right) in outcomes.iter().enumerate() {
-            assert_eq!(i == j, left == right);
-        }
-    }
-
-    // A false result is completed, never a refusal.
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(true), &mut Meter::new(UNLIMITED)),
-        Outcome::Completed(false)
-    );
-
-    // Ill-typed precedes evaluation and is returned beside the outcome.
-    let admit = |text: &str, profile| {
-        admit_text(
-            &TextPayload::from_utf8(text.as_bytes()).unwrap(),
-            &TextType::new(0, 8, profile).unwrap(),
-            &mut Meter::new(UNLIMITED),
-        )
-        .completed()
-        .unwrap()
-    };
-    let mut meter = Meter::new(limits([0; 10]));
-    let ill = compare_text(
-        ComparisonOperator::Equal,
-        &admit("a", TextProfile::Nfc),
-        &admit("a", TextProfile::BinaryUtf8),
-        &mut meter,
-    );
-    assert_eq!(
-        ill,
-        Err(IllTyped {
-            cause: IllTypedCause::DistinctTextProfiles
-        })
-    );
-    assert_eq!(IllTyped::CODE, "ill_typed");
-    assert!(meter.admitted_charges().is_empty());
-}
-
-/// Trace: TC-016, FR-006-AC-1
-#[test]
-fn tc_016_refusal_codes_are_closed() {
-    let codes: Vec<Option<&str>> = [
-        Refusal::InexactDecimal,
-        Refusal::DecimalOutOfDomain,
-        Refusal::DivisionPairOutOfDomain {
-            quotient_admitted: true,
-            remainder_admitted: false,
-        },
-        Refusal::ModuloOutOfDomain,
-        Refusal::TextLengthOutOfDomain,
-        Refusal::IntegerOutOfDomain,
-        Refusal::IeeeNanPayloadNotRepresentable,
-        Refusal::IeeeRationalOutOfDomain,
-        Refusal::RationalOutOfDomain,
-    ]
-    .into_iter()
-    .map(Refusal::code)
-    .collect();
-    assert_eq!(
-        codes,
-        [
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some("ieee_nan_payload_not_representable"),
-            Some("ieee_rational_out_of_domain"),
-            None,
-        ]
-    );
-}
-
-/// Trace: TC-016, FR-006-AC-3
-#[test]
-fn tc_016_charge_point_and_limit_vocabularies_round_trip() {
-    let spellings: Vec<&str> = ChargePoint::ALL
-        .iter()
-        .map(|point| point.as_str())
-        .collect();
-    assert_eq!(
-        spellings.iter().collect::<BTreeSet<_>>().len(),
-        ChargePoint::ALL.len()
-    );
-    for point in ChargePoint::ALL {
-        assert_eq!(ChargePoint::from_code(point.as_str()), Some(point));
-    }
-    assert_eq!(ChargePoint::from_code("equality.not-a-real-point"), None);
-    assert_eq!(ChargePoint::from_code("ordering"), None);
-    // The QSpec scalar families, in definition-row order.
-    assert_eq!(
-        spellings[spellings.len() - 11..],
-        [
-            "integer-arithmetic.operands",
-            "integer-arithmetic.arithmetic",
-            "integer-arithmetic.result-retain",
-            "rational-arithmetic.operands",
-            "rational-arithmetic.arithmetic",
-            "rational-arithmetic.normalize",
-            "rational-arithmetic.result-retain",
-            "ordering.operands",
-            "ordering.arithmetic",
-            "ordering.result-retain",
-            "boolean.result-retain",
-        ]
-    );
-    let fields: Vec<&str> = LimitKind::ALL.iter().map(|kind| kind.as_str()).collect();
-    assert_eq!(
-        fields,
-        [
-            "integer_bits",
-            "decimal_digits",
-            "scale_expansion",
-            "text_input_bytes",
-            "text_scalars",
-            "normalized_scalars",
-            "unit_edges",
-            "value_occurrences",
-            "work_units",
-            "result_units",
-        ]
-    );
-    let cumulative: Vec<bool> = LimitKind::ALL
-        .iter()
-        .map(|kind| kind.is_cumulative())
-        .collect();
-    assert_eq!(
-        cumulative,
-        [false, false, false, false, false, false, false, false, true, true]
-    );
-}
-
-/// Trace: TC-017, FR-006-AC-3
-#[test]
-fn tc_017_charges_precede_work_and_a_denied_charge_consumes_nothing() {
-    let two_64 = Integer::from(1_i128 << 64);
-    let mut tuple = [u64::MAX; 10];
-    tuple[0] = 128;
-    let mut meter = Meter::new(limits(tuple));
-    let outcome = evaluate_integer_arithmetic(
-        IntegerArithmetic::Multiply(&two_64, &two_64),
-        None,
-        &mut meter,
-    );
-    assert_eq!(
-        outcome,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::IntegerBits,
-            limit: 128,
-            consumed: 65,
-            // `bits(2^64) + bits(2^64) = 130`, never the square's 129.
-            next_charge: int(130),
-            charge_point: ChargePoint::IntegerArithmeticArithmetic,
-        })
-    );
-    assert_eq!(
-        meter.admitted_charges(),
-        [ChargePoint::IntegerArithmeticOperands]
-    );
-    let mut expected = vec![65, 0, 0, 0, 0, 0, 0, 2, 1, 0];
-    assert_eq!(consumed(&meter), expected);
-
-    // Size counters are high-water marks; work and result units accumulate.
-    let (one, three) = (int(1), int(3));
-    let run = evaluate_integer_arithmetic(IntegerArithmetic::Add(&one, &three), None, &mut meter);
-    assert_eq!(run, Outcome::Completed(int(4)));
-    expected[8] = 4;
-    expected[9] = 1;
-    assert_eq!(consumed(&meter), expected);
-}
-
-/// Trace: TC-017, FR-006-AC-3
-#[test]
-fn tc_017_first_short_counter_in_field_order_and_domain_refusal_before_retention() {
-    // Both integer_bits and work_units are short: integer_bits is reported.
-    let (a, b) = (int(255), int(1));
-    let mut short = [u64::MAX; 10];
-    short[0] = 7;
-    short[8] = 0;
-    let outcome = evaluate_integer_arithmetic(
-        IntegerArithmetic::Add(&a, &b),
-        None,
-        &mut Meter::new(limits(short)),
-    );
-    assert_eq!(
-        outcome,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::IntegerBits,
-            limit: 7,
-            consumed: 0,
-            next_charge: int(8),
-            charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
-    );
-
-    let bound = IntegerInterval::new(int(0), int(10)).unwrap();
-    let mut meter = Meter::new(UNLIMITED);
-    let refused = evaluate_integer_arithmetic(
-        IntegerArithmetic::Add(&int(7), &int(5)),
-        Some(&bound),
-        &mut meter,
-    );
-    assert_eq!(refused, Outcome::Refused(Refusal::IntegerOutOfDomain));
-    assert_eq!(
-        meter.admitted_charges(),
-        [
-            ChargePoint::IntegerArithmeticOperands,
-            ChargePoint::IntegerArithmeticArithmetic
-        ]
-    );
-    assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
-}
-
-/// Trace: TC-017, FR-006-AC-4
-#[test]
-fn tc_017_injected_denial_names_the_point_and_leaves_counters_unchanged() {
-    let points = [
-        ChargePoint::IntegerArithmeticOperands,
-        ChargePoint::IntegerArithmeticArithmetic,
-        ChargePoint::IntegerArithmeticResultRetain,
-    ];
-    for (work, point) in (0_u64..).zip(points) {
-        let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
-            point,
-            occurrence: NonZeroU64::new(1).unwrap(),
-        });
-        let outcome =
-            evaluate_integer_arithmetic(IntegerArithmetic::Negate(&int(-9)), None, &mut meter);
-        assert_eq!(
-            outcome,
-            Outcome::Incomplete(Incomplete {
-                limit_kind: LimitKind::WorkUnits,
-                limit: work,
-                consumed: work,
-                next_charge: int(1),
-                charge_point: point,
-            })
-        );
-        assert_eq!(meter.consumed(LimitKind::WorkUnits), work);
-        assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
-        assert_eq!(
-            meter.admitted_charges().len(),
-            usize::try_from(work).unwrap()
-        );
-    }
-
-    // A second occurrence is denied only on its second charge.
-    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
-        point: ChargePoint::BooleanResultRetain,
-        occurrence: NonZeroU64::new(2).unwrap(),
-    });
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Completed(true)
-    );
-    assert!(matches!(
-        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Incomplete(ref record) if record.limit == 1
-    ));
-}
-
-// ---- TC-031 / FR-010: the injected-charge-denial seam ---------------------
-
-fn limits_with_work(work_units: u64) -> ScalarLimits {
-    let mut tuple = [u64::MAX; 10];
-    tuple[8] = work_units;
-    limits(tuple)
 }
 
 /// Unwrap an [`Outcome`] known to be [`Outcome::Incomplete`]; panics with the
@@ -347,44 +52,12 @@ fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
         Outcome::Completed(_) => panic!("expected Outcome::Incomplete, got Completed"),
         Outcome::Undefined(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
         Outcome::Refused(reason) => panic!("expected Outcome::Incomplete, got {reason:?}"),
-        // `Outcome` is `#[non_exhaustive]` (NFR-002).
-        _ => panic!("expected Outcome::Incomplete, got an unrecognized outcome variant"),
     }
 }
 
-// One driver per admitted charge point family, run under `UNLIMITED` so every
-// charge before the point under test is genuinely admitted. Each returns the
-// `Incomplete` an injected denial at that call's first matching point
-// produces.
-
-fn drive_integer_arithmetic(meter: &mut Meter) -> Incomplete {
-    expect_incomplete(evaluate_integer_arithmetic(
-        IntegerArithmetic::Negate(&int(-9)),
-        None,
-        meter,
-    ))
-}
-
-fn drive_rational_arithmetic(meter: &mut Meter) -> Incomplete {
-    let operand = Rational::from_integer(int(5));
-    expect_incomplete(evaluate_rational_arithmetic(
-        RationalArithmetic::Negate(&operand),
-        None,
-        meter,
-    ))
-}
-
-fn drive_ordering(meter: &mut Meter) -> Incomplete {
-    expect_incomplete(order_numbers(
-        OrderingOperator::Less,
-        OrderedOperands::Integers(&int(1), &int(2)),
-        meter,
-    ))
-}
-
-fn drive_boolean(meter: &mut Meter) -> Incomplete {
-    expect_incomplete(evaluate_boolean(BooleanConnective::Not(false), meter))
-}
+// One driver per admitted charge point family the runtime itself charges, run under `UNLIMITED`
+// so every charge before the point under test is genuinely admitted. Each returns the
+// `Incomplete` an injected denial at that call's first matching point produces.
 
 /// A same-type equality between two `Integer` operands selects the
 /// occurrence-pair plan schedule, reaching `equality.plan-form`,
@@ -475,43 +148,6 @@ fn drive_composite(meter: &mut Meter) -> Incomplete {
     )
 }
 
-fn drive_decimal_basic(meter: &mut Meter) -> Incomplete {
-    let target = DecimalType::new(int(-1000), int(1000), 0, 10, RoundingMode::Exact).unwrap();
-    expect_incomplete(evaluate_decimal(
-        DecimalOperation::Negate(&Decimal::new(int(5), 0)),
-        &target,
-        meter,
-    ))
-}
-
-/// A `Divide` whose quotient (`1/3`) is not exactly representable, so it
-/// reaches `decimal.rounding` before `decimal.result-retain`.
-fn drive_decimal_rounding(meter: &mut Meter) -> Incomplete {
-    let target = DecimalType::new(int(-1000), int(1000), 0, 2, RoundingMode::TowardZero).unwrap();
-    let (one, three) = (Decimal::new(int(1), 0), Decimal::new(int(3), 0));
-    expect_incomplete(evaluate_decimal(
-        DecimalOperation::Divide(&one, &three),
-        &target,
-        meter,
-    ))
-}
-
-/// `binary-utf8` never normalizes, so this reaches `text.result-retain`
-/// without any `text.normalize-*` charge.
-fn drive_text_basic(meter: &mut Meter) -> Incomplete {
-    let payload = TextPayload::from_utf8(b"ab").unwrap();
-    let text_type = TextType::new(0, 10, TextProfile::BinaryUtf8).unwrap();
-    expect_incomplete(admit_text(&payload, &text_type, meter))
-}
-
-/// `nfc` emits one normalized scalar, charging both `text.normalize-input`
-/// and `text.normalize-output`.
-fn drive_text_normalize(meter: &mut Meter) -> Incomplete {
-    let payload = TextPayload::from_utf8(b"a").unwrap();
-    let text_type = TextType::new(0, 10, TextProfile::Nfc).unwrap();
-    expect_incomplete(admit_text(&payload, &text_type, meter))
-}
-
 fn drive_enum(meter: &mut Meter) -> Incomplete {
     let declaration =
         EnumDeclaration::new(NodeKey::from_bytes([9; 32]), true, &["a", "b"]).unwrap();
@@ -566,108 +202,20 @@ fn drive_quantity(meter: &mut Meter) -> Incomplete {
     )
 }
 
-fn drive_integer_division(meter: &mut Meter) -> Incomplete {
-    expect_incomplete(divide(
-        DivisionProfile::Truncating,
-        &int(7),
-        &int(2),
-        &IntegerDomain::Mathematical,
-        meter,
-    ))
-}
-
-fn drive_integer_modulus(meter: &mut Meter) -> Incomplete {
-    expect_incomplete(modulo(
-        &int(7),
-        &int(2),
-        &IntegerDomain::Mathematical,
-        meter,
-    ))
-}
-
-fn drive_ieee(meter: &mut Meter) -> Incomplete {
-    let operand = IeeeValue::binary32(0x3F80_0000);
-    expect_incomplete(
-        evaluate_ieee(
-            IeeeOperation::Add(operand, operand),
-            RoundingMode::NearestEven,
-            meter,
-        )
-        .unwrap(),
-    )
-}
-
 /// One `(point, driver)` entry of the AC-1 sweep below.
 type Driver = fn(&mut Meter) -> Incomplete;
 
 /// Trace: TC-031, FR-010-AC-1
 ///
-/// `collection.visit` is declared in `ChargePoint::ALL`
-/// (quire.value.accounting/v1) but no public `exact` operator charges it
-/// yet: it is ported ahead of the collection-traversal operator that will
-/// (agent-ix/quire-spec-language#119). It is therefore excluded from this
-/// AC-1 sweep as `unreachable`, not silently dropped: this is a gap between
-/// the declared `ChargePoint` vocabulary and what the runtime actually
-/// charges, not a gap in this test.
-/// Every other point FR-008 added — `function.call` (through
-/// `CheckedPackage::call`/`Frame::call`, FR-273), the `equality.*`
-/// occurrence-pair plan schedule and the `collection.*`/
-/// `composite.result-retain` family — is reachable through
-/// `CheckedPackage::call`, `CheckedEquality::evaluate`,
-/// `construct_collection` and `TypeEnvironment::evaluate_tuple`, and is
-/// driven below like any other.
+/// An injected denial at occurrence one of every charge point the runtime's own operations
+/// charge names exactly that point: `function.call` (through `CheckedPackage::call`/
+/// `Frame::call`, FR-273), the `equality.*` occurrence-pair plan schedule, the `collection.*`
+/// and `composite.result-retain` family, the enumeration `enum.*` points and the quantity
+/// `unit.*` points. The kernel's own scalar points are the kernel's evidence, not this crate's.
 #[test]
-fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() {
-    let unreachable = [
-        // `collection.visit`: ported ahead of the collection-traversal
-        // operator that will charge it (agent-ix/quire-spec-language#119); no
-        // operator in this crate charges it yet.
-        ChargePoint::CollectionVisit,
-    ];
+fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
     let drivers: Vec<(ChargePoint, Driver)> = vec![
         (ChargePoint::FunctionCall, drive_function_call),
-        (
-            ChargePoint::IntegerArithmeticOperands,
-            drive_integer_arithmetic,
-        ),
-        (
-            ChargePoint::IntegerArithmeticArithmetic,
-            drive_integer_arithmetic,
-        ),
-        (
-            ChargePoint::IntegerArithmeticResultRetain,
-            drive_integer_arithmetic,
-        ),
-        (
-            ChargePoint::RationalArithmeticOperands,
-            drive_rational_arithmetic,
-        ),
-        (
-            ChargePoint::RationalArithmeticArithmetic,
-            drive_rational_arithmetic,
-        ),
-        (
-            ChargePoint::RationalArithmeticNormalize,
-            drive_rational_arithmetic,
-        ),
-        (
-            ChargePoint::RationalArithmeticResultRetain,
-            drive_rational_arithmetic,
-        ),
-        (ChargePoint::OrderingOperands, drive_ordering),
-        (ChargePoint::OrderingArithmetic, drive_ordering),
-        (ChargePoint::OrderingResultRetain, drive_ordering),
-        (ChargePoint::BooleanResultRetain, drive_boolean),
-        (ChargePoint::DecimalOperands, drive_decimal_basic),
-        (ChargePoint::DecimalScaleExpansion, drive_decimal_basic),
-        (ChargePoint::DecimalArithmetic, drive_decimal_basic),
-        (ChargePoint::DecimalRounding, drive_decimal_rounding),
-        (ChargePoint::DecimalResultRetain, drive_decimal_basic),
-        (ChargePoint::TextInputBytes, drive_text_basic),
-        (ChargePoint::TextDecodeScalars, drive_text_basic),
-        (ChargePoint::TextNormalizeInput, drive_text_normalize),
-        (ChargePoint::TextNormalizeOutput, drive_text_normalize),
-        (ChargePoint::TextResultRetain, drive_text_basic),
         (ChargePoint::EnumIdentityRead, drive_enum),
         (ChargePoint::EnumResultRetain, drive_enum),
         (ChargePoint::UnitIdentityRead, drive_quantity),
@@ -675,30 +223,6 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() 
         (ChargePoint::UnitRationalArithmetic, drive_quantity),
         (ChargePoint::UnitTargetDomain, drive_quantity),
         (ChargePoint::UnitResultRetain, drive_quantity),
-        (ChargePoint::IntegerDivisionOperands, drive_integer_division),
-        (
-            ChargePoint::IntegerDivisionArithmetic,
-            drive_integer_division,
-        ),
-        (
-            ChargePoint::IntegerDivisionDomainPair,
-            drive_integer_division,
-        ),
-        (
-            ChargePoint::IntegerDivisionResultPair,
-            drive_integer_division,
-        ),
-        (ChargePoint::IntegerModulusOperands, drive_integer_modulus),
-        (ChargePoint::IntegerModulusArithmetic, drive_integer_modulus),
-        (ChargePoint::IntegerModulusDomain, drive_integer_modulus),
-        (
-            ChargePoint::IntegerModulusResultRetain,
-            drive_integer_modulus,
-        ),
-        (ChargePoint::IeeeOperands, drive_ieee),
-        (ChargePoint::IeeeExactIntermediate, drive_ieee),
-        (ChargePoint::IeeeRound, drive_ieee),
-        (ChargePoint::IeeeResultRetain, drive_ieee),
         (ChargePoint::EqualityPlanForm, drive_equality_plan),
         (ChargePoint::EqualityPlan, drive_equality_plan),
         (ChargePoint::EqualityPair, drive_equality_plan),
@@ -717,26 +241,17 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() 
         (ChargePoint::CompositeResultRetain, drive_composite),
     ];
 
-    // Every declared charge point is either driven here or named as
-    // known-unreachable, with no duplicates and no omissions.
     let covered: BTreeSet<ChargePoint> = drivers.iter().map(|(point, _)| *point).collect();
     assert_eq!(
         covered.len(),
         drivers.len(),
         "a charge point is driven twice"
     );
-    assert_eq!(covered.len() + unreachable.len(), ChargePoint::ALL.len());
-    for point in ChargePoint::ALL {
-        assert!(
-            covered.contains(&point) || unreachable.contains(&point),
-            "{point:?} is neither driven nor declared unreachable"
-        );
-    }
 
     for (point, drive) in drivers {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: NonZeroU64::new(1).unwrap(),
+            occurrence: NonZeroU64::MIN,
         });
         let record = drive(&mut meter);
         assert_eq!(record.limit_kind, LimitKind::WorkUnits, "{point:?}");
@@ -753,19 +268,16 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() 
             _ => int(1),
         };
         assert_eq!(record.next_charge, expected_next_charge, "{point:?}");
-        // The denied charge itself changed nothing: `work_units` after the
-        // call is exactly the charges admitted before it (one work unit
-        // each), no result unit was retained, and the point was not logged.
-        // The same three occurrence-derived-work points break this 1:1
-        // correspondence for whatever comes after them in a driver's own
-        // chain: `equality.plan-form` and `collection.member-walk` each
-        // admit for 2 work units instead of 1 (`occ(left) + occ(right)` at 2
-        // scalar operands), so a point immediately downstream of one of them
-        // has consumed exactly one more work unit than it has prior admitted
-        // charges. `equality.plan` (`Meter::charge_plan`) only *reserves*
-        // `pairs + 2` to decide availability; on success it still commits a
-        // single work unit like any other charge, so it adds no further
-        // drift once past `equality.plan-form`.
+        // The denied charge itself changed nothing: `work_units` after the call is exactly the
+        // charges admitted before it (one work unit each), no result unit was retained, and the
+        // point was not logged. The occurrence-derived-work points break this 1:1
+        // correspondence for whatever comes after them in a driver's own chain:
+        // `equality.plan-form` and `collection.member-walk` each admit for 2 work units instead
+        // of 1 (`occ(left) + occ(right)` at 2 scalar operands), so a point immediately
+        // downstream of one of them has consumed exactly one more work unit than it has prior
+        // admitted charges. `equality.plan` (`Meter::charge_plan`) only *reserves* `pairs + 2`
+        // to decide availability; on success it still commits a single work unit like any other
+        // charge, so it adds no further drift once past `equality.plan-form`.
         assert_eq!(
             meter.consumed(LimitKind::WorkUnits),
             record.consumed,
@@ -785,432 +297,5 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_admitted_charge_point() 
             "{point:?}"
         );
         assert!(!meter.admitted_charges().contains(&point), "{point:?}");
-    }
-}
-
-/// Trace: TC-031, FR-010-AC-2
-#[test]
-fn tc_031_injected_record_is_independent_of_the_configured_work_units_limit() {
-    let point = ChargePoint::IntegerArithmeticResultRetain;
-    let denial = InjectedDenial {
-        point,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    };
-    let mut low = Meter::new(limits_with_work(5)).with_injected_denial(denial);
-    let mut high = Meter::new(limits_with_work(500)).with_injected_denial(denial);
-    let drive = |meter: &mut Meter| {
-        expect_incomplete(evaluate_integer_arithmetic(
-            IntegerArithmetic::Negate(&int(-9)),
-            None,
-            meter,
-        ))
-    };
-    let record_low = drive(&mut low);
-    let record_high = drive(&mut high);
-
-    // Same record under two different configured `work_units` limits: the
-    // report is the work already spent, not either configured limit.
-    assert_eq!(record_low, record_high);
-    assert_eq!(record_low.limit, record_low.consumed);
-    // `integer-arithmetic.operands` then `.arithmetic` precede
-    // `.result-retain`: two admitted charges.
-    assert_eq!(record_low.consumed, 2);
-    assert_eq!(record_low.next_charge, int(1));
-    assert_eq!(record_low.limit_kind, LimitKind::WorkUnits);
-    assert_ne!(record_low.limit, low.limits().work_units);
-    assert_ne!(record_high.limit, high.limits().work_units);
-    assert_eq!(low.consumed(LimitKind::WorkUnits), 2);
-    assert_eq!(high.consumed(LimitKind::WorkUnits), 2);
-}
-
-/// Trace: TC-031, FR-010-AC-3
-#[test]
-fn tc_031_injected_denial_takes_precedence_over_a_genuinely_short_counter() {
-    let mut short = [u64::MAX; 10];
-    short[0] = 1; // integer_bits: far too small for `magnitude_bits(9) = 4`.
-    let short = limits(short);
-
-    // Without injection, the real short counter denies this exact charge.
-    let real = evaluate_integer_arithmetic(
-        IntegerArithmetic::Negate(&int(-9)),
-        None,
-        &mut Meter::new(short),
-    );
-    assert_eq!(
-        real,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::IntegerBits,
-            limit: 1,
-            consumed: 0,
-            next_charge: int(4),
-            charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
-    );
-
-    // With the injection at that same point and occurrence, the injected
-    // record wins: `WorkUnits`, never the real `IntegerBits` shortfall.
-    let mut meter = Meter::new(short).with_injected_denial(InjectedDenial {
-        point: ChargePoint::IntegerArithmeticOperands,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    });
-    let injected = expect_incomplete(evaluate_integer_arithmetic(
-        IntegerArithmetic::Negate(&int(-9)),
-        None,
-        &mut meter,
-    ));
-    assert_eq!(
-        injected,
-        Incomplete {
-            limit_kind: LimitKind::WorkUnits,
-            limit: 0,
-            consumed: 0,
-            next_charge: int(1),
-            charge_point: ChargePoint::IntegerArithmeticOperands,
-        }
-    );
-    assert!(meter.admitted_charges().is_empty());
-}
-
-/// Trace: TC-031, FR-010-AC-4
-#[test]
-fn tc_031_occurrence_counts_only_admitted_charges_at_the_injected_point() {
-    let mut tuple = [u64::MAX; 10];
-    tuple[0] = 10; // integer_bits: room for a 4-bit operand, not a 20-bit one.
-    let mut meter = Meter::new(limits(tuple)).with_injected_denial(InjectedDenial {
-        point: ChargePoint::IntegerArithmeticOperands,
-        occurrence: NonZeroU64::new(2).unwrap(),
-    });
-
-    // A charge at another point never advances the injected point's
-    // occurrence counter.
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Completed(true)
-    );
-
-    // A charge at the injected point that a genuinely short counter denies
-    // (too many bits) is not admitted, so it does not count as an occurrence.
-    let oversized = int(1_i128 << 19);
-    assert_eq!(
-        evaluate_integer_arithmetic(IntegerArithmetic::Negate(&oversized), None, &mut meter),
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::IntegerBits,
-            limit: 10,
-            consumed: 0,
-            next_charge: int(20),
-            charge_point: ChargePoint::IntegerArithmeticOperands,
-        })
-    );
-
-    // The first ADMITTED charge at the injected point: occurrence one, not
-    // denied (the injection names occurrence two).
-    let small = int(-9);
-    assert_eq!(
-        evaluate_integer_arithmetic(IntegerArithmetic::Negate(&small), None, &mut meter),
-        Outcome::Completed(int(9))
-    );
-
-    // Another charge at a different point, again uncounted.
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(true), &mut meter),
-        Outcome::Completed(false)
-    );
-
-    // The second ADMITTED charge at the injected point: occurrence two, so
-    // the injected denial fires here.
-    let record = expect_incomplete(evaluate_integer_arithmetic(
-        IntegerArithmetic::Negate(&small),
-        None,
-        &mut meter,
-    ));
-    assert_eq!(record.limit_kind, LimitKind::WorkUnits);
-    assert_eq!(record.charge_point, ChargePoint::IntegerArithmeticOperands);
-    assert_eq!(record.limit, record.consumed);
-    assert_eq!(record.next_charge, int(1));
-}
-
-/// Trace: TC-031, FR-010-AC-5
-///
-/// FR-010's Behavior section: "Exactly one charge is denied per meter... Once
-/// the injected denial has fired, the meter's subsequent charges are metered
-/// normally against the configured limits." FR-010-AC-5 restates this as "no
-/// second charge is injected-denied."
-///
-/// This test encodes that requirement as written. It used to FAIL (issue #22):
-/// `Meter::charge`'s `check_injected` (`src/exact/accounting.rs`) matched on
-/// `denial_point_seen.checked_add(1) == Some(denial.occurrence)` alone, and
-/// nothing marked the denial as spent or advanced `denial_point_seen` on the
-/// denial path, so every later charge at the same injected point matched the
-/// same condition again and was denied again, indefinitely, rather than
-/// exactly once. `check_injected` now clears `self.denial` on the arm that
-/// fires, which is what makes the seam single-shot.
-#[test]
-fn tc_031_further_charges_after_the_injected_denial_meter_normally() {
-    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
-        point: ChargePoint::BooleanResultRetain,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    });
-    let fired = evaluate_boolean(BooleanConnective::Not(false), &mut meter);
-    assert_eq!(
-        fired,
-        Outcome::Incomplete(Incomplete {
-            limit_kind: LimitKind::WorkUnits,
-            limit: 0,
-            consumed: 0,
-            next_charge: int(1),
-            charge_point: ChargePoint::BooleanResultRetain,
-        })
-    );
-
-    // A further charge at the SAME point, under the same generous limits,
-    // must meter normally now that the one injected denial has fired.
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(true), &mut meter),
-        Outcome::Completed(false)
-    );
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Completed(true)
-    );
-}
-
-/// Trace: TC-031, FR-010-AC-5
-///
-/// The companion half of `tc_031_further_charges_after_the_injected_denial_meter_normally`:
-/// that test only checks the *outcomes* of the charges after the fired denial fire. This
-/// test checks the *counters* directly, at occurrence 2 rather than 1 so there is a real
-/// admitted charge before the denial as well as after it: the denied charge must consume
-/// nothing (FR-010's Outputs: "No change to any counter"), and every admitted charge before
-/// and after it must accumulate `work_units` normally with no gap and no double-count, and
-/// the admitted-charge log must list only the admitted charges, never the denied one.
-#[test]
-fn tc_031_work_accounting_is_correct_before_and_after_the_injected_denial() {
-    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
-        point: ChargePoint::BooleanResultRetain,
-        occurrence: NonZeroU64::new(2).unwrap(),
-    });
-
-    // Occurrence one: admitted normally, one work unit consumed.
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Completed(true)
-    );
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
-
-    // Occurrence two: the injection fires here and consumes nothing.
-    let fired = expect_incomplete(evaluate_boolean(BooleanConnective::Not(true), &mut meter));
-    assert_eq!(fired.charge_point, ChargePoint::BooleanResultRetain);
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
-
-    // The next two charges at the same point must not be denied again, and
-    // must keep accumulating from where the denied charge left off — not
-    // reset, and not skipping a unit for the charge that never landed.
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(false), &mut meter),
-        Outcome::Completed(true)
-    );
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 2);
-
-    assert_eq!(
-        evaluate_boolean(BooleanConnective::Not(true), &mut meter),
-        Outcome::Completed(false)
-    );
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 3);
-
-    // Exactly the three admitted charges are logged; the denied one never is.
-    assert_eq!(
-        meter.admitted_charges(),
-        &[
-            ChargePoint::BooleanResultRetain,
-            ChargePoint::BooleanResultRetain,
-            ChargePoint::BooleanResultRetain,
-        ]
-    );
-}
-
-// ---- TC-031 / FR-010-AC-5 at the other `check_injected` caller: `Meter::charge_plan` ---------
-//
-// `check_injected` has exactly two callers (`src/exact/accounting.rs`): `Meter::charge` (driven
-// above at `ChargePoint::BooleanResultRetain`) and `Meter::charge_plan`, reached only through the
-// `equality.plan` charge (`src/exact/equality.rs:229`) with its `pairs + 2` reservation. No other
-// call site reaches `ChargePoint::EqualityPlan`, so injecting a denial there necessarily drives
-// `charge_plan`, never `charge` (issue #35).
-
-/// A `CheckedEquality` over two `Integer` operands, reusable across calls on one `Meter`.
-/// `plan_pairs` walks one leaf pair for two scalar `Integer` operands, so `pairs = 1` and the
-/// `equality.plan` reservation `charge_plan` checks availability against is `pairs + 2 = 3`.
-fn checked_int_equality() -> impl Fn(&mut Meter) -> Outcome<bool> {
-    let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
-    let checked = env
-        .check_equality(
-            EqualityOperator::Equal,
-            EqualityOperand::typed(ValueType::Integer),
-            EqualityOperand::typed(ValueType::Integer),
-        )
-        .unwrap();
-    move |meter: &mut Meter| {
-        checked.evaluate(&Value::Integer(int(3)), &Value::Integer(int(3)), meter)
-    }
-}
-
-/// Trace: TC-031, FR-010-AC-5
-///
-/// The outcomes half of the `charge_plan` sweep: an injected denial at `equality.plan` fires
-/// exactly once, through `charge_plan`, and a further `equality.plan` charge under the same
-/// limits meters normally rather than being injected-denied again.
-#[test]
-fn tc_031_further_charge_plan_calls_after_the_injected_denial_meter_normally() {
-    let equality = checked_int_equality();
-    let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
-        point: ChargePoint::EqualityPlan,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    });
-
-    // Occurrence one: the injection fires at `equality.plan`, so this whole equality returns
-    // `Incomplete`, never reaching `equality.pair`/`equality.result-retain`. `equality.plan-form`
-    // admits first (its own work amount is `occ(left) + occ(right) = 1 + 1 = 2` for two scalar
-    // `Integer` operands), so `limit = consumed = 2`; `next_charge` is the `pairs + 2 = 3`
-    // reservation `charge_plan` checked availability against, not the one work unit a real charge
-    // here would commit.
-    let fired = expect_incomplete(equality(&mut meter));
-    assert_eq!(
-        fired,
-        Incomplete {
-            limit_kind: LimitKind::WorkUnits,
-            limit: 2,
-            consumed: 2,
-            next_charge: int(3),
-            charge_point: ChargePoint::EqualityPlan,
-        }
-    );
-
-    // Further `equality.plan` charges, under the same generous limits, must meter normally now
-    // that the one injected denial has fired: the whole equality completes both times.
-    assert_eq!(equality(&mut meter), Outcome::Completed(true));
-    assert_eq!(equality(&mut meter), Outcome::Completed(true));
-}
-
-/// Trace: TC-031, FR-010-AC-5
-///
-/// The reservation half of the `charge_plan` sweep, checking the counters directly rather than
-/// the outcome. FR-010's `equality.plan` bullet: `charge_plan` checks availability against
-/// `pairs + 2` before admitting anything, but "on success it commits only its own single work
-/// unit, the same as any other charge." The denied call commits nothing at all (FR-010's Outputs:
-/// "No change to any counter"), so the `pairs + 2` it merely checked against must leave no trace:
-/// a second `equality.plan` charge right after it must see the same remaining `work_units`
-/// capacity it would have seen had the first `equality.plan` charge never been attempted, not a
-/// capacity already reduced by the denied reservation.
-///
-/// The limit below is the exact minimum a full call needs once the first call's `equality.plan`
-/// is denied: call 1's `equality.plan-form` (2) + call 2's `equality.plan-form` (2) + call 2's
-/// `equality.plan` commit (1) + call 2's `equality.pair` (1) + call 2's `equality.result-retain`
-/// (1) = 7, with call 2's own `equality.plan` reservation check (`pairs + 2 = 3`) landing on
-/// exactly 3 remaining (`7 - 4`) at that point. If the denied reservation had leaked into
-/// `consumed`, or been double-reserved across calls, call 2's reservation check would see less
-/// than 3 remaining and be denied for real — not injected — insufficient work, and this test
-/// would fail.
-#[test]
-fn tc_031_charge_plan_reservation_is_unaffected_by_the_injected_denial() {
-    let equality = checked_int_equality();
-    let mut meter = Meter::new(limits_with_work(7)).with_injected_denial(InjectedDenial {
-        point: ChargePoint::EqualityPlan,
-        occurrence: NonZeroU64::new(1).unwrap(),
-    });
-
-    let fired = expect_incomplete(equality(&mut meter));
-    assert_eq!(fired.charge_point, ChargePoint::EqualityPlan);
-    // The denied `charge_plan` call commits nothing beyond what `equality.plan-form` already
-    // admitted before the reservation check ran: `work_units` is still 2, not `2 + 3` (the
-    // reservation) and not `2 + 1` (what a real charge here would commit).
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 2);
-
-    // A second `equality.plan` charge, on the tight limit computed above, succeeds in full: the
-    // first call's denied reservation left no trace on the meter's remaining capacity.
-    assert_eq!(equality(&mut meter), Outcome::Completed(true));
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 7);
-    assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
-
-    // Exactly the admitted charges are logged: call 1's `equality.plan-form` (its
-    // `equality.plan` was denied and injected-denials never log), then call 2's full schedule.
-    // The denied `equality.plan` never appears.
-    assert_eq!(
-        meter.admitted_charges(),
-        &[
-            ChargePoint::EqualityPlanForm,
-            ChargePoint::EqualityPlanForm,
-            ChargePoint::EqualityPlan,
-            ChargePoint::EqualityPair,
-            ChargePoint::EqualityResultRetain,
-        ]
-    );
-}
-
-/// Trace: TC-016, FR-006-AC-6
-#[test]
-fn tc_016_refusal_code_is_some_for_exactly_four_named_variants() {
-    // `Refusal` is `#[non_exhaustive]` (NFR-002), so this match, compiled
-    // from `tests/` as a downstream crate, needs a wildcard arm. Rather than a
-    // silent `_ => None` (which would falsely claim a new variant carries no
-    // normative code), the wildcard panics: adding a variant without
-    // extending this match and the `variants` array below is a loud test
-    // failure, not a silently passing one.
-    fn expected_code(refusal: &Refusal) -> Option<&'static str> {
-        match refusal {
-            Refusal::IeeeNanPayloadNotRepresentable => Some("ieee_nan_payload_not_representable"),
-            Refusal::IeeeRationalOutOfDomain => Some("ieee_rational_out_of_domain"),
-            Refusal::ForeignReference => Some("foreign_reference"),
-            Refusal::CardinalityOutOfBound { .. } => Some("cardinality_out_of_bound"),
-            Refusal::InexactDecimal
-            | Refusal::DecimalOutOfDomain
-            | Refusal::DivisionPairOutOfDomain { .. }
-            | Refusal::ModuloOutOfDomain
-            | Refusal::TextLengthOutOfDomain
-            | Refusal::IntegerOutOfDomain
-            | Refusal::RationalOutOfDomain
-            | Refusal::IeeeNotExact { .. }
-            | Refusal::CheckedInvariant => None,
-            _ => panic!(
-                "Refusal gained a variant expected_code does not enumerate; extend this match \
-                 and the variants array below"
-            ),
-        }
-    }
-
-    let variants = [
-        Refusal::InexactDecimal,
-        Refusal::DecimalOutOfDomain,
-        Refusal::DivisionPairOutOfDomain {
-            quotient_admitted: true,
-            remainder_admitted: false,
-        },
-        Refusal::ModuloOutOfDomain,
-        Refusal::TextLengthOutOfDomain,
-        Refusal::IntegerOutOfDomain,
-        Refusal::RationalOutOfDomain,
-        Refusal::IeeeNotExact {
-            would_be: IeeeFlags::EMPTY,
-        },
-        Refusal::IeeeNanPayloadNotRepresentable,
-        Refusal::IeeeRationalOutOfDomain,
-        Refusal::ForeignReference,
-        Refusal::CardinalityOutOfBound {
-            violation: BoundViolation::AboveMaximum,
-            kind: CollectionKind::Set,
-            bound: CardinalityBound::new(0, 10).unwrap(),
-            count: 11,
-        },
-        Refusal::CheckedInvariant,
-    ];
-    let some_count = variants
-        .iter()
-        .filter(|refusal| expected_code(refusal).is_some())
-        .count();
-    assert_eq!(
-        some_count, 4,
-        "exactly four variants carry a normative code"
-    );
-
-    for refusal in variants {
-        assert_eq!(refusal.code(), expected_code(&refusal));
     }
 }

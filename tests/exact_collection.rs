@@ -7,11 +7,13 @@ use std::num::NonZeroU64;
 use std::rc::Rc;
 
 use quire_contract_runtime::exact::{
-    construct_collection, form_collection, BoundViolation, CardinalityBound, ChargePoint,
-    CollectionKind, CollectionType, Component, CompositeDeclaration, CompositeShape,
-    ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue, Incomplete,
-    InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome, Presence, Refusal, ScalarLimits,
-    TypeEnvironment, Undefined, Value, ValueType,
+    construct_collection, form_collection, CollectionType, Component, CompositeDeclaration,
+    CompositeShape, ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue,
+    NodeKey, Presence, TypeEnvironment, Value, ValueType,
+};
+use quire_exact::{
+    BoundViolation, CardinalityBound, ChargePoint, CollectionKind, Incomplete, InjectedDenial,
+    Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -379,7 +381,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
 
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
         point: ChargePoint::CollectionElement,
-        occurrence: NonZeroU64::new(1).unwrap(),
+        occurrence: NonZeroU64::MIN,
     });
     let before = consumed(&meter);
     let elements: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
@@ -425,7 +427,7 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     ] {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: NonZeroU64::new(1).unwrap(),
+            occurrence: NonZeroU64::MIN,
         });
         let outcome = form_collection(
             &collection_type,

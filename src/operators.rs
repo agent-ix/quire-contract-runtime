@@ -2,10 +2,11 @@
 
 /// Short-circuit conjunction. The right operand is skipped when `left` is false.
 ///
-/// `R` carries whatever `right` returns: plain `bool` for an ordinary generated expression, or a
-/// stop-carrying type such as `exact::Outcome<bool>` (via its `From<bool>` impl) when the right
-/// operand may itself be undefined, refused or incomplete. When `left` alone decides the result,
-/// `right` is never called, so a stop it could have produced can never arise.
+/// `R` carries whatever `right` returns: plain `bool` for an ordinary generated expression, or any
+/// stop-carrying type that is `From<bool>`. The kernel's `exact::Outcome<bool>` is not one (the
+/// runtime does not own it and cannot add the impl); a right operand that may itself be undefined,
+/// refused or incomplete uses `exact::evaluate_boolean_short_circuit`. When `left` alone decides
+/// the result, `right` is never called, so a stop it could have produced can never arise.
 // Implements: FR-002
 #[inline]
 pub fn and_short_circuit<R: From<bool>>(left: bool, right: impl FnOnce() -> R) -> R {

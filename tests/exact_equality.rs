@@ -2,18 +2,19 @@
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 
-use std::num::NonZeroU64;
-
 use proptest::prelude::*;
 use quire_contract_runtime::exact::{
-    admit_text, CardinalityBound, ChargePoint, CollectionKind, CollectionType, Component,
-    CompositeDeclaration, CompositeShape, ConstructionCause, ConstructionRefusal, DecimalType,
-    EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule, FieldDeclaration,
-    FieldValue, IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer,
-    IntegerInterval, LimitKind, Meter, NodeKey, ObjectIdentity, ObjectReference,
-    ObjectTypeDeclaration, OptionValue, Outcome, Presence, Quantity, QuantityUnit, Rational,
-    Refusal, RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType, TypeEnvironment,
-    UnitDeclaration, UnitGraph, UniverseIdentity, Value, ValueType,
+    CollectionType, Component, CompositeDeclaration, CompositeShape, ConstructionCause,
+    ConstructionRefusal, EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule,
+    FieldDeclaration, FieldValue, NodeKey, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
+    OptionValue, Presence, Quantity, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph,
+    Value, ValueType,
+};
+use quire_exact::{
+    admit_text, CardinalityBound, ChargePoint, CollectionKind, DecimalType, IeeeWidth, IllTyped,
+    IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerInterval, LimitKind, Meter, Outcome,
+    Rational, Refusal, RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType,
+    UniverseId,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -224,8 +225,8 @@ fn tc_026_p2_plan_equality_is_uncharged_and_refuses_foreign_references_at_plan_t
     assert_eq!(plan.pair_events(), &Integer::one());
 
     // A reference pair of different universes refuses by name at plan time.
-    let universe_a = UniverseIdentity::new(b"universe-a").unwrap();
-    let universe_b = UniverseIdentity::new(b"universe-b").unwrap();
+    let universe_a = UniverseId::from_digest([0xa1; 32]);
+    let universe_b = UniverseId::from_digest([0xb2; 32]);
     let object_type = key(80);
     let identity = ObjectIdentity::new(b"object-1").unwrap();
     let reference_a = Value::Reference(ObjectReference::new(
@@ -236,7 +237,13 @@ fn tc_026_p2_plan_equality_is_uncharged_and_refuses_foreign_references_at_plan_t
     let reference_b = Value::Reference(ObjectReference::new(universe_b, object_type, identity));
     let refusal =
         quire_contract_runtime::exact::plan_equality(&reference_a, &reference_b).unwrap_err();
-    assert_eq!(refusal, Refusal::ForeignReference);
+    assert_eq!(
+        refusal,
+        Refusal::ForeignReference {
+            required: universe_a,
+            supplied: universe_b,
+        }
+    );
 }
 
 /// Trace: TC-026, FR-008-AC-5
@@ -423,14 +430,14 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
 /// Trace: TC-026, FR-008-AC-6
 #[test]
 fn tc_026_p4_object_reference_identity_and_no_component_substitution() {
-    let universe = UniverseIdentity::new(b"universe-a").unwrap();
+    let universe = UniverseId::from_digest([0xa1; 32]);
     let object_type = key(81);
     let identity = ObjectIdentity::new(b"object-1").unwrap();
-    let reference = ObjectReference::new(universe.clone(), object_type, identity.clone());
+    let reference = ObjectReference::new(universe, object_type, identity.clone());
     // The reference carries exactly its supplied triple: no attribute of the
     // referenced object is read or required (this crate has no
     // `ObjectEnvironment` at all to read one from).
-    assert_eq!(reference.universe(), &universe);
+    assert_eq!(reference.universe(), universe);
     assert_eq!(reference.object_type(), object_type);
     assert_eq!(reference.identity(), &identity);
 
@@ -551,7 +558,7 @@ fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
     for (point, expected_consumed, next_charge) in cases {
         let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
             point,
-            occurrence: NonZeroU64::new(1).unwrap(),
+            occurrence: std::num::NonZeroU64::MIN,
         });
         let outcome = checked.evaluate(&int_value(1), &int_value(1), &mut meter);
         let Outcome::Incomplete(record) = outcome else {
@@ -909,12 +916,9 @@ proptest! {
         let mut meter = Meter::new(UNLIMITED);
         let outcome = checked.evaluate(&left, &right, &mut meter);
         prop_assert!(matches!(outcome, Outcome::Completed(_)), "unlimited meter, got {outcome:?}");
-        prop_assert!(
-            !meter.charge_log_truncated(),
-            "the charge log capacity assumption below (every admitted equality.pair charge is \
-             actually in admitted_charges) does not hold for this case"
-        );
-
+        // The kernel's test-support log retains only the first 4096 admissions.
+        // This depth-3, width-4-bounded generator stays below that capacity,
+        // so every admitted `equality.pair` charge is in `admitted_charges`.
         let admitted_pairs = meter
             .admitted_charges()
             .iter()

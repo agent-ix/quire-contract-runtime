@@ -1,41 +1,39 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Complete-V1 exact scalar oracle operators and typed runtime outcomes.
+//! Runtime-owned negotiation and temporary exact-semantic residue.
 //!
-//! Implements: FR-006, FR-007, FR-008, FR-273.
+//! Implements: FR-009, FR-012, FR-143, FR-144, FR-146, FR-149, FR-273.
 //!
-//! `quire-spec-language` `quire_spec_language::value` is the semantic
-//! authority. This module is a `no_std + alloc` port of that
-//! authority for generated oracles: every type, field and variant keeps the
-//! authority's name and order, so a shared-corpus test compares the two by
-//! their `Debug` renderings, and no operator decides anything the authority
-//! does not.
+//! Exact scalar values, operations, outcomes and metering belong to `quire-exact` (FR-275).
+//! Consumers import those directly from the kernel. This module still defines
+//!
+//! - the runtime-owned I13 negotiators ([`negotiate_integer_division`], [`negotiate_ieee`] and
+//!   their types; FR-009, interface-001-AC-8), and
+//! - the remaining ported QSL code, pending removal under QSL-358: the composite, collection,
+//!   equality, quantity, unit, enumeration, containment, expression and carried-vocabulary
+//!   modules. This residue is an open FR-275 defect, not an approved exception. It is built over
+//!   kernel scalars and metering and is consumed by [`Value`].
+//!
+//! Trace: interface-001-AC-2, interface-001-AC-4
+//!
+//! ```compile_fail
+//! use quire_contract_runtime::exact::Integer;
+//! ```
 //!
 //! Layers:
 //!
-//! 1. typed values: [`Integer`], [`IntegerInterval`]/[`BoundedInteger`],
-//!    [`Rational`], [`Decimal`], [`IeeeValue`], [`Text`], [`EnumValue`] and
-//!    [`Quantity`] over a [`UnitGraph`];
-//! 2. explicit operation tables: [`evaluate_integer_arithmetic`],
-//!    [`evaluate_rational_arithmetic`], [`order_numbers`], [`evaluate_boolean`],
-//!    [`evaluate_boolean_short_circuit`],
-//!    [`evaluate_decimal`], [`divide`] and
-//!    [`modulo`], [`evaluate_ieee`], [`compare_ieee`], [`convert_ieee_width`],
-//!    [`ieee_to_exact`], [`exact_to_ieee`], [`admit_text`], [`compare_text`],
-//!    [`compare_enum`], [`evaluate_quantity`], [`compare_quantity`] and
-//!    [`convert_quantity`], each after its static [`IllTyped`] refusal;
-//! 3. quire-specification/FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
+//! 1. the runtime's residue over kernel scalars: [`EnumValue`] and [`Quantity`] over a [`UnitGraph`]
+//!    ([`compare_enum`], [`evaluate_quantity`], [`compare_quantity`], [`convert_quantity`]),
+//!    and [`evaluate_boolean_short_circuit`], the stop-carrying lazy-right connective the
+//!    kernel does not export;
+//! 2. quire-specification/FR-143 composite values: [`TypeEnvironment`], [`Value`], [`ValueType`]
 //!    and the [`ValueGraph`] finite-value constructor, over terminal
 //!    [`ObjectReference`] identities;
-//! 4. quire-specification/FR-144 collections: [`CollectionType`], [`CollectionValue`] and
+//! 3. quire-specification/FR-144 collections: [`CollectionType`], [`CollectionValue`] and
 //!    [`construct_collection`]/[`form_collection`], keyed by the quire-specification/FR-144
 //!    canonical key that [`CheckedEquality`] and collection membership share;
-//! 5. the quire-specification/FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
+//! 4. the quire-specification/FR-149 equality matrix: [`TypeEnvironment::check_equality`] and
 //!    [`CheckedEquality::evaluate`];
-//! 6. the distinct evaluator [`Outcome`] with typed [`Undefined`], [`Refusal`]
-//!    and [`Incomplete`] reasons;
-//! 7. `quire.value.accounting/v1` charge-before-work metering through
-//!    [`Meter`];
-//! 8. the quire-specification/FR-146 function-application surface:
+//! 5. the quire-specification/FR-146 function-application surface:
 //!    [`PackageDeclarations::check`] and [`CheckedPackage::call`]/
 //!    [`CheckedPackage::evaluate`], ported to the boundary AD-002 sets.
 //!
@@ -63,37 +61,25 @@
 //! [`plan_call`]/[`plan_evaluation`] check every function argument's
 //! references against.
 
-mod accounting;
+mod boolean;
 mod collection;
-mod comparison;
 mod composite;
 mod containment;
-mod decimal;
 mod definition;
 mod division;
 mod enumeration;
 mod equality;
 mod expression;
 mod ieee;
-mod integer;
 mod key;
 mod node;
-mod numeric;
-mod outcome;
 mod quantity;
-mod rational;
 mod reference;
-mod text;
+mod stop;
 mod unit;
 
-pub use accounting::{
-    ChargePoint, Incomplete, InjectedDenial, LimitKind, Meter, ScalarLimits, CHARGE_LOG_CAPACITY,
-};
-pub use collection::{
-    construct_collection, form_collection, CardinalityBound, CollectionKind, CollectionType,
-    CollectionValue, EmptyCardinalityBound,
-};
-pub use comparison::{ComparisonOperator, IllTyped, IllTypedCause};
+pub use boolean::{evaluate_boolean_short_circuit, ShortCircuitConnective};
+pub use collection::{construct_collection, form_collection, CollectionType, CollectionValue};
 pub use composite::{
     Component, CompositeDeclaration, CompositeShape, CompositeValue, ConstructionCause,
     ConstructionRefusal, DeclarationCause, Deferred, FieldDeclaration, FieldExpression, FieldValue,
@@ -101,14 +87,10 @@ pub use composite::{
     TypeEnvironment, Value, ValueType,
 };
 pub use containment::{GraphCause, GraphNode, GraphNodeId, GraphRefusal, GraphSlot, ValueGraph};
-pub use decimal::{
-    evaluate_decimal, Decimal, DecimalLoss, DecimalOperation, DecimalRepresentation, DecimalResult,
-    DecimalType, RoundingMode,
-};
 pub use definition::{PackageCause, PackageRefusal, PackageRefusalCode, SelectionRefusalCode};
 pub use division::{
-    divide, modulo, negotiate_integer_division, DivisionProfile, IntegerDivisionBounds,
-    IntegerDivisionConsumer, IntegerDivisionDisposition, QuotientRemainder,
+    negotiate_integer_division, IntegerDivisionBounds, IntegerDivisionConsumer,
+    IntegerDivisionDisposition,
 };
 pub use enumeration::{compare_enum, EnumDeclaration, EnumValue};
 pub use equality::{
@@ -122,36 +104,17 @@ pub use expression::{
     PackageDeclarations, ValueLoss, MAX_CALL_DEPTH,
 };
 pub use ieee::{
-    compare_ieee, convert_ieee_width, evaluate_ieee, exact_to_ieee, ieee_intrinsic_identities,
-    ieee_to_exact, negotiate_ieee, ExactScalar, IeeeBackendCapabilities, IeeeComparison,
-    IeeeDisposition, IeeeExact, IeeeExactLoss, IeeeExactTarget, IeeeFlag, IeeeFlags,
-    IeeeItemRequirement, IeeeOperand, IeeeOperation, IeeeOperationKind, IeeeProvenance, IeeeResult,
-    IeeeUnsupportedCause, IeeeValue, IeeeWidth, IEEE_DEFINITION,
-};
-pub use integer::{
-    BoundedInteger, EmptyInterval, Integer, IntegerDomain, IntegerInterval, NonCanonicalInteger,
-    OutOfDomain,
+    negotiate_ieee, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
+    IeeeUnsupportedCause,
 };
 pub use node::{InvalidSemanticGraph, NodeKey, SemanticGraphCause, NODE_KEY_DOMAIN};
-pub use numeric::{
-    evaluate_boolean, evaluate_boolean_short_circuit, evaluate_integer_arithmetic,
-    evaluate_rational_arithmetic, order_numbers, BooleanConnective, IntegerArithmetic,
-    OrderedOperands, OrderingOperator, RationalArithmetic, ShortCircuitConnective,
-};
-pub use outcome::{BoundViolation, Outcome, Refusal, Undefined};
 pub use quantity::{
     compare_quantity, convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity,
     QuantityOperation, QuantityTarget, QuantityUnit,
 };
-pub use rational::{NonPositiveDenominatorBound, Rational, RationalDomain, ZeroDenominator};
 pub use reference::{
     InvalidObjectIdentity, ObjectEnvironment, ObjectEnvironmentCause, ObjectEnvironmentRefusal,
-    ObjectIdentity, ObjectReference, UniverseIdentity,
-};
-pub use text::{
-    admit_text, compare_text, EmptyTextBounds, InvalidTextLiteral, InvalidUtf8, NormalizationForm,
-    Text, TextPayload, TextProfile, TextProvenance, TextType, UNICODE_TEXT_DEFINITION,
-    UNICODE_VERSION,
+    ObjectIdentity, ObjectReference,
 };
 pub use unit::{
     CompoundUnit, CompoundUnitCause, Dimension, InvalidCompoundUnit, Unit, UnitDeclaration,

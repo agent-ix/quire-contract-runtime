@@ -1,4 +1,3 @@
-use crate::exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, ScalarLimits};
 use crate::{
     operators::{
         and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem,
@@ -8,6 +7,7 @@ use crate::{
     ClauseId, ClauseKind, ClauseOutcome, ContractIdentity, ExecutionPoint, FailureDetail,
     FailureKind, Observation, RequirementId, RevisionId, Verdict, VerdictContext, VerdictKind,
 };
+use quire_exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, ScalarLimits};
 
 // `quire-contract-codegen`'s generated exact-scalar oracles call
 // `quire_contract_runtime::exact` operators directly (`quire-contract-codegen`
@@ -20,11 +20,11 @@ use crate::{
 // generic call path (`Frame::call`): `Value`'s container arms (`Collection`, `Composite`,
 // `Option`) read a pointer out of a merged, not-fully-constant payload when the prover cannot
 // determine which variant it holds, which does not discharge, independent of `Integer`'s own
-// representation. `compare_ieee` reaches `src/exact/ieee.rs` (`decode`, `Class`,
-// `total_order_key`) without ever constructing a `BigInt` or a `Value`: `IeeeValue` is a plain
-// `(IeeeWidth, u64)` bit pattern, and every metering charge below it — `Integer`-typed inside
-// `Meter`/`Charge` (`src/exact/accounting.rs`) — is built from concrete, non-symbolic widths and
-// counts, so no case-split reaches either at all.
+// representation. `compare_ieee` is `quire-exact`'s (FR-275) and reaches its `ieee` module
+// (`decode`, `Class`, `total_order_key`) without ever constructing a `BigInt` or a `Value`:
+// `IeeeValue` is a plain `(IeeeWidth, u64)` bit pattern, and every metering charge below it —
+// `Integer`-typed inside `Meter`/`Charge` (its `accounting` module) — is built from concrete,
+// non-symbolic widths and counts, so no case-split reaches either at all.
 //
 // Every limit below is `u64::MAX`, so metering never refuses: harnesses built on
 // `EXACT_UNLIMITED` are scoped to an unbounded budget and discharge nothing about
@@ -264,12 +264,13 @@ fn tc_003_option_helpers_preserve_definedness() {
 // Reaches `crate::exact` (agent-ix/quire-contract-runtime#53): every declared harness before
 // this one imports only `crate::operators` and top-level model types, so the prover compiled
 // `src/exact/` without discharging a single obligation over it. `compare_ieee` is one of the
-// operators `quire-contract-codegen`'s generated oracles call (`src/exact_scalar.rs:1677`). The
+// operators `quire-contract-codegen`'s generated oracles call (`src/exact_scalar.rs:1677`), and
+// since FR-275 it is `quire-exact`'s code, which this harness proves from the runtime's side. The
 // proposition is IEEE 754's own definedness boundary for `numericEqual`: reflexive equality holds
 // for every bit pattern except NaN, which compares unequal to itself. `IeeeValue` is a bit
 // pattern, not a `BigInt`, so this stays cheap for the prover; see the wider module comment above
 // for the `Integer`/`BigInt` alternative this harness deliberately does not attempt. `unwind(8)`
-// bounds `exact::accounting::Meter::charge`'s own bookkeeping loop over its two-entry size vector;
+// bounds `Meter::charge`'s own bookkeeping loop over its two-entry size vector;
 // CBMC discharges the loop's unwinding assertion at that bound with room to spare.
 // Implements: TC-003
 #[kani::proof]
@@ -280,8 +281,8 @@ fn tc_003_exact_ieee_numeric_equal_matches_nan_unordered() {
     // The binary32 NaN encoding read straight off the bit pattern: exponent field all ones with a
     // nonzero trailing significand. The expectation is derived from `bits`, not from
     // `IeeeValue::is_nan` — `is_nan` is `matches!(decode(self), Class::Nan { .. })`
-    // (`src/exact/ieee.rs:112`) and `compare_ieee`'s `NumericEqual` arm dispatches on the same
-    // `decode` (`src/exact/ieee.rs:613`), so an `is_nan`-based expectation moves with any
+    // (`quire-exact`'s `ieee` module) and `compare_ieee`'s `NumericEqual` arm dispatches on the
+    // same `decode`, so an `is_nan`-based expectation moves with any
     // misclassification inside `decode` and holds vacuously. Measured: with `is_nan` on both
     // sides, a `decode` that classifies every NaN as `Class::Finite` still verifies SUCCESSFUL.
     let is_nan = bits & 0x7f80_0000 == 0x7f80_0000 && bits & 0x007f_ffff != 0;

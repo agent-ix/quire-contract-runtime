@@ -22,7 +22,8 @@ the runtime, independently of the shared-corpus agreement suites. Evidence:
 `FR-362-AC-12` and `FR-362-AC-13` test rational canonical form and membership; and
 `FR-363-AC-6` and `FR-363-AC-7` test decimal normalized values versus retained charges.
 Those are kernel subsets only. The RT quantity type-fault ordering and any RT/QSL agreement
-remain separate obligations. This spec-only change leaves the current local tests in place.
+remain separate obligations. The kernel tests left with the copied implementation; RT's
+quantity cases remain in `tests/exact_semantics.rs`.
 
 ## Test Procedure
 
