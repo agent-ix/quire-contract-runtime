@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# FR-275-AC-8 / TC-198: prove the `deny.toml` bans on QSL crates actually fire.
+# FR-275-AC-8 / TC-198: prove the QSL Git source is rejected.
 #
-# For each guarded crate, in a scratch copy of the workspace that is never committed, add the
+# For each sampled QSL crate, in a scratch copy of the workspace that is never committed, add the
 # crate as a normal dependency and as a dev dependency, run `cargo deny`, and require both a
-# non-zero exit and cargo-deny's `banned` diagnostic naming the crate. A licence or source
-# failure alone does not count. The unmodified tree must pass first. Scratch copies hold the
+# non-zero exit and cargo-deny's `source-not-allowed` diagnostic naming the QSL Git source.
+# A licence failure alone does not count. The unmodified tree must pass first. Scratch copies hold the
 # tracked files only, so a local `make use-local` patch never reaches them.
 #
 # Usage: scripts/check_deny_bans.sh [crate ...]   (default: the TC-198 step 3 crates)
@@ -47,11 +47,12 @@ for crate in "${crates[@]}"; do
     printf '\n[%s.%s]\ngit = "%s"\nbranch = "main"\n' "$table" "$crate" "$qsl_git" >>"$dir/Cargo.toml"
     output="$(cd "$dir" && cargo deny --workspace check licenses bans sources 2>&1)"
     status=$?
-    # cargo-deny's banned diagnostic: `error[banned]: crate '<name> = <version>' is explicitly banned`
-    if [[ $status -ne 0 ]] && grep -Eq "error\[banned\]: crate '$crate = " <<<"$output"; then
-      echo "ok: $crate as $table fails with the banned diagnostic"
+    # The rejected source must be the QSL repository, not another transitive Git source.
+    if [[ $status -ne 0 ]] && grep -A 6 -F 'error[source-not-allowed]' <<<"$output" |
+      grep -Fq "git+$qsl_git?branch=main"; then
+      echo "ok: $crate as $table rejects the QSL Git source"
     else
-      echo "FAIL: $crate as $table (exit $status) did not report error[banned] for $crate" >&2
+      echo "FAIL: $crate as $table (exit $status) did not reject the QSL Git source" >&2
       failures=$((failures + 1))
     fi
   done

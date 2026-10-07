@@ -60,15 +60,15 @@ crates that the runtime consumes.
 
 ## Inputs
 
-- The `exact` feature of `quire-contract-runtime`, and the `quire-exact` crate it enables.
+- The `exact` feature of `quire-contract-runtime`, and the `quire-exact` and `quire-semantic-value` crates it enables.
 - The runtime's `Cargo.toml`, `Cargo.lock` and `deny.toml`.
 
 ## Outputs
 
-- A build graph in which `quire-exact` resolves once, and (after step 2) a runtime with no `exact`
+- A build graph in which `quire-exact` and `quire-semantic-value` each resolve once, and in the end state a runtime with no `exact`
   module whose `exact`-feature code defines only the runtime-owned `scalar` items and re-exports no
   QSL-owned crate.
-- A build that fails when a QSL crate other than `quire-exact` enters the runtime's dependency graph.
+- A build that rejects the QSL repository as a Git dependency source.
 
 ## Behavior
 
@@ -98,30 +98,21 @@ crates that the runtime consumes.
   capability and disposition types are defined in the runtime's own source (interface-001-AC-8). They
   are not a port and not vendoring, and they are outside QSL-358 and the residue list. They
   consume the QSL `Value`, `Meter` and `Outcome` types where they need one.
-- **Dependency spelling.** The dependency is a git dependency on the QSL repository for the crate
-  `quire-exact`, optional, enabled only by the `exact` feature (interface-001-AC-11), and spelled
+- **Dependency spelling.** `quire-exact` and `quire-semantic-value` are optional Git dependencies on
+  their own repositories, enabled only by the `exact` feature (interface-001-AC-11), and spelled
   `branch = "main"` as every first-party dependency is (IR-434). It carries no `rev`, `tag` or
   `path`, and no committed `[patch]`; local development against a sibling checkout uses the
   untracked `make use-local` patch. The runtime records no version, commit or digest of
-  `quire-exact` in its sources or specification.
-- **One copy.** `Cargo.lock` holds exactly one `quire-exact` entry (`scripts/check_one_copy.awk`,
-  run by `make deny`). `deny.toml` admits that one git source (`allow-git`) and a licence exception
-  for the `quire-exact` crate; `unknown-git = "deny"` stays for every other git source.
-- **Guarded edges.** The runtime depends on no crate of the QSL repository other than `quire-exact`
-  (and, after step 2, `quire-semantic-value`). `deny.toml` carries a `[bans]` `deny` entry for each
-  QSL workspace crate other than those, enumerated from QSL's workspace members when the list was
-  written: the root crate `quire-spec-language`, `qsl-attrs`,
-  `qsl-bench`, `qsl-cst`, `qsl-eval`, `qsl-foundation`, `qsl-forms`, `qsl-package`, `qsl-replay`,
-  `qsl-route`, `qsl-semantics`, `qsl-source`, `xtask` and `arch-lint`. A normal, build or dev
-  dependency on any of them fails `make deny` with cargo-deny's `banned` diagnostic. This
-  enumeration is what the guard covers and no more: a crate QSL adds to its workspace later is
-  not banned until RT's list is extended, because `allow-git` admits the whole repository. The
-  complete guard is this list plus QSL's own lint (QSL-356, QSL #554, in review), and keeping the
-  list current is an open item owned by the runtime maintainers (see Open questions). Each
-  repository guards its own edges, so the guard does not rely on the lint. A dev dependency on
-  `qsl-eval` for conformance is not permitted: it is the same edge. `quire-semantic-value` is not on
-  the list. The sources policy alone does not catch this, because `allow-git` names a repository, not a
-  crate.
+  either shared crate in its sources or specification.
+- **One copy.** `Cargo.lock` holds one entry each for `quire-exact` and `quire-semantic-value`;
+  `quire-canonical` and `quire-canonical-derive` enter transitively. `scripts/check_one_copy.awk`,
+  run by `make deny`, checks every first-party Git crate. `deny.toml` admits only their three
+  own-repository Git sources and carries scoped licence exceptions for the four crates.
+- **Guarded edges.** No normal, build or dev dependency may resolve from the QSL repository.
+  `unknown-git = "deny"` rejects that repository because `allow-git` admits only the three
+  own-repository sources. `make deny-mutations` adds QSL Git dependencies in scratch copies and
+  requires cargo-deny's source-rejection diagnostic, including for dev dependencies. A licence
+  error alone does not prove the source guard.
 - **No substitute for the copy.** The runtime keeps no test that compares its output with a second
   implementation of the kernel, no shared-corpus agreement test, no vendored vector or fixture from
   another repository, and no compatibility layer for the removed copy. With one kernel there is
@@ -129,12 +120,14 @@ crates that the runtime consumes.
   runtime keeps only the tests of the residue; when the residue is deleted it keeps none of them,
   because the residue's tests move to QSL with the code (the dispositions are in the test matrix, "Evidence at
   the kernel move").
-- **`no_std` plus `alloc`.** `quire-exact` is `#![no_std]` with `alloc`, and builds for
+- **`no_std` plus `alloc`.** `quire-exact` and `quire-semantic-value` are `#![no_std]` with `alloc`.
+  `quire-exact` builds for
   `thumbv7em-none-eabi` in the QSL repository's `make ci` (QSL-357). With `exact` enabled and `std`
   disabled the runtime builds for that target. `quire-exact` shares values through `alloc::sync::Arc`,
   which needs the target's atomic compare-and-swap; the runtime's only `no_std` target,
   `thumbv7em-none-eabi`, has it. The runtime's own `exact` source uses no `std`.
-- **Footprint.** The default profile resolves no `quire-exact`: the `quire-contract-runtime-footprint`
+- **Footprint.** The default profile resolves no `quire-exact`, `quire-semantic-value`,
+  `quire-canonical` or `quire-canonical-derive`: the `quire-contract-runtime-footprint`
   measurement crate depends on the runtime with `default-features = false`, so NFR-001's 500 byte
   floor, 4 KiB ceiling and panic-path check measure the same code as before and `make size` is the
   check. The kernel's size is outside that budget, as the `exact` feature always was.
@@ -154,13 +147,13 @@ crates that the runtime consumes.
 | FR-275-AC-1 | With `exact` enabled, no public item the runtime defines (in `scalar` or any other module) has the name of an item that `quire-exact` or `quire-semantic-value` exports. | Inspection (TC-197) |
 | FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
-| FR-275-AC-4 | The `quire-exact` dependency is a git source on the `agent-ix/quire-exact` repository with `branch = "main"` and with no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
+| FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one `quire-exact` entry. | Test (TC-197, `make deny`) |
 | FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second `quire-exact` entry. | Test (TC-197) |
-| FR-275-AC-7 | `deny.toml` carries a `[bans]` `deny` entry for each QSL workspace crate listed under Guarded edges, which includes `qsl-eval`, `qsl-replay` and `quire-spec-language`. | Inspection (TC-198) |
-| FR-275-AC-8 | `make deny` reports cargo-deny's `banned` error for the named crate, and exits non-zero, when the runtime's dependency graph, dev dependencies included, contains a crate listed under Guarded edges; a licence failure alone does not satisfy this. | Test (TC-198) |
+| FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and keeps `unknown-git = "deny"`; it does not admit the QSL Git repository. | Inspection (TC-198) |
+| FR-275-AC-8 | `make deny` reports cargo-deny's `source-not-allowed` error for the QSL Git repository, and exits non-zero, when a normal or dev dependency resolves from it; a licence failure alone does not satisfy this. | Test (TC-198) |
 | FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor. | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
-| FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`. | Test (TC-199) |
+| FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`. | Test (TC-199) |
 | FR-275-AC-11 | `make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band. | Test (TC-199, `make size`) |
 | FR-275-AC-12 | The runtime has no test that compares its output with a second implementation of the kernel or that depends on a QSL crate other than `quire-exact`. | Inspection (TC-197) |
 | FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order. The residue list is not an allowance: every item on it is a violation of this criterion, which stays unmet while the list is non-empty. The runtime-owned negotiators are not ports. | Inspection (TC-197) |
@@ -198,9 +191,6 @@ and is deleted in step 1.
 - **How the runtime handles its residue copy until QSL-358 lands (open, owner decision).** The
   owner ruled there is no exception, no expiry and no approval for the copy. What the runtime does
   with it in the meantime is not decided here and no interim policy is stated.
-- **Upkeep of the ban list (open).** The list under Guarded edges is a snapshot of QSL's workspace members
-  when the list was written. The runtime maintainers keep it current until QSL's own lint (QSL-356, QSL #554) is in
-  force; whether RT's gate should instead assert on the dependency source is not decided here.
 - **Status for rows whose evidence lives upstream (planner question).** The matrix has no "verified
   upstream" status; leaving rows stay "planned" with a reason (FR-275-AC-15).
 - **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`

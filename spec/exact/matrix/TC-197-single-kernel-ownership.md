@@ -21,13 +21,15 @@ IR-349; it is planned until then.
    no name defined in the runtime that either crate exports (FR-275-AC-1, FR-275-AC-2), none defined twice
    under an alias, no `exact` module and no `pub use` of `quire-exact`, `quire-semantic-value` or the
    evaluation leaf crate (FR-275-AC-16).
-2. Read `Cargo.toml`; expect `quire-exact` optional, enabled only by `exact`, with a git source on the
-   QSL repository, `branch = "main"`, and no `rev`, `tag`, `path` or `[patch]` (FR-275-AC-3, FR-275-AC-4).
+2. Read `Cargo.toml`; expect `quire-exact` and `quire-semantic-value` optional, enabled only by `exact`,
+   each using its own Git repository, `branch = "main"`, and no `rev`, `tag`, `path` or `[patch]`
+   (FR-275-AC-3, FR-275-AC-4).
 3. Run `make deny`; expect success, and `awk -f scripts/check_one_copy.awk Cargo.lock` to report one
-   `quire-exact` entry. Add a second `quire-exact` source in a scratch copy and expect the gate to
+   entry each for `quire-exact` and `quire-semantic-value`, plus one each for transitive
+   `quire-canonical` and `quire-canonical-derive`. Add a second first-party source in a scratch copy and expect the gate to
    fail (FR-275-AC-5, FR-275-AC-6).
 4. List the files under `tests/`, `src/` and any fixture directory; expect no test that runs a second
-   kernel implementation, no use of a QSL crate other than `quire-exact`, and no file copied from the
+   kernel implementation, no use of the QSL Git repository, and no file copied from the
    QSL repository (FR-275-AC-12, FR-275-AC-13).
 5. Diff the specification against its state before the move; expect no requirement, acceptance
    criterion or test case deleted, and every row whose evidence left the runtime marked planned with

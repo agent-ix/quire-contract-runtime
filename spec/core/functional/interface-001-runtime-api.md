@@ -204,6 +204,8 @@ exact:
   core_items: [Verdict, VerdictKind, Observation, ClauseOutcome, FailureDetail, CampaignReport]  # core modules, never kernel types
   dependencies:
     - quire-contract-runtime -> quire-exact (normal, optional, enabled only by the exact feature)
+    - quire-contract-runtime -> quire-semantic-value (normal, optional, enabled only by the exact feature)
+    - quire-semantic-value -> quire-exact and quire-canonical (own-repository Git dependencies)
     - quire-exact -> no quire-contract-runtime, quire-contract-codegen, quire-contract-ir or quire-spec-language crate (leaf)
     - quire-contract-codegen and generated oracles -> quire_exact and quire_semantic_value, by their own paths (no quire_contract_runtime::exact)
     - quire-contract-codegen -> quire-exact (normal; ADR-011 X-1)
@@ -238,6 +240,6 @@ Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relay
 | interface-001-AC-8 | The runtime shall define the `negotiate_*` predicates AD-016 WP7 selects (today: `negotiate_integer_division`, `negotiate_ieee`) and the requirement, capability and disposition types they take and return in its own source. | Inspection |
 | interface-001-AC-9 | While a residue `exact` operation exists in the runtime, an operation the correspondence table above maps to a `quire-exact` operation shall call the `quire-exact` operation the table maps it to. | Inspection |
 | interface-001-AC-10 | The runtime shall define every item the `core_items` list names in its `verdict`, `observation` and `accounting` modules. | Inspection |
-| interface-001-AC-11 | The runtime shall depend on `quire-exact` only through the `exact` feature. | Inspection |
+| interface-001-AC-11 | The runtime shall depend on `quire-exact` and `quire-semantic-value` only through the `exact` feature. | Inspection |
 | interface-001-AC-13 | While the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
-| interface-001-AC-14 | The runtime's normal dependencies shall include no crate published from agent-ix/quire-spec-language other than `quire-exact`. | Inspection |
+| interface-001-AC-14 | The runtime's normal and dev dependency graphs shall include no crate from the `agent-ix/quire-spec-language` Git repository. | Inspection |
