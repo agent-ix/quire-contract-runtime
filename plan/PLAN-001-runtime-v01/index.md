@@ -8,7 +8,6 @@ description: "Contents of the PLAN-001 runtime implementation bundle."
 ## Contents
 
 - [Plan overview](./plan.md)
-- [Update log](./log.md)
 - [Task-001: Foundation specification](./tasks/Task-001-foundation.md)
 - [Task-002: Runtime data model](./tasks/Task-002-runtime-model.md)
 - [Task-003: Operators, adapters, and accounting](./tasks/Task-003-runtime-behavior.md)
