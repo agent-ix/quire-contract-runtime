@@ -20,7 +20,9 @@ named denial subsets; `FR-358-AC-8` through `FR-358-AC-11` own the post-cap test
 `FR-359-AC-1` through `FR-359-AC-6` own cumulative-boundary and first-short-counter checks;
 `FR-368-AC-1` and `FR-368-AC-2` own the spelling census.
 The RT residue charge-point driver remains in `tests/exact_outcomes.rs` under TC-031.
-No reference establishes the untested FR-010-AC-2/3 amount and precedence details.
+The exact injected record and ordinary-limit precedence now have direct owner evidence under
+`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`;
+RT's older quire-exact dependency revision still needs a separate refresh.
 
 ## Test Procedure
 
