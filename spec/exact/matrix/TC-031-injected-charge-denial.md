@@ -10,36 +10,44 @@ relationships:
 
 ## Description
 
-Check the injection seam's precedence, record contents, occurrence counting and single-shot
-behavior. Evidence: `tests/exact_outcomes.rs` (`--features exact`).
+Drive injection through RT's remaining exact-feature charge points and check that each request
+reaches the shared meter. Evidence: `tests/exact_outcomes.rs` (`--features exact`) for the RT
+charge-point census; `ix://agent-ix/quire-exact/TC-906` for the kernel record and precedence.
 
 ## Ownership and evidence
 
-`ix://agent-ix/quire-exact/FR-358-AC-1` and `FR-358-AC-2` test named occurrence,
-one-shot retry and `equality.plan` denial; `FR-358-AC-3` specifies the nonzero type by
-Inspection. They leave the AC-2
-`pairs + 2` reservation amount and AC-3 simultaneous-limit precedence unproved by owner
-tests; IR-676 tracks the remaining owner evidence gaps. RT retains the AC-1 residue
-charge-point driver, which also asserts `limit = consumed` and `next_charge = 3` for one
-`equality.plan` pair. It does not compare different configured `work_units` limits
-for AC-2 or assert AC-3's simultaneous-limit
-precedence.
+`ix://agent-ix/quire-exact/FR-358-AC-1` and `ix://agent-ix/quire-exact/FR-358-AC-2`
+test named occurrence, one-shot retry and `equality.plan` denial;
+`ix://agent-ix/quire-exact/FR-358-AC-3` specifies the nonzero type by Inspection.
+`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`
+have direct public-meter tests for the exact record and ordinary-limit precedence in
+`ix://agent-ix/quire-exact/TC-906`. RT retains the FR-010-AC-1 residue charge-point
+driver. Its one-pair reservation assertion is a local observation, not the owner evidence
+for all records or for precedence. The RT dependency still needs a separate refresh to the
+owner revision containing those tests.
 
 ## Test Procedure
 
-1. Inject at each admitted charge point at occurrence 1 under generous limits; check the record,
-   every counter and the admitted-charge log.
-2. Run the same injection under two different `work_units` limits; check `limit` and `consumed`
-   are identical and equal to the work spent, not to either configured limit; also check
-   `equality.plan` reports its `pairs + 2` reservation as `next_charge`.
-3. Set limits short enough that the same charge would be denied on a real counter; check the
-   injected record is returned.
-4. Interleave charges at other points and charges the limits deny at the injected point; check the
-   occurrence counts only admitted charges at the injected point.
-5. Continue charging after the injection fires; check later charges meter normally and no second
-   injection occurs.
+1. For each RT residue operation's admitted charge point, inject occurrence 1 under sufficient
+   limits. Drive the operation and check `WorkUnits`, the named point, `limit = consumed`, the
+   point's expected `next_charge`, post-refusal work consumption equal to the record's
+   `consumed`, zero result consumption, and absence of the denied point from the admitted-charge
+   log. This is what the retained FR-010-AC-1 driver in `tests/exact_outcomes.rs` asserts; it
+   does not snapshot every counter, admission count or the whole log.
+2. Inspect the RT exact-feature meter dependency and its use by those drivers; check that the
+   returned record and injection-versus-ordinary-limit precedence are the owner behavior in
+   `ix://agent-ix/quire-exact/FR-358-AC-12` and
+   `ix://agent-ix/quire-exact/FR-358-AC-13`. The owner verifies both through
+   `ix://agent-ix/quire-exact/TC-906`; this RT procedure does not duplicate its cases.
+3. Use `ix://agent-ix/quire-exact/FR-358-AC-1` through
+   `ix://agent-ix/quire-exact/FR-358-AC-3` for named occurrence, one-shot retry and
+   nonzero occurrence evidence; retain their RT acceptance-criterion rows in the matrix.
 
 ## Expected Results
 
-Exactly one charge is denied, its record is independent of the configured limits, and the
-occurrence counter advances only on admitted charges at the injected point.
+Each driven RT residue point reaches the shared meter and satisfies the fields and post-refusal
+observations in step 1. Full meter-state atomicity is owner evidence under
+`ix://agent-ix/quire-exact/FR-358-AC-1`; the injected record and ordinary-limit precedence
+have one authoritative definition and direct evidence in
+`ix://agent-ix/quire-exact/FR-358-AC-12`, `ix://agent-ix/quire-exact/FR-358-AC-13`
+and `ix://agent-ix/quire-exact/TC-906`.

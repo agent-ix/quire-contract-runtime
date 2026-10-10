@@ -12,10 +12,11 @@ relationships:
 
 ## Description
 
-When a qualification harness must observe how an oracle behaves at a denied charge it cannot
-provoke by setting a limit, the runtime shall accept one `InjectedDenial` naming a charge point and
-an occurrence, and shall deny exactly that charge with a record whose contents are fixed and do not
-depend on the configured `ScalarLimits`.
+When a qualification harness must observe how an RT exact-feature oracle behaves at a denied
+charge it cannot provoke by setting a limit, the runtime shall use the `quire-exact` meter's
+`InjectedDenial` seam. The kernel owns the injected record and ordinary-limit precedence under
+`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`;
+RT owns the charge-point drivers for its remaining operations.
 
 ## Inputs
 
@@ -25,23 +26,14 @@ depend on the configured `ScalarLimits`.
 
 ## Outputs
 
-- `Incomplete` for the matching charge, with `limit_kind = WorkUnits`, `charge_point` the injected
-  point, `limit` and `consumed` both equal to the `work_units` consumed before the denied charge,
-  and `next_charge` the amount that charge point checks its availability against before admitting
-  anything — the charge's own `work_units` amount for every point except `equality.plan`, which is
-  covered below.
+- The kernel's `Incomplete` for the matching charge, as specified by
+  `ix://agent-ix/quire-exact/FR-358-AC-12`.
 - No change to any counter, to the admitted-charge log, or to the meter's occurrence counter.
 
 ## Behavior
 
-- The injected denial is decided **before** any counter is inspected. When a charge would also be
-  denied by a genuinely short counter, the injected denial wins and the caller sees the injected
-  record, not the real one. This precedence is what makes the seam deterministic: a harness that
-  injects at a point gets the same record whatever limits the request was configured with.
-- Because of that precedence the reported `limit` is **not** `ScalarLimits.work_units`. It is the
-  work already spent, reported as if the `work_units` limit were exactly that, so that
-  `limit = consumed` and the denied amount is the charge that would have exceeded it. A consumer
-  must not read an injected `Incomplete` as evidence about the configured limits.
+- The kernel decides injected-versus-ordinary-limit precedence under
+  `ix://agent-ix/quire-exact/FR-358-AC-13`. RT passes its charge requests to that meter.
 - The occurrence is 1-based and counts **admitted** charges at the injected point. The `n`th
   occurrence is the `n`th charge at that point that reaches the counters and is admitted; a charge
   at that point that a short counter denies does not advance the occurrence counter, and neither
@@ -50,14 +42,8 @@ depend on the configured `ScalarLimits`.
   subsequent charges are metered normally against the configured limits.
 - A `Meter` carries at most one `InjectedDenial`, and it names exactly one point. Charges at every
   other point are unaffected, including charges at other points interleaved with the injected one.
-- **`equality.plan`'s injected `next_charge` is its reservation, not its commit.** `equality.plan`
-  (`Meter::charge_plan`) checks availability against `pairs + 2` — one remaining work unit for each
-  subsequent `equality.pair` charge the plan's pairs will drive, plus one for the closing
-  `equality.result-retain` — before admitting anything, but on success it commits only its own
-  single work unit, the same as any other charge. The qualification seam is decided at that same
-  availability check (`check_injected`, before either counter is inspected), so an injected denial
-  at `equality.plan` reports `next_charge = pairs + 2`: the reservation the check was made against,
-  not the one work unit a real charge at that point would have committed.
+- The `equality.plan` reservation recorded by an injected denial is defined by
+  `ix://agent-ix/quire-exact/FR-358-AC-12`.
 - The denied charge consumes nothing and exposes no partial value: FR-011's stop discipline applies
   unchanged to an injected `Incomplete`.
 - The occurrence counter is saturating. Past `u64::MAX` admitted charges at the injected point no
@@ -67,9 +53,9 @@ depend on the configured `ScalarLimits`.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-010-AC-1 | For every admitted charge point, an injected denial at occurrence 1 yields `Incomplete` naming that point with `limit_kind = WorkUnits`, every counter unchanged, and no entry appended to the admitted-charge log. | Test (TC-031) |
-| FR-010-AC-2 | The injected record's `limit` and `consumed` are both the `work_units` consumed before the charge and are independent of the configured `ScalarLimits.work_units`; `next_charge` is the amount that charge point's availability check was made against — the charge's own work amount at every point except `equality.plan`, whose `next_charge` is its `pairs + 2` reservation. | Test (TC-031) |
-| FR-010-AC-3 | With limits short enough that the same charge would be denied on a real counter, the injected record is returned, not the real-counter record. | Test (TC-031) |
+| FR-010-AC-1 | For every charge point that an RT-owned residue operation can issue through the `quire-exact` meter, an occurrence-1 injected denial returns `Incomplete` with `WorkUnits` and that point; the observed work consumption equals the record's `consumed`, result consumption is zero, and the denied point is absent from the admitted-charge log. `ix://agent-ix/quire-exact/FR-358-AC-1` owns full meter-state atomicity. | Test (TC-031); Test (owner TC-906) |
+| FR-010-AC-2 | A denial reached through an RT exact-feature charge-point driver returns the `quire-exact` record specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-12`; RT adds no second record definition. | Test (owner TC-906); Inspection (RT dependency) |
+| FR-010-AC-3 | An RT exact-feature charge-point driver uses the `quire-exact` injection-versus-ordinary-limit precedence specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-13`; RT adds no second precedence rule. | Test (owner TC-906); Inspection (RT dependency) |
 | FR-010-AC-4 | An injection at occurrence `n` fires on the `n`th admitted charge at that point, counting no charge at any other point and no charge at that point that a short counter denied. | Test (TC-031) |
 | FR-010-AC-5 | After the injected denial fires, further charges are metered against the configured limits and no second charge is injected-denied. | Test (TC-031) |
 | FR-010-AC-6 | A 0-based `occurrence` cannot be constructed, so an injected denial can never silently match no charge and degrade into "no fault injected". | Test (TC-031) |
@@ -83,14 +69,14 @@ moves to the kernel's repository the matrix says so and keeps the row, without d
 acceptance criterion.
 
 `ix://agent-ix/quire-exact/FR-358-AC-1` tests named admitted occurrences and one-shot
-behavior; `FR-358-AC-2` tests denial and retry at `equality.plan`; `FR-358-AC-3` fixes the
-nonzero occurrence type. These are partial owner evidence for FR-010. In particular, they do not
-test FR-010-AC-2's `equality.plan` reservation `next_charge = pairs + 2` or
-FR-010-AC-3's precedence when an injected denial and a real limit would both deny the same
-charge. RT's retained charge-point driver asserts `limit = consumed` and the reservation is 3
-for one pair, but does not compare different configured `work_units` limits; it has no AC-3
-precedence assertion. Keep both criteria and their partial status; IR-676 tracks the remaining
-owner evidence gap.
+behavior; `ix://agent-ix/quire-exact/FR-358-AC-2` tests denial and retry at `equality.plan`;
+`ix://agent-ix/quire-exact/FR-358-AC-3` fixes the nonzero occurrence type.
+`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`
+directly test the complete injected record and ordinary-limit precedence at the public meter.
+RT's retained TC-031 driver checks its residue charge points against that meter. The RT lockfile
+still resolves an older `quire-exact` revision; refreshing that dependency is separate from this
+spec transfer and is required before claiming current RT consumes the newly evidenced owner
+revision.
 
 ## Dependencies
 
