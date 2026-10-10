@@ -40,8 +40,8 @@ without making a certification or accreditation claim.
   ([quire-contract-ir#109](https://github.com/agent-ix/quire-contract-ir/issues/109)).
 - Defining temporal semantics, deriving tick monitor plans, protocol encodings admitted by a
   backend profile, and replay. QSL defines and produces the monitor plan; this runtime only
-  consumes it. The monitor constructor remains pending QSL's executable topology and event
-  projection contract (QSL-685), and no monitor implementation is accepted here yet.
+  consumes it. QSL-685 now specifies the executable plan and one-argument build contract; the
+  QSL producer, driver/IR admission and lowering, and RT monitor implementation remain pending.
 
 ## System Overview
 
@@ -71,7 +71,7 @@ matrix and the test cases that matrix declares. Interface requirements live in `
 | Accounting | `spec/accounting/` | Complete campaign counters and the bounded immutable campaign snapshot transport | `quire-contract-runtime`: `accounting` (including its snapshot transport, `src/snapshot_json.rs`) | AD-001, AD-003, AD-004 | runtime-maintainers |
 | Proptest adapter | `spec/proptest_adapter/` | Adaptation of verdicts to the proptest framework | `quire-contract-runtime`: `proptest_adapter` | AD-001, AD-003, AD-004 | runtime-maintainers |
 | Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` today; the end state is AD-004 (proposed): no `exact` module, the value kernel is `quire-exact` and `quire-semantic-value` (FR-275), this crate keeps the backend negotiators and the lazy connective in `scalar`, and the ported function-application code is not authorized and is replaced or deleted per AD-004 Q-1 | AD-001, AD-002, AD-003, AD-004 | runtime-maintainers |
-| Tick monitor | `spec/monitor/` | Planned consumer of QSL `TimedMonitorPlan`; bounded counter steps and typed results, without temporal-semantic ownership | no RT module yet; QSL-685 and QSL-587 must define and produce the executable plan | AD-004 | runtime-maintainers |
+| Tick monitor | `spec/monitor/` | Planned consumer of QSL's admitted executable `TimedMonitorPlan`; bounded counter steps and typed results, without temporal-semantic ownership | no RT module yet; QSL-587 must produce the executable plan, driver/IR admit and lower it | AD-004 | runtime-maintainers |
 
 ## Requirements Architecture
 

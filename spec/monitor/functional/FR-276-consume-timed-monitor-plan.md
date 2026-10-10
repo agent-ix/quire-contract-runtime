@@ -16,48 +16,55 @@ relationships:
 
 ## Description
 
-When the runtime receives a QSL-produced `TimedMonitorPlan` with the producer-defined executable
-topology and event projection for a timestamped-event claim, the runtime SHALL construct and
-advance a bounded tick monitor under the plan's clock binding and event-rate limit. The runtime
-owns the monitor's state, counter arithmetic, storage, and typed step outcomes;
-QSL owns the checked claim, interval conversion, buffer capacities, and temporal meaning
+When the runtime receives one driver-admitted immutable `TimedMonitorPlan` with QSL's complete
+executable program for a timestamped-event claim, `build(plan)` SHALL allocate fresh state, run
+the prescribed initialization entry, and yield a bounded monitor without consuming an event or
+emitting a verdict. The runtime SHALL execute the plan's event and admitted-watermark transition
+bodies and own state, counter arithmetic, storage, input admission, and typed outcomes;
+QSL owns the checked claim, complete program's temporal meaning, interval conversion and capacities
 (ix://agent-ix/quire-spec-language/FR-251). The runtime SHALL NOT reconstruct a temporal formula
-or copy QSL's reference evaluator from plan metadata.
-
-The exact construction signature is pending a QSL-owned plan topology and event-projection
-contract. The four fields currently listed in QSL FR-251 (`binding`, `intervals`, `buffers`,
-`rate_limit`) do not identify the operator graph, obligation identities, or event predicates a
-monitor must advance. The independent obligations below describe the consumer once that input is
-defined; they do not claim an implementation is available.
+or operator update from graph tags, names, intervals or buffers, or copy QSL's reference evaluator.
+This is a planned consumer contract, not an implemented monitor.
 
 ## Inputs
 
-- A QSL-produced `TimedMonitorPlan` with a QSpec FR-252 `ClockBindingKey`, plan-selected tick
-  intervals, `(SubformulaId, capacity)` buffers, and an exact event-rate limit.
-- A counter source identified by the plan's binding, and one observed event with its counter
-  reading per monitor step. The event projection and executable topology remain QSL-685's
-  unresolved producer contract; the runtime neither infers them from `SubformulaId` nor reads
-  host wall-clock time.
-- The plan's declared counter width and caller-stated `max_reading_gap` premise from its QSL
-  `MonitorTarget`; the producer must make these available to the consumer without an inferred
-  default.
+- One driver-admitted immutable executable plan in RT representation, bound to the independently
+  selected checked package/clause and target. It carries the exact subject, clock binding with
+  counter/unit/width, uncertainty, maximum reading gap, rate limit, intervals, buffers, atoms,
+  ordered topology, typed state and complete initialization/event/watermark instruction bodies.
+  Its `PlanId` selects the complete plan in driver ownership, not merely its resource table.
+- An observed event with the plan's admitted counter reading, snapshot/invocation values and
+  binding identity; separately, an admitted progress assertion for a watermark transition.
+  Hardware acquisition and conversion into admitted inputs belong to the caller, which supplies
+  no atom callback, replacement clause, transition function, or new temporal meaning.
 
 ## Outputs
 
-- Construction either yields a monitor bound to the plan's exact clock identity or a typed
-  refusal before an event is consumed. A target with `max_reading_gap >= 2^width_bits` has QSL
+- QSL derivation refusal or driver/IR admission refusal yields no RT plan to build. An unsupported
+  instruction/predicate receives `Unsupported` before build. RT allocation or initialization
+  failure yields typed `MonitorBuildFailure` and no usable partial monitor. A target with
+  `max_reading_gap >= 2^width_bits` has QSL
   `MonitorPlanRefusal::GapExceedsWidth{max_reading_gap, width_bits}` and cannot yield a monitor.
 - Each affected obligation has a typed step result: definite true, definite false, pending, or
   indeterminate; `Incomplete(LimitReached{limit, value, setting})` for an event-rate buffer stop;
   or `Failed(ReadingGapExceeded{gap, max_reading_gap})` for a counter fault. Incomplete and failed
-  are not temporal verdicts. Unaffected obligations retain their prior state.
+  are not temporal verdicts. An invalid event/progress input yields a typed refusal without state
+  change; executor invariant failure yields `Failed` and terminates the monitor. Unaffected
+  obligations retain their prior state.
 
 ## Behavior
 
-- The runtime SHALL compare the attached counter identity, unit, width, profile, and admitted
-  order with the plan's QSpec FR-252 clock binding before consuming an event. A foreign or
-  incomplete binding SHALL NOT settle an obligation. The runtime SHALL NOT infer admitted order
-  from ingestion order or numeric tick order.
+- Driver admission SHALL bind the complete executable program to its independently selected
+  checked package/clause and target before RT build. Missing or foreign atom/operand references,
+  instruction bodies, state initializers, interval/buffer owners, activation bindings, or changed
+  target premises SHALL refuse admission with no initialization; structural validity alone grants
+  no execution authority. RT SHALL own or retain the whole immutable plan for the monitor's
+  lifetime, allocate independent mutable state on each build, and prohibit live rebinds.
+- The runtime SHALL compare attached counter identity, unit, width, profile, admitted order and
+  required entry values with the plan before consuming an event; watermark input SHALL carry an
+  admitted progress assertion under QSpec FR-094/FR-160. Invalid input SHALL leave state unchanged
+  and settle no obligation. Polling a counter alone creates neither an event position nor a
+  watermark. The runtime SHALL NOT infer admitted order from ingestion or numeric tick order.
 - The runtime SHALL compute consecutive counter differences modulo `2^width_bits`, using the
   declared width without truncating a reading or overflowing host integer arithmetic. A
   difference greater than `max_reading_gap` SHALL settle each affected obligation `Failed` with
@@ -73,7 +80,10 @@ defined; they do not claim an implementation is available.
   runtime SHALL NOT use a midpoint, host clock, or rounded point estimate to decide it.
 - The runtime SHALL preserve the plan's subformula and obligation identities through each
   result. A fault or limit stop on one obligation SHALL NOT overwrite an unrelated sibling's
-  decision. The runtime SHALL NOT treat this monitor's result as proof of elapsed real time,
+  decision. Subject-scoped IDs from another plan SHALL NOT alias despite equal numeric indices.
+  An executor invariant failure SHALL terminate the monitor as `Failed`, never as a Boolean
+  property verdict; the runtime SHALL reject subsequent input. The runtime SHALL NOT treat this
+  monitor's result as proof of elapsed real time,
   worst-case execution time, preemption, or interrupt timing (QSL ADR-026 KG-4).
 
 ## Acceptance Criteria
@@ -85,11 +95,15 @@ defined; they do not claim an implementation is available.
 | FR-276-AC-3 | Under a 16-bit counter with maximum gap 100, readings 65530 then 4 advance by 10; readings 65530 then 65500 settle `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` with no temporal verdict. A plan whose maximum gap is 65536 is refused before construction. | Test |
 | FR-276-AC-4 | Changing the counter identity, unit, width, profile or admitted order never reuses the first plan's monitor state or settles its obligation; equal timestamps without admitted order never acquire causality from arrival order. | Test |
 | FR-276-AC-5 | The step API carries distinct definite, pending, indeterminate, incomplete and failed outcomes with the affected obligation identities; a limit or fault on one obligation does not turn a sibling's state into a verdict or erase its identity. | Test |
+| FR-276-AC-6 | The complete admitted plan alone builds a monitor after driver preparation objects are dropped. Its checked subject, activation/captures, atom bodies, ordered topology, typed state initializers and executable event/watermark entries remain available. Build consumes no event and emits no verdict; a second build has independent state, and neither monitor can be rebound to another plan. No source parse, second clause, callback or RT operator translation completes it. | Test |
+| FR-276-AC-7 | For each of a foreign atom/operand, missing transition body, changed initializer, interval/buffer owner, activation binding, uncertainty and maximum gap under the original selection, driver/IR admission refuses without RT initialization; equal numeric subformula IDs under different subjects do not alias. An unsupported executable operation yields `Unsupported`, and RT allocation or initialization failure returns typed build failure with no monitor. | Test |
+| FR-276-AC-8 | Invalid event/progress inputs, including a missing required admitted value, leave monitor state unchanged with no verdict. An admitted progress assertion can settle a deadline, while a mere counter poll cannot. Executing the admitted program agrees with QSL's reference evaluator on boundary, reversed-operand, false-activation and open/closed-endpoint cases; an RT executor invariant failure returns `Failed`, terminates the monitor and rejects later input. | Test |
 
 ## Dependencies
 
-- QSL ADR-026 MN-1 to MN-4 and FR-251 own plan production, rounding and capacities; QSpec
+- QSL ADR-026 MN-1 to MN-7 and FR-251 own the complete executable plan, temporal meaning,
+  rounding and capacities; QSpec
   FR-160 owns uncertainty and QSpec FR-252 owns clock binding identity and admitted order.
-- QSL-685 must define the executable topology, event projection, obligation identities and
-  counter-target fields before RT can freeze its constructor or accept runtime implementation.
-  QSL-587 must produce the plan; IR-349 must complete the applicable RT architecture migration.
+- QSL-685 fixed the closed executable plan and one-argument build boundary in QSL FR-251/ADR-026;
+  QSL-587 must produce the plan, driver/IR must admit and lower its complete program, and IR-349
+  must complete the applicable RT architecture migration before runtime implementation acceptance.

@@ -29,6 +29,26 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
    producer and check its refusal happens before RT construction. Repeat a valid pair with a
    counter identity, unit, width, profile or admitted order changed one component at a time;
    equal-tick events with no admitted order must not gain causality from ingestion order.
+4. Admit one QSL-derived closed executable plan against an independently selected checked
+   package/clause and target. Drop the driver's preparation objects, then build two RT monitors
+   from that plan. Verify the plan retains subject, activation/captures, atom bodies, ordered
+   implication/eventually/always topology, state initializers and executable event/watermark
+   entries; feed a request only to the first monitor. Try rebinding either live monitor to a
+   changed plan. No source parse, additional clause, atom callback or RT operator translation may
+   complete the program.
+5. Before RT initialization, independently replace an atom/operand reference, transition body,
+   state initializer, interval association, buffer owner, activation binding, uncertainty and
+   maximum gap while keeping the original selected subject/target. Also give equal numeric
+   subformula IDs from two different subjects. Exercise unsupported executable content and RT
+   allocation and initialization failures separately. Record the boundary and typed result for
+   every rejection rather than treating them as Boolean property decisions.
+6. Offer an event missing a required admitted value and a progress input lacking QSpec-admitted
+   assertion; compare monitor state before and after each. Separately provide an admitted
+   watermark past a deadline and an ordinary counter poll with no watermark. Run the same admitted
+   plan against QSL's reference evaluator on the boundary cases above, reversed implication
+   operands, false activation, and open/closed interval endpoints. Inject an executor invariant
+   failure and offer one further input. Use test-authored expected subject/obligation origins and
+   outcomes rather than comparing two RT outputs as the oracle.
 
 ## Expected Results
 
@@ -43,3 +63,15 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
   and emits no temporal verdict for that fault. The 65536-gap target yields QSL
   `GapExceedsWidth` with no RT monitor constructed. Every foreign or incomplete binding is
   refused before it can settle an obligation; no order is inferred from equal ticks.
+- Step 4 builds two independent monitors without a verdict from initialization; a request in the
+  first changes no state in the second. Dropped preparation objects do not invalidate either
+  monitor, rebinding fails unchanged, and outputs retain the exact selected subject, target
+  premises, obligation instance and origin.
+- Step 5 refuses altered or incomplete programs at driver/IR admission with no RT initialization,
+  even when numeric IDs match. Unsupported content yields `Unsupported` before build. Allocation
+  and initialization failures yield typed `MonitorBuildFailure` with no usable monitor, not a
+  false property verdict.
+- Step 6 refuses invalid event/progress input without a state change or verdict. Admitted progress
+  can settle the deadline, while a counter poll cannot. RT execution and the independent QSL
+  reference evaluator agree per obligation in all named cases. Executor invariant failure yields
+  `Failed` with no verdict; the monitor refuses subsequent input.
