@@ -17,3 +17,4 @@ declares the test cases beside it. This index declares none.
 | Accounting | FR-004 | `accounting/matrix/tests.md` | ✅ Complete |
 | Proptest adapter | FR-003 | `proptest_adapter/matrix/tests.md` | ✅ Complete |
 | Exact | FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-273, FR-275 | `exact/matrix/tests.md` | 🚧 QSL agreement evidence removed (no agreement test is kept: one kernel, FR-275); FR-008-AC-10 through AC-12 sequence and ordered-set cases untested |
+| Tick monitor | FR-276 | `monitor/matrix/tests.md` | 🚧 Planned; QSL-685 topology contract and QSL-587 producer not yet available |
