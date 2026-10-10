@@ -42,7 +42,7 @@ failed postconditions to test failure, and rejected preconditions to test reject
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-003-AC-1 | Each verdict maps to the corresponding proptest outcome. | Test (TC-004) |
-| FR-003-AC-2 | The adapter is absent unless the opt-in feature is selected, as the `compile_fail` doctest in `src/lib.rs` shows. | compile-time-check |
+| FR-003-AC-2 | The adapter is absent unless the opt-in feature is selected, as the `compile_fail` doctest in `src/lib.rs` shows. | compile-time-check (TC-004) |
 | FR-003-AC-3 | `adapt` records nothing; `adapt_recording` records a matching verdict exactly once and maps it as `adapt` does; a mismatched identity yields a proptest failure naming both identities and leaves the report's counters unchanged. | Test (TC-004) |
 
 ## Dependencies

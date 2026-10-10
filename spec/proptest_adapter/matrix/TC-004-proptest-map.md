@@ -1,22 +1,25 @@
 ---
 id: TC-004
-title: "Map verdicts to proptest outcomes"
+title: "Verify the optional proptest adapter"
 type: TC
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/FR-003
     type: verifies
 ---
-# TC-004: Map verdicts to proptest outcomes
+# TC-004: Verify the optional proptest adapter
 
 ## Description
 
-Verify the optional adapter maps pass, postcondition failure, and precondition rejection distinctly.
+Verify the adapter is absent without `proptest`, present with it, and maps pass, postcondition
+failure, and precondition rejection distinctly.
 
 ## Test Procedure
 
-Enable `proptest`, adapt each verdict, and inspect the result variant.
+1. Run the `src/lib.rs` `compile_fail` doctest without default features and confirm that importing
+   `quire_contract_runtime::proptest_adapter` fails because the module is absent.
+2. Enable `proptest`, adapt each verdict through the public module, and inspect the result variant.
 
 ## Expected Results
 
-Pass becomes success, failure becomes `Fail`, and rejection becomes `Reject`.
-
+The feature-off import fails for the missing module. With the feature enabled, pass becomes
+success, failure becomes `Fail`, and rejection becomes `Reject`.
