@@ -33,3 +33,9 @@ The new criterion is tagged by four tests, but two new checked-fault paths lack 
 ## Coverage
 
 Plan completion: not assessed. `quire matrix` binds FR-273-AC-8 to four Rust test functions. The unchanged-charge clause is not asserted in the two named tests. Optional semantic review was skipped.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | 65ae56e5410041cbc5f50883a28b8b3731e4c1ff |

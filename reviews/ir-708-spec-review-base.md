@@ -29,3 +29,9 @@ The changed requirements and test procedures were checked for coverage and consi
 | ID | Severity | Summary | Refs |
 | --- | --- | --- | --- |
 | FND-001 | medium | FR-273-AC-8 is absent from both FR-273 and TC-194 coverage rows | spec/exact/matrix/tests.md:53 |
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed | 65ae56e5410041cbc5f50883a28b8b3731e4c1ff |
