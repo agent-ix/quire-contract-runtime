@@ -14,8 +14,9 @@ use quire_contract_runtime::exact::{
     ValueType,
 };
 use quire_exact::{
-    CardinalityBound, ChargePoint, CollectionKind, IeeeWidth, IllTyped, IllTypedCause, Incomplete,
-    InjectedDenial, Integer, LimitKind, Meter, Outcome, ScalarLimits, Undefined,
+    CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, IeeeWidth, IllTyped,
+    IllTypedCause, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal,
+    ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -30,6 +31,40 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
     work_units: u64::MAX,
     result_units: u64::MAX,
 };
+
+/// Trace: FR-008-AC-1
+#[test]
+fn deferred_record_value_outside_declared_type_has_precise_cause() {
+    let declaration = CompositeDeclaration::new(
+        key(1),
+        "Record",
+        CompositeShape::Record(vec![FieldDeclaration::new(
+            "flag",
+            ValueType::Boolean,
+            Presence::Required,
+        )]),
+    );
+    let environment = TypeEnvironment::new([declaration], []).unwrap();
+    let mut meter = Meter::new(UNLIMITED);
+    let outcome = environment
+        .evaluate_record(
+            key(1),
+            vec![(
+                "flag",
+                FieldExpression::Evaluate(Box::new(|_| {
+                    Outcome::Completed(Value::Integer(Integer::one()))
+                })),
+            )],
+            &mut meter,
+        )
+        .unwrap();
+    assert!(matches!(
+        outcome,
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::DeferredResultNotAdmitted,
+        })
+    ));
+}
 
 fn key(byte: u8) -> NodeKey {
     NodeKey::from_bytes([byte; 32])

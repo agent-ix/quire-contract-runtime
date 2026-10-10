@@ -43,8 +43,8 @@ use core::cell::{Cell, RefCell};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use quire_exact::{
-    Charge, ChargePoint, DecimalLoss, IeeeExactLoss, IeeeFlags, IllTyped, IllTypedCause, Integer,
-    Meter, Outcome, Refusal,
+    Charge, ChargePoint, CheckedInvariantCause, DecimalLoss, IeeeExactLoss, IeeeFlags, IllTyped,
+    IllTypedCause, Integer, Meter, Outcome, Refusal,
 };
 
 use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
@@ -613,9 +613,11 @@ pub fn plan_call(
 /// [`InputRefusal`]'s verbatim-ported vocabulary. [`CheckedPackage::evaluate`]
 /// itself still returns `Result<Evaluation, InputRefusal>` exactly as FR-273
 /// specifies: a foreign expression surfaces there as `Ok(Evaluation {
-/// outcome: Outcome::Refused(Refusal::CheckedInvariant), .. })`, decided here
+/// outcome: Outcome::Refused(Refusal::CheckedInvariant {
+///     cause: CheckedInvariantCause::ForeignCheckedExpression,
+/// }), .. })`, decided here
 /// at the plan boundary, before any charge — never by drifting into a
-/// `Refused(CheckedInvariant)` deep inside a body that silently ran against
+/// `Refused(CheckedInvariant { cause: ForeignCheckedExpression })` deep inside a body that silently ran against
 /// the wrong package's function table.
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -794,13 +796,17 @@ impl CheckedPackage {
         meter: &mut Meter,
     ) -> Outcome<Value> {
         let Some(guard) = self.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::CallDepthExceeded,
+            });
         };
         if let Err(stop) = charge_call(meter) {
             return Outcome::from_stop(Err(stop));
         }
         let Some(declaration) = self.function(function) else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::UnknownCheckedFunction,
+            });
         };
         let cell = RefCell::new(meter);
         let frame = Frame {
@@ -828,7 +834,9 @@ impl CheckedPackage {
             Err(EvaluationRefusal::Input(refusal)) => return Err(refusal),
             Err(EvaluationRefusal::ForeignExpression) => {
                 return Ok(Evaluation {
-                    outcome: Outcome::Refused(Refusal::CheckedInvariant),
+                    outcome: Outcome::Refused(Refusal::CheckedInvariant {
+                        cause: CheckedInvariantCause::ForeignCheckedExpression,
+                    }),
                     location: None,
                     losses: Vec::new(),
                 });
@@ -850,7 +858,9 @@ impl CheckedPackage {
         meter: &mut Meter,
     ) -> Outcome<Value> {
         let Some(guard) = self.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::CallDepthExceeded,
+            });
         };
         let cell = RefCell::new(meter);
         let frame = Frame {
@@ -917,21 +927,29 @@ impl<'a> Frame<'a> {
     /// the same re-entrant chain.
     pub fn call(&self, function: &str, arguments: &[Value]) -> Outcome<Value> {
         let Some(guard) = self.package.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::CallDepthExceeded,
+            });
         };
         let Some(declaration) = self.package.function(function) else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::UnknownCheckedFunction,
+            });
         };
         {
             let Ok(mut meter) = self.meter.try_borrow_mut() else {
-                return Outcome::Refused(Refusal::CheckedInvariant);
+                return Outcome::Refused(Refusal::CheckedInvariant {
+                    cause: CheckedInvariantCause::MeterBorrowConflict,
+                });
             };
             if let Err(stop) = charge_call(&mut meter) {
                 return Outcome::from_stop(Err(stop));
             }
         }
         let Ok(mut meter) = self.meter.try_borrow_mut() else {
-            return Outcome::Refused(Refusal::CheckedInvariant);
+            return Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::MeterBorrowConflict,
+            });
         };
         let child = Frame {
             package: self.package,
@@ -943,7 +961,7 @@ impl<'a> Frame<'a> {
     }
 
     /// Run `run` against the shared [`Meter`] this frame's whole call tree
-    /// charges through. `Err(Refusal::CheckedInvariant)` if this frame's
+    /// charges through. `Err(Refusal::CheckedInvariant { cause: MeterBorrowConflict })` if this frame's
     /// `Meter` is already mutably borrowed by an enclosing call on the same
     /// re-entrant chain, rather than panicking on the double borrow.
     /// Returning `Result` rather than `Option` matters here: a body that
@@ -957,7 +975,9 @@ impl<'a> Frame<'a> {
         let mut guard = self
             .meter
             .try_borrow_mut()
-            .map_err(|_| Refusal::CheckedInvariant)?;
+            .map_err(|_| Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::MeterBorrowConflict,
+            })?;
         Ok(run(&mut guard))
     }
 

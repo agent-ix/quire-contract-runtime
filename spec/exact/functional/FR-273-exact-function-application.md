@@ -34,7 +34,7 @@ but not its proofs: the runtime's `PackageDeclarations::check` admits only the f
 package carries — its declared types, unique names and a termination measure the producer states it
 discharged upstream (`measure_discharged`) — and refuses `CheckMode::Kernel`. The authority's
 typer, fact derivation, termination prover, task machine and expression IR are not ported: function
-bodies, and the root of a `CheckedExpression`, are resumable states the generated oracle supplies,
+bodies, and the root of a `CheckedExpression`, will be resumable states the generated oracle supplies,
 already lowered to Rust by the code generator, so `evaluate` drives a generated body and is call surface,
 not an expression interpreter. The generated oracle, which links this `#![no_std]` crate alone,
 calls the ported surface.
@@ -84,8 +84,12 @@ calls the ported surface.
   source-level application to the runtime-managed call-frame mechanism (a code-generator obligation,
   like the proof precondition above).
 - `evaluate` on an expression checked against a different package returns
-  `Ok(Evaluation { outcome: Refused(CheckedInvariant), .. })` before any charge, and
+  `Ok(Evaluation { outcome: Refused(CheckedInvariant { cause: ForeignCheckedExpression }), .. })` before any charge, and
   `check_expression` checks parameter and result types only.
+- A checked body that requests a function absent from its own package returns
+  `CheckedInvariant { cause: UnknownCheckedFunction }`; a re-entrant mutable meter borrow returns
+  `CheckedInvariant { cause: MeterBorrowConflict }`. These checked-program failures retain their
+  distinct causes and remain internal faults.
 - A function whose declared operator requirements no registered backend can discharge settles
   `unsupported` with a warning naming the required capability. FR-009's negotiators decide that
   disposition over the function's declared requirements, before any application and with no `Meter`
@@ -138,9 +142,10 @@ calls the ported surface.
 | FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
 | FR-273-AC-7 | A checked, decreasing function completes 4,096 runtime-managed calls on a 64 KiB native stack when `work_units` suffices; across depths 1, 128 and 4,096, no two generated-body transitions are simultaneously active, and inspection shows the scheduler returns to one loop before invoking the next transition. No depth-specific refusal or incomplete outcome exists. | Test (TC-194) |
-| FR-273-AC-8 | For an admitted chain of `N` calls whose bodies only request the next call or return a literal, the expected charge vector is `function.call` repeated `N` times and the expected `work_units` spend is `N`. A limit of `N` completes; a limit of `N - 1` returns `Incomplete` at the Nth `function.call`, naming `work_units`, with exactly `N - 1` calls in both the counter and log, and without changing the checked package's static totality verdict. | Test (TC-194) |
-| FR-273-AC-9 | In a nested call with two argument applications and an enclosing application, the charge vector is exactly three `function.call` entries in left argument, right argument, enclosing call order; the enclosing charge precedes parameter binding and body work. With `work_units: 2`, the enclosing charge is denied, the log and counter retain exactly the first two calls, and no enclosing body work occurs. | Test (TC-194) |
-| FR-273-AC-10 | A resumable body transition returns a child-call request while its owned parent state retains live locals and the child-result destination; after the child completes, the runtime resumes that parent with the child's value and does not invoke a second body transition from within the first. A stopped child propagates without resuming the parent. | Test (TC-194) |
+| FR-273-AC-8 | A foreign checked expression, an absent function requested within a checked body, and a re-entrant meter borrow carry `ForeignCheckedExpression`, `UnknownCheckedFunction`, and `MeterBorrowConflict` respectively, without changing their charge behavior or treating them as ordinary input refusals. | Test (TC-194) |
+| FR-273-AC-9 | For an admitted chain of `N` calls whose bodies only request the next call or return a literal, the expected charge vector is `function.call` repeated `N` times and the expected `work_units` spend is `N`. A limit of `N` completes; a limit of `N - 1` returns `Incomplete` at the Nth `function.call`, naming `work_units`, with exactly `N - 1` calls in both the counter and log, and without changing the checked package's static totality verdict. | Test (TC-194) |
+| FR-273-AC-10 | In a nested call with two argument applications and an enclosing application, the charge vector is exactly three `function.call` entries in left argument, right argument, enclosing call order; the enclosing charge precedes parameter binding and body work. With `work_units: 2`, the enclosing charge is denied, the log and counter retain exactly the first two calls, and no enclosing body work occurs. | Test (TC-194) |
+| FR-273-AC-11 | A resumable body transition returns a child-call request while its owned parent state retains live locals and the child-result destination; after the child completes, the runtime resumes that parent with the child's value and does not invoke a second body transition from within the first. A stopped child propagates without resuming the parent. | Test (TC-194) |
 
 ## Kernel ownership
 
@@ -156,8 +161,8 @@ owner decision. The "port of the authority" wording above describes that source.
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md); [FR-008](./FR-008-composite-collection-and-equality.md);
   [FR-009](./FR-009-i13-backend-negotiation.md);
   `ix://agent-ix/quire-specification` (FR-146, `expressions/FR-146-check-total-pure-functions.md`);
-  quire-spec-language. The quire-exact owner must amend FR-369-AC-3 to remove its RT
-  `CallDepthExceeded` producer obligation before this requirement can merge; its
+  quire-spec-language. The quire-exact FR-369-AC-3 contract already specifies explicit frames and
+  fuel with no `CallDepthExceeded` producer in the final carrier; its
   `UnknownCheckedFunction`, `ForeignCheckedExpression` and `MeterBorrowConflict` obligations remain.
 - **Producer**: `ix://agent-ix/quire-contract-codegen/FR-021` owns emitted resumable body states,
   argument order and continuation slots. Its current synchronous-closure contract requires an

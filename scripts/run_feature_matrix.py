@@ -46,6 +46,8 @@ DOMAIN_TARGETS = [
     "--test",
     "proptest_adapter",
     "--test",
+    "proptest_adapter_absent",
+    "--test",
     "snapshot",
 ]
 

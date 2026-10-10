@@ -10,9 +10,9 @@ use core::cmp::Ordering;
 
 use quire_exact::{
     rational_arithmetic_bits, sbits, sdigits, BoundedInteger, Charge, ChargePoint,
-    ComparisonOperator, DecimalLoss, DecimalResult, DecimalType, IllTyped, IllTypedCause,
-    InexactTarget, Integer, IntegerInterval, LimitKind, Meter, Outcome, Placed, Rational,
-    RationalArithmetic, Refusal, RoundingMode, Undefined,
+    CheckedInvariantCause, ComparisonOperator, DecimalLoss, DecimalResult, DecimalType, IllTyped,
+    IllTypedCause, InexactTarget, Integer, IntegerInterval, LimitKind, Meter, Outcome, Placed,
+    Rational, RationalArithmetic, Refusal, RoundingMode, Undefined,
 };
 
 use super::stop::{OutcomeStop, Stop};
@@ -543,7 +543,9 @@ fn convert(
                 .admit()
                 .map_err(|_| out_of_domain())?
                 .into_integer()
-                .ok_or(Stop::Refused(Refusal::CheckedInvariant))?;
+                .ok_or(Stop::Refused(Refusal::CheckedInvariant {
+                    cause: CheckedInvariantCause::ExpectedIntegerPlacement,
+                }))?;
             let value = domain.admit(coefficient).map_err(|_| out_of_domain())?;
             charge_retain(meter)?;
             ConvertedValue::Integer { value, loss }

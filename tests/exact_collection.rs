@@ -12,8 +12,9 @@ use quire_contract_runtime::exact::{
     NodeKey, Presence, TypeEnvironment, Value, ValueType,
 };
 use quire_exact::{
-    BoundViolation, CardinalityBound, ChargePoint, CollectionKind, Incomplete, InjectedDenial,
-    Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits, Undefined,
+    BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind,
+    Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits,
+    Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -120,6 +121,28 @@ fn tc_025_p2_form_collection_refuses_an_ineligible_occurrence_before_any_charge(
         }
     );
     assert!(meter.admitted_charges().is_empty());
+}
+
+/// Trace: FR-008-AC-3
+#[test]
+fn checked_collection_element_outside_declared_type_has_precise_cause() {
+    let collection_type = CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::Integer,
+        CardinalityBound::new(0, 1).unwrap(),
+    );
+    let mut meter = Meter::new(UNLIMITED);
+    let outcome = construct_collection(
+        &collection_type,
+        vec![Box::new(|_| Outcome::Completed(Value::Boolean(true)))],
+        &mut meter,
+    );
+    assert!(matches!(
+        outcome,
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::CollectionElementNotAdmitted,
+        })
+    ));
 }
 
 /// Trace: TC-025, FR-008-AC-3

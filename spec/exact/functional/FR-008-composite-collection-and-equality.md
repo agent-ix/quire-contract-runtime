@@ -119,10 +119,18 @@ name and order; and no operator here decides anything the authority does not.
   shape: `Undefined::EmptyReduction` and `Undefined::NoneValue` (reachable only from direct kernel
   evaluation of an unlinked expression, which this crate does not yet expose — see Out of Scope);
   `Refusal::ForeignReference`; `Refusal::CardinalityOutOfBound { violation, kind, bound, count }`
-  with its `BoundViolation::{BelowMinimum, AboveMaximum}`; and `Refusal::CheckedInvariant`, reachable
+  with its `BoundViolation::{BelowMinimum, AboveMaximum}`; and `Refusal::CheckedInvariant { cause }`, reachable
   only when a checked-program invariant fails and unreachable from any admitted vector. `Refusal`
   gains a `cause()` method carrying the closed FR-272 cause tag beside `code()`, populated for
   `CardinalityOutOfBound` and empty for every other variant.
+- A checked equality operand that violates its source admission, reaches a nonintegral decimal
+  conversion to integer, has its quantity conversion rejected, receives a nonexact quantity
+  placement, reaches no conversion arm, or fails target admission carries the corresponding
+  `CheckedInvariantCause::{EqualityOperandSourceNotAdmitted, EqualityOperandNonIntegralDecimal,
+  EqualityQuantityConversionRejected, EqualityQuantityNonExactPlacement,
+  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel FR-369.
+  `EqualityQuantityConversionRejected` retains the conversion's `IllTypedCause` payload. These
+  checked-program faults remain distinct from ordinary input refusals.
 - The `quire.value.accounting/v1` charge vocabulary gains twelve points ordered
   `equality.plan-form`, `equality.plan`, `equality.pair`, `equality.result-retain`, `function.call`,
   `collection.element`, `collection.visit`, `collection.member-walk`, `collection.member-test`,
@@ -146,14 +154,14 @@ name and order; and no operator here decides anything the authority does not.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-008-AC-1 | A `TypeEnvironment` admits a closed set of record, tuple and object-type declarations only after member-type and both recursion-rule checks succeed, and refuses at the originating declaration with a typed `DeclarationCause` otherwise; `record`, `tuple`, `evaluate_record` and `evaluate_tuple` construct in declaration order under the first-stopped rule and charge `composite.result-retain` with the exact retained `occ`. | Test (TC-024) |
+| FR-008-AC-1 | A `TypeEnvironment` admits a closed set of record, tuple and object-type declarations only after member-type and both recursion-rule checks succeed, and refuses at the originating declaration with a typed `DeclarationCause` otherwise; `record`, `tuple`, `evaluate_record` and `evaluate_tuple` construct in declaration order under the first-stopped rule and charge `composite.result-retain` with the exact retained `occ`; a deferred result outside its declared type carries `CheckedInvariant { cause: DeferredResultNotAdmitted }`. | Test (TC-024) |
 | FR-008-AC-2 | `TypeEnvironment::build` constructs a finite value bottom-up from a `ValueGraph`, sharing a node reached from more than one slot as one immutable value with no object identity created, and refuses the first containment cycle as `ContainmentCycle` at the node that closes it. | Test (TC-024) |
-| FR-008-AC-3 | `construct_collection` charges `collection.element` before running each deferred element and stops at the first non-completing element with no later element run; `form_collection` refuses a type-mismatched occurrence before any charge; formation charges membership comparisons, `collection.bound` and `collection.result-retain` in that order, and a set or bag is stored in ascending canonical-key order. | Test (TC-025) |
+| FR-008-AC-3 | `construct_collection` charges `collection.element` before running each deferred element and stops at the first non-completing element with no later element run; a completed element outside its declared type returns `CheckedInvariant { cause: CollectionElementNotAdmitted }`; `form_collection` refuses a type-mismatched occurrence before any charge; formation charges membership comparisons, `collection.bound` and `collection.result-retain` in that order, and a set or bag is stored in ascending canonical-key order. | Test (TC-025) |
 | FR-008-AC-10 | When formation coalesces occurrences, the runtime charges one `collection.member-walk` and one `collection.member-test` per membership comparison for a set, bag or ordered set, and charges neither point for a sequence. | Test (TC-025) |
 | FR-008-AC-11 | When a collection is retained, the runtime stores a sequence in supplied occurrence order, an ordered set as the first occurrence of each distinct member in first-occurrence order, a set as one occurrence of each distinct member in ascending canonical-key order, and a bag as every occurrence in ascending canonical-key order. | Test (TC-025) |
 | FR-008-AC-12 | When a retained collection is visited by equality planning or by a further formation, the runtime visits its elements in the order it stored them, for every one of the four kinds. | Test (TC-025) |
 | FR-008-AC-4 | The type-owned canonical key totally orders every keyed type, ranks `Absent < Null < Present`, fixes set and bag canonical and visiting order, and is evaluated iteratively at a depth that would overflow a recursive host-stack walk. | Test (TC-025) |
-| FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge and refuses a cross-universe reference pair as `ForeignReference`; `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order. | Test (TC-026) |
+| FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge, refuses a cross-universe reference pair as `ForeignReference`, and distinguishes unlike collection kinds (`CollectionKindMismatch`) from unlike value kinds (`ValueKindMismatch`); `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order, and each of the six checked operand failures carries its FR-369 cause, retaining `IllTypedCause` for a rejected quantity conversion. | Test (TC-026) |
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 62 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
