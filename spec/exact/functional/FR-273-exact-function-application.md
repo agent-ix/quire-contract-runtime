@@ -78,9 +78,9 @@ calls the ported surface.
   (`ChargePoint::FunctionCall`, `"function.call"`); this requirement is the first to charge it during
   a live call rather than carrying it unexercised. `call` charges one `function.call` for the called
   function's own body; `evaluate` runs a standalone `CheckedExpression` root, so it charges
-  `function.call` once for each `Frame::call` the root makes; the runtime counts only `Frame::call`
-  invocations, so the code generator must lower every source-level application in an expression
-  to a `Frame::call` (a code-generator obligation, like the proof precondition above).
+  `function.call` once for each application the root makes. The code generator must lower every
+  source-level application to the runtime-managed call-frame mechanism (a code-generator obligation,
+  like the proof precondition above).
 - `evaluate` on an expression checked against a different package returns
   `Ok(Evaluation { outcome: Refused(CheckedInvariant), .. })` before any charge, and
   `check_expression` checks parameter and result types only.
@@ -93,16 +93,18 @@ calls the ported surface.
   name, an argument count or kind mismatch against the checked signature, or an argument
   `Value::Reference` the supplied `ObjectEnvironment` cannot resolve, each refuse call input with no
   `Meter` participation, exactly as `plan_equality`'s pre-charge refusals do for equality.
-- Unbounded host recursion through a checked package is silent stack corruption on the governed
-  `thumbv7em-none-eabi` target: re-entry into a checked package through `CheckedPackage::call`,
-  `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own
-  `CheckingLimits::depth`, not an authority checker limit (at most
-  `MAX_CALL_DEPTH`), by one budget shared across all three entry paths, and exceeding it refuses as
-  `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal: a
-  host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still
-  overflow the host stack — but so does a body that recurses without touching this crate's runtime at
-  all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern,
-  not this crate's.
+- The runtime SHALL execute the call nesting it governs through an explicit call-frame stack,
+  including calls made from a function body and from a standalone expression. The number of active
+  function calls SHALL NOT consume native stack in proportion to call depth. A generated body SHALL
+  hand its nested application back to that execution mechanism; arbitrary recursion inside unrelated
+  host Rust remains outside this call surface's guarantee. No application call-depth ceiling, counter
+  or `CallDepthExceeded` refusal SHALL decide an outcome.
+- The shared `Meter`'s `work_units` limit SHALL bound execution, including each admitted
+  `function.call`. Exhaustion at a denied charge SHALL return `Incomplete` with
+  `limit_kind: work_units` and the denied charge point; the denied charge SHALL leave counters
+  unchanged and SHALL NOT change the package's static totality verdict. The ordinary charge order
+  remains: evaluate arguments left to right, validate the completed inputs, charge `function.call`,
+  then bind parameters and run the body. Nested calls use the same meter in execution order.
 
 ## Acceptance Criteria
 
@@ -114,7 +116,9 @@ calls the ported surface.
 | FR-273-AC-4 | A function whose declared operator requirements no registered backend can discharge negotiates `unsupported`, naming the required capability, before any application; the disposition is never an `Outcome` variant, never an `InputRefusal`, and takes no `Meter`. | Test (TC-195) |
 | FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
-| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own `CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
+| FR-273-AC-7 | A checked, decreasing function completes 4,096 runtime-managed calls on a 64 KiB native stack when `work_units` suffices; inspection shows explicit call frames and no call-depth outcome branch, so increasing call depth alone does not produce a refusal or incomplete outcome. | Test (TC-194) |
+| FR-273-AC-8 | For an admitted call chain requiring `w` work units, a `work_units` limit of `w` admits it and a limit of `w - 1` returns `Incomplete` at the first denied charge, naming `work_units` and its charge point, without recording the denied charge or changing the package's totality verdict. | Test (TC-194) |
+| FR-273-AC-9 | In a nested call with multiple argument applications, argument charges occur left to right before the enclosing `function.call`; that charge precedes parameter binding and body work. All calls share one meter and preserve the exact charge sequence on completion and on fuel exhaustion. | Test (TC-194) |
 
 ## Kernel ownership
 
