@@ -53,9 +53,9 @@ RT owns the charge-point drivers for its remaining operations.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-010-AC-1 | For every admitted charge point, an injected denial at occurrence 1 yields `Incomplete` naming that point with `limit_kind = WorkUnits`, every counter unchanged, and no entry appended to the admitted-charge log. | Test (TC-031) |
-| FR-010-AC-2 | A denial reached through an RT exact-feature charge-point driver returns the `quire-exact` record specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-12`; RT adds no second record definition. | Test (TC-031); Inspection |
-| FR-010-AC-3 | An RT exact-feature charge-point driver uses the `quire-exact` injection-versus-ordinary-limit precedence specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-13`; RT adds no second precedence rule. | Test (TC-031) |
+| FR-010-AC-1 | For every RT residue charge point driven in TC-031, an occurrence-1 injected denial returns `Incomplete` with `WorkUnits` and that point; the observed work consumption equals the record's `consumed`, result consumption is zero, and the denied point is absent from the admitted-charge log. `ix://agent-ix/quire-exact/FR-358-AC-1` owns full meter-state atomicity. | Test (TC-031); Test (owner TC-906) |
+| FR-010-AC-2 | A denial reached through an RT exact-feature charge-point driver returns the `quire-exact` record specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-12`; RT adds no second record definition. | Test (owner TC-906); Inspection (RT dependency) |
+| FR-010-AC-3 | An RT exact-feature charge-point driver uses the `quire-exact` injection-versus-ordinary-limit precedence specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-13`; RT adds no second precedence rule. | Test (owner TC-906); Inspection (RT dependency) |
 | FR-010-AC-4 | An injection at occurrence `n` fires on the `n`th admitted charge at that point, counting no charge at any other point and no charge at that point that a short counter denied. | Test (TC-031) |
 | FR-010-AC-5 | After the injected denial fires, further charges are metered against the configured limits and no second charge is injected-denied. | Test (TC-031) |
 | FR-010-AC-6 | A 0-based `occurrence` cannot be constructed, so an injected denial can never silently match no charge and degrade into "no fault injected". | Test (TC-031) |

@@ -29,9 +29,11 @@ owner revision containing those tests.
 ## Test Procedure
 
 1. For each RT residue operation's admitted charge point, inject occurrence 1 under sufficient
-   limits. Drive the operation and check the refusal names that point, changes no counter or
-   admitted-charge log, and reports the meter's observed denied amount. This is the retained
-   FR-010-AC-1 driver in `tests/exact_outcomes.rs`.
+   limits. Drive the operation and check `WorkUnits`, the named point, `limit = consumed`, the
+   point's expected `next_charge`, post-refusal work consumption equal to the record's
+   `consumed`, zero result consumption, and absence of the denied point from the admitted-charge
+   log. This is what the retained FR-010-AC-1 driver in `tests/exact_outcomes.rs` asserts; it
+   does not snapshot every counter, admission count or the whole log.
 2. Inspect the RT exact-feature meter dependency and its use by those drivers; check that the
    returned record and injection-versus-ordinary-limit precedence are the owner behavior in
    `ix://agent-ix/quire-exact/FR-358-AC-12` and
@@ -43,6 +45,9 @@ owner revision containing those tests.
 
 ## Expected Results
 
-Each driven RT residue point reaches the shared meter and reports that point without changing
-admitted state. The injected record and ordinary-limit precedence have one authoritative
-definition and direct evidence in quire-exact FR-358-AC-12/13 and TC-906.
+Each driven RT residue point reaches the shared meter and satisfies the fields and post-refusal
+observations in step 1. Full meter-state atomicity is owner evidence under
+`ix://agent-ix/quire-exact/FR-358-AC-1`; the injected record and ordinary-limit precedence
+have one authoritative definition and direct evidence in
+`ix://agent-ix/quire-exact/FR-358-AC-12`, `ix://agent-ix/quire-exact/FR-358-AC-13`
+and `ix://agent-ix/quire-exact/TC-906`.
