@@ -26,6 +26,8 @@ without making a certification or accreditation claim.
 - Optional exact-oracle operators and typed outcome/accounting envelopes, under the `exact`
   feature, for the complete-V1 scalar, composite, collection, equality, containment-graph,
   reference, backend-negotiation and total-pure-function-application families.
+- The planned consumer of QSL-produced tick monitor plans: bounded counter steps, fixed buffers,
+  and typed temporal decision, limit and fault results.
 
 ### Out of Scope
 
@@ -36,10 +38,10 @@ without making a certification or accreditation claim.
   predicate beside `negotiate_ieee` and `negotiate_integer_division`. That construct is negotiated
   at the code generator's arrow, not this runtime's, and is blocked on IR lowering the frame node
   ([quire-contract-ir#109](https://github.com/agent-ix/quire-contract-ir/issues/109)).
-- Temporal semantics, protocol encodings admitted by a backend profile, and replay. The language
-  authority that defines them has not shipped
-  ([quire-spec-language#121](https://github.com/agent-ix/quire-spec-language/issues/121)), and this
-  runtime is an implementation of that definition, never a second semantic authority.
+- Defining temporal semantics, deriving tick monitor plans, protocol encodings admitted by a
+  backend profile, and replay. QSL defines and produces the monitor plan; this runtime only
+  consumes it. QSL-685 now specifies the executable plan and one-argument build contract; the
+  QSL producer, driver/IR admission and lowering, and RT monitor implementation remain pending.
 
 ## System Overview
 
@@ -69,14 +71,15 @@ matrix and the test cases that matrix declares. Interface requirements live in `
 | Accounting | `spec/accounting/` | Complete campaign counters and the bounded immutable campaign snapshot transport | `quire-contract-runtime`: `accounting` (including its snapshot transport, `src/snapshot_json.rs`) | AD-001, AD-003, AD-004 | runtime-maintainers |
 | Proptest adapter | `spec/proptest_adapter/` | Adaptation of verdicts to the proptest framework | `quire-contract-runtime`: `proptest_adapter` | AD-001, AD-003, AD-004 | runtime-maintainers |
 | Exact | `spec/exact/` | The exact-oracle operators and typed outcome/accounting envelopes: scalar, text, composite, collection, equality, expression and function application, backend negotiation, the injected-denial seam and the carried compiler vocabulary | `quire-contract-runtime`: `exact` today; the end state is AD-004 (proposed): no `exact` module, the value kernel is `quire-exact` and `quire-semantic-value` (FR-275), this crate keeps the backend negotiators and the lazy connective in `scalar`, and the ported function-application code is not authorized and is replaced or deleted per AD-004 Q-1 | AD-001, AD-002, AD-003, AD-004 | runtime-maintainers |
+| Tick monitor | `spec/monitor/` | Planned consumer of QSL's admitted executable `TimedMonitorPlan`; bounded counter steps and typed results, without temporal-semantic ownership | no RT module yet; QSL-587 must produce the executable plan, driver/IR admit and lower it | AD-004 | runtime-maintainers |
 
 ## Requirements Architecture
 
 Stakeholder requirement StR-001 is refined by functional requirements FR-001 through FR-004,
-FR-006 through FR-012, FR-273, FR-275, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
+FR-006 through FR-012, FR-273, FR-275, the planned monitor consumer FR-276, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
 runtime API contract implemented by those FRs. FR-275 states the end state of the exact kernel: QSL's
 kernel and the residue QSL-358 takes over, consumed and never copied, so the runtime holds no ported QSL code. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
-TC-035 (TC-027–TC-029 unused), TC-194–TC-195 and TC-197–TC-199 provide the verification matrix.
+TC-035 (TC-027–TC-029 unused), TC-194–TC-195, TC-197–TC-199, and planned TC-200 provide the verification matrix.
 
 ## References
 
