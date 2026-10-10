@@ -1020,7 +1020,7 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
 
 /// `CheckingLimits::new` refuses a depth above `MAX_CALL_DEPTH`.
 ///
-/// Trace: TC-194, FR-273-AC-7
+/// Historical depth-limit behavior; replace during IR-512 implementation.
 #[test]
 fn tc_194_checking_limits_refuses_a_depth_above_the_maximum() {
     assert_eq!(
@@ -1035,7 +1035,7 @@ fn tc_194_checking_limits_refuses_a_depth_above_the_maximum() {
 /// Recursion through `Frame::call` beyond `CheckingLimits::depth` refuses
 /// with `Refusal::CheckedInvariant` rather than recursing without bound.
 ///
-/// Trace: TC-194, FR-273-AC-7
+/// Historical depth-limit behavior; replace during IR-512 implementation.
 #[test]
 fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
     let limits = CheckingLimits::new(u64::MAX, 3).unwrap();
@@ -1152,7 +1152,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
 /// path exactly as it bounds `Frame::call`, refusing rather than recursing
 /// the host stack without limit.
 ///
-/// Trace: TC-194, FR-273-AC-7
+/// Historical depth-limit behavior; replace during IR-512 implementation.
 #[test]
 fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
     let limits = CheckingLimits::new(u64::MAX, 3).unwrap();

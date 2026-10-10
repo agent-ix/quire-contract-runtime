@@ -43,18 +43,31 @@ agent-ix/quire-contract-runtime#34.
 9. Inspect this requirement's corpus for `CheckMode::Kernel`: check that every applied package is
    checked under `CheckMode::Linked` and that no test applies a package checked only under
    `CheckMode::Kernel` (FR-273-AC-6).
-10. Run a checked decreasing function through 4,096 runtime-managed calls with enough `work_units`
-    on a 64 KiB native stack. Check it returns its declared value. Inspect the execution mechanism
-    for explicit call frames and the absence of a call-depth outcome branch (FR-273-AC-7).
-11. For the same admitted call chain, measure the work required for completion as `w`. Run with
-    limits `w` and `w - 1`; check completion at `w`, and at `w - 1` check `Incomplete` naming
-    `work_units` and the first denied charge point. Check that denied charge was not recorded and
-    that a fresh run still applies the same checked package (FR-273-AC-8).
-12. Make a nested call whose argument expressions each call a function. Record the charge sequence
-    and body-entry observations. Check arguments run left to right, their charges precede the
-    enclosing `function.call`, and that charge precedes parameter binding and body work. Repeat with
-    fuel ending at one of those charges; check the prefix and stop point are exact and no later
-    body work occurs (FR-273-AC-9).
+10. Run a checked decreasing function through depths 1, 128 and 4,096 with sufficient `work_units`
+    on a 64 KiB native stack. Count simultaneously active generated-body transitions independently
+    of the runtime: increment on entry and decrement before each transition returns its step. Assert
+    a maximum of one at every depth and the declared result at 4,096. Inspect every scheduler path
+    to confirm that it returns to one loop before invoking another transition and has no depth-stop
+    branch. This combination rejects linear native-stack growth even if a 4,096-call sample alone
+    happens to fit (FR-273-AC-7).
+11. Use an admitted fixture with `N = 64` calls: each body only requests the next call or returns a
+    literal, so the test-authored expected vector is `function.call` repeated exactly 64 times and
+    the expected `work_units` spend is 64, independent of any measured run. At limit 64 assert that
+    vector, the result, and the counter. At limit 63 assert `Incomplete` at the 64th
+    `function.call`, a counter of 63, and exactly 63 logged calls with no denied entry. A fresh
+    limit-64 run of the same checked package must still complete (FR-273-AC-8).
+12. From a standalone expression, apply a left argument function, then a right argument function,
+    then an enclosing function; each body only returns a literal. Assert the test-authored vector
+    `[function.call(left), function.call(right), function.call(enclosing)]` and observe that the
+    enclosing body's parameters are bound only after its charge. At `work_units: 2`, assert
+    `Incomplete` at the enclosing charge, two consumed work units, precisely the first two log
+    entries, and no enclosing body entry (FR-273-AC-9).
+13. Exercise a resumable body fixture whose owned state holds one live local across a yielded child-call
+    request. Assert the runtime resumes the same parent state with the child's completed value, restores
+    the live local, and has no simultaneously active parent and child body transitions. Inspect the
+    runtime interface so every nonterminal transition requests a metered call. The generator's own
+    FR-021 tests must separately show that it emits this state and never places an uncharged loop
+    or direct recursive application inside a transition (FR-273-AC-10).
 
 ## Expected Results
 
@@ -64,5 +77,7 @@ parameter order; the `function.call` charge precedes the function's body on ever
 `evaluate` agrees with `call` on argument validation and refuses identically, and charges
 `function.call` once per application the root makes and none for a root that makes none; no applied
 package is checked only under `CheckMode::Kernel`; deep runtime-managed calls complete through
-explicit frames when fuel suffices; the first denied charge returns `Incomplete` on `work_units`
-without recording that charge; and nested argument, call and body charges remain in evaluation order.
+explicit frames when fuel suffices, with at most one active generated-body transition at each tested
+depth; the first denied charge returns `Incomplete` on `work_units` without recording that charge;
+and nested argument, call and body charges remain in evaluation order. A yielded parent resumes with
+its owned locals and its child's completed value; a stopped child propagates without a parent resume.
