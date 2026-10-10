@@ -15,11 +15,14 @@ failure, and precondition rejection distinctly.
 
 ## Test Procedure
 
-1. Run the `src/lib.rs` `compile_fail` doctest without default features and confirm that importing
-   `quire_contract_runtime::proptest_adapter` fails because the module is absent.
+1. Without `proptest`, compile a separate path-dependent client that imports a known public type,
+   then compile the same client package's `proptest_adapter` import and require rustc `E0432` at
+   that exact import. Use a distinct stable worktree-owned Cargo target to avoid a nested build
+   lock. Also run the `src/lib.rs` `compile_fail` doctest without default features.
 2. Enable `proptest`, adapt each verdict through the public module, and inspect the result variant.
 
 ## Expected Results
 
-The feature-off import fails for the missing module. With the feature enabled, pass becomes
+The ordinary feature-off import compiles, while the adapter import fails at `E0432` for the
+missing module; the compile-fail doctest agrees. With the feature enabled, pass becomes
 success, failure becomes `Fail`, and rejection becomes `Reject`.
