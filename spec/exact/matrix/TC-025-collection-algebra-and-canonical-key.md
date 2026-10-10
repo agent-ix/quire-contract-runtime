@@ -22,6 +22,8 @@ that fixes set and bag order. Evidence:
    the outcome with no later element run.
 2. Call `form_collection` with an occurrence outside the declared element type; check the refusal
    names the offending `Element(index)` before any charge is admitted.
+   Separately, have a deferred element complete with a value outside its checked type and assert
+   `CheckedInvariant { cause: CollectionElementNotAdmitted }`.
 3. Form a set, a bag and an ordered set from occurrences with repeats; check one
    `collection.member-walk` and one `collection.member-test` are charged per comparison against the
    members retained so far, in retention order, stopping at the first equal member. Form a sequence
@@ -53,4 +55,5 @@ that fixes set and bag order. Evidence:
 Charges precede the work they pay for in the declared order; a type-mismatched occurrence refuses
 before any charge; canonical order is total, stable and iterative at depth; both bound-violation
 directions are typed and distinct; every injected denial fires with no partial collection, and
-`CheckedInvariant` is unreachable from every vector in this test's corpus.
+`CheckedInvariant` is unreachable from every admitted vector in this test's corpus; the deliberately
+invalid deferred element carries `CollectionElementNotAdmitted`.

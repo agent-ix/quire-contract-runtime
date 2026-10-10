@@ -11,10 +11,10 @@ use quire_contract_runtime::exact::{
     Value, ValueType,
 };
 use quire_exact::{
-    admit_text, CardinalityBound, ChargePoint, CollectionKind, DecimalType, IeeeWidth, IllTyped,
-    IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerInterval, LimitKind, Meter, Outcome,
-    Rational, Refusal, RoundingMode, ScalarLimits, Text, TextPayload, TextProfile, TextType,
-    UniverseId,
+    admit_text, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, DecimalType,
+    IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerInterval,
+    LimitKind, Meter, Outcome, Rational, Refusal, RoundingMode, ScalarLimits, Text, TextPayload,
+    TextProfile, TextType, UniverseId,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -43,6 +43,48 @@ fn consumed(meter: &Meter) -> Vec<u64> {
 
 fn int_value(n: i128) -> Value {
     Value::Integer(Integer::from(n))
+}
+
+/// Trace: FR-008-AC-5
+#[test]
+fn equality_plan_distinguishes_collection_kind_and_value_kind_failures() {
+    let collection_type = |kind| {
+        CollectionType::new(
+            kind,
+            ValueType::Integer,
+            CardinalityBound::new(0, 1).unwrap(),
+        )
+    };
+    let mut meter = Meter::new(UNLIMITED);
+    let sequence = quire_contract_runtime::exact::form_collection(
+        &collection_type(CollectionKind::Sequence),
+        vec![int_value(1)],
+        &mut meter,
+    )
+    .unwrap()
+    .completed()
+    .unwrap();
+    let set = quire_contract_runtime::exact::form_collection(
+        &collection_type(CollectionKind::Set),
+        vec![int_value(1)],
+        &mut meter,
+    )
+    .unwrap()
+    .completed()
+    .unwrap();
+
+    assert_eq!(
+        quire_contract_runtime::exact::plan_equality(&sequence, &set),
+        Err(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::CollectionKindMismatch,
+        })
+    );
+    assert_eq!(
+        quire_contract_runtime::exact::plan_equality(&sequence, &int_value(1)),
+        Err(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::ValueKindMismatch,
+        })
+    );
 }
 
 /// Two declared units of two base dimensions: `meter`/`kilometer` (dimension

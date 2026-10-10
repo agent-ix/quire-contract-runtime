@@ -23,9 +23,9 @@ use core::fmt::Write as _;
 use core::mem;
 
 use quire_exact::{
-    Charge, ChargePoint, CollectionKind, Decimal, DecimalType, IeeeValue, IeeeWidth, IllTyped,
-    IllTypedCause, Integer, IntegerInterval, LimitKind, Meter, Outcome, Rational, RationalDomain,
-    Refusal, Text, TextType,
+    Charge, ChargePoint, CheckedInvariantCause, CollectionKind, Decimal, DecimalType, IeeeValue,
+    IeeeWidth, IllTyped, IllTypedCause, Integer, IntegerInterval, LimitKind, Meter, Outcome,
+    Rational, RationalDomain, Refusal, Text, TextType,
 };
 
 use super::collection::{CollectionType, CollectionValue};
@@ -1509,7 +1509,9 @@ fn admitted(value_type: &ValueType, outcome: Outcome<Value>) -> Result<Value, St
     if value_type.admits(&value) {
         Ok(value)
     } else {
-        Err(Stop::Refused(Refusal::CheckedInvariant))
+        Err(Stop::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::DeferredResultNotAdmitted,
+        }))
     }
 }
 

@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Check `check_equality`, `plan_equality`, `CheckedEquality::evaluate` and terminal `Reference<T>`
-identity. Evidence: `tests/exact_equality.rs` (`--features exact`). A Kani proof of the
+identity. Evidence: `tests/exact_equality.rs` and `src/exact/equality.rs` unit tests (`--features exact`). A Kani proof of the
 plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked as IR-241 (Linear).
 
 ## Test Procedure
@@ -23,7 +23,8 @@ plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked a
    the common comparison type.
 2. Call `plan_equality` on two completed operands and check no charge is admitted; call it on a pair
    of references from different universes and check it refuses as `ForeignReference` at plan time,
-   never as a charged comparison.
+   never as a charged comparison. Give it two different collection kinds and then a collection
+   and scalar; assert `CollectionKindMismatch` and `ValueKindMismatch` respectively.
 3. Evaluate `CheckedEquality::evaluate` over a composite and a collection operand pair with at least
    one nested occurrence pair; check the left and right conversion charges run in operand order, then
    `equality.plan-form`, `equality.plan`, one `equality.pair` per planned pair and
@@ -38,12 +39,20 @@ plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked a
 6. For generated `Boolean`, `Integer`, `Option`, bounded `Sequence` and tuple-record composite
    operands, check that the planned pair count equals an independently computed occurrence-pair
    count and the number of admitted `equality.pair` charges.
+7. Exercise checked equality operands that fail source admission, receive a nonintegral decimal
+   during integer conversion, reach no conversion shape, or fail target admission; assert the four
+   distinct FR-369 causes. Reject a quantity conversion across incompatible dimensions and assert
+   `EqualityQuantityConversionRejected` retains `IllTypedCause::IncompatibleDimensions`. Feed a
+   nonexact converted quantity to the exact placement boundary and assert
+   `EqualityQuantityNonExactPlacement`.
 
 ## Expected Results
 
-Every equality refusal is decided before any charge; the selected schedule and its conversions are
+Static equality refusals are decided before any charge; checked operand invariant faults retain
+their distinct causes and any charge admitted before detection. The selected schedule and its conversions are
 charged in the declared order; a cross-universe reference pair refuses by name, never by silent
 inequality; references carry no inspected state; every injected denial fires with no partial result,
-and `CheckedInvariant` is unreachable from every vector in this test's corpus. Over generated
+and `CheckedInvariant` is unreachable from every admitted vector in this test's corpus. Deliberate
+collection/value kind mismatches carry their specified typed causes. Over generated
 composite values, `plan_equality`'s predicted pair count, an independently computed occurrence-pair
 count, and the number of `equality.pair` charges `CheckedEquality::evaluate` admits always agree.
