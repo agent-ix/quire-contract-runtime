@@ -28,3 +28,13 @@ Examined FR-003-AC-1 (tri-state mapping), FR-003-AC-2 (feature-off absence and f
 ## Evidence
 
 `cargo test --doc --no-default-features` passed 11 doctests, including the feature-off `src/lib.rs` compile-fail example. The feature-on integration assertions are behind `#![cfg(feature = "proptest")]`. `quire matrix --scope . --strict --format json` binds FR-003-AC-2 solely to `tests/proptest_adapter.rs:11` and reports the PR-wide inherited 49 untagged criteria outside this review slice. Author pre-PR logs: `/tmp/ir715-prepr-ci.log`, `/tmp/ir715-prepr-rest.log`, `/tmp/ir715-prepr-deny-mutations.log`, and `/tmp/ir715-prepr-final.log`.
+
+## Dispositions
+
+| FND | outcome | sha/reason |
+| --- | --- | --- |
+| FND-001 | fixed 1d6ef4849e97e196abc0d9c4bbd62e9a4aa8dda4 | The matrix now names the executable feature-off probe, matching Quire’s sole AC2 verifying claim. |
+
+## Disposition Verdict
+
+**PASS at 1d6ef4849e97e196abc0d9c4bbd62e9a4aa8dda4** — FND-001 is fixed; no new findings in the fix diff.
