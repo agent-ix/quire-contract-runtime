@@ -11,6 +11,8 @@ relationships:
     type: depends_on
   - target: ix://agent-ix/quire-specification/FR-146
     type: implements
+  - target: ix://agent-ix/quire-contract-codegen/FR-021
+    type: references
 ---
 # FR-273: Apply checked total pure functions under exact semantics
 
@@ -32,8 +34,8 @@ but not its proofs: the runtime's `PackageDeclarations::check` admits only the f
 package carries — its declared types, unique names and a termination measure the producer states it
 discharged upstream (`measure_discharged`) — and refuses `CheckMode::Kernel`. The authority's
 typer, fact derivation, termination prover, task machine and expression IR are not ported: function
-bodies, and the root of a `CheckedExpression`, are host callables the generated oracle supplies,
-already lowered to Rust by the code generator, so `evaluate` runs a host body and is call surface,
+bodies, and the root of a `CheckedExpression`, will be resumable states the generated oracle supplies,
+already lowered to Rust by the code generator, so `evaluate` drives a generated body and is call surface,
 not an expression interpreter. The generated oracle, which links this `#![no_std]` crate alone,
 calls the ported surface.
 
@@ -78,9 +80,9 @@ calls the ported surface.
   (`ChargePoint::FunctionCall`, `"function.call"`); this requirement is the first to charge it during
   a live call rather than carrying it unexercised. `call` charges one `function.call` for the called
   function's own body; `evaluate` runs a standalone `CheckedExpression` root, so it charges
-  `function.call` once for each `Frame::call` the root makes; the runtime counts only `Frame::call`
-  invocations, so the code generator must lower every source-level application in an expression
-  to a `Frame::call` (a code-generator obligation, like the proof precondition above).
+  `function.call` once for each application the root makes. The code generator must lower every
+  source-level application to the runtime-managed call-frame mechanism (a code-generator obligation,
+  like the proof precondition above).
 - `evaluate` on an expression checked against a different package returns
   `Ok(Evaluation { outcome: Refused(CheckedInvariant { cause: ForeignCheckedExpression }), .. })` before any charge, and
   `check_expression` checks parameter and result types only.
@@ -97,16 +99,37 @@ calls the ported surface.
   name, an argument count or kind mismatch against the checked signature, or an argument
   `Value::Reference` the supplied `ObjectEnvironment` cannot resolve, each refuse call input with no
   `Meter` participation, exactly as `plan_equality`'s pre-charge refusals do for equality.
-- Unbounded host recursion through a checked package is silent stack corruption on the governed
-  `thumbv7em-none-eabi` target: re-entry into a checked package through `CheckedPackage::call`,
-  `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own
-  `CheckingLimits::depth`, not an authority checker limit (at most
-  `MAX_CALL_DEPTH`), by one budget shared across all three entry paths, and exceeding it refuses as
-  `Refusal::CheckedInvariant { cause: CallDepthExceeded }` before any charge. The bound is per-`CheckedPackage`, not universal: a
-  host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still
-  overflow the host stack — but so does a body that recurses without touching this crate's runtime at
-  all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern,
-  not this crate's.
+- The current synchronous `Body` closure and `Frame::call` contract cannot suspend a caller. The
+  runtime SHALL replace that contract with a resumable body interface. For each invocation the
+  generated producer creates owned state containing its next instruction, bound values and the
+  destination for a child's result. The runtime invokes one transition at a time with either the
+  initial arguments or a completed child value; a transition returns either a request to
+  call a named checked function with completed arguments, or a final `Outcome<Value>`. The suspended
+  parent state remains in an explicit runtime-owned call-frame stack. The runtime validates and
+  charges the child call, pushes its state, and resumes the parent with the child's value after
+  successful completion. A stopped child outcome propagates without evaluating later arguments or body
+  work. The scheduler SHALL return to its loop between transitions; neither a generated transition
+  nor the scheduler recursively invokes another body transition. `CheckedPackage::call` and
+  `CheckedPackage::evaluate` seed that scheduler, while generated nested applications use only its
+  call request. There is no synchronous nested-call path in the generated-body contract.
+- The generated-oracle producer owns the lowering of every function and standalone-expression root
+  into that resumable state, including left-to-right argument evaluation and result destinations.
+  It SHALL emit finite transitions free of uncharged loops and direct recursive applications.
+  Every nonterminal transition requests a runtime-charged operation;
+  therefore a finite `work_units` budget bounds the number of runtime-managed transitions. This
+  guarantee depends on the producer's upstream purity, termination and definedness proofs. An
+  arbitrary host implementation of the body interface can loop, recurse, re-enter a top-level call
+  or perform unmetered work; such unchecked host code is outside the generated-program guarantee,
+  and interface conformance alone does not prove its totality.
+- The runtime-managed call stack SHALL grow independently of the native stack. No application
+  call-depth ceiling, counter or `CallDepthExceeded` refusal SHALL decide an outcome. The shared
+  `Meter`'s `work_units` limit is execution fuel for the generated program, including each admitted
+  `function.call`. Exhaustion at a denied charge SHALL return `Incomplete` with
+  `limit_kind: work_units` and the denied charge point; the denied charge SHALL leave counters and
+  charge log unchanged and SHALL NOT change the package's static totality verdict. The ordinary
+  charge order remains: evaluate arguments left to right, validate the completed inputs, charge
+  `function.call`, then bind parameters and run the body. Nested calls use the same meter in
+  execution order.
 
 ## Acceptance Criteria
 
@@ -118,8 +141,11 @@ calls the ported surface.
 | FR-273-AC-4 | A function whose declared operator requirements no registered backend can discharge negotiates `unsupported`, naming the required capability, before any application; the disposition is never an `Outcome` variant, never an `InputRefusal`, and takes no `Meter`. | Test (TC-195) |
 | FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
-| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own `CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant { cause: CallDepthExceeded }` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
+| FR-273-AC-7 | A checked, decreasing function completes 4,096 runtime-managed calls on a 64 KiB native stack when `work_units` suffices; across depths 1, 128 and 4,096, no two generated-body transitions are simultaneously active, and inspection shows the scheduler returns to one loop before invoking the next transition. No depth-specific refusal or incomplete outcome exists. | Test (TC-194) |
 | FR-273-AC-8 | A foreign checked expression, an absent function requested within a checked body, and a re-entrant meter borrow carry `ForeignCheckedExpression`, `UnknownCheckedFunction`, and `MeterBorrowConflict` respectively, without changing their charge behavior or treating them as ordinary input refusals. | Test (TC-194) |
+| FR-273-AC-9 | For an admitted chain of `N` calls whose bodies only request the next call or return a literal, the expected charge vector is `function.call` repeated `N` times and the expected `work_units` spend is `N`. A limit of `N` completes; a limit of `N - 1` returns `Incomplete` at the Nth `function.call`, naming `work_units`, with exactly `N - 1` calls in both the counter and log, and without changing the checked package's static totality verdict. | Test (TC-194) |
+| FR-273-AC-10 | In a nested call with two argument applications and an enclosing application, the charge vector is exactly three `function.call` entries in left argument, right argument, enclosing call order; the enclosing charge precedes parameter binding and body work. With `work_units: 2`, the enclosing charge is denied, the log and counter retain exactly the first two calls, and no enclosing body work occurs. | Test (TC-194) |
+| FR-273-AC-11 | A resumable body transition returns a child-call request while its owned parent state retains live locals and the child-result destination; after the child completes, the runtime resumes that parent with the child's value and does not invoke a second body transition from within the first. A stopped child propagates without resuming the parent. | Test (TC-194) |
 
 ## Kernel ownership
 
@@ -135,4 +161,10 @@ owner decision. The "port of the authority" wording above describes that source.
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md); [FR-008](./FR-008-composite-collection-and-equality.md);
   [FR-009](./FR-009-i13-backend-negotiation.md);
   `ix://agent-ix/quire-specification` (FR-146, `expressions/FR-146-check-total-pure-functions.md`);
-  quire-spec-language.
+  quire-spec-language. The quire-exact FR-369-AC-3 contract already specifies explicit frames and
+  fuel with no `CallDepthExceeded` producer in the final carrier; its
+  `UnknownCheckedFunction`, `ForeignCheckedExpression` and `MeterBorrowConflict` obligations remain.
+- **Producer**: `ix://agent-ix/quire-contract-codegen/FR-021` owns emitted resumable body states,
+  argument order and continuation slots. Its current synchronous-closure contract requires an
+  amendment to use the runtime's new stepping interface before a generated oracle can satisfy this
+  requirement.
