@@ -19,7 +19,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![deny(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
-// Trace: FR-003-AC-2
 #![cfg_attr(
     not(feature = "proptest"),
     doc = r#"
@@ -61,6 +60,9 @@ pub mod identity;
 pub mod observation;
 // Implements: FR-002
 pub mod operators;
+/// The adapter exists only when the opt-in `proptest` feature is enabled.
+///
+/// Trace: FR-003-AC-2
 #[cfg(feature = "proptest")]
 // Implements: FR-003
 pub mod proptest_adapter;
