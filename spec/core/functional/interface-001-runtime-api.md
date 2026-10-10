@@ -130,8 +130,11 @@ exact value kernel: values and value types, the kernel evaluation `Outcome` with
 provenance, the checked `NodeKey`, and the scalar and collection operations over them. The kernel
 does not define, today, the function-application boundary (`Frame`, `Body`, `CheckedPackage`,
 `Evaluation`, `plan_call`), the static checking environments generated oracles build before they
-evaluate. QSL-358 moves those into a QSL-owned `no_std` plus `alloc` leaf crate,
-`quire-semantic-value` (as relayed from QSL), so they are not runtime-owned in the end state: the
+evaluate. QSL-358 places checking vocabulary in `quire-semantic-value`; QSL FR-262 assigns the
+function-application mechanism to its separate evaluation leaf. IR-583 supplies the shared `core`
+plus `alloc` interface and std reference seam; IR-590 supplies the usable `no_std` evaluator. RT
+deletes its copy only after that implementation passes its governed `no_std` target acceptance for
+checked-input and generated-body evaluation. These items are not runtime-owned in the end state: the
 runtime's copy of them is not authorized: [FR-275](../../exact/functional/FR-275-single-exact-kernel.md)
 records it as residue to delete, with no exception, no expiry and no approval. The negotiation predicates are different: they are runtime-owned code, not a QSL port, and
 stay (interface-001-AC-8). The `runtime_owned` block holds only those negotiation items and the lazy Boolean connective (neither shared crate has it); the
@@ -179,7 +182,7 @@ exact:
       text: [Text, TextPayload, TextProfile, TextType, admit_text]
       quantity: [Quantity]
   residue:
-    owner: QSL (QSL-358, quire-semantic-value, as relayed); not runtime-owned
+    owner: QSL (`quire-semantic-value` for checking vocabulary; evaluation leaf for function application, QSL FR-262); not runtime-owned
     status: not authorized; vendored code to be deleted; no exception, no expiry, no approval (FR-275)
     rule: every exact item the upstream quire-exact crate does not export, other than the runtime_owned items
     consumed:
@@ -205,6 +208,7 @@ exact:
   dependencies:
     - quire-contract-runtime -> quire-exact (normal, optional, enabled only by the exact feature)
     - quire-contract-runtime -> quire-semantic-value (normal, optional, enabled only by the exact feature)
+    - quire-contract-runtime -> QSL evaluation leaf (target after IR-590 implementation passes RT no_std acceptance; not an IR-583-only deletion trigger)
     - quire-semantic-value -> quire-exact and quire-canonical (own-repository Git dependencies)
     - quire-exact -> no quire-contract-runtime, quire-contract-codegen, quire-contract-ir or quire-spec-language crate (leaf)
     - quire-contract-codegen and generated oracles -> quire_exact and quire_semantic_value, by their own paths (no quire_contract_runtime::exact)

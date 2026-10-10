@@ -17,7 +17,8 @@ relationships:
 Where the `exact` feature is enabled, the runtime shall take the exact value kernel from the one
 `quire-exact` crate (the kernel crate, QSL ADR-011 X-1, now in the `agent-ix/quire-exact` repository) and shall hold no copy,
 port or re-implementation of any item `quire-exact` exports. The end state is that the runtime holds
-no ported QSL code at all: it is reached via `quire-exact` and via `quire-semantic-value` (QSL-358).
+no ported QSL code at all: it is reached via `quire-exact`, `quire-semantic-value` (QSL-358),
+and the QSL evaluation leaf after IR-590 target acceptance.
 The runtime has no `quire_contract_runtime::exact` module: it re-exports
 no item of those QSL-owned crates (no `pub use`, alias, wrapper, feature or compatibility layer), and
 generated oracles and the code generator name the owning crates' own paths. Under the `exact` feature
@@ -31,15 +32,18 @@ The end state is delivered in two steps:
 1. **Step 1, the `quire-exact` exports now (IR-349 part 1).** Everything `quire-exact` exports today
    is deleted from the runtime and consumed from `quire-exact`.
 2. **Step 2, the residue.** QSL says (as relayed by the team leader, from the IR planner) that
-   QSL-358 slices place the residue (function application, checking environments, containment and
-   unit graphs, enumeration declarations and the carried compiler vocabulary) in QSL-owned `no_std`
-   plus `alloc` leaf crate(s), `quire-semantic-value` (QSL ADR-011 layer SV); `quire-exact` stays the
-   kernel. The owner ruled FB-05 YES (relayed via the planner): a shared `no_std` plus `alloc` leaf
-   that the runtime may depend on. The residue is about 3,365 lines of the runtime's source (as
+   QSL-358 slices place checking environments, containment and unit graphs, enumeration declarations
+   and carried compiler vocabulary in `quire-semantic-value` (QSL ADR-011 layer SV); `quire-exact`
+   stays the kernel. Function application belongs to QSL's separate evaluation leaf: IR-583 defines
+   its shared `core` plus `alloc` interface and std reference seam; IR-590 supplies the usable
+   `no_std` plus `alloc` evaluator (QSL FR-262). The owner ruled FB-05 YES (relayed via the planner):
+   shared QSL leaves the runtime may depend on. The residue is about 3,365 lines of the runtime's source (as
    relayed); about 7,670 further lines already exist in `quire-exact` in a different shape (`Rc`
    against `Arc`, `EffectiveId` against `NodeKey`, `Quantity`), which IR-349 adapts to. The residue
-   is not runtime-owned: the runtime deletes it and consumes `quire-semantic-value`. The order and
-   mechanism are tracked by QSL-358 and IR-349.
+   is not runtime-owned: the runtime deletes it and consumes the QSL-owned crates. The order and
+   mechanism are tracked by QSL-358, IR-583, IR-590 and IR-349. IR-583 alone does not authorize
+   deletion of the function-application copy; IR-590's checked-input and generated-body implementation
+   must pass RT's governed `no_std` target acceptance first.
 3. **The negotiators are runtime-owned, not residue.** QSL deleted its negotiators on purpose
    (QSL FR-078, as relayed), so `negotiate_integer_division`, `negotiate_ieee` and their types are the
    runtime's own code, not a port, and stay in the runtime in the end state (FR-009,
@@ -49,9 +53,9 @@ The residue in the runtime's `src/exact` is ported QSL code. It is **not authori
 code that violates the no-vendoring rule. There is no exception, no expiry and no approval for it. The
 owner (Peter) ruled directly: "no vendoring. i didnt realize you had tried to approve vendoring 3000
 lines of corpus. Absolutely not allowed." The end state is that the runtime holds no ported QSL code,
-and the residue is to be deleted. How the runtime handles its copy until QSL-358 delivers the shared
-crate(s) is an open decision with the owner (see Open questions); this requirement states no interim
-policy.
+and the residue is to be deleted. How the runtime handles its function-application copy until the
+usable IR-590 `no_std` evaluator passes RT target acceptance is an open decision with the owner
+(see Open questions); this requirement states no interim policy.
 
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
 steps IR-349 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
@@ -91,8 +95,9 @@ crates that the runtime consumes.
 - **The end state.** There is no `exact` module. The runtime defines under the `exact` feature only the
   runtime-owned `scalar` items (the negotiators and their types, and `evaluate_boolean_short_circuit`
   with `ShortCircuitConnective`): the rest of `src/exact` is deleted, no `pub use`, alias or wrapper
-  re-exports `quire-exact`, `quire-semantic-value` or the evaluation leaf crate (IR-583), and no
-  compatibility layer keeps the old source reachable. The runtime then depends on each of those crates
+  re-exports `quire-exact`, `quire-semantic-value` or the evaluation leaf crate (IR-583 interface,
+  IR-590 implementation), and no compatibility layer keeps the old source reachable. The runtime
+  then depends on each of those crates
   once, by the same spelling rule as `quire-exact`.
 - **Runtime-owned negotiators.** `negotiate_integer_division`, `negotiate_ieee` and their requirement,
   capability and disposition types are defined in the runtime's own source (interface-001-AC-8). They
@@ -169,7 +174,8 @@ crates that the runtime consumes.
 ## Residue list (not authorized; to be deleted)
 
 Every item below is vendored QSL code that violates the no-vendoring rule. There is no exception,
-no expiry and no approval. The order and mechanism of deletion are tracked by QSL-358 and IR-349.
+no expiry and no approval. The order and mechanism of deletion are tracked by QSL-358 and IR-349;
+function-application deletion also needs IR-583, IR-590 and RT target acceptance.
 Classified against what `quire-exact` exports; IR-349 part 1 re-measures it. Where a source file holds both an exported item and a residue item, only the
 residue item is listed: the exported item is deleted in step 1. The negotiators are not on this list: they are runtime-owned.
 
@@ -188,9 +194,9 @@ and is deleted in step 1.
 - **MSRV is the owner's decision.** One floor, Rust 1.98.1, for all features, decided by Peter on
   2026-10-01 (it replaces the 1.82 the IR planner proposed under IR-18, as relayed). The footprint
   measurement at 1.98.1 was taken by the IR-349 foundation slice (NFR-001-AC-3).
-- **How the runtime handles its residue copy until QSL-358 lands (open, owner decision).** The
-  owner ruled there is no exception, no expiry and no approval for the copy. What the runtime does
-  with it in the meantime is not decided here and no interim policy is stated.
+- **Interim function-application residue (open, owner decision).** The owner ruled there is no
+  exception, no expiry and no approval for the copy. What the runtime does before the IR-590
+  implementation passes RT target acceptance is not decided here; no interim policy is stated.
 - **Status for rows whose evidence lives upstream (planner question).** The matrix has no "verified
   upstream" status; leaving rows stay "planned" with a reason (FR-275-AC-15).
 - **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`
@@ -209,7 +215,7 @@ and is deleted in step 1.
   [NFR-001](../../core/non-functional/NFR-001-no-std-footprint.md).
 - **Downstream**: the code steps IR-349: the foundation slice (floor, dependency, bans, one copy;
   no deletion; it adds the `deny.toml` entries) comes first; part 1 deletes the `quire-exact`
-  exports; part 2 deletes the residue (order and mechanism tracked by QSL-358 and IR-349).
+  exports; part 2 deletes the residue, with function-application deletion gated by the IR-583 interface, IR-590 implementation and RT target acceptance (QSL FR-262).
 - **Routed**: the codegen repository's lock resolves two `quire-exact` copies and three
   `quire-contract-model` revisions; that is codegen's one-copy work (its layout AD, step 1d, the
   codegen owner) and is not a runtime requirement. This requirement covers the runtime only, so
