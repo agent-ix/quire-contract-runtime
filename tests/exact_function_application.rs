@@ -1119,6 +1119,8 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
         evaluation.outcome,
         Outcome::Completed(Value::Boolean(true))
     ));
+    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
 /// Trace: TC-194, FR-273-AC-8
@@ -1153,6 +1155,8 @@ fn checked_body_missing_function_has_distinct_invariant_cause() {
             cause: CheckedInvariantCause::UnknownCheckedFunction,
         })
     ));
+    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
 /// A body that calls [`Frame::call`] from inside a [`Frame::meter`] closure
@@ -1191,6 +1195,8 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
             cause: CheckedInvariantCause::MeterBorrowConflict
         })
     ));
+    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
 /// The original attack this bounds: a running [`Body`](quire_contract_runtime::exact::Body)
