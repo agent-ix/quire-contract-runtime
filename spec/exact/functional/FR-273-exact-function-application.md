@@ -82,8 +82,12 @@ calls the ported surface.
   invocations, so the code generator must lower every source-level application in an expression
   to a `Frame::call` (a code-generator obligation, like the proof precondition above).
 - `evaluate` on an expression checked against a different package returns
-  `Ok(Evaluation { outcome: Refused(CheckedInvariant), .. })` before any charge, and
+  `Ok(Evaluation { outcome: Refused(CheckedInvariant { cause: ForeignCheckedExpression }), .. })` before any charge, and
   `check_expression` checks parameter and result types only.
+- A checked body that requests a function absent from its own package returns
+  `CheckedInvariant { cause: UnknownCheckedFunction }`; a re-entrant mutable meter borrow returns
+  `CheckedInvariant { cause: MeterBorrowConflict }`. These checked-program failures retain their
+  distinct causes and remain internal faults.
 - A function whose declared operator requirements no registered backend can discharge settles
   `unsupported` with a warning naming the required capability. FR-009's negotiators decide that
   disposition over the function's declared requirements, before any application and with no `Meter`
@@ -98,7 +102,7 @@ calls the ported surface.
   `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own
   `CheckingLimits::depth`, not an authority checker limit (at most
   `MAX_CALL_DEPTH`), by one budget shared across all three entry paths, and exceeding it refuses as
-  `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal: a
+  `Refusal::CheckedInvariant { cause: CallDepthExceeded }` before any charge. The bound is per-`CheckedPackage`, not universal: a
   host body that builds a *fresh* `CheckedPackage` at each hop gets a fresh budget and can still
   overflow the host stack — but so does a body that recurses without touching this crate's runtime at
   all, since under AD-002 a body is arbitrary host Rust and its own stack usage is the host's concern,
@@ -114,7 +118,8 @@ calls the ported surface.
 | FR-273-AC-4 | A function whose declared operator requirements no registered backend can discharge negotiates `unsupported`, naming the required capability, before any application; the disposition is never an `Outcome` variant, never an `InputRefusal`, and takes no `Meter`. | Test (TC-195) |
 | FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
-| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own `CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
+| FR-273-AC-7 | Re-entry into a checked package through `CheckedPackage::call`, `CheckedPackage::evaluate` or `Frame::call` is bounded by the runtime's own `CheckingLimits::depth`, not an authority checker limit (at most `MAX_CALL_DEPTH`) by one budget shared across all three entry paths, and exceeding it refuses as `Refusal::CheckedInvariant { cause: CallDepthExceeded }` before any charge. The bound is per-`CheckedPackage`, not universal. | Test (TC-194) |
+| FR-273-AC-8 | A foreign checked expression, an absent function requested within a checked body, and a re-entrant meter borrow carry `ForeignCheckedExpression`, `UnknownCheckedFunction`, and `MeterBorrowConflict` respectively, without changing their charge behavior or treating them as ordinary input refusals. | Test (TC-194) |
 
 ## Kernel ownership
 

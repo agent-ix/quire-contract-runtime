@@ -35,6 +35,8 @@ spellings and residue behavior.
    its `Component` and `ConstructionCause`. Run `evaluate_record`/`evaluate_tuple` with deferred
    field expressions and check they run in declaration order under the first-stopped rule, and that
    a completed value charges `composite.result-retain` with its exact `occ` before exposure.
+   Have one deferred field return a value outside its declared type and assert
+   `CheckedInvariant { cause: DeferredResultNotAdmitted }`.
 5. Build a `ValueGraph` where two slots name the same node and check the built value is shared with
    no object identity created; check a graph naming two nodes with one id refuses as `DuplicateNode`
    and a slot or root naming no node refuses as `UnknownNode`; build a graph whose containment closes
@@ -52,5 +54,6 @@ spellings and residue behavior.
 Every declaration and construction refusal names its typed cause and originating component; deferred
 evaluation follows declaration order and stops at the first non-completing member; containment
 graphs build bottom-up with sharing and no recursion-depth failure; the injected denial fires with no
-partial value, and `CheckedInvariant` is unreachable from every vector in this test's corpus.
+partial value, and `CheckedInvariant` is unreachable from every admitted vector in this test's corpus.
+The deliberately invalid deferred field carries `DeferredResultNotAdmitted`.
 Deep type metadata survives cloning, comparison, formatting and freeing without host-stack recursion.

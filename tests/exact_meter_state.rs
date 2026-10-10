@@ -110,7 +110,9 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
 fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
     let stops = [
         Outcome::Undefined(Undefined::DivisionByZero),
-        Outcome::Refused(Refusal::CheckedInvariant),
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: quire_exact::CheckedInvariantCause::CallDepthExceeded,
+        }),
         Outcome::Incomplete(Incomplete {
             limit_kind: LimitKind::WorkUnits,
             limit: 0,

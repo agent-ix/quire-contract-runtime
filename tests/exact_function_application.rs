@@ -14,8 +14,8 @@ use quire_contract_runtime::exact::{
     Origin, PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
 };
 use quire_exact::{
-    ChargePoint, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter, Outcome, Refusal,
-    RoundingMode, ScalarLimits, UniverseId,
+    ChargePoint, CheckedInvariantCause, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter,
+    Outcome, Refusal, RoundingMode, ScalarLimits, UniverseId,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -472,14 +472,15 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
             Vec::new(),
             ValueType::Boolean,
             Box::new(|frame, _arguments| {
-                let first = frame.call("leaf", &[]).completed();
-                let second = frame.call("leaf", &[]).completed();
-                match (first, second) {
-                    (Some(Value::Boolean(a)), Some(Value::Boolean(b))) => {
-                        Outcome::Completed(Value::Boolean(a && b))
-                    }
-                    _ => Outcome::Refused(quire_exact::Refusal::CheckedInvariant),
-                }
+                let first = match frame.call("leaf", &[]).completed() {
+                    Some(Value::Boolean(value)) => value,
+                    other => panic!("checked leaf must return Boolean: {other:?}"),
+                };
+                let second = match frame.call("leaf", &[]).completed() {
+                    Some(Value::Boolean(value)) => value,
+                    other => panic!("checked leaf must return Boolean: {other:?}"),
+                };
+                Outcome::Completed(Value::Boolean(first && second))
             }),
         )
         .unwrap();
@@ -686,10 +687,12 @@ fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
 /// in isolation. A foreign expression (checked against a different package)
 /// is not an `InputRefusal` at all — `evaluate`'s signature cannot carry a
 /// fifth variant — so it surfaces as `Ok(Evaluation { outcome:
-/// Outcome::Refused(Refusal::CheckedInvariant), .. })` instead, decided at
+/// Outcome::Refused(Refusal::CheckedInvariant {
+///     cause: CheckedInvariantCause::ForeignCheckedExpression,
+/// }), .. })` instead, decided at
 /// the plan boundary before any charge.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5
+/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-8
 #[test]
 fn tc_194_evaluate_shares_plan_call_argument_validation() {
     let package = PackageDeclarations {
@@ -775,7 +778,9 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::ForeignCheckedExpression
+        })
     ));
     assert!(meter.admitted_charges().is_empty());
 
@@ -935,7 +940,9 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::ForeignCheckedExpression
+        })
     ));
     assert!(meter.admitted_charges().is_empty());
 }
@@ -1066,16 +1073,18 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(quire_exact::Refusal::CheckedInvariant)
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::CallDepthExceeded
+        })
     ));
 }
 
 /// A body that re-enters its own [`Frame::meter`] from inside the closure
 /// [`Frame::meter`] already handed it refuses the inner access with
-/// `Err(Refusal::CheckedInvariant)` instead of panicking on the double
+/// `Err(Refusal::CheckedInvariant { cause: MeterBorrowConflict })` instead of panicking on the double
 /// `RefCell` borrow.
 ///
-/// Trace: TC-194, FR-273-AC-2
+/// Trace: TC-194, FR-273-AC-2, FR-273-AC-8
 #[test]
 fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
     let package = PackageDeclarations {
@@ -1089,7 +1098,12 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
             measure_discharged: true,
             body: Box::new(|frame, _arguments| {
                 let outer = frame.meter(|_outer_meter| frame.meter(|_inner_meter| true));
-                let inner_refused = matches!(outer, Ok(Err(Refusal::CheckedInvariant)));
+                let inner_refused = matches!(
+                    outer,
+                    Ok(Err(Refusal::CheckedInvariant {
+                        cause: CheckedInvariantCause::MeterBorrowConflict
+                    }))
+                );
                 Outcome::Completed(Value::Boolean(inner_refused))
             }),
         }],
@@ -1105,13 +1119,51 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
         evaluation.outcome,
         Outcome::Completed(Value::Boolean(true))
     ));
+    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+}
+
+/// Trace: TC-194, FR-273-AC-8
+#[test]
+fn checked_body_missing_function_has_distinct_invariant_cause() {
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: vec![FunctionDeclaration {
+            name: "caller".to_string(),
+            parameters: Vec::new(),
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|frame, _arguments| frame.call("absent", &[])),
+        }],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let mut meter = Meter::new(UNLIMITED);
+    let evaluation = package
+        .call(
+            "caller",
+            Vec::new(),
+            &ObjectEnvironment::default(),
+            &mut meter,
+        )
+        .unwrap();
+    assert!(matches!(
+        evaluation.outcome,
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::UnknownCheckedFunction,
+        })
+    ));
+    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
 /// A body that calls [`Frame::call`] from inside a [`Frame::meter`] closure
 /// re-enters the same frame's `Meter` `RefCell`: `Frame::run` refuses with
 /// [`Refusal::CheckedInvariant`] instead of panicking on the double borrow.
 ///
-/// Trace: TC-194, FR-273-AC-2
+/// Trace: TC-194, FR-273-AC-2, FR-273-AC-8
 #[test]
 fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking() {
     let package = PackageDeclarations {
@@ -1126,7 +1178,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
             body: Box::new(|frame, _arguments| {
                 frame
                     .meter(|_meter| frame.call("reentrant_call", &[]))
-                    .unwrap_or(Outcome::Refused(Refusal::CheckedInvariant))
+                    .expect("outer meter borrow remains available")
             }),
         }],
     }
@@ -1139,8 +1191,12 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::MeterBorrowConflict
+        })
     ));
+    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
 /// The original attack this bounds: a running [`Body`](quire_contract_runtime::exact::Body)
@@ -1193,7 +1249,9 @@ fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant)
+        Outcome::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::CallDepthExceeded
+        })
     ));
 }
 

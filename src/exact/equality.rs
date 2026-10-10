@@ -17,14 +17,15 @@ use alloc::vec;
 
 use quire_exact::{
     compare_shifted, compare_text, evaluate_decimal, power_of_ten_bits, sbits as shifted_bits,
-    sdigits as shifted_digits, Charge, ChargePoint, ComparisonOperator, Decimal, DecimalOperation,
-    DecimalType, IllTyped, IllTypedCause, Integer, LimitKind, Meter, Outcome, Rational, Refusal,
+    sdigits as shifted_digits, Charge, ChargePoint, CheckedInvariantCause, ComparisonOperator,
+    Decimal, DecimalOperation, DecimalType, IllTyped, IllTypedCause, Integer, LimitKind, Meter,
+    Outcome, Rational, Refusal,
 };
 
 use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
 use super::enumeration::compare_enum;
 use super::quantity::{
-    compare_quantity, convert_quantity, ConvertedValue, Quantity, QuantityTarget,
+    compare_quantity, convert_quantity, ConvertedValue, Quantity, QuantityTarget, QuantityUnit,
 };
 use super::stop::{OutcomeStop, Stop};
 
@@ -182,14 +183,18 @@ impl CheckedEquality {
                 EqualitySchedule::Text | EqualitySchedule::Enum | EqualitySchedule::Quantity,
                 _,
                 _,
-            ) => return Err(invariant()),
+            ) => return Err(invariant(CheckedInvariantCause::EqualityScheduleMismatch)),
         };
-        scheduled.map_err(|_| invariant())?.into_stop()
+        scheduled
+            .map_err(|error| {
+                invariant(CheckedInvariantCause::ScheduledComparisonRefused { cause: error.cause })
+            })?
+            .into_stop()
     }
 }
 
-fn invariant() -> Stop {
-    Stop::Refused(Refusal::CheckedInvariant)
+fn invariant(cause: CheckedInvariantCause) -> Stop {
+    Stop::Refused(Refusal::CheckedInvariant { cause })
 }
 
 /// The complete occurrence-pair plan of one planned equality.
@@ -308,7 +313,9 @@ pub(crate) fn plan_pairs(left: &Value, right: &Value) -> Result<PlannedPairs, Re
             (Value::Collection(l), Value::Collection(r)) => {
                 let kind = l.collection_type().kind();
                 if kind != r.collection_type().kind() {
-                    return Err(Refusal::CheckedInvariant);
+                    return Err(Refusal::CheckedInvariant {
+                        cause: CheckedInvariantCause::CollectionKindMismatch,
+                    });
                 }
                 let (l, r) = (l.elements(), r.elements());
                 // A set's member count and a bag's occurrence count are the
@@ -335,7 +342,11 @@ pub(crate) fn plan_pairs(left: &Value, right: &Value) -> Result<PlannedPairs, Re
                 | Value::Composite(_)
                 | Value::Collection(_),
                 _,
-            ) => return Err(Refusal::CheckedInvariant),
+            ) => {
+                return Err(Refusal::CheckedInvariant {
+                    cause: CheckedInvariantCause::ValueKindMismatch,
+                })
+            }
         };
         equal = equal && leaf;
     }
@@ -430,7 +441,9 @@ pub(crate) fn operand_value(
     meter: &mut Meter,
 ) -> Result<Value, Stop> {
     if !operand.source.admits(value) {
-        return Err(invariant());
+        return Err(invariant(
+            CheckedInvariantCause::EqualityOperandSourceNotAdmitted,
+        ));
     }
     let Some(target) = &operand.target else {
         return Ok(value.clone());
@@ -464,29 +477,45 @@ pub(crate) fn operand_value(
         (_, ValueType::Integer | ValueType::Int(_), Value::Decimal(decimal)) => {
             let rational = decimal.normalized().to_rational();
             if !rational.is_integer() {
-                return Err(invariant());
+                return Err(invariant(
+                    CheckedInvariantCause::EqualityOperandNonIntegralDecimal,
+                ));
             }
             Value::Integer(rational.numerator().clone())
         }
         (_, ValueType::Quantity(unit), Value::Quantity(quantity)) => {
             let conversion = convert_quantity(quantity, unit, &QuantityTarget::Exact, meter)
-                .map_err(|_| invariant())?
+                .map_err(|error| {
+                    invariant(CheckedInvariantCause::EqualityQuantityConversionRejected {
+                        cause: error.cause,
+                    })
+                })?
                 .into_stop()?;
-            match conversion.value() {
-                ConvertedValue::Exact(exact) => {
-                    Value::Quantity(Quantity::new(exact.clone(), unit.clone()))
-                }
-                ConvertedValue::Decimal(_) | ConvertedValue::Integer { .. } => {
-                    return Err(invariant())
-                }
-            }
+            exact_quantity_value(conversion.value(), unit)?
         }
-        _ => return Err(invariant()),
+        _ => {
+            return Err(invariant(
+                CheckedInvariantCause::EqualityConversionShapeMismatch,
+            ))
+        }
     };
     if target.admits(&converted) {
         Ok(converted)
     } else {
-        Err(invariant())
+        Err(invariant(
+            CheckedInvariantCause::EqualityOperandTargetNotAdmitted,
+        ))
+    }
+}
+
+fn exact_quantity_value(value: &ConvertedValue, unit: &QuantityUnit) -> Result<Value, Stop> {
+    match value {
+        ConvertedValue::Exact(exact) => {
+            Ok(Value::Quantity(Quantity::new(exact.clone(), unit.clone())))
+        }
+        ConvertedValue::Decimal(_) | ConvertedValue::Integer { .. } => Err(invariant(
+            CheckedInvariantCause::EqualityQuantityNonExactPlacement,
+        )),
     }
 }
 
@@ -570,4 +599,138 @@ fn decimal_to_rational(value: &Decimal, meter: &mut Meter) -> Result<Value, Stop
             .results(1),
     )?;
     Ok(Value::Rational(rational))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::node::NodeKey;
+    use super::super::unit::{UnitDeclaration, UnitGraph};
+    use super::*;
+    use alloc::boxed::Box;
+    use alloc::vec::Vec;
+    use quire_exact::{IntegerInterval, RoundingMode, ScalarLimits};
+
+    fn meter() -> Meter {
+        Meter::new(ScalarLimits {
+            integer_bits: u64::MAX,
+            decimal_digits: u64::MAX,
+            scale_expansion: u64::MAX,
+            text_input_bytes: u64::MAX,
+            text_scalars: u64::MAX,
+            normalized_scalars: u64::MAX,
+            unit_edges: u64::MAX,
+            value_occurrences: u64::MAX,
+            work_units: u64::MAX,
+            result_units: u64::MAX,
+        })
+    }
+
+    fn invariant_cause(result: Result<Value, Stop>) -> CheckedInvariantCause {
+        match result {
+            Err(Stop::Refused(Refusal::CheckedInvariant { cause })) => cause,
+            other => panic!("expected typed checked invariant, got {other:?}"),
+        }
+    }
+
+    /// Trace: FR-008-AC-5
+    #[test]
+    fn equality_operand_failures_keep_distinct_causes() {
+        let mut meter = meter();
+        assert_eq!(
+            invariant_cause(operand_value(
+                &EqualityOperand::typed(ValueType::Boolean),
+                &Value::Integer(Integer::one()),
+                &mut meter,
+            )),
+            CheckedInvariantCause::EqualityOperandSourceNotAdmitted,
+        );
+
+        let decimal_type = DecimalType::new(
+            Integer::zero(),
+            Integer::from(20_i64),
+            1,
+            1,
+            RoundingMode::Exact,
+        )
+        .unwrap();
+        assert_eq!(
+            invariant_cause(operand_value(
+                &EqualityOperand::converted(ValueType::Decimal(decimal_type), ValueType::Integer),
+                &Value::Decimal(Decimal::new(Integer::from(15_i64), 1)),
+                &mut meter,
+            )),
+            CheckedInvariantCause::EqualityOperandNonIntegralDecimal,
+        );
+
+        assert_eq!(
+            invariant_cause(operand_value(
+                &EqualityOperand::converted(ValueType::Boolean, ValueType::Integer),
+                &Value::Boolean(true),
+                &mut meter,
+            )),
+            CheckedInvariantCause::EqualityConversionShapeMismatch,
+        );
+
+        let narrow = IntegerInterval::new(Integer::zero(), Integer::one()).unwrap();
+        assert_eq!(
+            invariant_cause(operand_value(
+                &EqualityOperand::converted(ValueType::Integer, ValueType::Int(narrow)),
+                &Value::Integer(Integer::from(2_i64)),
+                &mut meter,
+            )),
+            CheckedInvariantCause::EqualityOperandTargetNotAdmitted,
+        );
+    }
+
+    /// Trace: FR-008-AC-5
+    #[test]
+    fn equality_quantity_failure_retains_ill_typed_cause() {
+        let key = |byte| NodeKey::from_bytes([byte; 32]);
+        let dimensions = [(key(1), Vec::new()), (key(2), Vec::new())];
+        let declaration = |dimension| UnitDeclaration {
+            dimension,
+            target: None,
+            scale: Rational::from_integer(Integer::one()),
+            offset: Rational::from_integer(Integer::zero()),
+        };
+        let graph = UnitGraph::admit(
+            dimensions,
+            [(key(3), declaration(key(1))), (key(4), declaration(key(2)))],
+        )
+        .unwrap();
+        let source = QuantityUnit::Declared(Box::new(graph.unit(key(3)).unwrap().clone()));
+        let target = QuantityUnit::Declared(Box::new(graph.unit(key(4)).unwrap().clone()));
+        let quantity = Value::Quantity(Quantity::new(
+            Rational::from_integer(Integer::one()),
+            source.clone(),
+        ));
+        assert_eq!(
+            invariant_cause(operand_value(
+                &EqualityOperand::converted(
+                    ValueType::Quantity(source),
+                    ValueType::Quantity(target)
+                ),
+                &quantity,
+                &mut meter(),
+            )),
+            CheckedInvariantCause::EqualityQuantityConversionRejected {
+                cause: IllTypedCause::IncompatibleDimensions,
+            },
+        );
+    }
+
+    /// Trace: FR-008-AC-5
+    #[test]
+    fn nonexact_quantity_placement_is_a_distinct_checked_fault() {
+        let interval = IntegerInterval::new(Integer::zero(), Integer::one()).unwrap();
+        let value = ConvertedValue::Integer {
+            value: interval.admit(Integer::zero()).unwrap(),
+            loss: None,
+        };
+        let unit = QuantityUnit::Compound(super::super::unit::CompoundUnit::dimensionless());
+        assert_eq!(
+            invariant_cause(exact_quantity_value(&value, &unit)),
+            CheckedInvariantCause::EqualityQuantityNonExactPlacement,
+        );
+    }
 }

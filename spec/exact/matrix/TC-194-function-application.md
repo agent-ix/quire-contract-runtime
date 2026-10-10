@@ -37,7 +37,7 @@ agent-ix/quire-contract-runtime#34.
    no `Frame::call` charges no `function.call`, and that an expression root making two `Frame::call`
    invocations charges exactly two, each before its own function's body. Check `evaluate` on an
    expression checked against another package returns `Ok(Evaluation)` with
-   `Refused(CheckedInvariant)`.
+   `Refused(CheckedInvariant { cause: ForeignCheckedExpression })`.
 8. For a shared-corpus function-application vector, check the outcome, refusal and charge sequence
    against the quire-spec-language authority.
 9. Inspect this requirement's corpus for `CheckMode::Kernel`: check that every applied package is
@@ -47,9 +47,12 @@ agent-ix/quire-contract-runtime#34.
     `MAX_CALL_DEPTH`, and separately recurse by direct, bypassing re-entry into
     `CheckedPackage::call`/`CheckedPackage::evaluate` from within a running body holding its own
     `Rc<CheckedPackage>`; on both paths, check that going one call beyond the checked package's
-    configured depth refuses `Refusal::CheckedInvariant` with no charge, and that the two entry paths
+    configured depth refuses `Refusal::CheckedInvariant { cause: CallDepthExceeded }` with no charge, and that the two entry paths
     share one depth budget on a given `CheckedPackage` rather than each getting its own
     (FR-273-AC-7).
+11. Trigger a missing function from within an admitted checked body and both re-entrant meter
+    borrow paths; assert `UnknownCheckedFunction` and `MeterBorrowConflict` respectively. Check a
+    foreign expression carries `ForeignCheckedExpression` (FR-273-AC-8).
 
 ## Expected Results
 
@@ -59,5 +62,5 @@ parameter order; the `function.call` charge precedes the function's body on ever
 `evaluate` agrees with `call` on argument validation and refuses identically, and charges
 `function.call` once per `Frame::call` the root makes and none for a root that makes none; no applied package is checked only under `CheckMode::Kernel`; and re-entry beyond a checked
 package's configured `CheckingLimits::depth`, through `Frame::call` or through a direct, bypassing
-re-entry into `CheckedPackage::call`/`evaluate`, refuses `Refusal::CheckedInvariant` before any charge
+re-entry into `CheckedPackage::call`/`evaluate`, refuses `Refusal::CheckedInvariant { cause: CallDepthExceeded }` before any charge
 against one budget shared by all three entry paths.

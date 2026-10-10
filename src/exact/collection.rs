@@ -20,8 +20,8 @@ use core::cmp::Ordering;
 use core::mem;
 
 use quire_exact::{
-    length_amount, CardinalityBound, Charge, ChargePoint, CollectionKind, Integer, LimitKind,
-    Meter, Outcome, Refusal,
+    length_amount, CardinalityBound, Charge, ChargePoint, CheckedInvariantCause, CollectionKind,
+    Integer, LimitKind, Meter, Outcome, Refusal,
 };
 
 use super::composite::{
@@ -134,7 +134,9 @@ fn construct(
         meter.charge(Charge::new(ChargePoint::CollectionElement))?;
         let value = element(meter).into_stop()?;
         if !collection_type.element.admits(&value) {
-            return Err(Stop::Refused(Refusal::CheckedInvariant));
+            return Err(Stop::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::CollectionElementNotAdmitted,
+            }));
         }
         occurrences.push(value);
     }
@@ -307,7 +309,9 @@ fn sort_by_key(elements: &mut [Value]) -> Result<(), Stop> {
         })
     });
     if unkeyed.get() {
-        return Err(Stop::Refused(Refusal::CheckedInvariant));
+        return Err(Stop::Refused(Refusal::CheckedInvariant {
+            cause: CheckedInvariantCause::CanonicalKeyUnavailable,
+        }));
     }
     Ok(())
 }
