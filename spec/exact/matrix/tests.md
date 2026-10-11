@@ -32,7 +32,7 @@ type: TestMatrix
 | FR-007 | FR-007-AC-8 | TC-034 | 🚧 owner-backed by quire-exact FR-365-AC-1/2 for rounding ties and default; RT-local kernel test removed |
 | FR-007 | FR-007-AC-9 | TC-034 | 🚧 owner-backed by quire-exact FR-366-AC-1..4 for IEEE NaNs, signed zero and order; RT-local kernel test removed |
 | FR-007 | FR-007-AC-10 | TC-034 | 🚧 owner-backed by quire-exact FR-362-AC-12/13 for rational canonical form and membership; RT-local kernel test removed |
-| FR-007 | FR-007-AC-11 | TC-034 | 🚧 owner-backed by quire-exact FR-363-AC-6/7 for normalized decimal value versus retained representation; RT-local kernel test removed |
+| FR-007 | FR-007-AC-11 | TC-034 | 🚧 owner-backed by quire-exact FR-363-AC-6/7 and `tests/ir673_decimal.rs`: equal normalized values, ordering size counters 8/3/1 versus 4/2/0, and one Boolean result unit in both comparisons; RT exact-feature binder remains planned after the local kernel test was removed |
 | FR-007 | FR-007-AC-12 | TC-034 | ✅ retained RT quantity and Euclidean residue assertions; matching kernel subsets remain owner-backed |
 | FR-007 | FR-007-AC-13 | TC-035 | ✅ implemented |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |

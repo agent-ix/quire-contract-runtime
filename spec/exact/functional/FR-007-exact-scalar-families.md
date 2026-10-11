@@ -38,8 +38,10 @@ accounting schedule.
   distinguished and each governs a different thing. *Value* comparison — `Decimal::compare` and
   `numerically_equal` — is mathematical and is computed on the normalized representation, so
   `1.10` and `1.1` are equal and neither orders before the other; `Decimal` deliberately has no
-  structural `PartialEq`. *Charges* are sized on the retained representation, never a normalized
-  one, so a value retained at a larger scale costs more to order and to retain. The retained
+  structural `PartialEq`. *Ordering size charges* use the retained operand representations,
+  never their normalized forms, so an equal-value pair can have different ordering size counters.
+  The Boolean `ordering.result-retain` charge remains one result unit for either pair. Decimal
+  arithmetic's result-retain upscale charges are a separate operation (AC-2). The retained
   representation is kept as provenance and is never silently normalized away.
 - Decimal rounding has six spellings, and an omitted spelling is strict `Exact`, which refuses any
   discarded nonzero digit rather than rounding. On an exact tie the tie-break is fixed per mode:
@@ -102,7 +104,7 @@ accounting schedule.
 | FR-007-AC-8 | The six rounding spellings round every exact tie to the stated neighbour for both signs; an omitted spelling is `Exact` and refuses a discarded nonzero digit. | Test (TC-034) |
 | FR-007-AC-9 | IEEE NaN propagation is leftmost-wins with sign and payload preserved and the result quieted; `invalid` is raised when any operand is signaling; an unrepresentable NaN payload is refused, never truncated; `-0.0` and `+0.0` convert to the same exact value with `discarded_negative_zero` reported; `total_order_key` totally orders every bit pattern including both zeros and NaNs. | Test (TC-034) |
 | FR-007-AC-10 | `Rational` membership admits exactly the reduced pairs inside both intervals — including refusing a value whose numeric magnitude is inside the numerator interval but whose reduced denominator is outside the denominator interval — an absent domain decides no membership and retains, and every exposed rational is in canonical form with zero as `0/1`. | Test (TC-034) |
-| FR-007-AC-11 | `Decimal` value comparison is on the normalized representation and charges are sized on the retained one, demonstrated by a pair equal in value whose ordering and retain charges differ. | Test (TC-034) |
+| FR-007-AC-11 | Retained decimals `(110, 2)` and `(11, 1)` compare equal in value and both normalize to `(11, 1)` without changing their retained representations. On separate fresh meters, `(110, 2) < (11, 1)` and `(11, 1) < (11, 1)` both return false; their ordering size counters (`integer_bits`, `decimal_digits`, `scale_expansion`) are respectively `8/3/1` and `4/2/0`, while both comparisons consume `value_occurrences/work_units/result_units = 2/3/1`, including one Boolean `ordering.result-retain` result unit. | Test (TC-034) |
 | FR-007-AC-12 | `mod` returns the Euclidean remainder for every operand sign whatever `div`/`rem` law is selected; a quotient/remainder pair outside the consumer domain is refused as a pair naming which members were admitted, exposing neither; quantity `IllTyped` causes appear in the stated per-operation order with zero charges, and `Multiply`/`Divide`/`Power` raise no dimension fault. | Test (TC-034) |
 | FR-007-AC-13 | Every hand-written `Debug` impl for a boxed value or type struct (`Rational`, `RationalDomain`, `Decimal`, `DecimalType`, `Quantity`, `Text`, `EnumValue`, `ObjectReference`, `CompoundUnit`) renders exactly the fields its `*Fields` struct declares, in declaration order, against a fixed expected string. | Test (TC-035) |
 
@@ -135,6 +137,11 @@ FR-007-AC-2's decimal allocation subset maps to `FR-361-AC-4` through `FR-361-AC
 These owner contracts do not prove QSpec/QSL shared-corpus agreement or the whole decimal
 family. `FR-360` concerns
 `Integer::abs(i64::MIN)` only and is not evidence for those broader claims.
+For FR-007-AC-11, `ix://agent-ix/quire-exact/FR-363-AC-6` and `FR-363-AC-7` specify the
+normalized-value and retained-operand-charge distinction; the kernel's
+`tests/ir673_decimal.rs` tests the equal values, retained representations and exact
+`8/3/1` versus `4/2/0` size counters with one result unit in each comparison.
+The RT exact-feature obligation remains planned in TC-034 until RT-local evidence binds it.
 
 [The exact matrix](../matrix/tests.md) separates current RT evidence, future kernel-owned
 evidence, IR-669 agreement work and RT evaluation residue under IR-349 step 2 and IR-583. This spec amendment removes

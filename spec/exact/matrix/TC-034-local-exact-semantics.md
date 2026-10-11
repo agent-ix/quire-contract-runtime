@@ -20,7 +20,8 @@ the runtime, independently of the shared-corpus agreement suites. Evidence:
 `ix://agent-ix/quire-exact/FR-365-AC-1` and `FR-365-AC-2` test rounding ties and default;
 `FR-366-AC-1` through `FR-366-AC-4` test IEEE NaNs, signed zero and total order;
 `FR-362-AC-12` and `FR-362-AC-13` test rational canonical form and membership; and
-`FR-363-AC-6` and `FR-363-AC-7` test decimal normalized values versus retained charges.
+`FR-363-AC-6` and `FR-363-AC-7`, traced by kernel `tests/ir673_decimal.rs`, test decimal
+normalized values versus retained ordering size charges and the unchanged Boolean result unit.
 Those are kernel subsets only. The RT quantity type-fault ordering and any RT/QSL agreement
 remain separate obligations. The kernel tests left with the copied implementation; RT's
 quantity cases remain in `tests/exact_semantics.rs`.
@@ -38,8 +39,11 @@ quantity cases remain in `tests/exact_semantics.rs`.
    interval excludes `3`; evaluate the same operation with no domain.
 7. Construct rationals from unreduced, negative-denominator and zero numerators; check canonical
    form and that zero is `0/1`.
-8. Compare and order `1.10` against `1.1`; check equality, ordering and that the ordering and
-   retain charges differ.
+8. Compare retained `(110, 2)` against `(11, 1)` and order each of `(110, 2) < (11, 1)` and
+   `(11, 1) < (11, 1)` on a fresh meter. Check equal normalized values and false ordering;
+   check `integer_bits/decimal_digits/scale_expansion` of `8/3/1` versus `4/2/0`, with
+   `value_occurrences/work_units/result_units = 2/3/1` for both comparisons. The Boolean
+   `ordering.result-retain` point consumes one result unit in each case.
 9. Evaluate `mod` for all four operand-sign combinations under each `div`/`rem` law.
 10. Refuse a quotient/remainder pair with each admitted-member combination.
 11. Type-check each quantity operation against inputs failing more than one cause.
