@@ -148,21 +148,114 @@ fn tc_034_quantity_add_subtract_cause_order_first_failure_wins() {
 
 /// Trace: TC-034, FR-007-AC-12
 #[test]
-fn tc_034_quantity_multiply_and_divide_raise_no_dimension_fault() {
+fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
     let graph = graph();
-    let length = quantity(&graph, UNIT_METER, 2);
+    let length = quantity(&graph, UNIT_KILOMETER, 2);
     let kelvin = quantity(&graph, UNIT_KELVIN, 3);
 
     // Cross-dimension operands would fail `Add`/`Subtract`'s incompatible-
-    // dimensions check; `Multiply` and `Divide` never check dimension
-    // compatibility, since their dimensions combine rather than match.
+    // dimensions check. Arithmetic converts declared units to canonical roots.
     let mut meter = Meter::new(UNLIMITED);
     let product = evaluate_quantity(QuantityOperation::Multiply(&length, &kelvin), &mut meter)
         .expect("multiply is well-typed across dimensions");
-    assert!(product.completed().is_some());
+    assert_eq!(
+        product.completed(),
+        Some(Quantity::new(
+            ratio(6000, 1),
+            QuantityUnit::Compound(
+                graph
+                    .compound_unit(&[(UNIT_METER, int(1)), (UNIT_KELVIN, int(1))])
+                    .unwrap(),
+            ),
+        ))
+    );
 
     let mut meter = Meter::new(UNLIMITED);
     let quotient = evaluate_quantity(QuantityOperation::Divide(&length, &kelvin), &mut meter)
         .expect("divide is well-typed across dimensions");
-    assert!(quotient.completed().is_some());
+    assert_eq!(
+        quotient.completed(),
+        Some(Quantity::new(
+            ratio(2000, 3),
+            QuantityUnit::Compound(
+                graph
+                    .compound_unit(&[(UNIT_METER, int(1)), (UNIT_KELVIN, int(-1))])
+                    .unwrap(),
+            ),
+        ))
+    );
+
+    let mut meter = Meter::new(UNLIMITED);
+    let power = evaluate_quantity(QuantityOperation::Power(&length, &int(2)), &mut meter)
+        .expect("power is well-typed for a zero-offset unit");
+    assert_eq!(
+        power.completed(),
+        Some(Quantity::new(
+            ratio(4_000_000, 1),
+            QuantityUnit::Compound(graph.compound_unit(&[(UNIT_METER, int(2))]).unwrap()),
+        ))
+    );
+
+    let mut meter = Meter::new(UNLIMITED);
+    let reciprocal = evaluate_quantity(QuantityOperation::Power(&length, &int(-1)), &mut meter)
+        .expect("negative power is defined for a nonzero base");
+    assert_eq!(
+        reciprocal.completed(),
+        Some(Quantity::new(
+            ratio(1, 2000),
+            QuantityUnit::Compound(graph.compound_unit(&[(UNIT_METER, int(-1))]).unwrap()),
+        ))
+    );
+
+    let length = quantity(&graph, UNIT_METER, 5);
+    let mut meter = Meter::new(UNLIMITED);
+    let cancellation = evaluate_quantity(QuantityOperation::Divide(&length, &length), &mut meter)
+        .expect("equal units cancel");
+    assert_eq!(
+        cancellation.completed(),
+        Some(Quantity::new(
+            ratio(1, 1),
+            QuantityUnit::Compound(graph.compound_unit(&[]).unwrap()),
+        ))
+    );
+}
+
+/// Trace: TC-034, FR-007-AC-12
+#[test]
+fn tc_034_quantity_zero_power_and_affine_refusal() {
+    let graph = graph();
+    let zero = quantity(&graph, UNIT_METER, 0);
+    let mut meter = Meter::new(UNLIMITED);
+    let zero_power = evaluate_quantity(QuantityOperation::Power(&zero, &int(0)), &mut meter)
+        .expect("zero to the zero power is defined");
+    assert_eq!(
+        zero_power.completed(),
+        Some(Quantity::new(
+            ratio(1, 1),
+            QuantityUnit::Compound(graph.compound_unit(&[]).unwrap()),
+        ))
+    );
+
+    let mut meter = Meter::new(UNLIMITED);
+    let undefined = evaluate_quantity(QuantityOperation::Power(&zero, &int(-1)), &mut meter)
+        .expect("zero under a negative exponent is a runtime stop");
+    assert_eq!(
+        undefined,
+        quire_exact::Outcome::Undefined(quire_exact::Undefined::DivisionByZero)
+    );
+
+    let celsius = quantity(&graph, UNIT_CELSIUS, 1);
+    let kelvin = quantity(&graph, UNIT_KELVIN, 1);
+    for operation in [
+        QuantityOperation::Multiply(&celsius, &kelvin),
+        QuantityOperation::Multiply(&kelvin, &celsius),
+        QuantityOperation::Divide(&celsius, &kelvin),
+        QuantityOperation::Divide(&kelvin, &celsius),
+        QuantityOperation::Power(&celsius, &int(2)),
+    ] {
+        let mut meter = Meter::new(UNLIMITED);
+        let error = evaluate_quantity(operation, &mut meter).unwrap_err();
+        assert_eq!(error.cause, IllTypedCause::AffineUnitArithmetic);
+        assert!(meter.admitted_charges().is_empty());
+    }
 }
