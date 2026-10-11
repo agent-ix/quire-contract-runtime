@@ -248,7 +248,9 @@ fn tc_034_quantity_zero_power_and_affine_refusal() {
     let kelvin = quantity(&graph, UNIT_KELVIN, 1);
     for operation in [
         QuantityOperation::Multiply(&celsius, &kelvin),
+        QuantityOperation::Multiply(&kelvin, &celsius),
         QuantityOperation::Divide(&celsius, &kelvin),
+        QuantityOperation::Divide(&kelvin, &celsius),
         QuantityOperation::Power(&celsius, &int(2)),
     ] {
         let mut meter = Meter::new(UNLIMITED);
