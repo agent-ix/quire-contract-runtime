@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Check what the meter holds at `Undefined`, `Refused` and `Incomplete` stops, charge atomicity, the
-field-order scan, the bounded log, saturation and the exposed deterministic orders. Evidence:
+field-order scan, the bounded log, exact over-`u64` charge requests and the exposed deterministic orders. Evidence:
 `tests/exact_meter_state.rs` (`--features exact`).
 
 ## Ownership and evidence
@@ -43,8 +43,12 @@ owned by open IR-349 step 2 and backlog IR-583 until removed; QSL-358's QSL-side
    `ScalarLimitsV1`-field-order counter is reported and that nothing was written.
 7. Admit more than `CHARGE_LOG_CAPACITY` charges; check the log holds the first 4096 in order, is
    marked truncated, and the counters stay exact and enforced.
-8. Drive a cumulative counter to `u64::MAX - 1` and a derived amount past `u64::MAX`; check the
-   charge is denied, not wrapped.
+8. Under a cumulative limit of `u64::MAX`, admit one unit from `u64::MAX - 1` and deny the next
+   unit without changing meter state. Request a quantity power charge past `u64::MAX`; check
+   `Incomplete::next_charge` equals the exact requested amount, the power was not computed, and
+   the denied charge admitted nothing and changed no counter or log entry. QSpec TC-187 U13
+   supplies the `36893488147419103232` quantity-power vector; kernel FR-359-AC-3/4 own exact
+   over-`u64` refusal and atomicity.
 9. Read `consumed` for all ten `LimitKind` members; iterate IEEE flags, dimension terms and
    compound-unit terms built in several orders; drive `UnitGraph::admit` and `check_terms` into
    inputs that fail more than one check.
