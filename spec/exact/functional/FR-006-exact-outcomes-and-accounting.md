@@ -56,7 +56,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
   of its record and how occurrences are counted are FR-010.
 - What the meter holds at an `Undefined` or `Refused` stop, the atomicity of one charge, the
   field-order scan over a charge's own size vector, the value and truncation behavior of
-  `CHARGE_LOG_CAPACITY`, and which derived amounts saturate are FR-011.
+  `CHARGE_LOG_CAPACITY`, and exact derived charge requests are FR-011.
 - The `exact` surface uses no host floating point, no `std`, no `unsafe` and no intentional panic
   path, and is re-exported from private modules only.
 
