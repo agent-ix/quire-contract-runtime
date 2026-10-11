@@ -350,17 +350,57 @@ fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause
     let mut backend = capable_backend();
     backend.finite_proof = false;
 
-    let width_and_proof = IeeeItemRequirement {
-        width: IeeeWidth::Binary32,
-        requires_finite_proof: true,
-        ..baseline_item()
-    };
-    assert_eq!(
-        negotiate_ieee(&[width_and_proof], &backend),
-        [IeeeDisposition::Unsupported(IeeeUnsupportedCause::Width(
-            IeeeWidth::Binary32
-        ))]
-    );
+    let mut missing_policy = backend.clone();
+    missing_policy.exceptional_policy = false;
+    let cases = [
+        (
+            "width",
+            IeeeItemRequirement {
+                width: IeeeWidth::Binary32,
+                requires_finite_proof: true,
+                ..baseline_item()
+            },
+            backend.clone(),
+            IeeeUnsupportedCause::Width(IeeeWidth::Binary32),
+        ),
+        (
+            "operation",
+            IeeeItemRequirement {
+                operation: IeeeOperationKind::Multiply,
+                requires_finite_proof: true,
+                ..baseline_item()
+            },
+            backend.clone(),
+            IeeeUnsupportedCause::Operation(IeeeOperationKind::Multiply),
+        ),
+        (
+            "rounding",
+            IeeeItemRequirement {
+                rounding: RoundingMode::NearestEven,
+                requires_finite_proof: true,
+                ..baseline_item()
+            },
+            backend.clone(),
+            IeeeUnsupportedCause::Rounding(RoundingMode::NearestEven),
+        ),
+        (
+            "exceptional policy",
+            IeeeItemRequirement {
+                requires_finite_proof: true,
+                ..baseline_item()
+            },
+            missing_policy,
+            IeeeUnsupportedCause::ExceptionalPolicy,
+        ),
+    ];
+
+    for (name, item, backend, cause) in cases {
+        assert_eq!(
+            negotiate_ieee(&[item], &backend),
+            [IeeeDisposition::Unsupported(cause)],
+            "missing {name} must precede an undischarged finite proof"
+        );
+    }
 }
 
 /// Trace: TC-030
