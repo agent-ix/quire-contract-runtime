@@ -505,6 +505,8 @@ fn tc_033_dimension_multiply_is_order_independent_ascending_and_zero_free() {
     assert_eq!(forward, backward);
     assert_ne!(forward, low.power(&int(2)));
     assert_ne!(forward, low.power(&int(3)).multiply(&high.power(&int(2))));
+    assert_ne!(forward, low.power(&int(3)).multiply(&high.power(&int(3))));
+    assert_ne!(forward, low.power(&int(2)).multiply(&high.power(&int(2))));
 
     let terms: Vec<(NodeKey, Integer)> = forward
         .exponents()
@@ -544,6 +546,8 @@ fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
     assert_eq!(forward, backward);
     assert_ne!(forward, CompoundUnit::dimensionless());
     assert_ne!(build([1, 2], [1, 2], [2, 3]), build([2, 1], [2, 1], [3, 2]));
+    assert_ne!(build([1, 2], [1, 2], [2, 3]), build([2, 1], [2, 1], [3, 3]));
+    assert_ne!(build([1, 2], [1, 2], [2, 3]), build([2, 1], [2, 1], [2, 2]));
 
     let terms: Vec<(NodeKey, Integer)> = forward
         .terms()

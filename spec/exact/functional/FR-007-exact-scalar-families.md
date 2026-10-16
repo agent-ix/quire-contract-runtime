@@ -96,9 +96,9 @@ accounting schedule.
 |----|----------|--------------|
 | FR-007-AC-1 | Integer division and modulus agree with QSpec ix://agent-ix/quire-specification/TC-192 in value, outcome kind and charges; the arithmetic amount `max(bits(a), bits(b))` is charged before the quotient exists. | Test (TC-018) |
 | FR-007-AC-2 | Decimal arithmetic, rounding and ordering agree with QSpec ix://agent-ix/quire-specification/TC-185, including D20–D21 ordering charges and D22–D23 result-retain upscale charges; every operand-derived amount is exact at its limit and denied one under before allocation. | Test (TC-019) |
-| FR-007-AC-3 | IEEE profile operations agree with QSpec ix://agent-ix/quire-specification/TC-193. | Test (TC-020) |
-| FR-007-AC-4 | Text and enum operations agree with QSpec ix://agent-ix/quire-specification/TC-186. | Test (TC-021) |
-| FR-007-AC-5 | Quantity and unit-graph operations agree with QSpec ix://agent-ix/quire-specification/TC-187. | Test (TC-022) |
+| FR-007-AC-3 | IEEE profile operations agree with QSpec `ix://agent-ix/quire-specification/TC-193`. | Test (TC-020) |
+| FR-007-AC-4 | Text and enum operations agree with QSpec `ix://agent-ix/quire-specification/TC-186`. | Test (TC-021) |
+| FR-007-AC-5 | Quantity and unit-graph operations agree with QSpec `ix://agent-ix/quire-specification/TC-187`. | Test (TC-022) |
 | FR-007-AC-6 | Every evaluated shared-corpus vector is executed on both the runtime and the quire-spec-language authority with equal Debug renderings; admission-only vectors and charges not yet metered by the authority are listed by name. | Test (TC-018, TC-019, TC-020, TC-021, TC-022) |
 | FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec ix://agent-ix/quire-specification/TC-191 P11 and ix://agent-ix/quire-specification/TC-190 Q11 atom charges, with denial behavior at every kernel point; operand-derived arithmetic and normalize amounts are charged before any intermediate or result is allocated. | Test (TC-023) |
 | FR-007-AC-8 | The six rounding spellings round every exact tie to the stated neighbour for both signs; an omitted spelling is `Exact` and refuses a discarded nonzero digit. | Test (TC-034) |

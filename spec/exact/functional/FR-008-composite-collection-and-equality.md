@@ -128,7 +128,7 @@ name and order; and no operator here decides anything the authority does not.
   placement, reaches no conversion arm, or fails target admission carries the corresponding
   `CheckedInvariantCause::{EqualityOperandSourceNotAdmitted, EqualityOperandNonIntegralDecimal,
   EqualityQuantityConversionRejected, EqualityQuantityNonExactPlacement,
-  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel ix://agent-ix/quire-exact/FR-369.
+  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel `ix://agent-ix/quire-exact/FR-369`.
   `EqualityQuantityConversionRejected` retains the conversion's `IllTypedCause` payload. These
   checked-program faults remain distinct from ordinary input refusals.
 - The `quire.value.accounting/v1` charge vocabulary gains twelve points ordered
