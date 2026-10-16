@@ -439,12 +439,10 @@ fn tc_034_modulo_is_euclidean_in_all_sign_quadrants_and_refuses_outside_domain()
 fn tc_034_division_profiles_admit_only_exposed_member() {
     assert_eq!(DivisionProfile::ALL.len(), 3);
     for profile in DivisionProfile::ALL {
-        let profile_index = match profile {
-            DivisionProfile::Truncating => 0,
-            DivisionProfile::Floor => 1,
-            DivisionProfile::Euclidean => 2,
-        };
-        assert!(profile_index < DivisionProfile::ALL.len());
+        // A new profile variant must fail this exhaustive match at compile time.
+        match profile {
+            DivisionProfile::Truncating | DivisionProfile::Floor | DivisionProfile::Euclidean => {}
+        }
         let cases = [
             (
                 DivisionMember::Quotient,
