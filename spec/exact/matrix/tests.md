@@ -33,16 +33,17 @@ type: TestMatrix
 | FR-008 | FR-008-AC-9 | TC-024, TC-025 | ✅ implemented |
 | FR-008 | FR-008-AC-13 | TC-024 | ✅ implemented: deep metadata clone, equality, formatting and drop in a small-stack thread and default-stack child process |
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-025 | 🚧 sequence and ordered-set cases not yet in tests/exact_collection.rs |
-| FR-007 | FR-007-AC-8 | TC-034 | 🚧 owner-backed by quire-exact FR-365-AC-1/2 for rounding ties and default; RT-local kernel test removed |
+| FR-007 | FR-007-AC-8 | TC-034 | 🚧 owner-backed by quire-exact FR-365-AC-1 for all six modes on positive and negative ties and FR-365-AC-2 for default Exact; RT-local kernel test removed |
 | FR-007 | FR-007-AC-9 | TC-034 | 🚧 owner-backed by quire-exact FR-366-AC-1..4 for IEEE NaNs, signed zero and order; RT-local kernel test removed |
 | FR-007 | FR-007-AC-10 | TC-034 | 🚧 owner-backed by quire-exact FR-362-AC-12/13 for rational canonical form and membership; RT-local kernel test removed |
 | FR-007 | FR-007-AC-11 | TC-034 | 🚧 owner-backed by quire-exact FR-363-AC-6/7 and `tests/ir673_decimal.rs`: equal normalized values, ordering size counters 8/3/1 versus 4/2/0, and one Boolean result unit in both comparisons; RT exact-feature binder remains planned after the local kernel test was removed |
-| FR-007 | FR-007-AC-12 | TC-034 | 🚧 retained RT quantity type-fault order and cross-dimension arithmetic tests bind this row; no retained RT test checks single-member division exposure or Euclidean `mod`, so those checks remain planned against the kernel |
+| FR-007 | FR-007-AC-12 | TC-034 | 🚧 retained RT tests tagged with this criterion cover only the quantity type-fault order and cross-dimension arithmetic clause; single-member division exposure remains untested in RT, with owner evidence in quire-exact `only_the_exposed_member_must_be_in_domain` (FR-357-AC-2) and FR-357-AC-3; `mod` is in AC-18 |
 | FR-007 | FR-007-AC-13 | TC-035 | ✅ implemented |
-| FR-007 | FR-007-AC-15 | TC-034 | 🚧 planned: execute the three quotient-sign rounding vectors and check the exact loss; no RT-local binder yet |
+| FR-007 | FR-007-AC-15 | TC-034 | 🚧 planned: execute the three quotient-sign rounding vectors and check the exact loss; no RT-local binder yet; owner FR-365-AC-1 covers all six modes on both signs of a tie, not these division vectors |
 | FR-007 | FR-007-AC-16 | TC-034 | 🚧 planned: execute affine-unit `Power` at zero and negative exponents; retained RT test checks affine refusal at a positive exponent only |
 | FR-007 | FR-007-AC-17 | TC-034 | 🚧 planned: execute `Multiply` and `Divide` on distinct non-affine units of the same dimension; retained RT tests use different dimensions |
-| FR-007 | FR-007-AC-18 | TC-034 | 🚧 planned: execute both Euclidean `mod` sign vectors and check non-Euclidean selection at admission; no retained RT `mod` test |
+| FR-007 | FR-007-AC-18 | TC-034 | 🚧 planned: execute all four Euclidean `mod` sign vectors and out-of-domain refusal; no retained RT `mod` test; owner quire-exact FR-357-AC-7 covers all four quadrants |
+| FR-007 | FR-007-AC-19 | owner QSpec TC-192 DIV-03 | 🚧 delegated to quire-specification FR-147-AC-5 / TC-192 DIV-03 for compiler admission refusal; RT neither produces nor tests it |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
 | FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented (compile_fail doctest on `IeeeDisposition`, `src/exact/ieee.rs`) |
 | FR-010 | FR-010-AC-1 | TC-031 | ✅ retained RT residue charge-point driver; owner-backed by quire-exact FR-358-AC-1 for generic injection |
@@ -85,7 +86,7 @@ type: TestMatrix
 | TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | 🚧 local RT evidence is limited to the residue charge-point driver under AC-1; AC-2/3 owner evidence is FR-358-AC-12/13 and TC-906, while RT's older kernel revision still needs a separate refresh |
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | 🚧 RT quantity, lazy connective and graph cases remain; owner tests cover matching kernel meter subsets |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | ✅ implemented |
-| TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12, FR-007-AC-15, FR-007-AC-16, FR-007-AC-17, FR-007-AC-18 | 🚧 RT quantity cases remain; single-member division, rounding-sign, affine-power, same-dimension unit and `mod` checks are planned; kernel semantic cases left and matching owner tests are FR-362/363/365/366 |
+| TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12, FR-007-AC-15, FR-007-AC-16, FR-007-AC-17, FR-007-AC-18 | 🚧 retained RT tests cover only the AC-12 quantity clause; single-member division, rounding-sign, affine-power, same-dimension unit and `mod` checks are planned; owner evidence includes quire-exact FR-357-AC-2/3/7, FR-362/363/365/366; admission AC-19 is delegated to QSpec TC-192 DIV-03 |
 | TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ implemented |
 | TC-194 | Apply checked functions with explicit frames and work fuel | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7, FR-273-AC-8, FR-273-AC-9, FR-273-AC-10, FR-273-AC-11 | 🚧 existing input and ordering evidence remains; resumable-body, explicit-frame and work-fuel cases are planned under IR-512 |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |

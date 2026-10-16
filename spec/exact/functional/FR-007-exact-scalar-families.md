@@ -30,8 +30,10 @@ accounting schedule.
 
 - Integer division and modulus follow the truncating, floor and Euclidean definitions. The three
   laws are selectable for `div`/`rem` only. `mod` takes no law and is **always** the Euclidean
-  remainder (`0 <= r < |b|`), charged only at the four `integer-modulus.*` points. A package that
-  selects a non-Euclidean `mod` law is refused at admission as `IncompatibleDefinition`. `div`
+  remainder (`0 <= r < abs(b)`), charged only at the four `integer-modulus.*` points. A `mod`
+  remainder outside the consumer domain is refused without a value as `ModuloOutOfDomain`.
+  Compiler admission refuses a package selecting a non-Euclidean `mod` law with
+  `invalid_package` / `incompatible-definition`, as in QSpec TC-192 DIV-03. `div`
   checks only its exposed quotient against the consumer domain; `rem` checks only its exposed
   remainder. An out-of-domain exposed member is refused without a value, while the unexposed
   member is never checked and cannot cause a refusal, as in QSpec
@@ -50,8 +52,10 @@ accounting schedule.
   `ix://agent-ix/quire-specification/FR-140`. An omitted spelling is strict `Exact`, which
   refuses any discarded nonzero digit. On an exact tie, `NearestEven` takes the neighbour with
   the even coefficient and `NearestAway` takes the neighbour away from zero. `TowardZero` and the
-  `NearestAway` tie use the sign of the exact quotient, not the sign of the retained coefficient;
-  `TowardNegative` always takes the floor and `TowardPositive` always takes the ceiling,
+  `NearestAway` tie use the sign of the exact value being rounded (for division, the exact
+  quotient), not the sign of the retained coefficient. The retained coefficient is the integer
+  coefficient of the result at the target scale. `TowardNegative` always takes the floor and
+  `TowardPositive` always takes the ceiling,
   independently of sign. No mode consults the host's floating point.
 - IEEE operations follow the default profile's exact-intermediate and rounding rules, and the
   profile's exceptional semantics are fixed rather than left to a backend:
@@ -105,16 +109,23 @@ accounting schedule.
 | FR-007-AC-5 | Quantity and unit-graph operations agree with QSpec `ix://agent-ix/quire-specification/TC-187`. | Test (TC-022) |
 | FR-007-AC-6 | Every evaluated shared-corpus vector is executed on both the runtime and the quire-spec-language authority with equal Debug renderings; admission-only vectors and charges not yet metered by the authority are listed by name. | Test (TC-018, TC-019, TC-020, TC-021, TC-022) |
 | FR-007-AC-7 | Integer arithmetic, rational arithmetic, ordering and Boolean connectives match an independent `i128` oracle and the QSpec ix://agent-ix/quire-specification/TC-191 P11 and ix://agent-ix/quire-specification/TC-190 Q11 atom charges, with denial behavior at every kernel point; operand-derived arithmetic and normalize amounts are charged before any intermediate or result is allocated. | Test (TC-023) |
-| FR-007-AC-8 | The six rounding spellings are `exact`, `toward-zero`, `toward-positive`, `toward-negative`, `nearest-even` and `nearest-away`, corresponding to the six named `RoundingMode` variants. On positive and negative exact ties, `NearestEven` selects the neighbour with the even coefficient and `NearestAway` selects the neighbour with greater absolute coefficient; an omitted spelling is `Exact` and refuses a discarded nonzero digit. | Test (TC-034) |
+| FR-007-AC-8 | The six rounding spellings are `exact`, `toward-zero`, `toward-positive`, `toward-negative`, `nearest-even` and `nearest-away`, corresponding to the six named `RoundingMode` variants. For positive and negative exact ties, `NearestEven` selects the neighbour with the even coefficient, `NearestAway` selects the neighbour with greater absolute coefficient, `TowardZero` selects the zero neighbour, `TowardPositive` selects the ceiling and `TowardNegative` selects the floor. An omitted spelling is `Exact` and refuses a discarded nonzero digit. | Test (TC-034) |
 | FR-007-AC-9 | IEEE NaN propagation is leftmost-wins with sign and payload preserved and the result quieted; `invalid` is raised when any operand is signaling; an unrepresentable NaN payload is refused, never truncated; `-0.0` and `+0.0` convert to the same exact value with `discarded_negative_zero` reported; `total_order_key` totally orders every bit pattern including both zeros and NaNs. | Test (TC-034) |
 | FR-007-AC-10 | `Rational` membership admits exactly the reduced pairs inside both intervals — including refusing a value whose numeric magnitude is inside the numerator interval but whose reduced denominator is outside the denominator interval — an absent domain decides no membership and retains, and every exposed rational is in canonical form with zero as `0/1`. | Test (TC-034) |
 | FR-007-AC-11 | Retained decimals `(110, 2)` and `(11, 1)` compare equal in value and both normalize to `(11, 1)` without changing their retained representations. On separate fresh meters, `(110, 2) < (11, 1)` and `(11, 1) < (11, 1)` both return false; their ordering size counters (`integer_bits`, `decimal_digits`, `scale_expansion`) are respectively `8/3/1` and `4/2/0`, while both comparisons consume `value_occurrences/work_units/result_units = 2/3/1`, including one Boolean `ordering.result-retain` result unit. | Test (TC-034) |
-| FR-007-AC-12 | `mod` exposes only the Euclidean remainder; `div`/`rem` check only their exposed quotient/remainder against the consumer domain, refuse an out-of-domain exposed member without a value and never refuse because the unexposed member is outside. For example, `10 div 5` completes with `2` in `Int[1,10]` although its remainder is `0`, while `-10 rem -1` completes with `0` in `Int[-10,5]` although its quotient is `10`; an out-of-domain quotient or remainder instead yields `DivisionOutOfDomain` naming that exposed member. Quantity `IllTyped` causes appear in the stated per-operation order with zero charges, and `Multiply`/`Divide`/`Power` raise no dimension fault. | Test (TC-034) |
+| FR-007-AC-12 | `div`/`rem` check only their exposed quotient/remainder against the consumer domain, refuse an out-of-domain exposed member without a value and never refuse because the unexposed member is outside. For example, `10 div 5` completes with `2` in `Int[1,10]` although its remainder is `0`, while `-10 rem -1` completes with `0` in `Int[-10,5]` although its quotient is `10`; an out-of-domain quotient or remainder instead yields `DivisionOutOfDomain` naming that exposed member. Quantity `IllTyped` causes appear in the stated per-operation order with zero charges, and `Multiply`/`Divide`/`Power` raise no dimension fault. For the `mod` law and domain refusal, see FR-007-AC-18. | Test (TC-034) |
 | FR-007-AC-13 | Every hand-written `Debug` impl for a boxed value or type struct (`Rational`, `RationalDomain`, `Decimal`, `DecimalType`, `Quantity`, `Text`, `EnumValue`, `ObjectReference`, `CompoundUnit`) renders exactly the fields its `*Fields` struct declares, in declaration order, against a fixed expected string. | Test (TC-035) |
-| FR-007-AC-15 | Execute decimal division at target scale 0 under `TowardZero`: `(-1, 0) / (-3, 0)` yields coefficient `0` from exact quotient `+1/3`; `(1, 0) / (-3, 0)` yields coefficient `0` with exact value `-1/3` in its loss. Execute `(-1, 0) / (-2, 0)` under `NearestAway`: the exact `+1/2` tie yields coefficient `+1`, not `0`. These vectors are derived from the kernel; confirm each result by execution and correct this criterion if a result differs, rather than changing the test to fit it. | Test (TC-034) |
-| FR-007-AC-16 | Execute `Power` on `1 celsius` with exponent `0` and with exponent `-1`; both return `IllTyped` with cause `AffineUnitArithmetic` and zero charges. These cases are derived from the type check; confirm them by execution and correct this criterion if a result differs, rather than changing the test to fit it. | Test (TC-034) |
-| FR-007-AC-17 | Execute `Multiply` and `Divide` on `2 kilometers` and `3 meters`, two different non-affine units of the same dimension; neither raises `IncompatibleDimensions` or `DistinctUnits`. Their canonical results are `6000 meters²` and `2000/3` dimensionless, respectively. These values are derived from the unit graph; confirm them by execution and correct this criterion if either result differs, rather than changing the test to fit it. | Test (TC-034) |
-| FR-007-AC-18 | Execute `mod` with a domain admitting both residues: `-7 mod 3` yields `2` and `7 mod -3` yields `1`, each satisfying `0 <= r < |b|`. `mod` takes no law argument, and package admission refuses a non-Euclidean `mod` selection as `IncompatibleDefinition`. These results are derived from the kernel and admission contract; confirm them by execution and correct this criterion if a result differs, rather than changing the test to fit it. | Test (TC-034) |
+| FR-007-AC-15 | Decimal division with a target coefficient interval `[-100,100]` and scale `0` under `TowardZero`: `(-1, 0) / (-3, 0)` yields coefficient `0` from exact quotient `+1/3`; `(1, 0) / (-3, 0)` yields coefficient `0` with exact value `-1/3` in its loss. Under `NearestAway`, `(-1, 0) / (-2, 0)` has exact `+1/2` and yields coefficient `+1`. | Test (TC-034) |
+| FR-007-AC-16 | `Power` on `1 celsius` with exponent `0` and with exponent `-1` returns `IllTyped` with cause `AffineUnitArithmetic` and zero charges in both cases. | Test (TC-034) |
+| FR-007-AC-17 | In a unit graph with canonical root `meter` and non-affine `kilometer = 1000 meters` with zero offset, `Multiply` and `Divide` on `2 kilometers` and `3 meters` raise neither `IncompatibleDimensions` nor `DistinctUnits`. Their canonical results are `6000 meters²` and `2000/3` dimensionless, respectively. | Test (TC-034) |
+| FR-007-AC-18 | With a domain admitting residues `1` and `2`, `7 mod 3 = 1`, `-7 mod 3 = 2`, `7 mod -3 = 1` and `-7 mod -3 = 2`, each satisfying `0 <= r < abs(b)` regardless of the selected `div`/`rem` law; `mod` takes no law argument. An out-of-domain `mod` remainder is refused without a value as `ModuloOutOfDomain`. | Test (TC-034) |
+| FR-007-AC-19 | Compiler admission refuses a package selecting a non-Euclidean `mod` law as `refused { code: invalid_package, cause: incompatible-definition }` before expression evaluation. RT carries the refusal vocabulary but neither produces nor tests this admission refusal. | Test (owner ix://agent-ix/quire-specification/FR-147-AC-5, TC-192 DIV-03) |
+
+## Verification notes
+
+Use the stated AC-15 through AC-18 vectors as TC-034 expected results. If execution differs,
+investigate the implementation and criterion together before changing either expected result.
+AC-19 is verified by the delegated QSpec admission case, not by an RT execution.
 
 ## Kernel ownership
 
