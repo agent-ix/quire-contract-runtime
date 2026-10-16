@@ -28,9 +28,11 @@ normalized values versus retained ordering size charges and the unchanged Boolea
 `ix://agent-ix/quire-exact/FR-357-AC-2` (`only_the_exposed_member_must_be_in_domain`) tests
 single-member admission, `FR-357-AC-3` tests exposed-member domain refusal, and
 `FR-357-AC-7` tests all four `mod` sign quadrants independently of the division profile.
-Those are kernel subsets only. The RT quantity type-fault ordering and any RT/QSL agreement
-remain separate obligations. The kernel tests left with the copied implementation; RT's
-quantity cases remain in `tests/exact_semantics.rs`.
+Those are kernel subsets only. RT-local `tests/exact_semantics.rs` now backs the consumed
+rounding behavior in AC-8, quotient-sign rounding and exact loss in AC-15, affine power
+refusal in AC-16, same-dimension quantity arithmetic in AC-17, Euclidean `mod` in AC-18,
+and division exposure in AC-19. RT quantity type-fault ordering and any RT/QSL agreement
+remain separate obligations.
 
 ## Test Procedure
 

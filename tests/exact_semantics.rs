@@ -1,15 +1,18 @@
-//! FR-007 exact semantics of the unit graph and quantity type-fault order that the runtime still
-//! defines (the interim residue of FR-275), through the public `exact` surface.
+//! FR-007 exact rounding, division, Euclidean `mod`, and quantity semantics through the public
+//! `exact` surface. Quantity evaluation remains runtime-owned during FR-275.
 //!
-//! The decimal rounding, IEEE exceptional, rational membership, Euclidean `mod` and decimal
-//! normalization cases left with the kernel to `quire-exact` (FR-275).
+//! IEEE exceptional, rational membership, and decimal normalization cases are kernel-owned.
 #![cfg(feature = "exact")]
 
 use quire_contract_runtime::exact::{
     evaluate_quantity, NodeKey, Quantity, QuantityOperation, QuantityUnit, UnitDeclaration,
     UnitGraph,
 };
-use quire_exact::{IllTypedCause, Integer, Meter, Rational, ScalarLimits};
+use quire_exact::{
+    divide, evaluate_decimal, modulo, Decimal, DecimalOperation, DecimalType, DivisionMember,
+    DivisionProfile, IllTypedCause, InexactTarget, Integer, IntegerDomain, IntegerInterval, Meter,
+    Outcome, Rational, Refusal, RoundingMode, ScalarLimits,
+};
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
 
@@ -34,6 +37,109 @@ fn int(value: i128) -> Integer {
 
 fn ratio(numerator: i128, denominator: i128) -> Rational {
     Rational::new(int(numerator), int(denominator)).unwrap()
+}
+
+fn int_domain(lower: i128, upper: i128) -> IntegerDomain {
+    IntegerDomain::Bounded(IntegerInterval::new(int(lower), int(upper)).unwrap())
+}
+
+fn decimal_target(mode: RoundingMode) -> DecimalType {
+    DecimalType::new(int(-100), int(100), 0, 0, mode).unwrap()
+}
+
+fn decimal_divide(
+    numerator: i128,
+    denominator: i128,
+    mode: RoundingMode,
+) -> Outcome<quire_exact::DecimalResult> {
+    let left = Decimal::new(int(numerator), 0);
+    let right = Decimal::new(int(denominator), 0);
+    evaluate_decimal(
+        DecimalOperation::Divide(&left, &right),
+        &decimal_target(mode),
+        &mut Meter::new(UNLIMITED),
+    )
+}
+
+/// Trace: TC-034, FR-007-AC-8
+#[test]
+fn tc_034_rounding_modes_select_signed_tie_neighbours() {
+    assert_eq!(RoundingMode::ALL.len(), 6);
+    // Columns follow the exhaustive mode match below: Exact, TowardZero,
+    // TowardPositive, TowardNegative, NearestEven, NearestAway.
+    let cases = [
+        (1, [None, Some(0), Some(1), Some(0), Some(0), Some(1)]),
+        (-1, [None, Some(0), Some(0), Some(-1), Some(0), Some(-1)]),
+        (3, [None, Some(1), Some(2), Some(1), Some(2), Some(2)]),
+        (-3, [None, Some(-1), Some(-1), Some(-2), Some(-2), Some(-2)]),
+    ];
+    for mode in RoundingMode::ALL {
+        let column = match mode {
+            RoundingMode::Exact => 0,
+            RoundingMode::TowardZero => 1,
+            RoundingMode::TowardPositive => 2,
+            RoundingMode::TowardNegative => 3,
+            RoundingMode::NearestEven => 4,
+            RoundingMode::NearestAway => 5,
+        };
+        for (numerator, expected) in cases {
+            let Some(expected) = expected[column] else {
+                assert_eq!(
+                    decimal_divide(numerator, 2, mode),
+                    Outcome::Refused(Refusal::InexactDecimal {
+                        target: InexactTarget::Decimal(Box::new(decimal_target(mode))),
+                    }),
+                );
+                continue;
+            };
+            let result = decimal_divide(numerator, 2, mode)
+                .completed()
+                .expect("rounded tie");
+            assert_eq!(
+                result.value().representation().coefficient(),
+                &int(expected),
+                "{mode:?}, {numerator}"
+            );
+        }
+    }
+}
+
+/// Trace: TC-034, FR-007-AC-8
+#[test]
+fn tc_034_rounding_mode_spellings_and_default() {
+    assert_eq!(RoundingMode::ALL.len(), 6);
+    assert_eq!(RoundingMode::default(), RoundingMode::Exact);
+    for mode in RoundingMode::ALL {
+        let spelling = match mode {
+            RoundingMode::Exact => "exact",
+            RoundingMode::TowardZero => "toward-zero",
+            RoundingMode::TowardPositive => "toward-positive",
+            RoundingMode::TowardNegative => "toward-negative",
+            RoundingMode::NearestEven => "nearest-even",
+            RoundingMode::NearestAway => "nearest-away",
+        };
+        assert_eq!(mode.as_str(), spelling);
+        assert_eq!(RoundingMode::from_code(spelling), Some(mode));
+    }
+}
+
+/// Trace: TC-034, FR-007-AC-15
+#[test]
+fn tc_034_division_rounds_by_quotient_sign_and_records_exact_loss() {
+    for (a, b, mode, coefficient, exact) in [
+        (-1, -3, RoundingMode::TowardZero, 0, ratio(1, 3)),
+        (1, -3, RoundingMode::TowardZero, 0, ratio(-1, 3)),
+        (-1, -2, RoundingMode::NearestAway, 1, ratio(1, 2)),
+    ] {
+        let result = decimal_divide(a, b, mode)
+            .completed()
+            .expect("rounded quotient");
+        assert_eq!(
+            result.value().representation().coefficient(),
+            &int(coefficient)
+        );
+        assert_eq!(result.loss().expect("inexact quotient").exact(), exact);
+    }
 }
 
 const DIM_LENGTH: NodeKey = NodeKey::from_bytes([1; 32]);
@@ -257,5 +363,135 @@ fn tc_034_quantity_zero_power_and_affine_refusal() {
         let error = evaluate_quantity(operation, &mut meter).unwrap_err();
         assert_eq!(error.cause, IllTypedCause::AffineUnitArithmetic);
         assert!(meter.admitted_charges().is_empty());
+    }
+}
+
+/// Trace: TC-034, FR-007-AC-16
+#[test]
+fn tc_034_affine_power_refuses_zero_and_negative_exponents_without_charges() {
+    let graph = graph();
+    let celsius = quantity(&graph, UNIT_CELSIUS, 1);
+    for exponent in [0, -1] {
+        let mut meter = Meter::new(UNLIMITED);
+        let error = evaluate_quantity(
+            QuantityOperation::Power(&celsius, &int(exponent)),
+            &mut meter,
+        )
+        .unwrap_err();
+        assert_eq!(error.cause, IllTypedCause::AffineUnitArithmetic);
+        assert!(meter.admitted_charges().is_empty());
+    }
+}
+
+/// Trace: TC-034, FR-007-AC-17
+#[test]
+fn tc_034_distinct_units_of_same_dimension_multiply_and_divide() {
+    let graph = graph();
+    let kilometers = quantity(&graph, UNIT_KILOMETER, 2);
+    let meters = quantity(&graph, UNIT_METER, 3);
+    let product = evaluate_quantity(
+        QuantityOperation::Multiply(&kilometers, &meters),
+        &mut Meter::new(UNLIMITED),
+    )
+    .expect("same-dimension product");
+    assert_eq!(
+        product.completed(),
+        Some(Quantity::new(
+            ratio(6000, 1),
+            QuantityUnit::Compound(graph.compound_unit(&[(UNIT_METER, int(2))]).unwrap()),
+        ))
+    );
+    let quotient = evaluate_quantity(
+        QuantityOperation::Divide(&kilometers, &meters),
+        &mut Meter::new(UNLIMITED),
+    )
+    .expect("same-dimension quotient");
+    assert_eq!(
+        quotient.completed(),
+        Some(Quantity::new(
+            ratio(2000, 3),
+            QuantityUnit::Compound(graph.compound_unit(&[]).unwrap()),
+        ))
+    );
+}
+
+/// Trace: TC-034, FR-007-AC-18
+#[test]
+fn tc_034_modulo_is_euclidean_in_all_sign_quadrants_and_refuses_outside_domain() {
+    let domain = int_domain(0, 2);
+    for (a, b, expected) in [(7, 3, 1), (-7, 3, 2), (7, -3, 1), (-7, -3, 2)] {
+        assert_eq!(
+            modulo(&int(a), &int(b), &domain, &mut Meter::new(UNLIMITED)),
+            Outcome::Completed(int(expected)),
+        );
+    }
+    let refused = int_domain(0, 1);
+    assert_eq!(
+        modulo(&int(-7), &int(3), &refused, &mut Meter::new(UNLIMITED)),
+        Outcome::Refused(Refusal::ModuloOutOfDomain {
+            domain: Box::new(IntegerInterval::new(int(0), int(1)).unwrap()),
+        }),
+    );
+}
+
+/// Trace: TC-034, FR-007-AC-19
+#[test]
+fn tc_034_division_profiles_admit_only_exposed_member() {
+    assert_eq!(DivisionProfile::ALL.len(), 3);
+    for profile in DivisionProfile::ALL {
+        // A new profile variant must fail this exhaustive match at compile time.
+        match profile {
+            DivisionProfile::Truncating | DivisionProfile::Floor | DivisionProfile::Euclidean => {}
+        }
+        let cases = [
+            (
+                DivisionMember::Quotient,
+                10,
+                5,
+                int_domain(1, 10),
+                Outcome::Completed(int(2)),
+            ),
+            (
+                DivisionMember::Remainder,
+                -10,
+                -1,
+                int_domain(-10, 5),
+                Outcome::Completed(int(0)),
+            ),
+            (
+                DivisionMember::Quotient,
+                -10,
+                -1,
+                int_domain(-10, 5),
+                Outcome::Refused(Refusal::DivisionOutOfDomain {
+                    domain: Box::new(IntegerInterval::new(int(-10), int(5)).unwrap()),
+                    member: DivisionMember::Quotient,
+                }),
+            ),
+            (
+                DivisionMember::Remainder,
+                9,
+                10,
+                int_domain(0, 5),
+                Outcome::Refused(Refusal::DivisionOutOfDomain {
+                    domain: Box::new(IntegerInterval::new(int(0), int(5)).unwrap()),
+                    member: DivisionMember::Remainder,
+                }),
+            ),
+        ];
+        for (member, a, b, domain, expected) in cases {
+            assert_eq!(
+                divide(
+                    profile,
+                    member,
+                    &int(a),
+                    &int(b),
+                    &domain,
+                    &mut Meter::new(UNLIMITED)
+                ),
+                expected,
+                "{profile:?}, {member:?}, {a}, {b}"
+            );
+        }
     }
 }
