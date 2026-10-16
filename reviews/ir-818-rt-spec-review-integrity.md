@@ -38,3 +38,12 @@ Ticket: IR-818. Checked structural consistency across the five changed files. Th
 ## Verdict
 
 APPROVE WITH NITS (two low). The cross-file trace is consistent, and every planned row names the same ticket, test file and feature. `quire validate` passes on all five files, and `make spec` grammar is 192/192 clean. The `--strict` coverage failure (120 unbacked rows) was already failing before this PR; the PR adds the four planned rows it declares.
+
+## Dispositions
+
+Round 1, head d1ebadd943a15db39c75a3200eb3f23cd0882728, judged against the spec text.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The ticket-named key is removed. interface-001 matches origin/main and no residue item is added, so FR-275's list and interface-001 diverge by nothing new. |
+| FND-002 | fixed | The TC-201 row now follows TC-199. |

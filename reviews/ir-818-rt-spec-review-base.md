@@ -51,3 +51,15 @@ Verified true: the charge order (one `unit.identity-read`; all `unit.edge` charg
 ## Verdict
 
 CHANGES REQUESTED. One high, two medium, two low. The behavioural claims check out against the code: the charge schedule, refusal before any charge, declared-node versus compound-map admission, affine conversion, and every quoted value and charge tuple I re-derived (U22 `cm2`, U26, U15) match `src/exact/quantity.rs` and TC-187. The compound-target gap is stated in the open (see SR-11973 for its precision). What blocks the PR is placement and ownership: the function is added to a residue the spec itself calls unauthorized, and the plan for removing it in step 4 cites a move into a crate that does not have the function. The matrix rows, the file-to-TC row, the evidence line and the spec.md range agree with each other. `quire validate` is clean on all five files. `make spec` fails `--strict` with 120 unbacked rows, a pre-existing failure; this PR adds the four planned FR-007-AC-20..23 rows to that count.
+
+## Dispositions
+
+Round 1, head d1ebadd943a15db39c75a3200eb3f23cd0882728, judged against the spec text.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | No new RT symbol: interface-001 is back to origin/main (the residue key is gone) and FR-275's residue is unchanged; the criteria are pinned on the existing convert_quantity with QuantityTarget::Exact. |
+| FND-002 | fixed | Step 4 now deletes RT's convert_quantity and consumers switch to the shared crate. Checked with git show at the quire-semantic-value revision in RT's Cargo.lock: src/quantity.rs exports convert_quantity(source: UnitQuantity, unit, target: &QuantityTarget, meter) -> Result<Outcome<Conversion>, IllTyped>, and its QuantityTarget has Exact. |
+| FND-003 | fixed | Cites IR FR-038-AC-213, which admits only the exact mode for quire.op.quantity.convert. |
+| FND-004 | fixed | FR-142-AC-3 is now excluded and FR-142-AC-7 is cited, in FR-007 and in TC-201. |
+| FND-005 | fixed | No new symbol, so nothing to name: the function name is gone. |

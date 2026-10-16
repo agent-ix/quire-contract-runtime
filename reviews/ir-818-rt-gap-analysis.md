@@ -34,3 +34,12 @@ Ticket: IR-818. Planless gap analysis of a spec-only PR. It compares what FR-007
 ## Verdict
 
 CHANGES REQUESTED (one medium, one low). Every behaviour the ACs claim exists in `convert_quantity` as written: exact rational composition through the root, refusal before any charge, affine conversion, the edge-first charge schedule, `unit.target-domain` with no size, and denial through `Outcome::from_stop` with no partial value. The wrapper therefore needs no new kernel logic. The compound-target scope cut leaves the one input `convert_quantity` already admits but no AC specifies, and the compound refusal branch has no vector.
+
+## Dispositions
+
+Round 1, head d1ebadd943a15db39c75a3200eb3f23cd0882728, judged against the spec text.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | A compound target is now specified as admitted, with an empty root path and no edge, matching converts_to (_ => has_dimension_of) and path() (Compound => &[]). AC-23 binds U25's first step (N_m to compound kg*m^2*s^-2, exact 1). |
+| FND-002 | fixed | AC-21 now binds the compound branch with compound 4 m^2 to m (map {L:2} against {L:1}), and TC-201 step 3 matches. |

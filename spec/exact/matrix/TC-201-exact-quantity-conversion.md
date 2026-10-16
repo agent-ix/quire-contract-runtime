@@ -30,14 +30,13 @@ FR-007-AC-20 through AC-25, not copied from QSpec. Lossy conversion (`FR-142-AC-
    U09, U22 `N_m` to `J`, compound `4 m^2` to `m`); expect `Err(IllTyped)` `IncompatibleDimensions`
    and a meter with no charge.
 4. Convert `0 degC` to `K` and `1 u2` to `u1`; expect success, not `AffineUnitArithmetic`.
-5. Run `evaluate_quantity` Add, Subtract, Multiply, Divide and Power on `degC` (U05), then U20's
+5. Run `evaluate_quantity` Add, Subtract, Multiply and Divide of `1 degC` with `2 degC`, and Power of `1 degC` to `2` (U05), then U20's
    `u1 + u1`, `u3 * m` and `u2 + u2`; expect `AffineUnitArithmetic` with zero charges, and `3 u2`.
 6. Run U10, U15 first tuple, U22 `m2` and `cm2` first tuples, U25 both steps and U26 first tuple;
    check the recorded charge order and amounts.
 7. Run the denying tuples of FR-007-AC-25 (U10 with `result_units: 0`, U15 and U22 and U26 second
-   tuples); check each `Incomplete` field and that no partial quantity is returned. The test author
-   executes the U10 tuple and corrects the expected fields if the executed value differs; never
-   the test to fit the criterion.
+   tuples); check each `Incomplete` field and that no partial quantity is returned. A differing executed
+   value for the U10 tuple is a finding, never a reason to change the test to fit.
 
 ## Expected Results
 
