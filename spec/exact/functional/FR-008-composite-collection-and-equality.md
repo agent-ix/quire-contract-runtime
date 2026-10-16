@@ -70,7 +70,7 @@ name and order; and no operator here decides anything the authority does not.
   member, in ascending canonical-key order. A bag retains every occurrence in ascending
   canonical-key order, so equal occurrences are adjacent.
 - Every type that admits `=` has a total, type-owned canonical key: two values of that type have
-  equal keys exactly when they are FR-149 equal. The key fixes set and bag canonical and visiting
+  equal keys exactly when they are ix://agent-ix/quire-specification/FR-149 equal. The key fixes set and bag canonical and visiting
   order; it is not a general ordering operator and is not exposed for any type that does not admit
   `=`. Absent orders before null, which orders before a present value
   (`Absent < Null < Present`). Comparison is iterative over an explicit task stack, so value depth
@@ -81,8 +81,8 @@ name and order; and no operator here decides anything the authority does not.
   comparison type — before any charge. `plan_equality` forms the occurrence-pair plan of two
   completed operands with no charge; a reference pair whose universes differ refuses as
   `ForeignReference` at plan time, never as a charged comparison. `CheckedEquality::evaluate` then
-  runs the left and right conversion charges in operand order and the selected schedule: the FR-141
-  text, FR-141 enum or FR-142 quantity schedule for those top-level types, and otherwise
+  runs the left and right conversion charges in operand order and the selected schedule: the ix://agent-ix/quire-specification/FR-141
+  text, ix://agent-ix/quire-specification/FR-141 enum or ix://agent-ix/quire-specification/FR-142 quantity schedule for those top-level types, and otherwise
   `equality.plan-form`, `equality.plan`, one `equality.pair` per planned occurrence-path pair and
   `equality.result-retain`.
 - `TypeEnvironment::build` constructs the finite value rooted at one `GraphNodeId` of a `ValueGraph`
@@ -92,7 +92,7 @@ name and order; and no operator here decides anything the authority does not.
 - A `Reference<T>` value is terminal: its identity is the supplied `(UniverseIdentity, object-type
   key, ObjectIdentity)` triple, equality never inspects referenced state, and no source form
   constructs one from a component value.
-- `Value` carries no structural equality; the FR-149 relation reached through `plan_equality` and
+- `Value` carries no structural equality; the ix://agent-ix/quire-specification/FR-149 relation reached through `plan_equality` and
   `CheckedEquality::evaluate` is the only equality, because a structural comparison would be a second,
   unmetered relation and would be wrong for signed zero, NaN-bearing values, decimal values retained
   at differing scales, and reference pairs from different universes.
@@ -115,13 +115,13 @@ name and order; and no operator here decides anything the authority does not.
   `ConstructionRefusal`, `GraphRefusal`, `IllTyped`, the extended `Refusal` and `Undefined`) exactly
   as the authority names it; it never re-derives, renames or infers a refusal the authority does not
   already carry.
-- The `Undefined` and `Refusal` vocabularies are extended to their FR-149/FR-144 complete authority
+- The `Undefined` and `Refusal` vocabularies are extended to their ix://agent-ix/quire-specification/FR-149 / ix://agent-ix/quire-specification/FR-144 complete authority
   shape: `Undefined::EmptyReduction` and `Undefined::NoneValue` (reachable only from direct kernel
   evaluation of an unlinked expression, which this crate does not yet expose — see Out of Scope);
   `Refusal::ForeignReference`; `Refusal::CardinalityOutOfBound { violation, kind, bound, count }`
   with its `BoundViolation::{BelowMinimum, AboveMaximum}`; and `Refusal::CheckedInvariant { cause }`, reachable
   only when a checked-program invariant fails and unreachable from any admitted vector. `Refusal`
-  gains a `cause()` method carrying the closed FR-272 cause tag beside `code()`, populated for
+  gains a `cause()` method carrying the closed ix://agent-ix/quire-specification/FR-272 cause tag beside `code()`, populated for
   `CardinalityOutOfBound` and empty for every other variant.
 - A checked equality operand that violates its source admission, reaches a nonintegral decimal
   conversion to integer, has its quantity conversion rejected, receives a nonexact quantity

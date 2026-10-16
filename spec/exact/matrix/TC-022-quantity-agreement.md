@@ -10,12 +10,12 @@ relationships:
 
 ## Description
 
-Execute every QSpec TC-187 vector on the runtime and on quire-spec-language.
+Execute every QSpec ix://agent-ix/quire-specification/TC-187 vector on the runtime and on quire-spec-language.
 Evidence: none in this repository. The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done).
 
 ## Test Procedure
 
-1. Check the evaluated and admission-only lists together equal the TC-187 census.
+1. Check the evaluated and admission-only lists together equal the ix://agent-ix/quire-specification/TC-187 census.
 2. Compare dimension algebra, ill-typed combinations, graph topology refusals (zero scale,
    duplicate root, cross-dimension target, target cycle, unknown target, missing root), decimal
    and integer targets, compound units and values on both sides; compare charges and counters where

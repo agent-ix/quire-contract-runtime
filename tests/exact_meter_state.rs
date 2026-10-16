@@ -299,6 +299,7 @@ fn tc_032_ac7_dimension_terms_ascend_by_node_key_for_any_construction_order() {
         graph.dimension(k2).unwrap(),
         graph.dimension(k3).unwrap(),
     );
+    assert_ne!(d1, d2);
     let combinations = [
         d1.multiply(d2).multiply(d3),
         d3.multiply(d1).multiply(d2),

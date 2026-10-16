@@ -29,9 +29,9 @@ evidence. Shared-authority agreement remains separate, with open quire-integrati
 
 ## Test Procedure
 
-1. TC-191 P11 atoms: `2 > 0` and `2 - 1` each charge three points at `integer_bits` 2; the scalar
+1. ix://agent-ix/quire-specification/TC-191 P11 atoms: `2 > 0` and `2 - 1` each charge three points at `integer_bits` 2; the scalar
    atoms of `down(2)` cost 15 work and 5 result units and stop at `0 > 0` retention under 14 work.
-2. `3/2` charges four rational points at `integer_bits` 2; TC-190 Q11 `acc + x` charges
+2. `3/2` charges four rational points at `integer_bits` 2; ix://agent-ix/quire-specification/TC-190 Q11 `acc + x` charges
    `integer-arithmetic.*` per step.
 3. `implies`: left true costs 7 work and 3 results; left false skips the right operand and costs 4
    and 2. A stopped right operand is returned unchanged without `boolean.result-retain`.
