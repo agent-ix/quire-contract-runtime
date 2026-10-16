@@ -33,7 +33,7 @@ mod json {
         r#""counterSemantics":"saturating-u64-v1","counts":{"accepted":0,"rejected":0,"failed":0,"discarded":0}}"#
     );
 
-    /// Trace: TC-015, FR-004-AC-4, FR-004-AC-5
+    /// Trace: TC-015, FR-004-AC-4, FR-004-AC-5, FR-004-AC-9
     #[test]
     fn tc_015_actual_mixed_report_has_independent_exact_json() {
         let mut report = report("FR-\"é", "007");
