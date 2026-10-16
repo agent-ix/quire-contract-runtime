@@ -79,7 +79,7 @@ Stakeholder requirement StR-001 is refined by functional requirements FR-001 thr
 FR-006 through FR-012, FR-273, FR-275, the planned monitor consumer FR-276, and quality requirements NFR-001 and NFR-002. `interface-001` defines the language-neutral
 runtime API contract implemented by those FRs. FR-275 states the end state of the exact kernel: QSL's
 kernel and the residue QSL-358 takes over, consumed and never copied, so the runtime holds no ported QSL code. Test cases TC-001 through TC-004, TC-006, TC-007, TC-015 through
-TC-035 (TC-027–TC-029 unused), TC-194–TC-195, TC-197–TC-199, and planned TC-200 provide the verification matrix.
+TC-035 (TC-027–TC-029 unused), TC-194–TC-195, TC-197–TC-199, planned TC-200 and planned TC-201 provide the verification matrix.
 
 ## References
 

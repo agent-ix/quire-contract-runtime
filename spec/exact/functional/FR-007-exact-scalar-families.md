@@ -81,6 +81,24 @@ accounting schedule.
   units, first failure wins. `Multiply`, `Divide` and `Power` check affine-unit arithmetic only:
   their dimensions combine rather than having to match, so a dimension difference is not a fault
   there. Every one of these is `IllTyped`, reported beside the outcome with zero charges.
+- Exact quantity-to-quantity conversion (IR-818) is the thin function
+  `convert_quantity_exact(source, unit, meter)`, which returns
+  `Result<Outcome<Quantity>, IllTyped>` over the existing `convert_quantity` with the `Exact`
+  target. It is exact only: it takes no `RoundingMode`, and `Decimal` and `Integer` conversion
+  targets are not part of it. A direct conversion needs equal dimensions: two declared units must
+  share one dimension node, so distinct nodes with equal base-dimension maps are refused, while a
+  compound side compares normalized base-dimension maps. Affine units are convertible; only
+  `Add`, `Subtract`, `Multiply`, `Divide` and `Power` refuse them. `IncompatibleDimensions` is
+  `IllTyped` reported as `Err` before the identity read, so it charges nothing. The charge order is
+  one `unit.identity-read`; one `unit.edge` per edge of the source-to-root path and then of the
+  root-to-target path, all before the first rational event and with no common-ancestor shortcut;
+  two `unit.rational-arithmetic` events per edge (multiply then add forward, subtract then divide
+  in reverse); then `unit.target-domain` with no size amount; then `unit.result-retain`. A
+  **compound unit as the conversion target** is not specified or tested by this slice (a compound
+  *source* is); that gap is stated rather than filled, and the QSpec cases that need it (TC-187
+  U25's first step) are not bound here. The function moves to `quire-semantic-value` with the
+  `quantity` and `unit` modules in AD-004 step 4 (the `Value`-bearing set) and is deleted from RT
+  in that step; it is not re-exported from RT and no second copy remains.
 - `Rational[lo..hi; dmin..dmax]` membership is componentwise on the **reduced** form: the reduced
   numerator must lie in the numerator interval and the reduced denominator in the denominator
   interval. It is therefore not a numeric interval — a domain whose numeric span plainly contains
@@ -122,8 +140,20 @@ accounting schedule.
 | FR-007-AC-17 | In a unit graph with canonical root `meter` and non-affine `kilometer = 1000 meters` with zero offset, `Multiply` and `Divide` on `2 kilometers` and `3 meters` raise neither `IncompatibleDimensions` nor `DistinctUnits`. Their canonical results are `6000 meters²` and `2000/3` dimensionless, respectively. | Test (TC-034) |
 | FR-007-AC-18 | With a domain admitting residues `1` and `2`, `7 mod 3 = 1`, `-7 mod 3 = 2`, `7 mod -3 = 1` and `-7 mod -3 = 2`, each satisfying `0 <= r < abs(b)` regardless of the selected `div`/`rem` law; `mod` takes no law argument. An out-of-domain `mod` remainder is refused without a value as `ModuloOutOfDomain`. | Test (TC-034) |
 | FR-007-AC-19 | Under every `div`/`rem` profile, `div` checks only its exposed quotient and `rem` checks only its exposed remainder against the consumer domain; neither refuses because the unexposed member is outside. `10 div 5` returns `2` in `Int[1,10]` although its remainder is `0`, and `-10 rem -1` returns `0` in `Int[-10,5]` although its quotient is `10`. `-10 div -1` in `Int[-10,5]` refuses without a value as `DivisionOutOfDomain` naming the Quotient member. `9 rem 10` in `Int[0,5]` refuses without a value as `DivisionOutOfDomain` naming the Remainder member although its quotient is `0`. | Test (TC-034) |
+| FR-007-AC-20 | `convert_quantity_exact` between two units of equal dimension returns a completed `Quantity` in the target unit whose magnitude is `inverse(target_path)(source_path(v))` over exact rationals, with no `DecimalLoss` and no rounding: `250 cm` to `m` is `5/2 m` (QSpec TC-187 U01), `0 degC` and `32 degF` to `K` are both `5463/20 K` (U04), a distinct unit key under `L` with scale one converts to `m` exactly while keeping its own unit identity (U09b), compound `4 m^2` to `m2` is `4 m2` (U22), compound `kg*m^2*s^-2` to `J` is `1 J` (U25 second step), and `1 u2` to `u1` is `-9 u1` (U26); and for every numerator and denominator in an `i128` sweep of scale and offset fractions the magnitude equals an independent `i128` rational oracle. | Test (TC-201) |
+| FR-007-AC-21 | `convert_quantity_exact` between declared units on distinct dimension nodes, or between units with different normalized base-dimension maps, returns `Err(IllTyped)` with cause `IncompatibleDimensions` before any `unit.identity-read` or other charge, leaving the meter unchanged: `1 m` to `s` (U03-style), a base-dimension name and shape equal to `L` under a different semantic-node key (U09), and `1 N_m` to `J` (U22). | Test (TC-201) |
+| FR-007-AC-22 | `convert_quantity_exact` converts an affine source or target unit exactly while `Add`, `Subtract`, `Multiply`, `Divide` and `Power` on that unit still return `IllTyped` with cause `AffineUnitArithmetic` with zero charges: `0 degC` converts to `K` while `1 u1 + 2 u1` and `1 u3 * 1 m` refuse (U04, U20 conversion side). | Test (TC-201) |
+| FR-007-AC-23 | `convert_quantity_exact` charges one `unit.identity-read`, then all `unit.edge` charges for the source-to-root path followed by the root-to-target path with no shortcut, then two `unit.rational-arithmetic` events per edge, then `unit.target-domain` with no size amount, then `unit.result-retain`, and a limit that denies a charge returns `Incomplete` with the denied limit kind, limit, consumed amount, next charge and charge point and no partial quantity: `100 cm` to `m` under the exact U10 tuple returns `1 m` and a denied `unit.result-retain` is `Incomplete` (U10); `1 in` to `cm` under the U15 tuples returns `127/50 cm`, then `Incomplete` at `unit_edges` limit 1, consumed 1, next charge 2, `unit.edge`; compound `4 m^2` to `cm2` under the U22 tuples returns `40000 cm2`, then `Incomplete` at `integer_bits` limit 16, consumed 5, next charge 17, `unit.rational-arithmetic`; compound `kg*m^2*s^-2` to `J` under the U25 tuple makes one read, target admission and retention with no edge; and `1 u2` to `u1` under the U26 tuples returns `-9 u1`, then `Incomplete` at `unit_edges` limit 2, consumed 2, next charge 3, `unit.edge`. | Test (TC-201) |
 
 ## Verification notes
+
+FR-007-AC-20 through FR-007-AC-23 are PLANNED and are backed by RT-local `convert_quantity_exact` tests
+(TC-201) under `--features exact` once IR-818's code slice lands. They cite QSpec
+`ix://agent-ix/quire-specification/FR-142-AC-1` through `FR-142-AC-5` and `FR-142-AC-10` and
+TC-187 rows U01, U03, U04, U09, U09b, U10, U15, U20, U22, U25 and U26 by id; they do not copy
+those bytes. The pre-existing `convert_quantity` has no RT test. Compound-unit conversion
+*targets*, `Decimal` and `Integer` targets and any `RoundingMode` are not specified here, and
+U25's first step (a compound target) is not bound. Shared-corpus agreement stays IR-669 (TC-022).
 
 The six literal rounding spellings, their mapping to the consumed `RoundingMode` variants,
 the consumed enum's `Exact` default, directed-mode ties and explicit `Exact` refusal in

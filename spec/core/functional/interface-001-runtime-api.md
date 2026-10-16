@@ -191,6 +191,7 @@ exact:
       equality: [CheckedEquality, EqualityOperand, EqualityOperator, EqualitySchedule]
       enumeration: [EnumValue]
       quantity: [QuantityOperation, QuantityTarget, QuantityUnit, Conversion, evaluate_quantity, convert_quantity]
+      quantity_residue_added_by_ir_818: [convert_quantity_exact]  # exact-only Quantity-returning conversion (FR-007-AC-20..23); AD-004 step 4 moves it to quire-semantic-value with `quantity`, no second copy
   runtime_owned:
     owner: quire-contract-runtime
     module: scalar  # target: the module does not exist yet; today these items are in the exact module
