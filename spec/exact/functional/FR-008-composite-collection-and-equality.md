@@ -128,7 +128,7 @@ name and order; and no operator here decides anything the authority does not.
   placement, reaches no conversion arm, or fails target admission carries the corresponding
   `CheckedInvariantCause::{EqualityOperandSourceNotAdmitted, EqualityOperandNonIntegralDecimal,
   EqualityQuantityConversionRejected, EqualityQuantityNonExactPlacement,
-  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel FR-369.
+  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel ix://agent-ix/quire-exact/FR-369.
   `EqualityQuantityConversionRejected` retains the conversion's `IllTypedCause` payload. These
   checked-program faults remain distinct from ordinary input refusals.
 - The `quire.value.accounting/v1` charge vocabulary gains twelve points ordered
@@ -161,7 +161,7 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-11 | When a collection is retained, the runtime stores a sequence in supplied occurrence order, an ordered set as the first occurrence of each distinct member in first-occurrence order, a set as one occurrence of each distinct member in ascending canonical-key order, and a bag as every occurrence in ascending canonical-key order. | Test (TC-025) |
 | FR-008-AC-12 | When a retained collection is visited by equality planning or by a further formation, the runtime visits its elements in the order it stored them, for every one of the four kinds. | Test (TC-025) |
 | FR-008-AC-4 | The type-owned canonical key totally orders every keyed type, ranks `Absent < Null < Present`, fixes set and bag canonical and visiting order, and is evaluated iteratively at a depth that would overflow a recursive host-stack walk. | Test (TC-025) |
-| FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge, refuses a cross-universe reference pair as `ForeignReference`, and distinguishes unlike collection kinds (`CollectionKindMismatch`) from unlike value kinds (`ValueKindMismatch`); `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order, and each of the six checked operand failures carries its FR-369 cause, retaining `IllTypedCause` for a rejected quantity conversion. | Test (TC-026) |
+| FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge, refuses a cross-universe reference pair as `ForeignReference`, and distinguishes unlike collection kinds (`CollectionKindMismatch`) from unlike value kinds (`ValueKindMismatch`); `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order, and each of the six checked operand failures carries its ix://agent-ix/quire-exact/FR-369 cause, retaining `IllTypedCause` for a rejected quantity conversion. | Test (TC-026) |
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 62 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
@@ -172,7 +172,7 @@ name and order; and no operator here decides anything the authority does not.
 
 The consumed kernel exposes 62 charge points. The former RT-wide census assertion was
 removed in IR-349; the retained TC-024/025/026 tests cover selected spellings and residue
-charge denials, not the full census. Quire-exact FR-368-AC-1/2 now tests the full
+charge denials, not the full census. Quire-exact (ix://agent-ix/quire-exact/FR-368-AC-1 and ix://agent-ix/quire-exact/FR-368-AC-2) now tests the full
 62-member vocabulary and round trips. FR-008-AC-8 combines that owner evidence with
 retained RT tests of the twelve added charge-point denials. The owner tests do not
 establish RT/QSL agreement.

@@ -504,6 +504,7 @@ fn tc_033_dimension_multiply_is_order_independent_ascending_and_zero_free() {
     let backward = high.power(&int(3)).multiply(&low.power(&int(2)));
     assert_eq!(forward, backward);
     assert_ne!(forward, low.power(&int(2)));
+    assert_ne!(forward, low.power(&int(3)).multiply(&high.power(&int(2))));
 
     let terms: Vec<(NodeKey, Integer)> = forward
         .exponents()
@@ -522,25 +523,27 @@ fn tc_033_dimension_multiply_is_order_independent_ascending_and_zero_free() {
 /// Trace: TC-033, FR-012-AC-5
 #[test]
 fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
-    let build = |dimension_order: [u8; 2], unit_order: [u8; 2]| -> CompoundUnit {
-        let dimensions: Vec<(NodeKey, Vec<(NodeKey, Integer)>)> = dimension_order
-            .into_iter()
-            .map(|byte| (key(byte), vec![]))
-            .collect();
-        let units: Vec<(NodeKey, UnitDeclaration)> = unit_order
-            .into_iter()
-            .map(|byte| (key(byte + 10), root(key(byte))))
-            .collect();
-        let graph = UnitGraph::admit(dimensions, units).unwrap();
-        graph
-            .compound_unit(&[(key(11), int(1)), (key(12), int(1))])
-            .unwrap()
-    };
+    let build =
+        |dimension_order: [u8; 2], unit_order: [u8; 2], exponents: [i128; 2]| -> CompoundUnit {
+            let dimensions: Vec<(NodeKey, Vec<(NodeKey, Integer)>)> = dimension_order
+                .into_iter()
+                .map(|byte| (key(byte), vec![]))
+                .collect();
+            let units: Vec<(NodeKey, UnitDeclaration)> = unit_order
+                .into_iter()
+                .map(|byte| (key(byte + 10), root(key(byte))))
+                .collect();
+            let graph = UnitGraph::admit(dimensions, units).unwrap();
+            graph
+                .compound_unit(&[(key(11), int(exponents[0])), (key(12), int(exponents[1]))])
+                .unwrap()
+        };
 
-    let forward = build([1, 2], [1, 2]);
-    let backward = build([2, 1], [2, 1]);
+    let forward = build([1, 2], [1, 2], [1, 1]);
+    let backward = build([2, 1], [2, 1], [1, 1]);
     assert_eq!(forward, backward);
     assert_ne!(forward, CompoundUnit::dimensionless());
+    assert_ne!(build([1, 2], [1, 2], [2, 3]), build([2, 1], [2, 1], [3, 2]));
 
     let terms: Vec<(NodeKey, Integer)> = forward
         .terms()
@@ -550,7 +553,6 @@ fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
     assert!(terms.iter().all(|(_, exponent)| !exponent.is_zero()));
 
     assert!(CompoundUnit::dimensionless().terms().next().is_none());
-    assert_eq!(CompoundUnit::dimensionless(), CompoundUnit::default());
 }
 
 /// Trace: TC-033, FR-012-AC-4

@@ -3,7 +3,7 @@
 //! (quire-specification/FR-143).
 //!
 //! A reference is terminal: its identity is the snapshot-supplied
-//! ix://agent-ix/quire-specification/FR-009 and ix://agent-ix/quire-specification/FR-204
+//! quire-specification/FR-009 and quire-specification/FR-204
 //! triple (universe, object-type declaration identity, object
 //! identity), and equality never inspects the referenced state. No source
 //! form creates one. Cycles between objects are representable only through

@@ -178,6 +178,7 @@ fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {
         assert_eq!(prior_counts.failed(), 1);
         assert_eq!(prior_counts.discarded(), 1);
         let snapshot_before = report.snapshot();
+        assert_eq!(snapshot_before.counts(), prior_counts);
 
         let mismatch = report
             .record_verdict(&verdict)
