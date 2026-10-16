@@ -125,6 +125,11 @@ accounting schedule.
 
 ## Verification notes
 
+The directed-mode and explicit `Exact` behavior of FR-007-AC-8, and all of
+FR-007-AC-15 through FR-007-AC-19, are now backed by RT-local
+`tests/exact_semantics.rs` tests under `--features exact` (TC-034). The omitted
+rounding spelling in AC-8 remains a compiler-side obligation.
+
 Use the stated AC-15 through AC-19 vectors as TC-034 expected results. If execution differs,
 investigate the implementation and criterion together before changing either expected result.
 
