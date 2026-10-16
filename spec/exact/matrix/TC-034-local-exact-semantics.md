@@ -58,7 +58,10 @@ quantity cases remain in `tests/exact_semantics.rs`.
 10. For every `div`/`rem` profile, check `10 div 5` returns `2` in `Int[1,10]` even though
     its unexposed remainder is `0`, and `-10 rem -1` returns `0` in `Int[-10,5]` even though
     its unexposed quotient is `10`. Check `-10 div -1` in `Int[-10,5]` refuses without a value
-    as `DivisionOutOfDomain` naming the Quotient member.
+    as `DivisionOutOfDomain` naming the Quotient member. Check `9 rem 10` in `Int[0,5]`
+    refuses without a value as `DivisionOutOfDomain` naming the Remainder member although
+    its quotient is `0`. The test author executes this vector against the kernel and corrects
+    FR-007-AC-19 if the executed value differs; never change the test to fit the criterion.
 11. Type-check each quantity operation against inputs failing more than one cause.
 12. With decimal target coefficient bounds `[-100,100]` and scale `0`, divide `(-1,0)` by
     `(-3,0)` and `(1,0)` by `(-3,0)` under `TowardZero`; expect coefficient `0` and loss exact

@@ -43,7 +43,7 @@ type: TestMatrix
 | FR-007 | FR-007-AC-16 | TC-034 | 🚧 planned: execute affine-unit `Power` at zero and negative exponents; retained RT test checks affine refusal at a positive exponent only |
 | FR-007 | FR-007-AC-17 | TC-034 | 🚧 planned: execute `Multiply` and `Divide` on distinct non-affine units of the same dimension; retained RT tests use different dimensions |
 | FR-007 | FR-007-AC-18 | TC-034 | 🚧 planned: execute all four Euclidean `mod` sign vectors and out-of-domain refusal; no retained RT `mod` test; owner quire-exact FR-357-AC-7 covers all four quadrants |
-| FR-007 | FR-007-AC-19 | TC-034 | 🚧 planned: execute `10 div 5` in `Int[1,10]`, `-10 rem -1` in `Int[-10,5]`, and `-10 div -1` in `Int[-10,5]` under every profile; no RT-local binder yet; owner quire-exact FR-357-AC-2/3 tests exposed-member admission and refusal |
+| FR-007 | FR-007-AC-19 | TC-034 | 🚧 planned: execute `10 div 5` in `Int[1,10]`, `-10 rem -1` in `Int[-10,5]`, `-10 div -1` in `Int[-10,5]`, and `9 rem 10` in `Int[0,5]` under every profile; no RT-local binder yet; owner quire-exact FR-357-AC-2/3 tests exposed-member admission and refusal |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
 | FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented (compile_fail doctest on `IeeeDisposition`, `src/exact/ieee.rs`) |
 | FR-010 | FR-010-AC-1 | TC-031 | ✅ retained RT residue charge-point driver; owner-backed by quire-exact FR-358-AC-1 for generic injection |
