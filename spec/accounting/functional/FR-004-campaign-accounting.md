@@ -61,7 +61,9 @@ Encoding shall emit the listed member order, including the listed counter order.
 shall reject missing/duplicate/unknown members (including escaped-equivalent duplicate
 keys), unsupported schema/counter semantics, incorrect types, negative integers including
 negative zero, floating/exponent spelling, overflow, invalid UTF-8 and trailing values.
-No ignored arbitrary nested metadata or intermediate Value tree is permitted.
+Decode shall reject undeclared nested objects or arrays rather than silently
+accepting them as metadata; the decoded snapshot shall expose only the declared
+identity and counters.
 
 The structural schema is `schemas/campaign-snapshot-v1.schema.json`. Standard JSON Schema
 validation is necessary but insufficient: cross-field failed/accepted, UTF-8 byte limits,
@@ -71,9 +73,9 @@ Input and output are each limited to 65536 bytes; each decoded identity is limit
 4096 UTF-8 bytes. Check input bytes before parsing; check identity length before copying
 it into owned storage. Encoder shall preflight a conservative escaped-size bound and use
 a bounded sink. Resource-limit errors shall be distinct from malformed/semantic errors;
-no partial snapshot or serialized output is returned. Parser scratch is bounded by the
-input cap, and its actual allocation behavior must be inspected at the exact dependency
-pin. Allocator exhaustion can still abort: these limits do not promise recoverable OOM.
+no partial snapshot or serialized output is returned. Parser scratch shall remain
+bounded by the input cap. Allocator exhaustion can still abort: these limits do not
+promise recoverable OOM.
 A native isolated memory-ceiling control must distinguish process failure from a returned
 semantic refusal. No source/report mutation or filesystem access occurs in the codec.
 
@@ -92,6 +94,16 @@ the runtime.
 | FR-004-AC-6 | Conservative at-limit inspection distinguishes representable values from potentially saturated counts/totals without inventing overflow history. | Test (TC-015) |
 | FR-004-AC-7 | Byte/identity/depth limits fail boundedly without partial output; allocator/process failure is not mislabeled as semantic refusal. | Test (TC-015) |
 | FR-004-AC-8 | A verdict whose requirement or revision differs from the report's increments no counter, leaves a prior snapshot unchanged, and returns an `IdentityMismatch` carrying both identities; a report that recorded a mismatch has the same counters as one that never saw the verdict. | Test (TC-006) |
+| FR-004-AC-9 | Encoded snapshots emit `schemaVersion`, `requirement`, `revision`, `counterSemantics`, `counts` in that order, with `accepted`, `rejected`, `failed`, `discarded` in that order inside `counts`; byte-for-byte comparison of encoded output observes this order. | Test |
+| FR-004-AC-10 | Inspection of the decoder and its parser dependency confirms that parser scratch grows only with the capped input, with no unbounded allocation for rejected nested metadata. | Inspection |
+
+## Verification
+
+Inspect `decode_campaign_snapshot` in `src/snapshot_json.rs` and the parser implementation used
+by `serde_json::Deserializer::from_slice` for the scratch bound in FR-004-AC-10. Include the
+parser's allocation behavior as well as its logical scratch length. The existing
+`tc_015_actual_mixed_report_has_independent_exact_json` test compares encoded bytes for the
+member and counter order in FR-004-AC-9; its trace tag has not yet been updated for that new row.
 
 ## Dependencies
 

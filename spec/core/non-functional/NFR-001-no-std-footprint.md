@@ -23,6 +23,9 @@ allocator, but not `std`. Its separate bare-metal compile is not a default-profi
 footprint measurement. The governed fixed-population default footprint remains unchanged;
 do not present that measurement as the linked size of the allocating codec.
 
+The optional `exact` feature also enables `alloc` and uses allocating collections and values
+without requiring `std`. Its linked size is outside the default-profile footprint measurement.
+
 ## Rationale
 
 Embedded and assurance-sensitive consumers need predictable resource use and a small trusted surface.
