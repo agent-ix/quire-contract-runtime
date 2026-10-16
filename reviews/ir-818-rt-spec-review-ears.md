@@ -58,3 +58,10 @@ Round 1, head d1ebadd943a15db39c75a3200eb3f23cd0882728, judged against the spec 
 | FND-003 | fixed | AC-23 is success-only (order and amounts). Denial is the appended AC-25. Nothing is renumbered and AC-14 stays skipped. |
 | FND-004 | fixed | The DecimalLoss clause is removed from AC-20 and from TC-201 step 1. AC-20 now asserts the ConvertedValue::Exact variant, which can fail. |
 | FND-005 | fixed | U09b is no longer bound: it is dropped from AC-20 and from the citation list, so the ambiguous clause is gone. |
+
+Round 2, head 5abfc051fc424f2875be7a248cb372c79c8f6bc9, judged against the spec text.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-006 | fixed | AC-24 now names the operand pairs: Add, Subtract, Multiply and Divide of `1 degC` with `2 degC`, and Power of `1 degC` to `2`; TC-201 step 5 matches. Same unit, so `type_check` passes the dimension check and reports `AffineUnitArithmetic` before `DistinctUnits` (src/exact/quantity.rs:357-380). |
+| FND-007 | fixed | The verification note and TC-201 step 7 now say a differing executed U10 value is a finding against the criterion or the code, never a reason to change the test. The "correct the expected fields" escape is gone. |
