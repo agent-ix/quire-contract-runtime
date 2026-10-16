@@ -71,7 +71,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
 | FR-006-AC-7 | Inspection of `src/exact/` finds no host floating-point types, fields, casts or operations in the exact surface, including `f32` and `f64` uses. | Inspection |
 | FR-006-AC-8 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi` on the supported MSRV through the `build-exact-no-std-msrv` row of `make test-features`. | compile-time-check (TC-199, `make test-features`) |
-| FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; child module paths are inaccessible to consumers. One `compile_fail` doctest per child module checks path privacy, and inspection of `mod.rs` checks that it defines no public item directly. | compile-time-check and Inspection |
+| FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; child module paths are inaccessible to consumers. | compile-time-check |
 | FR-006-AC-10 | Non-test code in `src/exact/` has no panic site. | Inspection |
 
 ## Verification
