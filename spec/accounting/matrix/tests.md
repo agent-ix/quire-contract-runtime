@@ -13,6 +13,9 @@ type: TestMatrix
 | FR-004 | FR-004-AC-1, FR-004-AC-2 | TC-006 | ✅ Complete |
 | FR-004 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | TC-015 | ✅ implemented |
 | FR-004 | FR-004-AC-8 | TC-006 | ✅ Complete |
+| FR-004 | FR-004-AC-9 | TC-015 | 🚧 planned: encoded-order test exists but lacks this criterion's trace tag |
+| FR-004 | FR-004-AC-10 | — | 🚧 planned: unknown-key refusal before value decoding lacks a bound test |
+| FR-004 | FR-004-AC-11 | — (Inspection) | 🚧 planned: generic JSON tree inspection has no bound evidence symbol |
 
 ## Test Case Summary
 
@@ -21,8 +24,8 @@ type: TestMatrix
 | TC-006 | Retain complete campaign accounting | Unit | P0 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-8 | ✅ Complete |
 | TC-015 | Bound immutable campaign snapshot transport | Unit | P0 | FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-AC-7 | ✅ implemented |
 
-Every row is backed by a `tc_NNN` Rust test; executable semantic claims retain direct
-acceptance-criterion trace tags.
+Completed rows are backed by `tc_NNN` Rust tests; executable semantic claims retain direct
+acceptance-criterion trace tags. The planned rows above are unbacked.
 
 ## Evidence Locations
 

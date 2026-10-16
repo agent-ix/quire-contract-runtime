@@ -16,15 +16,21 @@ dependencies, and its release artifact shall remain within the measured v0.1 foo
 
 ## Scope
 
-The default feature set and every symbol linked by generated customer code.
+The no-heap obligation applies to the default feature profile and its linked symbols.
+The footprint-size obligation applies to the fixed-population default-profile build
+measured by `make size`.
 
 The optional `snapshot-json` codec uses bounded allocating storage and requires an
 allocator, but not `std`. Its separate bare-metal compile is not a default-profile
 footprint measurement. The governed fixed-population default footprint remains unchanged;
 do not present that measurement as the linked size of the allocating codec.
 
-The optional `exact` feature also enables `alloc` and uses allocating collections and values
-without requiring `std`. Its linked size is outside the default-profile footprint measurement.
+The optional `exact` feature enables `alloc` in `Cargo.toml` by design and can use allocating
+collections and values without requiring `std`. The `build-exact-no-std-msrv` row of
+`make test-features` checks its no-`std` build. This row does not measure linked size.
+
+**Note (owner decision):** Whether a generated oracle linking `exact` belongs to a separate
+footprint-size scope remains open; the default-profile measurement does not establish its size.
 
 ## Rationale
 

@@ -61,9 +61,9 @@ Encoding shall emit the listed member order, including the listed counter order.
 shall reject missing/duplicate/unknown members (including escaped-equivalent duplicate
 keys), unsupported schema/counter semantics, incorrect types, negative integers including
 negative zero, floating/exponent spelling, overflow, invalid UTF-8 and trailing values.
-Decode shall reject undeclared nested objects or arrays rather than silently
-accepting them as metadata; the decoded snapshot shall expose only the declared
-identity and counters.
+The decoded snapshot shall expose only the declared identity and counters. The decoder
+shall not materialize an intermediate generic JSON value tree for any member before
+validating that member.
 
 The structural schema is `schemas/campaign-snapshot-v1.schema.json`. Standard JSON Schema
 validation is necessary but insufficient: cross-field failed/accepted, UTF-8 byte limits,
@@ -95,15 +95,16 @@ the runtime.
 | FR-004-AC-7 | Byte/identity/depth limits fail boundedly without partial output; allocator/process failure is not mislabeled as semantic refusal. | Test (TC-015) |
 | FR-004-AC-8 | A verdict whose requirement or revision differs from the report's increments no counter, leaves a prior snapshot unchanged, and returns an `IdentityMismatch` carrying both identities; a report that recorded a mismatch has the same counters as one that never saw the verdict. | Test (TC-006) |
 | FR-004-AC-9 | Encoded snapshots emit `schemaVersion`, `requirement`, `revision`, `counterSemantics`, `counts` in that order, with `accepted`, `rejected`, `failed`, `discarded` in that order inside `counts`; byte-for-byte comparison of encoded output observes this order. | Test |
-| FR-004-AC-10 | Inspection of the decoder and its parser dependency confirms that parser scratch grows only with the capped input, with no unbounded allocation for rejected nested metadata. | Inspection |
+| FR-004-AC-10 | An unknown top-level or `counts` member is refused with `SnapshotError::Malformed` at its key before its value is decoded, including when the value is a maximally nested structure within the input cap. A test observes the typed refusal and establishes that the unknown member's value is not decoded by placing an invalid value after its key and receiving the same refusal. | Test |
+| FR-004-AC-11 | The decoder validates each member without materializing an intermediate generic JSON value tree. | Inspection |
 
 ## Verification
 
-Inspect `decode_campaign_snapshot` in `src/snapshot_json.rs` and the parser implementation used
-by `serde_json::Deserializer::from_slice` for the scratch bound in FR-004-AC-10. Include the
-parser's allocation behavior as well as its logical scratch length. The existing
-`tc_015_actual_mixed_report_has_independent_exact_json` test compares encoded bytes for the
-member and counter order in FR-004-AC-9; its trace tag has not yet been updated for that new row.
+For FR-004-AC-11, read `decode_campaign_snapshot`, `SnapshotSeed`, `CountsSeed`, and
+`FieldVisitor` in `src/snapshot_json.rs`; search the decode path for `serde_json::Value`
+or any equivalent generic JSON tree created before member validation. Any such tree fails
+the criterion. The existing `tc_015_actual_mixed_report_has_independent_exact_json` test
+compares encoded bytes for the member and counter order in FR-004-AC-9.
 
 ## Dependencies
 

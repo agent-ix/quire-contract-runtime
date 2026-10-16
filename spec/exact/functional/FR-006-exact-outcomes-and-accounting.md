@@ -69,16 +69,26 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
 | FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
-| FR-006-AC-7 | Inspection of `src/exact/` finds no host `f32` or `f64` operations in the exact surface. | Inspection |
-| FR-006-AC-8 | The `exact` feature remains available with crate-level `#![no_std]` and `#![forbid(unsafe_code)]`; inspection of non-test code in `src/exact/` finds no intentional panic site. | Inspection |
-| FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; the child modules are not public paths. | Inspection |
+| FR-006-AC-7 | Inspection of `src/exact/` finds no host floating-point types, fields, casts or operations in the exact surface, including `f32` and `f64` uses. | Inspection |
+| FR-006-AC-8 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi` on the supported MSRV through the `build-exact-no-std-msrv` row of `make test-features`. | compile-time-check (TC-199, `make test-features`) |
+| FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; child module paths are inaccessible to consumers. | compile-time-check (`compile_fail` doctest in `src/exact/mod.rs`) |
+| FR-006-AC-10 | Non-test code in `src/exact/` has no panic site. | Inspection |
 
 ## Verification
 
-Inspect `src/exact/` for host floating-point and non-test panic sites. Inspect the crate
-attributes in `src/lib.rs`, the `exact` feature in `Cargo.toml`, and the private module
-declarations and public re-exports in `src/exact/mod.rs`. The panic assertion covers library
-code; test-only assertions and panics are outside it.
+For FR-006-AC-7, search and read `src/exact/` for host floating-point types, fields,
+casts and operations. For FR-006-AC-10, search and read non-test `src/exact/` code for
+`unwrap`, `expect`, `panic!`, `unreachable!`, `todo!`, `unimplemented!`, `assert*!`, direct
+slice or array indexing, and unchecked arithmetic that can overflow. A reachable
+occurrence of any of these is a panic site; code under `#[cfg(test)]` is excluded.
+NFR-001-AC-2 owns the crate-wide `#![forbid(unsafe_code)]` check, and NFR-002-AC-1
+owns the public API no-intentional-panic behavior. For FR-006-AC-9, a `compile_fail`
+doctest that imports `quire_contract_runtime::exact::equality` shall verify the private
+child path, following the existing `exact::Integer` example in `src/exact/mod.rs`.
+
+**Note:** FR-006-AC-7 through FR-006-AC-10 bind `src/exact/` while that module exists.
+Under FR-275 they retire together with that module and are replaced by the kernel's
+equivalent criteria; they must never pass vacuously against an absent directory.
 
 ## Kernel ownership
 
