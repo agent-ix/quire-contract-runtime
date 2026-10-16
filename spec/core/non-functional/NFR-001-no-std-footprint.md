@@ -23,6 +23,12 @@ allocator, but not `std`. Its separate bare-metal compile is not a default-profi
 footprint measurement. The governed fixed-population default footprint remains unchanged;
 do not present that measurement as the linked size of the allocating codec.
 
+**Note (owner decision):** Whether the no-heap requirement for every symbol linked by generated
+customer code applies when a generated oracle links `exact` or `snapshot-json` remains open.
+Whether a generated oracle linking `exact` belongs to a separate footprint-size scope also
+remains open. `make size` measures a fixed population and does not by itself discharge the
+broader Scope sentence for every symbol linked by generated customer code.
+
 ## Rationale
 
 Embedded and assurance-sensitive consumers need predictable resource use and a small trusted surface.

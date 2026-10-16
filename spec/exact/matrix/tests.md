@@ -15,6 +15,10 @@ type: TestMatrix
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | 🚧 owner-backed by quire-exact FR-368-AC-1/2 for vocabulary and FR-359-AC-6/7 for meter ordering; local kernel tests removed |
 | FR-006 | FR-006-AC-4 | TC-017 | 🚧 owner-backed by quire-exact FR-358-AC-1/2 and FR-362-AC-11 for admitted-charge denial and scalar stops; local kernel test removed |
+| FR-006 | FR-006-AC-7 | — (Inspection) | 🚧 planned: RT-local host floating-point inspection has no bound evidence symbol |
+| FR-006 | FR-006-AC-8 | TC-199 | 🚧 planned: `build-exact-no-std-msrv` exists but has no bound criterion evidence symbol |
+| FR-006 | FR-006-AC-9 | — (`compile_fail` and Inspection) | 🚧 planned: per-child private-path doctests and direct-public-definition inspection are not yet bound |
+| FR-006 | FR-006-AC-10 | — (Inspection) | 🚧 planned: RT-local non-test panic-site inspection has no bound evidence symbol |
 | FR-007 | FR-007-AC-1 | TC-018 | 🚧 partly evidenced: quire-exact FR-361-AC-7/8 tests dividend-bit admission only; arithmetic `max(bits(a), bits(b))` exact/one-under is an owner evidence gap tracked by IR-678, and QSL two-sided agreement remains IR-669 work |
 | FR-007 | FR-007-AC-2 | TC-019 | 🚧 owner-backed by quire-exact FR-361-AC-9 for denied retain-upscale; RT-local allocation test removed and QSL two-sided agreement remains IR-669 work |
 | FR-007 | FR-007-AC-3 | TC-020 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
@@ -83,7 +87,7 @@ type: TestMatrix
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
 | TC-197 | Inspect that the runtime holds one kernel and no copy | Integration | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | 🚧 planned (Linear IR-349): the kernel copy is deleted in part 1 and the residue in part 2 (remaining RT deletion owned by open IR-349 step 2; function-application deletion awaits IR-590 and RT target acceptance after IR-583; QSL-358 extraction is Done); step 7 fails while the residue exists |
 | TC-198 | Fail the build on a dependency from the QSL Git source | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | 🚧 source rejection gate exists in `deny.toml` and `make deny-mutations`; Quire has no test-symbol binder for TC-198 |
-| TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | 🚧 exact profile and footprint gates exist in `make test-features`, `make size` and `make msrv`; Quire has no test-symbol binder for TC-199 |
+| TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-006-AC-8, FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | 🚧 exact profile and footprint gates exist in `make test-features`, `make size` and `make msrv`; Quire has no test-symbol binder for TC-199 |
 
 FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 uses owner
 FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and

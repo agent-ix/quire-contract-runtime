@@ -43,10 +43,16 @@ must be explicit to downstream users.
 |----|----------|--------------|
 | NFR-002-AC-1 | Valid public evaluation and accounting inputs encounter no intentional panic path. | property-based-testing (TC-003) |
 | NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive, as the `compile_fail` doctests in `src/observation.rs` and `src/verdict.rs` show. | compile-time-check |
+| NFR-002-AC-5 | The crate manifest declares `license = "AGPL-3.0-or-later"`. | Inspection |
+| NFR-002-AC-6 | The crate manifest declares `publish = false`, disabling registry publication for this package. | Inspection |
+| NFR-002-AC-7 | `make deny` passes its license-policy check for the resolved dependency set. | sca-sbom (`make deny`) |
 
 ## Verification
 
-CI runs Clippy, unit/property tests, and cargo-deny. The public API documentation states its size, panic, feature, and compatibility contracts.
+CI runs Clippy, unit/property tests, and cargo-deny. Inspect the package fields in
+`Cargo.toml` for NFR-002-AC-5 and NFR-002-AC-6; run `make deny` for NFR-002-AC-7.
+The public API documentation states its size,
+panic, feature, and compatibility contracts.
 
 ## Dependencies
 

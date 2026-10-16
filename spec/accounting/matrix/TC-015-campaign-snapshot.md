@@ -16,7 +16,8 @@ accounting inspection; no generated terminal outcomes are tested.
 ## Test Procedure
 
 1. Record pass, failure, rejection and discard; export, then record more events and verify
-   snapshot immutability. Compare exact independently written JSON and decoded identity/counts.
+   snapshot immutability. Compare exact independently written JSON and decoded identity/counts;
+   the byte-for-byte encoded-member-order check covers FR-004-AC-9.
 2. Independently omit, duplicate, mistype and substitute every root/count member. Exercise
    escaped-equivalent duplicate keys, invalid UTF-8, trailing values, unsupported identities,
    negative zero, exponents, floats, overflow and failed greater than accepted.
