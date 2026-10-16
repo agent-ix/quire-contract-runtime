@@ -71,7 +71,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
 | FR-006-AC-7 | Inspection of `src/exact/` finds no host floating-point types, fields, casts or operations in the exact surface, including `f32` and `f64` uses. | Inspection |
 | FR-006-AC-8 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi` on the supported MSRV through the `build-exact-no-std-msrv` row of `make test-features`. | compile-time-check (TC-199, `make test-features`) |
-| FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; child module paths are inaccessible to consumers. | compile-time-check (`compile_fail` doctest in `src/exact/mod.rs`) |
+| FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; child module paths are inaccessible to consumers. One `compile_fail` doctest per child module checks path privacy, and inspection of `mod.rs` checks that it defines no public item directly. | compile-time-check and Inspection |
 | FR-006-AC-10 | Non-test code in `src/exact/` has no panic site. | Inspection |
 
 ## Verification
@@ -82,9 +82,15 @@ casts and operations. For FR-006-AC-10, search and read non-test `src/exact/` co
 slice or array indexing, and unchecked arithmetic that can overflow. A reachable
 occurrence of any of these is a panic site; code under `#[cfg(test)]` is excluded.
 NFR-001-AC-2 owns the crate-wide `#![forbid(unsafe_code)]` check, and NFR-002-AC-1
-owns the public API no-intentional-panic behavior. For FR-006-AC-9, a `compile_fail`
-doctest that imports `quire_contract_runtime::exact::equality` shall verify the private
-child path, following the existing `exact::Integer` example in `src/exact/mod.rs`.
+owns the public API no-intentional-panic behavior. For FR-006-AC-9, add one `compile_fail`
+doctest importing each private child path under `quire_contract_runtime::exact`:
+`boolean`, `collection`, `composite`, `containment`, `definition`, `division`,
+`enumeration`, `equality`, `expression`, `ieee`, `key`, `node`, `quantity`,
+`reference`, `stop`, and `unit`. Compare this list against every child declaration in
+`src/exact/mod.rs` so a newly added child cannot be omitted. Each doctest must fail
+because its path is private, not because the import is malformed or the module is absent.
+Inspect `mod.rs` for direct public definitions, including `pub fn` and `pub struct`;
+any such definition fails the re-export-only clause.
 
 **Note:** FR-006-AC-7 through FR-006-AC-10 bind `src/exact/` while that module exists.
 Under FR-275 they retire together with that module and are replaced by the kernel's

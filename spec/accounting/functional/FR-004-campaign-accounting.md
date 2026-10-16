@@ -95,15 +95,31 @@ the runtime.
 | FR-004-AC-7 | Byte/identity/depth limits fail boundedly without partial output; allocator/process failure is not mislabeled as semantic refusal. | Test (TC-015) |
 | FR-004-AC-8 | A verdict whose requirement or revision differs from the report's increments no counter, leaves a prior snapshot unchanged, and returns an `IdentityMismatch` carrying both identities; a report that recorded a mismatch has the same counters as one that never saw the verdict. | Test (TC-006) |
 | FR-004-AC-9 | Encoded snapshots emit `schemaVersion`, `requirement`, `revision`, `counterSemantics`, `counts` in that order, with `accepted`, `rejected`, `failed`, `discarded` in that order inside `counts`; byte-for-byte comparison of encoded output observes this order. | Test |
-| FR-004-AC-10 | An unknown top-level or `counts` member is refused with `SnapshotError::Malformed` at its key before its value is decoded, including when the value is a maximally nested structure within the input cap. A test observes the typed refusal and establishes that the unknown member's value is not decoded by placing an invalid value after its key and receiving the same refusal. | Test |
+| FR-004-AC-10 | An unknown top-level or `counts` member is refused at its key before its value is read. In `src/snapshot_json.rs`, the unknown-key arm of `FieldVisitor::visit_str` must return an error before `SnapshotSeed` or `CountsSeed` can call `next_value` or `next_value_seed` for that member; neither visitor may consume an unknown value with `IgnoredAny` or an equivalent skip/decode path. | Inspection |
 | FR-004-AC-11 | The decoder validates each member without materializing an intermediate generic JSON value tree. | Inspection |
+| FR-004-AC-12 | Parser scratch on the `decode_campaign_snapshot` path remains bounded proportionally to the input cap of `MAX_BYTES` (65536 bytes), including escaped-string scratch and owned decoded identities; no input can cause scratch allocation to grow without a bound derived from that cap. | Inspection |
 
 ## Verification
 
 For FR-004-AC-11, read `decode_campaign_snapshot`, `SnapshotSeed`, `CountsSeed`, and
 `FieldVisitor` in `src/snapshot_json.rs`; search the decode path for `serde_json::Value`
 or any equivalent generic JSON tree created before member validation. Any such tree fails
-the criterion. The existing `tc_015_actual_mixed_report_has_independent_exact_json` test
+the criterion. For FR-004-AC-10, inspect `FieldVisitor::visit_str` and both map visitors:
+`next_key::<Field>()` must reject an unknown key before either visitor reaches its
+`next_value` or `next_value_seed` arms. An unknown-key arm that reads or skips the value
+first fails the criterion. **Note:** `decode_campaign_snapshot` maps ordinary serde errors
+to `SnapshotError::Malformed`, so its public result cannot distinguish key-first refusal
+from value-first decoding; a typed refusal cause that distinguishes them requires a code
+change owned by a later ticket.
+
+For FR-004-AC-12, inspect `decode_campaign_snapshot` and `MAX_BYTES` in
+`src/snapshot_json.rs`, then follow `serde_json::Deserializer::from_slice` through its
+escaped-string buffer and nesting controls. Account for the deserializer's scratch,
+`TextSeed`'s two `String::from` identity copies, and the fixed-size visitor state; each
+input-dependent allocation must have an upper bound proportional to `MAX_BYTES` (the
+identity copies also obey `MAX_IDENTITY_BYTES`). An unbounded per-member allocation,
+unbounded nesting stack, or scratch growth unrelated to the capped input fails the
+criterion. The existing `tc_015_actual_mixed_report_has_independent_exact_json` test
 compares encoded bytes for the member and counter order in FR-004-AC-9.
 
 ## Dependencies
