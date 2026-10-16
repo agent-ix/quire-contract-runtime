@@ -33,12 +33,17 @@ type: TestMatrix
 | FR-008 | FR-008-AC-9 | TC-024, TC-025 | ✅ implemented |
 | FR-008 | FR-008-AC-13 | TC-024 | ✅ implemented: deep metadata clone, equality, formatting and drop in a small-stack thread and default-stack child process |
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-025 | 🚧 sequence and ordered-set cases not yet in tests/exact_collection.rs |
-| FR-007 | FR-007-AC-8 | TC-034 | 🚧 owner-backed by quire-exact FR-365-AC-1/2 for rounding ties and default; RT-local kernel test removed |
+| FR-007 | FR-007-AC-8 | TC-034 | 🚧 owner-backed by quire-exact FR-365-AC-1 for all six modes on positive and negative ties and FR-365-AC-2 for default Exact; RT-local kernel test removed |
 | FR-007 | FR-007-AC-9 | TC-034 | 🚧 owner-backed by quire-exact FR-366-AC-1..4 for IEEE NaNs, signed zero and order; RT-local kernel test removed |
 | FR-007 | FR-007-AC-10 | TC-034 | 🚧 owner-backed by quire-exact FR-362-AC-12/13 for rational canonical form and membership; RT-local kernel test removed |
 | FR-007 | FR-007-AC-11 | TC-034 | 🚧 owner-backed by quire-exact FR-363-AC-6/7 and `tests/ir673_decimal.rs`: equal normalized values, ordering size counters 8/3/1 versus 4/2/0, and one Boolean result unit in both comparisons; RT exact-feature binder remains planned after the local kernel test was removed |
-| FR-007 | FR-007-AC-12 | TC-034 | ✅ retained RT quantity and Euclidean residue assertions; matching kernel subsets remain owner-backed |
+| FR-007 | FR-007-AC-12 | TC-034 | 🚧 retained RT tests tagged with this criterion cover quantity type-fault order and cross-dimension arithmetic; single-member division exposure is in AC-19 and `mod` is in AC-18 |
 | FR-007 | FR-007-AC-13 | TC-035 | ✅ implemented |
+| FR-007 | FR-007-AC-15 | TC-034 | 🚧 planned: execute the three quotient-sign rounding vectors and check the exact loss; no RT-local binder yet; owner FR-365-AC-1 covers all six modes on both signs of a tie, not these division vectors |
+| FR-007 | FR-007-AC-16 | TC-034 | 🚧 planned: execute affine-unit `Power` at zero and negative exponents; retained RT test checks affine refusal at a positive exponent only |
+| FR-007 | FR-007-AC-17 | TC-034 | 🚧 planned: execute `Multiply` and `Divide` on distinct non-affine units of the same dimension; retained RT tests use different dimensions |
+| FR-007 | FR-007-AC-18 | TC-034 | 🚧 planned: execute all four Euclidean `mod` sign vectors and out-of-domain refusal; no retained RT `mod` test; owner quire-exact FR-357-AC-7 covers all four quadrants |
+| FR-007 | FR-007-AC-19 | TC-034 | 🚧 planned: execute `10 div 5` in `Int[1,10]`, `-10 rem -1` in `Int[-10,5]`, `-10 div -1` in `Int[-10,5]`, and `9 rem 10` in `Int[0,5]` under every profile; no RT-local binder yet; owner quire-exact FR-357-AC-2/3 tests exposed-member admission and refusal |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
 | FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented (compile_fail doctest on `IeeeDisposition`, `src/exact/ieee.rs`) |
 | FR-010 | FR-010-AC-1 | TC-031 | ✅ retained RT residue charge-point driver; owner-backed by quire-exact FR-358-AC-1 for generic injection |
@@ -81,7 +86,7 @@ type: TestMatrix
 | TC-031 | Fire one injected denial with a limit-independent record | Unit | P0 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5, FR-010-AC-6 | 🚧 local RT evidence is limited to the residue charge-point driver under AC-1; AC-2/3 owner evidence is FR-358-AC-12/13 and TC-906, while RT's older kernel revision still needs a separate refresh |
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-AC-7, FR-011-AC-8 | 🚧 RT quantity, lazy connective and graph cases remain; owner tests cover matching kernel meter subsets |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Unit | P0 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5 | ✅ implemented |
-| TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12 | 🚧 RT quantity cases remain; kernel semantic cases left and matching owner tests are FR-362/363/365/366 |
+| TC-034 | Pin the exact semantics the agreement corpus does not reach | Unit | P0 | FR-007-AC-8, FR-007-AC-9, FR-007-AC-10, FR-007-AC-11, FR-007-AC-12, FR-007-AC-15, FR-007-AC-16, FR-007-AC-17, FR-007-AC-18, FR-007-AC-19 | 🚧 retained RT tests cover the AC-12 quantity clause; AC-19 single-member division, rounding-sign, affine-power, same-dimension unit and `mod` checks are planned; owner evidence includes quire-exact FR-357-AC-2/3/7, FR-362/363/365/366 |
 | TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ implemented |
 | TC-194 | Apply checked functions with explicit frames and work fuel | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7, FR-273-AC-8, FR-273-AC-9, FR-273-AC-10, FR-273-AC-11 | 🚧 existing input and ordering evidence remains; resumable-body, explicit-frame and work-fuel cases are planned under IR-512 |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
@@ -129,7 +134,7 @@ The table records what this slice actually changed; future dispositions are stat
 | `tests/exact_outcomes.rs` | TC-031 | one retained test | the residue charge-point driver remains; TC-016/017 kernel tests and stale four-code tags were removed |
 | `tests/exact_collection.rs` | TC-025 | retained | all eight collection and canonical-key tests remain in this slice; their RT `Value` and type behavior remains residue |
 | `tests/exact_meter_state.rs` | TC-032 | retained subset | nine RT quantity, lazy connective and graph-order tests remain; kernel-only meter tests were removed |
-| `tests/exact_semantics.rs` | TC-034 | retained subset | RT quantity and Euclidean residue cases remain; duplicate kernel semantic tests were removed |
+| `tests/exact_semantics.rs` | TC-034 | retained subset | RT quantity type-fault order and cross-dimension arithmetic cases remain; decimal rounding, single-member division and Euclidean `mod` cases are absent after duplicate kernel semantic tests were removed |
 | `tests/exact_debug_parity.rs` | TC-035 | retained subset | residue Debug cases remain; duplicate kernel Debug cases were removed |
 | `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | removed | in-crate tests of the deleted RT kernel implementation |
 
@@ -176,7 +181,7 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   recreating two-sided shared-corpus evidence is open IR-669 work.
 - TC-030: `tests/exact_negotiation.rs`; retained TC-032 RT quantity, lazy and graph
   cases: `tests/exact_meter_state.rs`; TC-033: `tests/exact_vocabulary.rs`;
-  retained TC-034 quantity/residue cases: `tests/exact_semantics.rs`; retained TC-035
+  retained TC-034 quantity cases: `tests/exact_semantics.rs`; retained TC-035
   residue Debug cases: `tests/exact_debug_parity.rs`.
 - TC-031: the retained residue charge-point driver in `tests/exact_outcomes.rs`.
   TC-016/017 kernel tests, TC-023 arithmetic tests and TC-018/019 allocation tests
