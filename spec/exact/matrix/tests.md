@@ -44,6 +44,12 @@ type: TestMatrix
 | FR-007 | FR-007-AC-17 | TC-034 | ✅ RT-local test checks `Multiply` and `Divide` on distinct non-affine units of the same dimension |
 | FR-007 | FR-007-AC-18 | TC-034 | ✅ RT-local test checks all four Euclidean `mod` sign vectors and typed out-of-domain refusal |
 | FR-007 | FR-007-AC-19 | TC-034 | ✅ RT-local test checks both admitted exposed members and both typed refusals under every division profile |
+| FR-007 | FR-007-AC-20 | TC-201 | 🚧 planned (Linear IR-818): RT-local tests of the existing `convert_quantity` with `Exact` are not yet written |
+| FR-007 | FR-007-AC-21 | TC-201 | 🚧 planned (Linear IR-818): RT-local tests of the existing `convert_quantity` with `Exact` are not yet written |
+| FR-007 | FR-007-AC-22 | TC-201 | 🚧 planned (Linear IR-818): RT-local tests of the existing `convert_quantity` with `Exact` are not yet written |
+| FR-007 | FR-007-AC-23 | TC-201 | 🚧 planned (Linear IR-818): RT-local tests of the existing `convert_quantity` with `Exact` are not yet written |
+| FR-007 | FR-007-AC-24 | TC-201 | 🚧 planned (Linear IR-818): tests of the existing `evaluate_quantity` affine refusals are not yet written |
+| FR-007 | FR-007-AC-25 | TC-201 | 🚧 planned (Linear IR-818): tests of the existing `convert_quantity` denial fields are not yet written |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
 | FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented (compile_fail doctest on `IeeeDisposition`, `src/exact/ieee.rs`) |
 | FR-010 | FR-010-AC-1 | TC-031 | ✅ retained RT residue charge-point driver; owner-backed by quire-exact FR-358-AC-1 for generic injection |
@@ -93,6 +99,7 @@ type: TestMatrix
 | TC-197 | Inspect that the runtime holds one kernel and no copy | Integration | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-6, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | 🚧 planned (Linear IR-349): the kernel copy is deleted in part 1 and the residue in part 2 (remaining RT deletion owned by open IR-349 step 2; function-application deletion awaits IR-590 and RT target acceptance after IR-583; QSL-358 extraction is Done); step 7 fails while the residue exists |
 | TC-198 | Fail the build on a dependency from the QSL Git source | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | 🚧 source rejection gate exists in `deny.toml` and `make deny-mutations`; Quire has no test-symbol binder for TC-198 |
 | TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-006-AC-8, FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | 🚧 exact profile and footprint gates exist in `make test-features`, `make size` and `make msrv`; Quire has no test-symbol binder for TC-199 |
+| TC-201 | Convert a quantity exactly between units of one dimension | Unit | P0 | FR-007-AC-20, FR-007-AC-21, FR-007-AC-22, FR-007-AC-23, FR-007-AC-24, FR-007-AC-25 | 🚧 planned (Linear IR-818): RT-local `tests/exact_quantity_conversion.rs`; QSL agreement stays IR-669 (TC-022) |
 
 FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 uses owner
 FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and
@@ -135,6 +142,7 @@ The table records what this slice actually changed; future dispositions are stat
 | `tests/exact_collection.rs` | TC-025 | retained | all eight collection and canonical-key tests remain in this slice; their RT `Value` and type behavior remains residue |
 | `tests/exact_meter_state.rs` | TC-032 | retained subset | nine RT quantity, lazy connective and graph-order tests remain; kernel-only meter tests were removed |
 | `tests/exact_semantics.rs` | TC-034 | retained and extended | RT quantity type-fault order and cross-dimension arithmetic cases remain; RT-local tests also cover consumed rounding, single-member division and Euclidean `mod` behavior |
+| `tests/exact_quantity_conversion.rs` | TC-201 | planned (IR-818) | new RT-local file testing the existing `convert_quantity` and `evaluate_quantity`; RT's copy is deleted in AD-004 step 4 and the test rebinds to the shared crate's `convert_quantity` |
 | `tests/exact_debug_parity.rs` | TC-035 | retained subset | residue Debug cases remain; duplicate kernel Debug cases were removed |
 | `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | removed | in-crate tests of the deleted RT kernel implementation |
 
@@ -179,6 +187,7 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   historically agreed on all five supplied vectors; that result does not establish current
   agreement evidence. AC-5 is currently partly evidenced: local ordering tests remain, while
   recreating two-sided shared-corpus evidence is open IR-669 work.
+- TC-201 (planned, IR-818): `tests/exact_quantity_conversion.rs` (`--features exact`).
 - TC-030: `tests/exact_negotiation.rs`; retained TC-032 RT quantity, lazy and graph
   cases: `tests/exact_meter_state.rs`; TC-033: `tests/exact_vocabulary.rs`;
   retained and extended TC-034 cases: `tests/exact_semantics.rs`; retained TC-035
