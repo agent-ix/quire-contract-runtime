@@ -36,7 +36,7 @@ quantity cases remain in `tests/exact_semantics.rs`.
 
 1. Round exact ties in every one of the six spellings, for a positive and a negative value.
    Check `NearestEven` chooses the even coefficient, `NearestAway` the greater magnitude,
-   `TowardZero` the zero neighbour, `TowardPositive` the ceiling and `TowardNegative` the floor.
+   `TowardZero` the neighbour nearer zero, `TowardPositive` the ceiling and `TowardNegative` the floor.
    Check the default `Exact` spelling refuses a discarded nonzero digit.
 2. Combine quiet and signaling NaNs in both operand positions; check leftmost-wins, sign and
    payload retention, quieting and the `invalid` flag.
@@ -57,8 +57,8 @@ quantity cases remain in `tests/exact_semantics.rs`.
    passed to `mod`. Refuse `-7 mod 3` under `Int[0,1]` as `ModuloOutOfDomain` without a value.
 10. For every `div`/`rem` profile, check `10 div 5` returns `2` in `Int[1,10]` even though
     its unexposed remainder is `0`, and `-10 rem -1` returns `0` in `Int[-10,5]` even though
-    its unexposed quotient is `10`. Refuse only when the exposed member is outside the domain,
-    naming that member in `DivisionOutOfDomain` and returning no value.
+    its unexposed quotient is `10`. Check `-10 div -1` in `Int[-10,5]` refuses without a value
+    as `DivisionOutOfDomain` naming the Quotient member.
 11. Type-check each quantity operation against inputs failing more than one cause.
 12. With decimal target coefficient bounds `[-100,100]` and scale `0`, divide `(-1,0)` by
     `(-3,0)` and `(1,0)` by `(-3,0)` under `TowardZero`; expect coefficient `0` and loss exact
@@ -70,8 +70,9 @@ quantity cases remain in `tests/exact_semantics.rs`.
     multiply and divide `2 kilometers` by `3 meters`; expect `6000 meters²` and `2000/3`
     dimensionless, with neither `IncompatibleDimensions` nor `DistinctUnits`.
 
-Compiler admission of a non-Euclidean `mod` selection belongs to QSpec FR-147-AC-5 and
-TC-192 DIV-03. RT does not execute that admission check (FR-007-AC-19).
+Compiler admission of a non-Euclidean `mod` selection belongs to
+`ix://agent-ix/quire-specification/FR-147-AC-5` and QSpec TC-192 DIV-03. RT neither produces
+nor tests that admission refusal.
 
 ## Expected Results
 
