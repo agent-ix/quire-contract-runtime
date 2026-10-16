@@ -10,12 +10,12 @@ relationships:
 
 ## Description
 
-Execute every QSpec TC-186 vector on the runtime and on quire-spec-language.
+Execute every QSpec ix://agent-ix/quire-specification/TC-186 vector on the runtime and on quire-spec-language.
 Evidence: none in this repository. The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done).
 
 ## Test Procedure
 
-1. Check the evaluated and admission-only lists together equal the TC-186 census.
+1. Check the evaluated and admission-only lists together equal the ix://agent-ix/quire-specification/TC-186 census.
 2. Compare admission lengths, invalid UTF-8 provenance, profile and declaration mismatches,
    ordered and unordered enum comparison, charges and counters on both sides.
 3. Deny every named charge; sweep six profiles × twelve sequences² × six operators, and every enum

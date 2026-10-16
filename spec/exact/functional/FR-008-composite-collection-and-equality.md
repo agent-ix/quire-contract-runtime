@@ -70,7 +70,7 @@ name and order; and no operator here decides anything the authority does not.
   member, in ascending canonical-key order. A bag retains every occurrence in ascending
   canonical-key order, so equal occurrences are adjacent.
 - Every type that admits `=` has a total, type-owned canonical key: two values of that type have
-  equal keys exactly when they are FR-149 equal. The key fixes set and bag canonical and visiting
+  equal keys exactly when they are ix://agent-ix/quire-specification/FR-149 equal. The key fixes set and bag canonical and visiting
   order; it is not a general ordering operator and is not exposed for any type that does not admit
   `=`. Absent orders before null, which orders before a present value
   (`Absent < Null < Present`). Comparison is iterative over an explicit task stack, so value depth
@@ -81,8 +81,8 @@ name and order; and no operator here decides anything the authority does not.
   comparison type — before any charge. `plan_equality` forms the occurrence-pair plan of two
   completed operands with no charge; a reference pair whose universes differ refuses as
   `ForeignReference` at plan time, never as a charged comparison. `CheckedEquality::evaluate` then
-  runs the left and right conversion charges in operand order and the selected schedule: the FR-141
-  text, FR-141 enum or FR-142 quantity schedule for those top-level types, and otherwise
+  runs the left and right conversion charges in operand order and the selected schedule: the ix://agent-ix/quire-specification/FR-141
+  text, ix://agent-ix/quire-specification/FR-141 enum or ix://agent-ix/quire-specification/FR-142 quantity schedule for those top-level types, and otherwise
   `equality.plan-form`, `equality.plan`, one `equality.pair` per planned occurrence-path pair and
   `equality.result-retain`.
 - `TypeEnvironment::build` constructs the finite value rooted at one `GraphNodeId` of a `ValueGraph`
@@ -92,7 +92,7 @@ name and order; and no operator here decides anything the authority does not.
 - A `Reference<T>` value is terminal: its identity is the supplied `(UniverseIdentity, object-type
   key, ObjectIdentity)` triple, equality never inspects referenced state, and no source form
   constructs one from a component value.
-- `Value` carries no structural equality; the FR-149 relation reached through `plan_equality` and
+- `Value` carries no structural equality; the ix://agent-ix/quire-specification/FR-149 relation reached through `plan_equality` and
   `CheckedEquality::evaluate` is the only equality, because a structural comparison would be a second,
   unmetered relation and would be wrong for signed zero, NaN-bearing values, decimal values retained
   at differing scales, and reference pairs from different universes.
@@ -115,20 +115,20 @@ name and order; and no operator here decides anything the authority does not.
   `ConstructionRefusal`, `GraphRefusal`, `IllTyped`, the extended `Refusal` and `Undefined`) exactly
   as the authority names it; it never re-derives, renames or infers a refusal the authority does not
   already carry.
-- The `Undefined` and `Refusal` vocabularies are extended to their FR-149/FR-144 complete authority
+- The `Undefined` and `Refusal` vocabularies are extended to their ix://agent-ix/quire-specification/FR-149 / ix://agent-ix/quire-specification/FR-144 complete authority
   shape: `Undefined::EmptyReduction` and `Undefined::NoneValue` (reachable only from direct kernel
   evaluation of an unlinked expression, which this crate does not yet expose — see Out of Scope);
   `Refusal::ForeignReference`; `Refusal::CardinalityOutOfBound { violation, kind, bound, count }`
   with its `BoundViolation::{BelowMinimum, AboveMaximum}`; and `Refusal::CheckedInvariant { cause }`, reachable
   only when a checked-program invariant fails and unreachable from any admitted vector. `Refusal`
-  gains a `cause()` method carrying the closed FR-272 cause tag beside `code()`, populated for
+  gains a `cause()` method carrying the closed ix://agent-ix/quire-specification/FR-272 cause tag beside `code()`, populated for
   `CardinalityOutOfBound` and empty for every other variant.
 - A checked equality operand that violates its source admission, reaches a nonintegral decimal
   conversion to integer, has its quantity conversion rejected, receives a nonexact quantity
   placement, reaches no conversion arm, or fails target admission carries the corresponding
   `CheckedInvariantCause::{EqualityOperandSourceNotAdmitted, EqualityOperandNonIntegralDecimal,
   EqualityQuantityConversionRejected, EqualityQuantityNonExactPlacement,
-  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel FR-369.
+  EqualityConversionShapeMismatch, EqualityOperandTargetNotAdmitted}` from kernel `ix://agent-ix/quire-exact/FR-369`.
   `EqualityQuantityConversionRejected` retains the conversion's `IllTypedCause` payload. These
   checked-program faults remain distinct from ordinary input refusals.
 - The `quire.value.accounting/v1` charge vocabulary gains twelve points ordered
@@ -161,7 +161,7 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-11 | When a collection is retained, the runtime stores a sequence in supplied occurrence order, an ordered set as the first occurrence of each distinct member in first-occurrence order, a set as one occurrence of each distinct member in ascending canonical-key order, and a bag as every occurrence in ascending canonical-key order. | Test (TC-025) |
 | FR-008-AC-12 | When a retained collection is visited by equality planning or by a further formation, the runtime visits its elements in the order it stored them, for every one of the four kinds. | Test (TC-025) |
 | FR-008-AC-4 | The type-owned canonical key totally orders every keyed type, ranks `Absent < Null < Present`, fixes set and bag canonical and visiting order, and is evaluated iteratively at a depth that would overflow a recursive host-stack walk. | Test (TC-025) |
-| FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge, refuses a cross-universe reference pair as `ForeignReference`, and distinguishes unlike collection kinds (`CollectionKindMismatch`) from unlike value kinds (`ValueKindMismatch`); `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order, and each of the six checked operand failures carries its FR-369 cause, retaining `IllTypedCause` for a rejected quantity conversion. | Test (TC-026) |
+| FR-008-AC-5 | `plan_equality` forms the occurrence-pair plan with no charge, refuses a cross-universe reference pair as `ForeignReference`, and distinguishes unlike collection kinds (`CollectionKindMismatch`) from unlike value kinds (`ValueKindMismatch`); `check_equality` refuses before any charge, including `operator-ineligible` when either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate` charges the selected schedule and its conversions in operand order, and each of the six checked operand failures carries its ix://agent-ix/quire-exact/FR-369 cause, retaining `IllTypedCause` for a rejected quantity conversion. | Test (TC-026) |
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 62 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
@@ -172,7 +172,7 @@ name and order; and no operator here decides anything the authority does not.
 
 The consumed kernel exposes 62 charge points. The former RT-wide census assertion was
 removed in IR-349; the retained TC-024/025/026 tests cover selected spellings and residue
-charge denials, not the full census. Quire-exact FR-368-AC-1/2 now tests the full
+charge denials, not the full census. Quire-exact (ix://agent-ix/quire-exact/FR-368-AC-1 and ix://agent-ix/quire-exact/FR-368-AC-2) now tests the full
 62-member vocabulary and round trips. FR-008-AC-8 combines that owner evidence with
 retained RT tests of the twelve added charge-point denials. The owner tests do not
 establish RT/QSL agreement.

@@ -10,7 +10,7 @@ relationships:
 
 ## Description
 
-Execute every QSpec TC-192 vector on the runtime and on quire-spec-language.
+Execute every QSpec ix://agent-ix/quire-specification/TC-192 vector on the runtime and on quire-spec-language.
 Evidence: The QSL agreement oracle is removed from this repository; recreating it in
 agent-ix/quire-integration is planned under IR-669. The RT-local allocation test was
 removed with the copied kernel; owner evidence covers only matching kernel cases.
@@ -25,11 +25,11 @@ allocation. `FR-361-AC-7` and `FR-361-AC-8` test the large floor quotient at the
 one-under dividend-bit limit at `integer-division.operands`. They do not test step 5's
 `max(bits(a), bits(b))` arithmetic charge at exact and one-under limits for division or
 modulus; quire-exact IR-678 tracks that owner evidence gap. These one-crate cases also do
-not establish the generated sweep or TC-192 agreement; IR-669 tracks the two-sided agreement.
+not establish the generated sweep or ix://agent-ix/quire-specification/TC-192 agreement; IR-669 tracks the two-sided agreement.
 
 ## Test Procedure
 
-1. Check the evaluated and admission-only lists together equal the TC-192 vector census.
+1. Check the evaluated and admission-only lists together equal the ix://agent-ix/quire-specification/TC-192 vector census.
 2. For each evaluated vector, evaluate both sides under the same limits and compare Debug renderings
    of value, outcome kind, charge sequence and consumed counters.
 3. Deny every admitted charge and compare the `Incomplete` records.

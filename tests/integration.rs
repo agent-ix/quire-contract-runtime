@@ -154,7 +154,7 @@ fn tc_001_clause_outcomes_are_distinct_through_construction_and_matching() {
 /// Trace: TC-006, FR-004-AC-8
 #[test]
 fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {
-    let (identity, _, detail) = fixture();
+    let (identity, context, detail) = fixture();
     let other_requirement = ContractIdentity::new(RequirementId::new("FR-999"), identity.revision);
     let other_revision = ContractIdentity::new(identity.requirement, RevisionId::new("rev-999"));
 
@@ -164,8 +164,21 @@ fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {
         let verdict = Verdict::failed_postcondition(mismatched_context, detail);
 
         let mut report = CampaignReport::new(identity);
-        let untouched = CampaignReport::new(identity);
+        report.record_verdict(&Verdict::passed(context)).unwrap();
+        report
+            .record_verdict(&Verdict::failed_postcondition(context, detail))
+            .unwrap();
+        report
+            .record_verdict(&Verdict::rejected_precondition(context, detail))
+            .unwrap();
+        report.record_discard();
+        let prior_counts = report.counts();
+        assert_eq!(prior_counts.accepted(), 2);
+        assert_eq!(prior_counts.rejected(), 1);
+        assert_eq!(prior_counts.failed(), 1);
+        assert_eq!(prior_counts.discarded(), 1);
         let snapshot_before = report.snapshot();
+        assert_eq!(snapshot_before.counts(), prior_counts);
 
         let mismatch = report
             .record_verdict(&verdict)
@@ -173,11 +186,7 @@ fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {
 
         assert_eq!(mismatch.expected(), identity);
         assert_eq!(mismatch.actual(), mismatched);
-        assert_eq!(report.counts().accepted(), 0);
-        assert_eq!(report.counts().rejected(), 0);
-        assert_eq!(report.counts().failed(), 0);
-        assert_eq!(report.counts().discarded(), 0);
-        assert_eq!(report.counts(), untouched.counts());
+        assert_eq!(report.counts(), prior_counts);
         assert_eq!(report.snapshot(), snapshot_before);
     }
 }

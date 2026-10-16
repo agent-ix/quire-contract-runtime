@@ -10,12 +10,12 @@ relationships:
 
 ## Description
 
-Execute every QSpec TC-193 vector on the runtime and on quire-spec-language.
+Execute every QSpec ix://agent-ix/quire-specification/TC-193 vector on the runtime and on quire-spec-language.
 Evidence: none in this repository. The QSL agreement oracle is removed from this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done).
 
 ## Test Procedure
 
-1. Check the evaluated and admission-only lists together equal the TC-193 census.
+1. Check the evaluated and admission-only lists together equal the ix://agent-ix/quire-specification/TC-193 census.
 2. Compare value, outcome kind, charges and counters for arithmetic, rounding, non-finite,
    NaN-payload and rational-domain vectors on both sides.
 3. Deny every admitted charge and compare the records; sweep generated operands per profile.
