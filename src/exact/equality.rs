@@ -608,6 +608,7 @@ mod tests {
     use super::*;
     use alloc::boxed::Box;
     use alloc::vec::Vec;
+    use ix_trace_rs::trace;
     use quire_exact::{IntegerInterval, RoundingMode, ScalarLimits};
 
     fn meter() -> Meter {
@@ -632,7 +633,7 @@ mod tests {
         }
     }
 
-    /// Trace: FR-008-AC-5
+    #[trace("FR-008-AC-5")]
     #[test]
     fn equality_operand_failures_keep_distinct_causes() {
         let mut meter = meter();
@@ -682,7 +683,7 @@ mod tests {
         );
     }
 
-    /// Trace: FR-008-AC-5
+    #[trace("FR-008-AC-5")]
     #[test]
     fn equality_quantity_failure_retains_ill_typed_cause() {
         let key = |byte| NodeKey::from_bytes([byte; 32]);
@@ -719,7 +720,7 @@ mod tests {
         );
     }
 
-    /// Trace: FR-008-AC-5
+    #[trace("FR-008-AC-5")]
     #[test]
     fn nonexact_quantity_placement_is_a_distinct_checked_fault() {
         let interval = IntegerInterval::new(Integer::zero(), Integer::one()).unwrap();

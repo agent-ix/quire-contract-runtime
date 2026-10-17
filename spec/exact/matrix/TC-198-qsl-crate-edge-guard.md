@@ -17,7 +17,8 @@ dependency graph. The negative cases run in a scratch copy of the workspace that
 ## Test Procedure
 
 1. Read `deny.toml`; expect `unknown-git = "deny"`, own-repository `allow-git` entries for
-   `quire-exact`, `quire-semantic-value` and `quire-canonical`, and no QSL Git source (FR-275-AC-7).
+   `quire-exact`, `quire-semantic-value` and `quire-canonical`, plus the dev-only first-party
+   tooling source `ix-trace-rs`, and no QSL Git source (FR-275-AC-7).
 2. Run `make deny` on the unmodified tree; expect success.
 3. In a scratch copy, add `qsl-eval` as a normal dependency from the QSL repository; run
    `make deny`; expect a non-zero exit that reports cargo-deny's `source-not-allowed` error for

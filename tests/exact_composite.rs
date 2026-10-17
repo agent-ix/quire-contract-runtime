@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     form_collection, CollectionType, Component, CompositeDeclaration, CompositeShape,
     ConstructionCause, ConstructionRefusal, DeclarationCause, FieldDeclaration, FieldExpression,
@@ -32,7 +33,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
     result_units: u64::MAX,
 };
 
-/// Trace: FR-008-AC-1
+#[trace("FR-008-AC-1")]
 #[test]
 fn deferred_record_value_outside_declared_type_has_precise_cause() {
     let declaration = CompositeDeclaration::new(
@@ -77,7 +78,7 @@ fn consumed(meter: &Meter) -> Vec<u64> {
         .collect()
 }
 
-/// Trace: TC-024, FR-008-AC-8
+#[trace("TC-024", "FR-008-AC-8")]
 #[test]
 fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point() {
     assert!(ChargePoint::ALL.contains(&ChargePoint::FunctionCall));
@@ -121,7 +122,7 @@ fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point(
         .contains(&ChargePoint::FunctionCall));
 }
 
-/// Trace: TC-024, FR-008-AC-1
+#[trace("TC-024", "FR-008-AC-1")]
 #[test]
 fn tc_024_p2_declaration_admission_refuses_duplicates_and_cycles() {
     // Two declarations sharing one node key.
@@ -215,7 +216,7 @@ fn tc_024_p2_declaration_admission_refuses_duplicates_and_cycles() {
     }
 }
 
-/// Trace: TC-024, FR-008-AC-1
+#[trace("TC-024", "FR-008-AC-1")]
 #[test]
 fn tc_024_p3_check_type_and_contains_ieee() {
     // Reference<T> to a non-object-type declaration is type-mismatch.
@@ -269,7 +270,7 @@ fn tc_024_p3_check_type_and_contains_ieee() {
     assert!(!nested_env.contains_ieee(&ValueType::Integer));
 }
 
-/// Trace: TC-024, FR-008-AC-1
+#[trace("TC-024", "FR-008-AC-1")]
 #[test]
 fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     let widget = CompositeDeclaration::new(
@@ -411,8 +412,8 @@ fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     );
 }
 
-/// Trace: TC-024, FR-008-AC-2, FR-008-AC-9 (the deep chain's normal, iterative `Drop` at
-/// scope end)
+/// FR-008-AC-9: the deep chain's normal, iterative `Drop` at scope end.
+#[trace("TC-024", "FR-008-AC-2", "FR-008-AC-9")]
 #[test]
 fn tc_024_p5_value_graph_sharing_and_refusals() {
     let leaf = CompositeDeclaration::new(key(1), "Leaf", CompositeShape::Tuple(Vec::new()));
@@ -588,12 +589,11 @@ fn tc_024_p5_value_graph_sharing_and_refusals() {
     // stack to free.
 }
 
-/// Trace: TC-024, FR-008-AC-9
-///
 /// `Value`'s `Debug` is hand-written and iterative (`agent-ix/quire-contract-runtime#25`): a chain
 /// nested past any plausible recursive-derive host-stack limit must format without overflowing.
 /// Also checks the rendering itself is exactly what the former `#[derive(Debug)]` produced, by
 /// comparing a shallow instance of the same shape against a hand-written expected string.
+#[trace("TC-024", "FR-008-AC-9")]
 #[test]
 fn tc_024_p6_debug_at_depth_has_no_stack_overflow() {
     let leaf = CompositeDeclaration::new(key(1), "Leaf", CompositeShape::Tuple(Vec::new()));
@@ -651,7 +651,7 @@ fn tc_024_p6_debug_at_depth_has_no_stack_overflow() {
     );
 }
 
-/// Trace: TC-024, FR-008-AC-8
+#[trace("TC-024", "FR-008-AC-8")]
 #[test]
 fn tc_024_p6_injected_denial_at_composite_result_retain() {
     let widget = CompositeDeclaration::new(
@@ -692,14 +692,13 @@ fn tc_024_p6_injected_denial_at_composite_result_retain() {
     assert_eq!(consumed(&meter), before);
 }
 
-/// Trace: TC-024, FR-008-AC-9
-///
 /// Pins `Value`'s hand-written, iterative `Debug` (`agent-ix/quire-contract-runtime#25`) to an
 /// exact literal string, in both compact and alternate form, on a small fixed value. Byte-identity
 /// against `#[derive(Debug)]`'s output at depth was confirmed out-of-band (a detached `origin/main`
 /// worktree, before `Value`'s `Debug` became hand-written, reproduces this exact literal for the
 /// same value, and matches this renderer byte-for-byte at 6,000 levels of nesting); this test is
 /// the durable, in-tree, always-run check that the hand-written renderer keeps producing it.
+#[trace("TC-024", "FR-008-AC-9")]
 #[test]
 fn tc_024_p8_debug_exact_string_both_forms() {
     let node = CompositeDeclaration::new(
@@ -756,7 +755,7 @@ fn exercise_deep_value_type(depth: usize, alternating_collections: bool) {
     drop(value_type);
 }
 
-/// Trace: TC-024, FR-008-AC-13
+#[trace("TC-024", "FR-008-AC-13")]
 #[test]
 fn tc_024_p9_value_type_operations_are_iterative() {
     const CHILD_ENV: &str = "QUIRE_RT_IR660_DEEP_VALUE_TYPE_CHILD";

@@ -152,8 +152,9 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
 
 ## Evidence Locations
 
-- TC-198: `deny.toml` (`[sources] unknown-git = "deny"`, the three own-repository `allow-git`
-  entries and `[graph] all-features = true`) and `scripts/check_deny_bans.sh`, run by
+- TC-198: `deny.toml` (`[sources] unknown-git = "deny"`, the three shared own-repository
+  `allow-git` entries, the dev-only first-party `ix-trace-rs` tooling entry and
+  `[graph] all-features = true`) and `scripts/check_deny_bans.sh`, run by
   `make deny-mutations`, which adds QSL Git dependencies in normal, build and dev tables in scratch
   copies and requires cargo-deny's `source-not-allowed` error for that repository. TC-199:
   `scripts/run_feature_matrix.py` (row `build-exact-no-std-msrv`, `make test-features`),

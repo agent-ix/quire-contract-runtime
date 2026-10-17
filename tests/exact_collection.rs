@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     construct_collection, form_collection, CollectionType, Component, CompositeDeclaration,
     CompositeShape, ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue,
@@ -53,7 +54,7 @@ fn charges_of(meter: &Meter, point: ChargePoint) -> usize {
         .count()
 }
 
-/// Trace: TC-025, FR-008-AC-3
+#[trace("TC-025", "FR-008-AC-3")]
 #[test]
 fn tc_025_p1_construct_collection_charges_element_before_running_and_stops_at_first_stop() {
     for kind in [
@@ -98,7 +99,7 @@ fn tc_025_p1_construct_collection_charges_element_before_running_and_stops_at_fi
     }
 }
 
-/// Trace: TC-025, FR-008-AC-3
+#[trace("TC-025", "FR-008-AC-3")]
 #[test]
 fn tc_025_p2_form_collection_refuses_an_ineligible_occurrence_before_any_charge() {
     let collection_type = CollectionType::new(
@@ -123,7 +124,7 @@ fn tc_025_p2_form_collection_refuses_an_ineligible_occurrence_before_any_charge(
     assert!(meter.admitted_charges().is_empty());
 }
 
-/// Trace: FR-008-AC-3
+#[trace("FR-008-AC-3")]
 #[test]
 fn checked_collection_element_outside_declared_type_has_precise_cause() {
     let collection_type = CollectionType::new(
@@ -145,7 +146,7 @@ fn checked_collection_element_outside_declared_type_has_precise_cause() {
     ));
 }
 
-/// Trace: TC-025, FR-008-AC-3
+#[trace("TC-025", "FR-008-AC-3")]
 #[test]
 fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
     let bound = CardinalityBound::new(0, 10).unwrap();
@@ -189,7 +190,7 @@ fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
     }
 }
 
-/// Trace: TC-025, FR-008-AC-7
+#[trace("TC-025", "FR-008-AC-7")]
 #[test]
 fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     let bound = CardinalityBound::new(2, 3).unwrap();
@@ -245,7 +246,7 @@ fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     );
 }
 
-/// Trace: TC-025, FR-008-AC-4
+#[trace("TC-025", "FR-008-AC-4")]
 #[test]
 fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_independent() {
     let wrapper = CompositeDeclaration::new(
@@ -312,8 +313,9 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
     assert_eq!(ranks_of(b.elements()), ranks_of(a.elements()));
 }
 
-/// Trace: TC-025, FR-008-AC-4 (the iterative task-stack walk), FR-008-AC-9 (the deep values'
-/// normal, iterative `Drop` at scope end)
+/// FR-008-AC-4: the iterative task-stack walk.
+/// FR-008-AC-9: the deep values' normal, iterative `Drop` at scope end.
+#[trace("TC-025", "FR-008-AC-4", "FR-008-AC-9")]
 #[test]
 fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     const DEPTH: u64 = 100_000;
@@ -393,7 +395,7 @@ fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {
     // overflow the host stack to free, `outcome`'s shared clones of `a` and `b` included.
 }
 
-/// Trace: TC-025, FR-008-AC-8
+#[trace("TC-025", "FR-008-AC-8")]
 #[test]
 fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     let collection_type = CollectionType::new(
@@ -466,13 +468,12 @@ fn tc_025_p7_injected_denials_leave_counters_unchanged() {
     }
 }
 
-/// Trace: TC-025, FR-008-AC-9
-///
 /// Pins `Value`'s hand-written, iterative `Debug` (`agent-ix/quire-contract-runtime#25`) to an
 /// exact literal string, in both compact and alternate form, on a small fixed collection value.
 /// See `tc_024_p8_debug_exact_string_both_forms` in `tests/exact_composite.rs` for the composite
 /// counterpart and the byte-identity-against-derived-output evidence this durable, in-tree check
 /// keeps guarding.
+#[trace("TC-025", "FR-008-AC-9")]
 #[test]
 fn tc_025_p8_debug_exact_string_both_forms() {
     let collection_type = CollectionType::new(

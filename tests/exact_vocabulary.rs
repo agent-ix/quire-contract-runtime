@@ -2,6 +2,7 @@
 //! normalized unit values, through the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, NodeKey,
     PackageRefusalCode, SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph,
@@ -203,7 +204,7 @@ fn undeclared_case_member() -> Result<EnumValue, InvalidSemanticGraph> {
     declaration.member("blue", key(2))
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_zero_exponent() {
     assert_eq!(
@@ -212,7 +213,7 @@ fn tc_033_admit_raises_zero_exponent() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_duplicate_term() {
     assert_eq!(
@@ -221,7 +222,7 @@ fn tc_033_admit_raises_duplicate_term() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_unsorted_terms() {
     assert_eq!(
@@ -230,7 +231,7 @@ fn tc_033_admit_raises_unsorted_terms() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_zero_scale() {
     assert_eq!(
@@ -239,7 +240,7 @@ fn tc_033_admit_raises_zero_scale() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_non_identity_root() {
     assert_eq!(
@@ -248,7 +249,7 @@ fn tc_033_admit_raises_non_identity_root() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_duplicate_node() {
     assert_eq!(
@@ -257,7 +258,7 @@ fn tc_033_admit_raises_duplicate_node() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_unknown_dimension() {
     assert_eq!(
@@ -266,7 +267,7 @@ fn tc_033_admit_raises_unknown_dimension() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_non_base_dimension_term() {
     assert_eq!(
@@ -275,7 +276,7 @@ fn tc_033_admit_raises_non_base_dimension_term() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_unknown_target() {
     assert_eq!(
@@ -284,7 +285,7 @@ fn tc_033_admit_raises_unknown_target() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_cross_dimension_target() {
     assert_eq!(
@@ -293,7 +294,7 @@ fn tc_033_admit_raises_cross_dimension_target() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_missing_root() {
     assert_eq!(
@@ -302,7 +303,7 @@ fn tc_033_admit_raises_missing_root() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_duplicate_root() {
     assert_eq!(
@@ -311,7 +312,7 @@ fn tc_033_admit_raises_duplicate_root() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_admit_raises_target_cycle() {
     assert_eq!(
@@ -320,7 +321,7 @@ fn tc_033_admit_raises_target_cycle() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_enum_declaration_member_raises_undeclared_case() {
     assert_eq!(
@@ -329,7 +330,7 @@ fn tc_033_enum_declaration_member_raises_undeclared_case() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_structural_inputs_never_raise_a_compiler_admission_cause() {
     let compiler_admission = |cause: SemanticGraphCause| {
@@ -365,7 +366,7 @@ fn tc_033_structural_inputs_never_raise_a_compiler_admission_cause() {
     }
 }
 
-/// Trace: TC-033, FR-012-AC-1
+#[trace("TC-033", "FR-012-AC-1")]
 #[test]
 fn tc_033_from_hex_accepts_exactly_64_lowercase_hex_digits() {
     let valid = "0123456789abcdef".repeat(4);
@@ -391,7 +392,7 @@ fn tc_033_from_hex_accepts_exactly_64_lowercase_hex_digits() {
     assert_eq!(NodeKey::from_hex(&non_ascii), None, "non-ASCII byte");
 }
 
-/// Trace: TC-033, FR-012-AC-1
+#[trace("TC-033", "FR-012-AC-1")]
 #[test]
 fn tc_033_digest_round_trips_through_bytes_hex_and_display() {
     let digests: [[u8; 32]; 3] = [
@@ -415,14 +416,14 @@ fn tc_033_digest_round_trips_through_bytes_hex_and_display() {
     }
 }
 
-/// Trace: TC-033, FR-012-AC-2
+#[trace("TC-033", "FR-012-AC-2")]
 #[test]
 fn tc_033_digest_domains_equal_their_normative_strings() {
     assert_eq!(NODE_KEY_DOMAIN, "quire.checked-semantic-node/v1");
     assert_eq!(COMPOUND_UNIT_DOMAIN, "quire.value.compound-unit/v1");
 }
 
-/// Trace: TC-033, FR-012-AC-3
+#[trace("TC-033", "FR-012-AC-3")]
 #[test]
 fn tc_033_selection_refusal_code_all_is_eight_codes_in_check_order() {
     assert_eq!(
@@ -440,7 +441,7 @@ fn tc_033_selection_refusal_code_all_is_eight_codes_in_check_order() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-3
+#[trace("TC-033", "FR-012-AC-3")]
 #[test]
 fn tc_033_selection_refusal_code_as_str_matches_lock_spelling() {
     let spellings: Vec<&str> = SelectionRefusalCode::ALL
@@ -462,7 +463,7 @@ fn tc_033_selection_refusal_code_as_str_matches_lock_spelling() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-3
+#[trace("TC-033", "FR-012-AC-3")]
 #[test]
 fn tc_033_selection_refusal_code_from_code_is_exact_inverse() {
     for code in SelectionRefusalCode::ALL {
@@ -481,7 +482,7 @@ fn tc_033_selection_refusal_code_from_code_is_exact_inverse() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-3
+#[trace("TC-033", "FR-012-AC-3")]
 #[test]
 fn tc_033_package_refusal_code_as_str_is_invalid_package() {
     assert_eq!(
@@ -490,7 +491,7 @@ fn tc_033_package_refusal_code_as_str_is_invalid_package() {
     );
 }
 
-/// Trace: TC-033, FR-012-AC-5
+#[trace("TC-033", "FR-012-AC-5")]
 #[test]
 fn tc_033_dimension_multiply_is_order_independent_ascending_and_zero_free() {
     let base = |byte: u8| -> Dimension {
@@ -522,7 +523,7 @@ fn tc_033_dimension_multiply_is_order_independent_ascending_and_zero_free() {
     assert_eq!(cancelled, Dimension::dimensionless());
 }
 
-/// Trace: TC-033, FR-012-AC-5
+#[trace("TC-033", "FR-012-AC-5")]
 #[test]
 fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
     let build =
@@ -559,7 +560,7 @@ fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
     assert!(CompoundUnit::dimensionless().terms().next().is_none());
 }
 
-/// Trace: TC-033, FR-012-AC-4
+#[trace("TC-033", "FR-012-AC-4")]
 #[test]
 fn tc_033_enum_declaration_new_is_the_only_runtime_admission_point() {
     let empty = EnumDeclaration::new(key(1), true, &[]);

@@ -5,6 +5,7 @@
 //! criteria restate; no QSpec bytes are copied.
 #![cfg(feature = "exact")]
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     convert_quantity, evaluate_quantity, Conversion, ConvertedValue, NodeKey, Quantity,
     QuantityOperation, QuantityTarget, QuantityUnit, UnitDeclaration, UnitGraph,
@@ -244,7 +245,7 @@ fn assert_no_charge(meter: &Meter) {
     }
 }
 
-/// Trace: TC-201, FR-007-AC-20
+#[trace("TC-201", "FR-007-AC-20")]
 #[test]
 fn tc_201_exact_conversion_returns_the_composed_rational_in_the_target_unit() {
     let graph = graph();
@@ -383,7 +384,7 @@ fn sweep_graph(source: (Fraction, Fraction), target: (Fraction, Fraction)) -> Un
     .unwrap()
 }
 
-/// Trace: TC-201, FR-007-AC-20
+#[trace("TC-201", "FR-007-AC-20")]
 #[test]
 fn tc_201_exact_conversion_matches_an_independent_i128_rational_oracle_over_edge_fractions() {
     let edges = sweep_edges();
@@ -431,7 +432,7 @@ fn unapply_path(path: &[(Fraction, Fraction)], value: Fraction) -> Fraction {
     })
 }
 
-/// Trace: TC-201, FR-007-AC-20
+#[trace("TC-201", "FR-007-AC-20")]
 #[test]
 fn tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths() {
     let graph = graph();
@@ -477,7 +478,7 @@ fn tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths() {
     assert_eq!(exact_value(&conversion), &ratio(1, 1));
 }
 
-/// Trace: TC-201, FR-007-AC-21
+#[trace("TC-201", "FR-007-AC-21")]
 #[test]
 fn tc_201_exact_conversion_refuses_incompatible_dimensions_before_any_charge() {
     let graph = graph();
@@ -511,7 +512,7 @@ fn tc_201_exact_conversion_refuses_incompatible_dimensions_before_any_charge() {
     assert_no_charge(&meter);
 }
 
-/// Trace: TC-201, FR-007-AC-22
+#[trace("TC-201", "FR-007-AC-22")]
 #[test]
 fn tc_201_exact_conversion_admits_affine_source_and_target_units() {
     let graph = graph();
@@ -543,7 +544,7 @@ fn tc_201_exact_conversion_admits_affine_source_and_target_units() {
     assert_eq!(exact_value(&conversion), &ratio(0, 1));
 }
 
-/// Trace: TC-201, FR-007-AC-23
+#[trace("TC-201", "FR-007-AC-23")]
 #[test]
 fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_then_retain() {
     let graph = graph();
@@ -695,7 +696,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
 }
 
-/// Trace: TC-201, FR-007-AC-23
+#[trace("TC-201", "FR-007-AC-23")]
 #[test]
 fn tc_201_exact_target_admission_carries_no_size_amount() {
     // `unit.target-domain` of an unbounded exact rational is a work unit with no size amount:
@@ -713,7 +714,7 @@ fn tc_201_exact_target_admission_carries_no_size_amount() {
     assert_eq!(meter.consumed(LimitKind::ValueOccurrences), 1);
 }
 
-/// Trace: TC-201, FR-007-AC-24
+#[trace("TC-201", "FR-007-AC-24")]
 #[test]
 fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
     let graph = graph();
@@ -768,7 +769,7 @@ fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
     assert!(!meter.admitted_charges().contains(&ChargePoint::UnitEdge));
 }
 
-/// Trace: TC-201, FR-007-AC-25
+#[trace("TC-201", "FR-007-AC-25")]
 #[test]
 fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quantity() {
     let graph = graph();

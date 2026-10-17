@@ -1,5 +1,6 @@
 use core::cell::Cell;
 
+use ix_trace_rs::trace;
 use proptest::prelude::*;
 use quire_contract_runtime::operators::{
     and_short_circuit, and_total, checked_add, checked_div, checked_mul, checked_rem, checked_sub,
@@ -26,7 +27,7 @@ macro_rules! assert_checked_matches_primitive {
     }};
 }
 
-/// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
+#[trace("TC-002", "FR-002-AC-1", "FR-002-AC-2")]
 #[test]
 fn tc_002_boolean_truth_tables() {
     for left in [false, true] {
@@ -41,7 +42,7 @@ fn tc_002_boolean_truth_tables() {
     }
 }
 
-/// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
+#[trace("TC-002", "FR-002-AC-1", "FR-002-AC-2")]
 #[test]
 fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
     let calls = Cell::new(0);
@@ -119,8 +120,7 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
 /// (`agent-ix/quire-contract-runtime#27`), so this crate must be able to carry a stop through them
 /// without the caller deciding it outside the connective. The kernel's `Outcome<bool>` is not
 /// `From<bool>` and the runtime cannot add the impl, so the test carries its stop in a local type.
-///
-/// Trace: TC-002, FR-002-AC-1, FR-002-AC-2
+#[trace("TC-002", "FR-002-AC-1", "FR-002-AC-2")]
 #[test]
 fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {
     #[derive(Clone, Debug, PartialEq)]
@@ -172,7 +172,7 @@ fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {
     );
 }
 
-/// Trace: TC-003, FR-002-AC-3, NFR-002-AC-1
+#[trace("TC-003", "FR-002-AC-3", "NFR-002-AC-1")]
 #[test]
 fn tc_003_definedness_boundaries_do_not_panic() {
     let values = [10_u8, 20];
@@ -189,7 +189,7 @@ fn tc_003_definedness_boundaries_do_not_panic() {
     assert_eq!(checked_rem(i32::MIN, -1), None);
 }
 
-/// Trace: TC-003, FR-002-AC-4
+#[trace("TC-003", "FR-002-AC-4")]
 #[test]
 fn tc_003_checked_integer_matches_primitive_semantics_for_all_twelve_types() {
     assert_checked_matches_primitive!(u8, [u8::MIN, u8::MAX, 0, 1]);
@@ -207,7 +207,7 @@ fn tc_003_checked_integer_matches_primitive_semantics_for_all_twelve_types() {
 }
 
 proptest! {
-    /// Trace: TC-003, FR-002-AC-3, NFR-002-AC-1
+    #[trace("TC-003", "FR-002-AC-3", "NFR-002-AC-1")]
     #[test]
     fn tc_003_checked_i32_helpers_match_primitive_semantics(left: i32, right: i32) {
         prop_assert_eq!(checked_add(left, right), left.checked_add(right));

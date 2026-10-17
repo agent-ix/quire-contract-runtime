@@ -5,6 +5,7 @@
 
 use std::collections::BTreeSet;
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,
     IeeeItemRequirement, IeeeUnsupportedCause, IntegerDivisionBounds, IntegerDivisionConsumer,
@@ -44,19 +45,19 @@ fn baseline_item() -> IeeeItemRequirement {
 
 // ---- AC-1: positional, order-preserving, empty-safe --------------------------
 
-/// Trace: TC-030, FR-009-AC-1
+#[trace("TC-030", "FR-009-AC-1")]
 #[test]
 fn tc_030_integer_division_empty_slice_gives_empty_result() {
     assert_eq!(negotiate_integer_division(&[]), Vec::new());
 }
 
-/// Trace: TC-030, FR-009-AC-1
+#[trace("TC-030", "FR-009-AC-1")]
 #[test]
 fn tc_030_ieee_empty_slice_gives_empty_result() {
     assert_eq!(negotiate_ieee(&[], &capable_backend()), Vec::new());
 }
 
-/// Trace: TC-030, FR-009-AC-1
+#[trace("TC-030", "FR-009-AC-1")]
 #[test]
 fn tc_030_integer_division_reversed_input_gives_reversed_dispositions() {
     let items = [
@@ -86,7 +87,7 @@ fn tc_030_integer_division_reversed_input_gives_reversed_dispositions() {
     assert_eq!(reversed, expected);
 }
 
-/// Trace: TC-030, FR-009-AC-1
+#[trace("TC-030", "FR-009-AC-1")]
 #[test]
 fn tc_030_ieee_reversed_input_gives_reversed_dispositions() {
     let mut backend = capable_backend();
@@ -124,7 +125,7 @@ fn tc_030_ieee_reversed_input_gives_reversed_dispositions() {
 
 // ---- AC-2: integer division bound-subset table --------------------------------
 
-/// Trace: TC-030, FR-009-AC-2
+#[trace("TC-030", "FR-009-AC-2")]
 #[test]
 fn tc_030_mathematical_consumer_is_supported() {
     assert_eq!(
@@ -133,7 +134,7 @@ fn tc_030_mathematical_consumer_is_supported() {
     );
 }
 
-/// Trace: TC-030, FR-009-AC-2
+#[trace("TC-030", "FR-009-AC-2")]
 #[test]
 fn tc_030_finite_consumer_is_supported_only_for_the_full_bound_set() {
     for has_operand in [false, true] {
@@ -163,7 +164,7 @@ fn tc_030_finite_consumer_is_supported_only_for_the_full_bound_set() {
 
 // ---- AC-3: IEEE cause order, first failure wins --------------------------------
 
-/// Trace: TC-030, FR-009-AC-3
+#[trace("TC-030", "FR-009-AC-3")]
 #[test]
 fn tc_030_ieee_each_cause_fires_alone_in_order() {
     let backend = capable_backend();
@@ -211,7 +212,7 @@ fn tc_030_ieee_each_cause_fires_alone_in_order() {
     );
 }
 
-/// Trace: TC-030, FR-009-AC-3
+#[trace("TC-030", "FR-009-AC-3")]
 #[test]
 fn tc_030_ieee_two_failing_causes_report_the_earlier_one() {
     let backend = capable_backend();
@@ -289,7 +290,7 @@ fn tc_030_ieee_two_failing_causes_report_the_earlier_one() {
     );
 }
 
-/// Trace: TC-030, FR-009-AC-3
+#[trace("TC-030", "FR-009-AC-3")]
 #[test]
 fn tc_030_non_rounding_operation_ignores_an_unsupported_rounding_direction() {
     assert!(!IeeeOperationKind::NumericEqual.rounds());
@@ -320,7 +321,7 @@ fn tc_030_non_rounding_operation_ignores_an_unsupported_rounding_direction() {
 
 // ---- AC-4: the finite-proof seam -----------------------------------------------
 
-/// Trace: TC-030, FR-009-AC-4
+#[trace("TC-030", "FR-009-AC-4")]
 #[test]
 fn tc_030_undischarged_finite_proof_requires_bound_only_absent_an_unsupported_cause() {
     let mut backend = capable_backend();
@@ -344,7 +345,7 @@ fn tc_030_undischarged_finite_proof_requires_bound_only_absent_an_unsupported_ca
     );
 }
 
-/// Trace: TC-030, FR-009-AC-4
+#[trace("TC-030", "FR-009-AC-4")]
 #[test]
 fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause() {
     let mut backend = capable_backend();
@@ -403,7 +404,7 @@ fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause
     }
 }
 
-/// Trace: TC-030
+#[trace("TC-030")]
 #[test]
 fn tc_030_every_disposition_is_a_known_variant() {
     // Both negotiators also stay checked against the closed set of dispositions
