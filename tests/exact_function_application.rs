@@ -217,7 +217,6 @@ fn tc_194_unknown_function_refuses_before_any_charge() {
 /// `plan_call` alone reproduces every one of the four `InputRefusal`
 /// variants with no `Meter` in scope at all: the refusal path never needs
 /// one, for any of them.
-///
 #[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
@@ -286,7 +285,6 @@ fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
 /// refusal names parameter 0's kind, never the later dangling reference. A
 /// naive "collect every violation" or "check references first"
 /// implementation would instead report `DanglingReference { parameter: 1 }`.
-///
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
@@ -335,7 +333,6 @@ fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
 /// would report `WrongValueKind { parameter: 0 }`; one that validated it
 /// against parameter 1 (`Reference`) would report `DanglingReference
 /// { parameter: 1 }`. Only comparing counts first reports `Arity`.
-///
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_arity_is_decided_before_any_per_argument_check() {
@@ -380,7 +377,6 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
 /// The body records whether `function.call` was already admitted at the
 /// instant it started running: `call` must charge before invoking the body,
 /// not after.
-///
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_function_call_precedes_the_body() {
@@ -427,7 +423,6 @@ fn tc_194_function_call_precedes_the_body() {
 /// application the root reaches through `Frame::call` charges exactly one
 /// `function.call`. A root with zero applications leaves the meter
 /// untouched; a root with two charges exactly two.
-///
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
@@ -503,7 +498,6 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
 
 /// An `InjectedDenial` at the `function.call` charge stops before the body
 /// runs: the body's side effect (setting a flag) never happens.
-///
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
@@ -540,7 +534,6 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
 /// of `function.call` charges the planned call or evaluation actually gets
 /// admitted once run: one for a named `call`, zero for `evaluate`'s own
 /// root.
-///
 #[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
@@ -590,7 +583,6 @@ fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
 /// `plan_call` shares (there is no `UnknownFunction` here — `evaluate` takes
 /// no function name to look up), plus the foreign-expression identity check
 /// `plan_call` does not need.
-///
 #[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3", "FR-273-AC-5")]
 #[test]
 fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
@@ -692,7 +684,6 @@ fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
 ///     cause: CheckedInvariantCause::ForeignCheckedExpression,
 /// }), .. })` instead, decided at
 /// the plan boundary before any charge.
-///
 #[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3", "FR-273-AC-5", "FR-273-AC-8")]
 #[test]
 fn tc_194_evaluate_shares_plan_call_argument_validation() {
@@ -816,7 +807,6 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
 /// moved package's new address at `evaluate` time, refusing the package's
 /// own expression as `ForeignExpression` — silently indistinguishable from a
 /// genuine invariant violation inside a body.
-///
 #[trace("TC-194")]
 #[test]
 fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
@@ -884,7 +874,6 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
 /// fields, so the same size class) to make address reuse likely on this
 /// allocator; the monotonic id must refuse regardless of whether reuse
 /// actually happens.
-///
 #[trace("TC-194")]
 #[test]
 fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
@@ -964,7 +953,6 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
 /// *this* charge's ordering relative to *this* body: an implementation that
 /// ran `observe`'s body before charging for it would leave the count at `1`
 /// when the body observed it.
-///
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
@@ -1084,7 +1072,6 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
 /// [`Frame::meter`] already handed it refuses the inner access with
 /// `Err(Refusal::CheckedInvariant { cause: MeterBorrowConflict })` instead of panicking on the double
 /// `RefCell` borrow.
-///
 #[trace("TC-194", "FR-273-AC-2", "FR-273-AC-8")]
 #[test]
 fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
@@ -1163,7 +1150,6 @@ fn checked_body_missing_function_has_distinct_invariant_cause() {
 /// A body that calls [`Frame::call`] from inside a [`Frame::meter`] closure
 /// re-enters the same frame's `Meter` `RefCell`: `Frame::run` refuses with
 /// [`Refusal::CheckedInvariant`] instead of panicking on the double borrow.
-///
 #[trace("TC-194", "FR-273-AC-2", "FR-273-AC-8")]
 #[test]
 fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking() {
@@ -1334,7 +1320,6 @@ fn tc_195_dischargeable_requirements_negotiate_supported_or_requires_bound() {
 /// `Meter` could discriminate. Its result type having no path into
 /// `Outcome`/`InputRefusal` is proven separately, by the `compile_fail`
 /// doctest on `IeeeDisposition` (`src/exact/ieee.rs`).
-///
 #[trace("TC-195", "FR-273-AC-4")]
 #[test]
 fn tc_195_negotiate_ieee_takes_no_meter_by_signature() {

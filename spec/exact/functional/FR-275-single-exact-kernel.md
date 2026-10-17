@@ -111,11 +111,13 @@ crates that the runtime consumes.
   either shared crate in its sources or specification.
 - **One copy.** `Cargo.lock` holds one entry each for `quire-exact` and `quire-semantic-value`;
   `quire-canonical` and `quire-canonical-derive` enter transitively. `scripts/check_one_copy.awk`,
-  run by `make deny`, checks every first-party Git crate. `deny.toml` admits only their three
-  own-repository Git sources and carries scoped licence exceptions for the four crates.
+  run by `make deny`, checks every first-party Git crate. `deny.toml` admits their three
+  own-repository Git sources plus the dev-only `ix-trace-rs` tooling source, and carries scoped
+  licence exceptions for the four shared crates.
 - **Guarded edges.** No normal, build or dev dependency may resolve from the QSL repository.
-  `unknown-git = "deny"` rejects that repository because `allow-git` admits only the three
-  own-repository sources. `make deny-mutations` adds QSL Git dependencies in scratch copies and
+  `unknown-git = "deny"` rejects that repository because `allow-git` admits only those three
+  own-repository sources and the dev-only `ix-trace-rs` tooling source. `make deny-mutations`
+  adds QSL Git dependencies in scratch copies and
   requires cargo-deny's source-rejection diagnostic for normal, build and dev dependencies. A licence
   error alone does not prove the source guard.
 - **No substitute for the copy.** The runtime keeps no test that compares its output with a second
@@ -155,7 +157,7 @@ crates that the runtime consumes.
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`. | Test (TC-197, `make deny`) |
 | FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second entry for any first-party Git crate. | Test (TC-197) |
-| FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and keeps `unknown-git = "deny"`; it does not admit the QSL Git repository. | Inspection (TC-198) |
+| FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and the dev-only `ix-trace-rs` first-party tooling source, and keeps `unknown-git = "deny"`; it does not admit the QSL Git repository. | Inspection (TC-198) |
 | FR-275-AC-8 | `make deny` reports cargo-deny's `source-not-allowed` error for the QSL Git repository, and exits non-zero, when a normal, build or dev dependency resolves from it; a licence failure alone does not satisfy this. | Test (TC-198) |
 | FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor. | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
 | FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`. | Test (TC-199) |

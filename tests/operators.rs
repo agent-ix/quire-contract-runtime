@@ -120,7 +120,6 @@ fn tc_002_evaluation_contracts_are_distinct_and_ordered() {
 /// (`agent-ix/quire-contract-runtime#27`), so this crate must be able to carry a stop through them
 /// without the caller deciding it outside the connective. The kernel's `Outcome<bool>` is not
 /// `From<bool>` and the runtime cannot add the impl, so the test carries its stop in a local type.
-///
 #[trace("TC-002", "FR-002-AC-1", "FR-002-AC-2")]
 #[test]
 fn tc_002_short_circuit_is_generic_over_a_stop_carrying_right_operand() {

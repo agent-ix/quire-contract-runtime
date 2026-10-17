@@ -313,8 +313,8 @@ fn tc_025_p5_canonical_order_ranks_absent_null_and_present_and_is_input_order_in
     assert_eq!(ranks_of(b.elements()), ranks_of(a.elements()));
 }
 
-/// The iterative task-stack walk.
-/// The deep values' normal, iterative `Drop` at scope end.
+/// FR-008-AC-4: the iterative task-stack walk.
+/// FR-008-AC-9: the deep values' normal, iterative `Drop` at scope end.
 #[trace("TC-025", "FR-008-AC-4", "FR-008-AC-9")]
 #[test]
 fn tc_025_p6_canonical_key_comparison_at_depth_has_no_stack_overflow() {

@@ -412,7 +412,7 @@ fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     );
 }
 
-/// The deep chain's normal, iterative `Drop` at scope end.
+/// FR-008-AC-9: the deep chain's normal, iterative `Drop` at scope end.
 #[trace("TC-024", "FR-008-AC-2", "FR-008-AC-9")]
 #[test]
 fn tc_024_p5_value_graph_sharing_and_refusals() {

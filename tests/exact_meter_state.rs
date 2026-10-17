@@ -71,7 +71,6 @@ fn tc_032_ac2_power_zero_base_negative_exponent_is_division_by_zero() {
 /// "first match wins" is demonstrated here by both shapes reducing to the
 /// identical `DivisionByZero` cause the vocabulary reserves for it (FR-011:
 /// "the vocabulary carries no separate cause for it").
-///
 #[trace("TC-032", "FR-011-AC-2")]
 #[test]
 fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
@@ -105,7 +104,6 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
 ///   returns unchanged, with no `boolean.result-retain` charge and no result unit consumed
 ///   (FR-011-AC-8). If it completes, the combined result charges `boolean.result-retain` exactly
 ///   once.
-///
 #[trace("TC-032", "FR-011-AC-3", "FR-011-AC-8")]
 #[test]
 fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
@@ -229,7 +227,6 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
 /// `unit.identity-read` attaches `value_occurrences` then `integer_bits` (the reverse of
 /// field order), and still reports the field-order-first short counter. The scan-order cases of
 /// the kernel's own charge points left with the kernel.
-///
 #[trace("TC-032", "FR-011-AC-4")]
 #[test]
 fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
@@ -315,7 +312,6 @@ fn tc_032_ac7_dimension_terms_ascend_by_node_key_for_any_construction_order() {
 /// same `pub(crate)` `CompoundUnit::multiply`/`divide`; this exercises it
 /// through the public `evaluate_quantity` surface instead, over declared root
 /// units admitted in distinct dimensions, associated in several orders.
-///
 #[trace("TC-032", "FR-011-AC-7")]
 #[test]
 fn tc_032_ac7_compound_unit_terms_ascend_by_node_key_for_any_construction_order() {

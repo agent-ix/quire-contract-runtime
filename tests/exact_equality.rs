@@ -920,7 +920,6 @@ proptest! {
     /// `independent_pair_count`, computed from the generated shape and values alone, so a counting
     /// bug shared by `plan_equality` and `evaluate`'s own planning (both call `plan_pairs`) cannot
     /// pass by agreeing with itself.
-    ///
     #[trace("TC-026", "FR-008-AC-5")]
     #[test]
     fn tc_026_evaluate_admits_exactly_the_pairs_plan_equality_predicts(
