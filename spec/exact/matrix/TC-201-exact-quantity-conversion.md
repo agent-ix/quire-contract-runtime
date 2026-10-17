@@ -16,7 +16,7 @@ existing `evaluate_quantity`, directly against the runtime. No new RT symbol is 
 `FR-142-AC-2`, `FR-142-AC-4`, `FR-142-AC-5`, `FR-142-AC-7` and `FR-142-AC-10` and TC-187 rows U01,
 U03, U04, U05, U09, U10, U15, U20, U22, U25 and U26 by id; their vectors are re-stated in
 FR-007-AC-20 through AC-25, not copied from QSpec. Lossy conversion (`FR-142-AC-3`), `Decimal` and
-`Integer` targets and rounding are out of scope. Evidence (planned, IR-818):
+`Integer` targets and rounding are out of scope. Evidence (IR-818):
 `tests/exact_quantity_conversion.rs` (`--features exact`). Shared-corpus agreement is IR-669
 (TC-022).
 
