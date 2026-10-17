@@ -151,9 +151,9 @@ accounting schedule.
 
 ## Verification notes
 
-FR-007-AC-20 through FR-007-AC-25 are PLANNED and are backed by RT-local tests of the existing
-`convert_quantity` and `evaluate_quantity` (TC-201) under `--features exact` once IR-818's code slice
-lands. They cite QSpec `ix://agent-ix/quire-specification/FR-142-AC-1`, `FR-142-AC-2`,
+FR-007-AC-20 through FR-007-AC-25 are backed by RT-local tests of the existing
+`convert_quantity` and `evaluate_quantity` (TC-201, `tests/exact_quantity_conversion.rs`) under
+`--features exact` (IR-818). They cite QSpec `ix://agent-ix/quire-specification/FR-142-AC-1`, `FR-142-AC-2`,
 `FR-142-AC-4`, `FR-142-AC-5`, `FR-142-AC-7` (exact-bound accounting; denial is incomplete with no
 partial quantity) and `FR-142-AC-10`, and TC-187 rows U01, U03, U04, U05, U09, U10, U15, U20, U22,
 U25 and U26 by id; they do not copy those bytes. `FR-142-AC-3` (lossy conversion) is out of this
