@@ -2,9 +2,10 @@
 
 use std::{fs, path::Path, process::Command};
 
+use ix_trace_rs::trace;
 use serde_json::Value;
 
-/// Trace: TC-004, FR-003-AC-2
+#[trace("TC-004", "FR-003-AC-2")]
 #[test]
 fn tc_004_adapter_import_fails_without_proptest_feature() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));

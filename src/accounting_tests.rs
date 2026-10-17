@@ -1,7 +1,8 @@
 use super::CampaignCounts;
 use crate::VerdictKind;
+use ix_trace_rs::trace;
 
-/// Trace: TC-006, FR-004-AC-2
+#[trace("TC-006", "FR-004-AC-2")]
 #[test]
 fn tc_006_private_counters_saturate() {
     let mut counts = CampaignCounts {
@@ -22,7 +23,7 @@ fn tc_006_private_counters_saturate() {
     assert_eq!(counts.total(), u64::MAX);
 }
 
-/// Trace: TC-015, FR-004-AC-4, FR-004-AC-6
+#[trace("TC-015", "FR-004-AC-4", "FR-004-AC-6")]
 #[test]
 fn tc_015_actual_near_limit_report_preserves_capture_and_saturates() {
     use crate::{

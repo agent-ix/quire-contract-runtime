@@ -5,6 +5,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     negotiate_ieee, negotiate_integer_division, plan_call, plan_evaluation, CheckCause, CheckMode,
     CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum, EvaluationRefusal,
@@ -82,7 +83,7 @@ fn identity_package() -> PackageDeclarations {
     }
 }
 
-/// Trace: TC-194, FR-273-AC-1
+#[trace("TC-194", "FR-273-AC-1")]
 #[test]
 fn tc_194_kernel_check_is_refused_so_no_kernel_package_is_applicable() {
     let refusals = expect_check_refusals(
@@ -92,7 +93,7 @@ fn tc_194_kernel_check_is_refused_so_no_kernel_package_is_applicable() {
     assert_eq!(refusals[0].cause, CheckCause::UnsupportedCheckMode);
 }
 
-/// Trace: TC-194, FR-273-AC-1, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-1", "FR-273-AC-2")]
 #[test]
 fn tc_194_linked_package_applies_every_declared_function() {
     let package = identity_package()
@@ -114,7 +115,7 @@ fn tc_194_linked_package_applies_every_declared_function() {
         .contains(&ChargePoint::FunctionCall));
 }
 
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_arity_mismatch_refuses_before_any_charge() {
     let package = identity_package()
@@ -138,7 +139,7 @@ fn tc_194_arity_mismatch_refuses_before_any_charge() {
     assert_eq!(meter.consumed(quire_exact::LimitKind::WorkUnits), 0);
 }
 
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_wrong_value_kind_refuses_before_any_charge() {
     let package = identity_package()
@@ -160,7 +161,7 @@ fn tc_194_wrong_value_kind_refuses_before_any_charge() {
     assert!(meter.admitted_charges().is_empty());
 }
 
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_dangling_reference_refuses_before_any_charge() {
     let package = PackageDeclarations {
@@ -193,7 +194,7 @@ fn tc_194_dangling_reference_refuses_before_any_charge() {
     assert!(meter.admitted_charges().is_empty());
 }
 
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_unknown_function_refuses_before_any_charge() {
     let package = identity_package()
@@ -217,7 +218,7 @@ fn tc_194_unknown_function_refuses_before_any_charge() {
 /// variants with no `Meter` in scope at all: the refusal path never needs
 /// one, for any of them.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
     let identity = identity_package()
@@ -286,7 +287,7 @@ fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
 /// naive "collect every violation" or "check references first"
 /// implementation would instead report `DanglingReference { parameter: 1 }`.
 ///
-/// Trace: TC-194, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
     let package = PackageDeclarations {
@@ -335,7 +336,7 @@ fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
 /// against parameter 1 (`Reference`) would report `DanglingReference
 /// { parameter: 1 }`. Only comparing counts first reports `Arity`.
 ///
-/// Trace: TC-194, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_arity_is_decided_before_any_per_argument_check() {
     let package = PackageDeclarations {
@@ -380,7 +381,7 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
 /// instant it started running: `call` must charge before invoking the body,
 /// not after.
 ///
-/// Trace: TC-194, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_function_call_precedes_the_body() {
     let package = PackageDeclarations {
@@ -427,7 +428,7 @@ fn tc_194_function_call_precedes_the_body() {
 /// `function.call`. A root with zero applications leaves the meter
 /// untouched; a root with two charges exactly two.
 ///
-/// Trace: TC-194, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
     let checked = PackageDeclarations {
@@ -503,7 +504,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
 /// An `InjectedDenial` at the `function.call` charge stops before the body
 /// runs: the body's side effect (setting a flag) never happens.
 ///
-/// Trace: TC-194, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     let ran = Rc::new(Cell::new(false));
@@ -540,7 +541,7 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
 /// admitted once run: one for a named `call`, zero for `evaluate`'s own
 /// root.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
 #[test]
 fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
     let package = identity_package()
@@ -590,7 +591,7 @@ fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
 /// no function name to look up), plus the foreign-expression identity check
 /// `plan_call` does not need.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3", "FR-273-AC-5")]
 #[test]
 fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
     let two_param = PackageDeclarations {
@@ -692,7 +693,7 @@ fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
 /// }), .. })` instead, decided at
 /// the plan boundary before any charge.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-3, FR-273-AC-5, FR-273-AC-8
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3", "FR-273-AC-5", "FR-273-AC-8")]
 #[test]
 fn tc_194_evaluate_shares_plan_call_argument_validation() {
     let package = PackageDeclarations {
@@ -816,7 +817,7 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
 /// own expression as `ForeignExpression` — silently indistinguishable from a
 /// genuine invariant violation inside a body.
 ///
-/// Trace: TC-194
+#[trace("TC-194")]
 #[test]
 fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
     let objects = ObjectEnvironment::default();
@@ -884,7 +885,7 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
 /// allocator; the monotonic id must refuse regardless of whether reuse
 /// actually happens.
 ///
-/// Trace: TC-194
+#[trace("TC-194")]
 #[test]
 fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
     let objects = ObjectEnvironment::default();
@@ -964,7 +965,7 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
 /// ran `observe`'s body before charging for it would leave the count at `1`
 /// when the body observed it.
 ///
-/// Trace: TC-194, FR-273-AC-2
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
     let package = PackageDeclarations {
@@ -1084,7 +1085,7 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
 /// `Err(Refusal::CheckedInvariant { cause: MeterBorrowConflict })` instead of panicking on the double
 /// `RefCell` borrow.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-8
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-8")]
 #[test]
 fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
     let package = PackageDeclarations {
@@ -1123,7 +1124,7 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
-/// Trace: TC-194, FR-273-AC-8
+#[trace("TC-194", "FR-273-AC-8")]
 #[test]
 fn checked_body_missing_function_has_distinct_invariant_cause() {
     let package = PackageDeclarations {
@@ -1163,7 +1164,7 @@ fn checked_body_missing_function_has_distinct_invariant_cause() {
 /// re-enters the same frame's `Meter` `RefCell`: `Frame::run` refuses with
 /// [`Refusal::CheckedInvariant`] instead of panicking on the double borrow.
 ///
-/// Trace: TC-194, FR-273-AC-2, FR-273-AC-8
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-8")]
 #[test]
 fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking() {
     let package = PackageDeclarations {
@@ -1257,7 +1258,7 @@ fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
 
 // ---- TC-195: FR-009 negotiation is not an evaluator outcome ---------------
 
-/// Trace: TC-195, FR-273-AC-4
+#[trace("TC-195", "FR-273-AC-4")]
 #[test]
 fn tc_195_undischargeable_function_capability_negotiates_unsupported() {
     let requirement = IeeeItemRequirement {
@@ -1291,7 +1292,7 @@ fn tc_195_undischargeable_function_capability_negotiates_unsupported() {
     }
 }
 
-/// Trace: TC-195, FR-273-AC-4
+#[trace("TC-195", "FR-273-AC-4")]
 #[test]
 fn tc_195_dischargeable_requirements_negotiate_supported_or_requires_bound() {
     let mut backend = IeeeBackendCapabilities::default();
@@ -1334,7 +1335,7 @@ fn tc_195_dischargeable_requirements_negotiate_supported_or_requires_bound() {
 /// `Outcome`/`InputRefusal` is proven separately, by the `compile_fail`
 /// doctest on `IeeeDisposition` (`src/exact/ieee.rs`).
 ///
-/// Trace: TC-195, FR-273-AC-4
+#[trace("TC-195", "FR-273-AC-4")]
 #[test]
 fn tc_195_negotiate_ieee_takes_no_meter_by_signature() {
     let backend = IeeeBackendCapabilities::default();
@@ -1359,7 +1360,7 @@ fn tc_195_negotiate_ieee_takes_no_meter_by_signature() {
 // file is never scanned as a doctest, so that placement would have been
 // silently vacuous.
 
-/// Trace: TC-195, FR-273-AC-4
+#[trace("TC-195", "FR-273-AC-4")]
 #[test]
 fn tc_195_supported_function_applies_normally_and_produces_no_disposition() {
     let mut backend = IeeeBackendCapabilities::default();
@@ -1405,7 +1406,7 @@ fn tc_195_supported_function_applies_normally_and_produces_no_disposition() {
 
 // ---- PackageDeclarations::check: what a generated package must supply -----
 
-/// Trace: TC-194, FR-273-AC-1
+#[trace("TC-194", "FR-273-AC-1")]
 #[test]
 fn tc_194_ambiguous_function_names_refuse_admission() {
     let package = PackageDeclarations {
@@ -1461,7 +1462,7 @@ fn tc_194_ambiguous_function_names_refuse_admission() {
     }
 }
 
-/// Trace: TC-194, FR-273-AC-1
+#[trace("TC-194", "FR-273-AC-1")]
 #[test]
 fn tc_194_undischarged_measure_refuses_admission() {
     let package = PackageDeclarations {

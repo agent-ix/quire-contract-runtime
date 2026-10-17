@@ -2,6 +2,7 @@
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use ix_trace_rs::trace;
 use proptest::prelude::*;
 use quire_contract_runtime::exact::{
     CollectionType, Component, CompositeDeclaration, CompositeShape, ConstructionCause,
@@ -45,7 +46,7 @@ fn int_value(n: i128) -> Value {
     Value::Integer(Integer::from(n))
 }
 
-/// Trace: FR-008-AC-5
+#[trace("FR-008-AC-5")]
 #[test]
 fn equality_plan_distinguishes_collection_kind_and_value_kind_failures() {
     let collection_type = |kind| {
@@ -128,7 +129,7 @@ fn unit_fixture() -> (QuantityUnit, QuantityUnit, QuantityUnit) {
     (meter_unit, kilometer_unit, kilogram_unit)
 }
 
-/// Trace: TC-026, FR-008-AC-5
+#[trace("TC-026", "FR-008-AC-5")]
 #[test]
 fn tc_026_p1_check_equality_refuses_before_any_charge_and_selects_schedule() {
     let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
@@ -258,7 +259,7 @@ fn tc_026_p1_check_equality_refuses_before_any_charge_and_selects_schedule() {
     assert_eq!(checked.schedule(), EqualitySchedule::Plan);
 }
 
-/// Trace: TC-026, FR-008-AC-5
+#[trace("TC-026", "FR-008-AC-5")]
 #[test]
 fn tc_026_p2_plan_equality_is_uncharged_and_refuses_foreign_references_at_plan_time() {
     // `plan_equality` takes no meter: it cannot charge anything by
@@ -288,7 +289,7 @@ fn tc_026_p2_plan_equality_is_uncharged_and_refuses_foreign_references_at_plan_t
     );
 }
 
-/// Trace: TC-026, FR-008-AC-5
+#[trace("TC-026", "FR-008-AC-5")]
 #[test]
 fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
@@ -469,7 +470,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
         .all(|point| !point.as_str().starts_with("equality.")));
 }
 
-/// Trace: TC-026, FR-008-AC-6
+#[trace("TC-026", "FR-008-AC-6")]
 #[test]
 fn tc_026_p4_object_reference_identity_and_no_component_substitution() {
     let universe = UniverseId::from_digest([0xa1; 32]);
@@ -554,7 +555,7 @@ fn tc_026_p4_object_reference_identity_and_no_component_substitution() {
     assert!(matches!(outcome, Outcome::Completed(Value::Collection(_))));
 }
 
-/// Trace: TC-026, FR-008-AC-8
+#[trace("TC-026", "FR-008-AC-8")]
 #[test]
 fn tc_026_p5_injected_denials_at_each_equality_charge_point() {
     let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
@@ -920,7 +921,7 @@ proptest! {
     /// bug shared by `plan_equality` and `evaluate`'s own planning (both call `plan_pairs`) cannot
     /// pass by agreeing with itself.
     ///
-    /// Trace: TC-026, FR-008-AC-5
+    #[trace("TC-026", "FR-008-AC-5")]
     #[test]
     fn tc_026_evaluate_admits_exactly_the_pairs_plan_equality_predicts(
         (spec, raw_left, raw_right) in equality_case_strategy()

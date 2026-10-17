@@ -10,6 +10,7 @@
 
 use std::cell::Cell;
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     evaluate_boolean_short_circuit, evaluate_quantity, CompoundUnit, CompoundUnitCause,
     InvalidCompoundUnit, InvalidSemanticGraph, NodeKey, Quantity, QuantityOperation, QuantityUnit,
@@ -48,7 +49,7 @@ fn key(byte: u8) -> NodeKey {
     NodeKey::from_bytes(bytes)
 }
 
-/// Trace: TC-032, FR-011-AC-2
+#[trace("TC-032", "FR-011-AC-2")]
 #[test]
 fn tc_032_ac2_power_zero_base_negative_exponent_is_division_by_zero() {
     let base = Quantity::new(
@@ -71,7 +72,7 @@ fn tc_032_ac2_power_zero_base_negative_exponent_is_division_by_zero() {
 /// identical `DivisionByZero` cause the vocabulary reserves for it (FR-011:
 /// "the vocabulary carries no separate cause for it").
 ///
-/// Trace: TC-032, FR-011-AC-2
+#[trace("TC-032", "FR-011-AC-2")]
 #[test]
 fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
     let unit = QuantityUnit::Compound(CompoundUnit::dimensionless());
@@ -105,7 +106,7 @@ fn tc_032_ac2_divide_by_zero_and_power_zero_base_report_same_cause() {
 ///   (FR-011-AC-8). If it completes, the combined result charges `boolean.result-retain` exactly
 ///   once.
 ///
-/// Trace: TC-032, FR-011-AC-3, FR-011-AC-8
+#[trace("TC-032", "FR-011-AC-3", "FR-011-AC-8")]
 #[test]
 fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
     let stops = [
@@ -229,7 +230,7 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
 /// field order), and still reports the field-order-first short counter. The scan-order cases of
 /// the kernel's own charge points left with the kernel.
 ///
-/// Trace: TC-032, FR-011-AC-4
+#[trace("TC-032", "FR-011-AC-4")]
 #[test]
 fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     let mut tuple = [u64::MAX; 10];
@@ -256,7 +257,7 @@ fn tc_032_ac4_field_order_scan_independent_of_attachment_order() {
     );
 }
 
-/// Trace: TC-032, FR-011-AC-6
+#[trace("TC-032", "FR-011-AC-6")]
 #[test]
 fn tc_032_ac6_derived_amount_past_u64_max_is_denied_not_admitted() {
     let base = Quantity::new(
@@ -281,7 +282,7 @@ fn tc_032_ac6_derived_amount_past_u64_max_is_denied_not_admitted() {
     assert_eq!(meter.admitted_charges(), [ChargePoint::UnitIdentityRead]);
 }
 
-/// Trace: TC-032, FR-011-AC-7
+#[trace("TC-032", "FR-011-AC-7")]
 #[test]
 fn tc_032_ac7_dimension_terms_ascend_by_node_key_for_any_construction_order() {
     let (k1, k2, k3) = (key(1), key(2), key(3));
@@ -315,7 +316,7 @@ fn tc_032_ac7_dimension_terms_ascend_by_node_key_for_any_construction_order() {
 /// through the public `evaluate_quantity` surface instead, over declared root
 /// units admitted in distinct dimensions, associated in several orders.
 ///
-/// Trace: TC-032, FR-011-AC-7
+#[trace("TC-032", "FR-011-AC-7")]
 #[test]
 fn tc_032_ac7_compound_unit_terms_ascend_by_node_key_for_any_construction_order() {
     let (d1, d2, d3) = (key(11), key(12), key(13));
@@ -365,7 +366,7 @@ fn tc_032_ac7_compound_unit_terms_ascend_by_node_key_for_any_construction_order(
     }
 }
 
-/// Trace: TC-032, FR-011-AC-7
+#[trace("TC-032", "FR-011-AC-7")]
 #[test]
 fn tc_032_ac7_unit_graph_admit_orders_well_formedness_duplicate_keys_then_topology() {
     // Well-formedness precedes the duplicate-key check for one item: `k` is
@@ -414,7 +415,7 @@ fn tc_032_ac7_unit_graph_admit_orders_well_formedness_duplicate_keys_then_topolo
     );
 }
 
-/// Trace: TC-032, FR-011-AC-7
+#[trace("TC-032", "FR-011-AC-7")]
 #[test]
 fn tc_032_ac7_check_terms_refuses_zero_then_duplicate_then_unsorted() {
     let graph = UnitGraph::default();
