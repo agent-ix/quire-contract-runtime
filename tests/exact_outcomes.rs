@@ -10,6 +10,7 @@
 use std::collections::BTreeSet;
 use std::num::NonZeroU64;
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
     CollectionType, CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration,
@@ -205,13 +206,12 @@ fn drive_quantity(meter: &mut Meter) -> Incomplete {
 /// One `(point, driver)` entry of the AC-1 sweep below.
 type Driver = fn(&mut Meter) -> Incomplete;
 
-/// Trace: TC-031, FR-010-AC-1
-///
 /// An injected denial at occurrence one of every charge point the runtime's own operations
 /// charge names exactly that point: `function.call` (through `CheckedPackage::call`/
 /// `Frame::call`, FR-273), the `equality.*` occurrence-pair plan schedule, the `collection.*`
 /// and `composite.result-retain` family, the enumeration `enum.*` points and the quantity
 /// `unit.*` points. The kernel's own scalar points are the kernel's evidence, not this crate's.
+#[trace("TC-031", "FR-010-AC-1")]
 #[test]
 fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
     let drivers: Vec<(ChargePoint, Driver)> = vec![

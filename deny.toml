@@ -40,9 +40,12 @@ version = 2
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-# Only the shared first-party repositories are admitted. QSL's monorepo source is denied.
+# Only the shared first-party repositories and dev-only ix-trace-rs tooling source are admitted.
+# QSL's monorepo source is denied. The license check excludes dev dependencies, including
+# ix-trace-rs; the source guard still checks its Git origin.
 allow-git = [
     "https://github.com/agent-ix/quire-exact",
     "https://github.com/agent-ix/quire-semantic-value",
     "https://github.com/agent-ix/quire-canonical",
+    "https://github.com/agent-ix/ix-trace-rs",
 ]

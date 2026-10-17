@@ -9,15 +9,15 @@
 //! is red. The kernel scalars' pins left with the kernel to `quire-exact` (FR-275).
 #![cfg(feature = "exact")]
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     CompoundUnit, EnumDeclaration, NodeKey, ObjectIdentity, ObjectReference,
 };
 use quire_exact::UniverseId;
 
-/// Trace: TC-035, FR-007-AC-13
-///
 /// Only the runtime-held `CompoundUnit` and `Dimension` rendering is pinned here; the kernel
 /// scalars' own renderings are `quire-exact`'s to pin.
+#[trace("TC-035", "FR-007-AC-13")]
 #[test]
 fn tc_035_debug_parity_compound_unit() {
     let compound = CompoundUnit::dimensionless();
@@ -27,7 +27,7 @@ fn tc_035_debug_parity_compound_unit() {
     );
 }
 
-/// Trace: TC-035, FR-007-AC-13
+#[trace("TC-035", "FR-007-AC-13")]
 #[test]
 fn tc_035_debug_parity_enum_value_and_object_reference() {
     let declaration =

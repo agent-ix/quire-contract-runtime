@@ -1,3 +1,4 @@
+use ix_trace_rs::trace;
 use quire_contract_runtime::{
     CampaignReport, ClauseId, ClauseKind, ClauseOutcome, ContractIdentity, ExecutionPoint,
     FailureDetail, FailureKind, Observation, RequirementId, RevisionId, Verdict, VerdictContext,
@@ -29,7 +30,7 @@ fn fixture() -> (
     (identity, context, OBSERVATIONS[0].detail.unwrap())
 }
 
-/// Trace: TC-001, FR-001-AC-1, FR-001-AC-2, StR-001-VC-1
+#[trace("TC-001", "FR-001-AC-1", "FR-001-AC-2", "StR-001-VC-1")]
 #[test]
 fn tc_001_preserves_tri_state_identity_and_observations() {
     let (identity, context, detail) = fixture();
@@ -59,7 +60,7 @@ fn tc_001_preserves_tri_state_identity_and_observations() {
     assert_eq!(verdicts[1].detail(), Some(&detail));
 }
 
-/// Trace: TC-006, FR-004-AC-1, FR-004-AC-2
+#[trace("TC-006", "FR-004-AC-1", "FR-004-AC-2")]
 #[test]
 fn tc_006_report_tracks_complete_saturating_counts() {
     let (identity, context, detail) = fixture();
@@ -84,7 +85,7 @@ fn tc_006_report_tracks_complete_saturating_counts() {
     );
 }
 
-/// Trace: TC-001, FR-001-AC-4
+#[trace("TC-001", "FR-001-AC-4")]
 #[test]
 fn tc_001_clause_outcomes_are_distinct_through_construction_and_matching() {
     // Enumerated explicitly, with an unreachable wildcard, so a future sixth
@@ -151,7 +152,7 @@ fn tc_001_clause_outcomes_are_distinct_through_construction_and_matching() {
     assert_eq!(rejected_detail.message, None);
 }
 
-/// Trace: TC-006, FR-004-AC-8
+#[trace("TC-006", "FR-004-AC-8")]
 #[test]
 fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {
     let (identity, context, detail) = fixture();
@@ -191,7 +192,7 @@ fn tc_006_mismatched_identity_leaves_every_counter_and_snapshot_untouched() {
     }
 }
 
-/// Trace: TC-006, FR-004-AC-1, FR-004-AC-2
+#[trace("TC-006", "FR-004-AC-1", "FR-004-AC-2")]
 #[test]
 fn tc_006_report_refuses_a_different_requirement() {
     let (identity, _, _) = fixture();

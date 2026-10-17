@@ -1,12 +1,13 @@
 #![cfg(feature = "proptest")]
 
+use ix_trace_rs::trace;
 use proptest::test_runner::TestCaseError;
 use quire_contract_runtime::{
     proptest_adapter, CampaignReport, ClauseId, ContractIdentity, ExecutionPoint, FailureDetail,
     FailureKind, RequirementId, RevisionId, Verdict, VerdictContext,
 };
 
-/// Trace: TC-004, FR-003-AC-1, StR-001-VC-1
+#[trace("TC-004", "FR-003-AC-1", "StR-001-VC-1")]
 #[test]
 fn tc_004_adapter_preserves_all_three_outcomes() {
     let context = VerdictContext::new(
@@ -27,7 +28,7 @@ fn tc_004_adapter_preserves_all_three_outcomes() {
     ));
 }
 
-/// Trace: TC-004, FR-003-AC-1, FR-004-AC-1, StR-001-VC-1
+#[trace("TC-004", "FR-003-AC-1", "FR-004-AC-1", "StR-001-VC-1")]
 #[test]
 fn tc_004_recording_adapter_preserves_the_campaign_census() {
     let identity = ContractIdentity::new(RequirementId::new("FR-003"), RevisionId::new("rev-1"));
@@ -57,7 +58,7 @@ fn tc_004_recording_adapter_preserves_the_campaign_census() {
     assert_eq!(report.counts().discarded(), 0);
 }
 
-/// Trace: TC-004, FR-003-AC-3
+#[trace("TC-004", "FR-003-AC-3")]
 #[test]
 fn tc_004_recording_adapter_maps_matching_verdicts_to_pinned_results_and_records_exactly_once() {
     let identity = ContractIdentity::new(RequirementId::new("FR-003"), RevisionId::new("rev-1"));
@@ -108,7 +109,7 @@ fn tc_004_recording_adapter_maps_matching_verdicts_to_pinned_results_and_records
     assert_eq!(report.counts().discarded(), 0);
 }
 
-/// Trace: TC-004, FR-003-AC-3
+#[trace("TC-004", "FR-003-AC-3")]
 #[test]
 fn tc_004_recording_adapter_rejects_a_revision_only_mismatch() {
     let expected = ContractIdentity::new(RequirementId::new("FR-003"), RevisionId::new("rev-1"));
@@ -128,7 +129,7 @@ fn tc_004_recording_adapter_rejects_a_revision_only_mismatch() {
     assert_eq!(report.counts(), Default::default());
 }
 
-/// Trace: TC-004, FR-003-AC-1, FR-004-AC-1
+#[trace("TC-004", "FR-003-AC-1", "FR-004-AC-1")]
 #[test]
 fn tc_004_recording_adapter_turns_identity_mismatch_into_failure() {
     let expected = ContractIdentity::new(RequirementId::new("FR-003"), RevisionId::new("rev-1"));

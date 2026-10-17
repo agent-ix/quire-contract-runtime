@@ -4,6 +4,7 @@
 //! IEEE exceptional, rational membership, and decimal normalization cases are kernel-owned.
 #![cfg(feature = "exact")]
 
+use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     evaluate_quantity, NodeKey, Quantity, QuantityOperation, QuantityUnit, UnitDeclaration,
     UnitGraph,
@@ -61,7 +62,7 @@ fn decimal_divide(
     )
 }
 
-/// Trace: TC-034, FR-007-AC-8
+#[trace("TC-034", "FR-007-AC-8")]
 #[test]
 fn tc_034_rounding_modes_select_signed_tie_neighbours() {
     assert_eq!(RoundingMode::ALL.len(), 6);
@@ -104,7 +105,7 @@ fn tc_034_rounding_modes_select_signed_tie_neighbours() {
     }
 }
 
-/// Trace: TC-034, FR-007-AC-8
+#[trace("TC-034", "FR-007-AC-8")]
 #[test]
 fn tc_034_rounding_mode_spellings_and_default() {
     assert_eq!(RoundingMode::ALL.len(), 6);
@@ -123,7 +124,7 @@ fn tc_034_rounding_mode_spellings_and_default() {
     }
 }
 
-/// Trace: TC-034, FR-007-AC-15
+#[trace("TC-034", "FR-007-AC-15")]
 #[test]
 fn tc_034_division_rounds_by_quotient_sign_and_records_exact_loss() {
     for (a, b, mode, coefficient, exact) in [
@@ -207,7 +208,7 @@ fn quantity(graph: &UnitGraph, unit_key: NodeKey, value: i128) -> Quantity {
     Quantity::new(ratio(value, 1), QuantityUnit::Declared(Box::new(unit)))
 }
 
-/// Trace: TC-034, FR-007-AC-12
+#[trace("TC-034", "FR-007-AC-12")]
 #[test]
 fn tc_034_quantity_add_subtract_cause_order_first_failure_wins() {
     let graph = graph();
@@ -252,7 +253,7 @@ fn tc_034_quantity_add_subtract_cause_order_first_failure_wins() {
     // `Err` before `Ok(Outcome::..)`.
 }
 
-/// Trace: TC-034, FR-007-AC-12
+#[trace("TC-034", "FR-007-AC-12")]
 #[test]
 fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
     let graph = graph();
@@ -326,7 +327,7 @@ fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
     );
 }
 
-/// Trace: TC-034, FR-007-AC-12
+#[trace("TC-034", "FR-007-AC-12")]
 #[test]
 fn tc_034_quantity_zero_power_and_affine_refusal() {
     let graph = graph();
@@ -366,7 +367,7 @@ fn tc_034_quantity_zero_power_and_affine_refusal() {
     }
 }
 
-/// Trace: TC-034, FR-007-AC-16
+#[trace("TC-034", "FR-007-AC-16")]
 #[test]
 fn tc_034_affine_power_refuses_zero_and_negative_exponents_without_charges() {
     let graph = graph();
@@ -383,7 +384,7 @@ fn tc_034_affine_power_refuses_zero_and_negative_exponents_without_charges() {
     }
 }
 
-/// Trace: TC-034, FR-007-AC-17
+#[trace("TC-034", "FR-007-AC-17")]
 #[test]
 fn tc_034_distinct_units_of_same_dimension_multiply_and_divide() {
     let graph = graph();
@@ -415,7 +416,7 @@ fn tc_034_distinct_units_of_same_dimension_multiply_and_divide() {
     );
 }
 
-/// Trace: TC-034, FR-007-AC-18
+#[trace("TC-034", "FR-007-AC-18")]
 #[test]
 fn tc_034_modulo_is_euclidean_in_all_sign_quadrants_and_refuses_outside_domain() {
     let domain = int_domain(0, 2);
@@ -434,7 +435,7 @@ fn tc_034_modulo_is_euclidean_in_all_sign_quadrants_and_refuses_outside_domain()
     );
 }
 
-/// Trace: TC-034, FR-007-AC-19
+#[trace("TC-034", "FR-007-AC-19")]
 #[test]
 fn tc_034_division_profiles_admit_only_exposed_member() {
     assert_eq!(DivisionProfile::ALL.len(), 3);

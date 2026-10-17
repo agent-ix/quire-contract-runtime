@@ -1,3 +1,4 @@
+use ix_trace_rs::trace;
 use quire_contract_runtime::{CampaignReport, ContractIdentity, RequirementId, RevisionId};
 
 fn report<'a>(requirement: &'a str, revision: &'a str) -> CampaignReport<'a> {
@@ -7,7 +8,7 @@ fn report<'a>(requirement: &'a str, revision: &'a str) -> CampaignReport<'a> {
     ))
 }
 
-/// Trace: TC-015, FR-004-AC-4
+#[trace("TC-015", "FR-004-AC-4")]
 #[test]
 fn tc_015_snapshot_is_a_complete_immutable_capture() {
     let mut report = report("FR-\"é", "007");
@@ -23,6 +24,7 @@ fn tc_015_snapshot_is_a_complete_immutable_capture() {
 #[cfg(feature = "snapshot-json")]
 mod json {
     use super::report;
+    use ix_trace_rs::trace;
     use quire_contract_runtime::{
         decode_campaign_snapshot as decode, encode_campaign_snapshot as encode, ClauseId,
         ExecutionPoint, FailureDetail, FailureKind, SnapshotError, Verdict, VerdictContext,
@@ -33,7 +35,7 @@ mod json {
         r#""counterSemantics":"saturating-u64-v1","counts":{"accepted":0,"rejected":0,"failed":0,"discarded":0}}"#
     );
 
-    /// Trace: TC-015, FR-004-AC-4, FR-004-AC-5, FR-004-AC-9
+    #[trace("TC-015", "FR-004-AC-4", "FR-004-AC-5", "FR-004-AC-9")]
     #[test]
     fn tc_015_actual_mixed_report_has_independent_exact_json() {
         let mut report = report("FR-\"é", "007");
@@ -69,7 +71,7 @@ mod json {
         );
     }
 
-    /// Trace: TC-015, FR-004-AC-5
+    #[trace("TC-015", "FR-004-AC-5")]
     #[test]
     fn tc_015_every_member_is_required_unique_closed_and_typed() {
         let value: serde_json::Value = serde_json::from_str(EMPTY).unwrap();
@@ -149,7 +151,7 @@ mod json {
         assert!(decode(EMPTY.as_bytes()).is_ok());
     }
 
-    /// Trace: TC-015, FR-004-AC-5, FR-004-AC-6
+    #[trace("TC-015", "FR-004-AC-5", "FR-004-AC-6")]
     #[test]
     fn tc_015_exact_maximum_and_sum_limit_are_not_overflow_history() {
         for (accepted, rejected, at_limit) in [
@@ -168,7 +170,7 @@ mod json {
         }
     }
 
-    /// Trace: TC-015, FR-004-AC-5, FR-004-AC-7
+    #[trace("TC-015", "FR-004-AC-5", "FR-004-AC-7")]
     #[test]
     fn tc_015_byte_identity_unicode_and_depth_boundaries() {
         let mut padded = EMPTY.as_bytes().to_vec();
@@ -227,7 +229,7 @@ mod json {
         assert!(decode(format!(" \n{EMPTY}\r\t").as_bytes()).is_ok());
     }
 
-    /// Trace: TC-015, FR-004-AC-5
+    #[trace("TC-015", "FR-004-AC-5")]
     #[test]
     fn tc_015_structured_refusals_remain_distinct() {
         assert_eq!(decode(b"{}").unwrap_err(), SnapshotError::Malformed);
@@ -247,7 +249,7 @@ mod json {
         );
     }
 
-    /// Trace: TC-015, FR-004-AC-4, FR-004-AC-5
+    #[trace("TC-015", "FR-004-AC-4", "FR-004-AC-5")]
     #[test]
     fn tc_015_generated_unicode_identities_roundtrip_without_normalization() {
         use proptest::prelude::*;
@@ -272,7 +274,7 @@ mod json {
             .unwrap();
     }
 
-    /// Trace: TC-015, FR-004-AC-7
+    #[trace("TC-015", "FR-004-AC-7")]
     #[cfg(target_os = "linux")]
     #[test]
     fn tc_015_memory_ceiling_is_process_failure_not_semantic_refusal() {
