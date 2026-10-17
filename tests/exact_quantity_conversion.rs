@@ -47,6 +47,9 @@ const REV: NodeKey = key(34);
 const CM2: NodeKey = key(35);
 const ALIAS: NodeKey = key(36);
 const ALIKE_ROOT: NodeKey = key(37);
+// `X` targets `degF` and `W` targets `X`: chains whose edges do not commute.
+const X: NodeKey = key(38);
+const W: NodeKey = key(39);
 
 fn int(value: i128) -> Integer {
     Integer::from(value)
@@ -130,6 +133,8 @@ fn graph() -> UnitGraph {
             (U2, to(D_THETA, U1, ratio(1, 1), ratio(-10, 1))),
             (U3, to(D_THETA, DEGC, ratio(1, 1), ratio(0, 1))),
             (CM2, to(D_AREA, M2, ratio(1, 10000), ratio(0, 1))),
+            (X, to(D_THETA, DEGF, ratio(2, 1), ratio(3, 1))),
+            (W, to(D_THETA, X, ratio(3, 1), ratio(-1, 1))),
         ],
     )
     .unwrap()
@@ -347,13 +352,15 @@ impl Fraction {
 }
 
 /// Every nonzero scale and every offset of the sweep: numerators spanning sign and a value past
-/// `i32`, denominators one, a prime and a power of ten.
+/// `i64::MAX` (`10^20 + 3`), denominators one, a prime and a power of ten. Intermediate values
+/// stay within `i128` (checked in the oracle).
 fn sweep_edges() -> Vec<(Fraction, Fraction)> {
-    let scales: Vec<_> = [-3, 1, 7, 1_000_003]
+    const BIG: i128 = 100_000_000_000_000_000_003;
+    let scales: Vec<_> = [-3, 1, 7, 1_000_003, BIG]
         .into_iter()
         .flat_map(|n| [1, 1000].map(|d| Fraction::new(n, d)))
         .collect();
-    let offsets: Vec<_> = [-5, 0, 1_000_003]
+    let offsets: Vec<_> = [-5, 0, 1_000_003, BIG]
         .into_iter()
         .flat_map(|n| [1, 7].map(|d| Fraction::new(n, d)))
         .collect();
@@ -406,7 +413,68 @@ fn tc_201_exact_conversion_matches_an_independent_i128_rational_oracle_over_edge
             }
         }
     }
-    assert_eq!(converted, 48 * 48 * 3);
+    assert_eq!(edges.len(), 80);
+    assert_eq!(converted, 80 * 80 * 3);
+}
+
+/// `target = scale * source + offset` along `path`, source-to-root, in the oracle's fractions.
+fn apply_path(path: &[(Fraction, Fraction)], value: Fraction) -> Fraction {
+    path.iter().fold(value, |current, (scale, offset)| {
+        scale.mul(current).add(*offset)
+    })
+}
+
+/// The inverse of [`apply_path`]: root-to-source, undoing the last edge first.
+fn unapply_path(path: &[(Fraction, Fraction)], value: Fraction) -> Fraction {
+    path.iter().rev().fold(value, |current, (scale, offset)| {
+        current.add(offset.neg()).div(*scale)
+    })
+}
+
+/// Trace: TC-201, FR-007-AC-20
+#[test]
+fn tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths() {
+    let graph = graph();
+    let f = |n, d| Fraction::new(n, d);
+    // Source-to-root edges of `X` (to degF, then to K) and of `W` (to X, to degF, to K); none of
+    // the adjacent edges commute.
+    let degf = (f(5, 9), f(45967, 180));
+    let x_path = [(f(2, 1), f(3, 1)), degf];
+    let w_path = [(f(3, 1), f(-1, 1)), (f(2, 1), f(3, 1)), degf];
+    let u2_path = [(f(1, 1), f(-10, 1)), (f(1, 1), f(10, 1))];
+    let cases = [
+        (X, &x_path[..], K, &[][..]),
+        (K, &[][..], X, &x_path[..]),
+        (W, &w_path[..], K, &[][..]),
+        (K, &[][..], W, &w_path[..]),
+        (X, &x_path[..], W, &w_path[..]),
+        (W, &w_path[..], X, &x_path[..]),
+        (W, &w_path[..], U2, &u2_path[..]),
+        (W, &w_path[..], DEGC, &[(f(1, 1), f(5463, 20))][..]),
+    ];
+    for (source_unit, source_path, target_unit, target_path) in cases {
+        for value in [f(1, 1), f(-7, 3), f(0, 1)] {
+            let source = Quantity::new(value.rational(), declared(&graph, source_unit));
+            let (conversion, _) = completed(&source, &declared(&graph, target_unit), UNLIMITED);
+            let root = apply_path(source_path, value);
+            let expected = unapply_path(target_path, root);
+            assert_eq!(conversion.canonical(), &root.rational());
+            assert_eq!(
+                exact_value(&conversion),
+                &expected.rational(),
+                "{value:?} from {source_unit:?} to {target_unit:?}"
+            );
+        }
+    }
+    // 1 X is 5163/20 K: 2 + 3 = 5 degF, then 5 * 5/9 + 45967/180.
+    let (conversion, _) = completed(&quantity(&graph, X, 1, 1), &declared(&graph, K), UNLIMITED);
+    assert_eq!(exact_value(&conversion), &ratio(5163, 20));
+    let (conversion, _) = completed(
+        &quantity(&graph, K, 5163, 20),
+        &declared(&graph, X),
+        UNLIMITED,
+    );
+    assert_eq!(exact_value(&conversion), &ratio(1, 1));
 }
 
 /// Trace: TC-201, FR-007-AC-21
@@ -667,7 +735,20 @@ fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
         QuantityOperation::Add(&u1_one, &u1_two),
         QuantityOperation::Multiply(&u3, &metre),
     ];
-    for operation in operations.into_iter().chain(u20) {
+    // The affine operand on the right: `1 m * 1 degC` is refused, and `1 K + 1 degC` is refused
+    // as affine arithmetic, not as distinct units. (Extra evidence beyond the AC's left forms.)
+    let (kelvin, one_metre, one_degc) = (
+        quantity(&graph, K, 1, 1),
+        quantity(&graph, M, 1, 1),
+        quantity(&graph, DEGC, 1, 1),
+    );
+    let right = [
+        QuantityOperation::Multiply(&one_metre, &one_degc),
+        QuantityOperation::Divide(&one_metre, &one_degc),
+        QuantityOperation::Add(&kelvin, &one_degc),
+        QuantityOperation::Subtract(&kelvin, &one_degc),
+    ];
+    for operation in operations.into_iter().chain(u20).chain(right) {
         for scalar_limits in [UNLIMITED, limits(0, 0, 0, 0, 0, 0)] {
             let mut meter = Meter::new(scalar_limits);
             let error = evaluate_quantity(operation, &mut meter).unwrap_err();
