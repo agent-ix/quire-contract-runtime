@@ -48,3 +48,13 @@ Mutants killed (reviewer set): m04 target-domain decimal-digits size, m05 identi
 Known limitation, judged as accepted, not a finding. Mutants m02 (target-domain sized `value_occurrences 1`) and m03 (target-domain sized `integer_bits 1`) survive. Size counters on the pinned `quire-exact` meter are high-water marks (`slot = max(slot, amount)`), and the public meter exposes only `consumed`, `admission_count` and the `ChargePoint`-only `admitted_charges`. Any integer-bits size of an exact result is at most the amount the last rational event or identity read already charged, and retain already sizes `value_occurrences` 1. Such a mutant is therefore observationally equivalent on every input through the public meter. No cheap stronger assertion exists there; `with_injected_denial` reports `work_units`, not sizes. The test does kill every size kind whose limit is 0 in the tuples (decimal digits, scale expansion; m04 killed). For the same reason, U15's third and fourth event amounts (15, 14) are only bounded by the high-water of 15. The first two are pinned by the 13- and 14-bit denials.
 
 Mergeability: fix FND-001 in this PR before merge. FND-002 and FND-003 are cheap and belong in the same fix round.
+
+## Dispositions
+
+Round 1, head 2ba10e4f630e39c27bc3dd8ff23977e95e1dd1e6, verified against the fix commit and by re-running the reviewer mutants on it (9/9 tests pass; debug run 3.6 s, release 0.3 s).
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The fixture now has units X (to degF, scale 2, offset 3) and W (to X, scale 3, offset -1), whose adjacent edges do not commute. New test `tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths` converts X and W to and from K, X to and from W, W to U2 and W to degC, and checks `canonical()` and the value. The expected values come from the oracle's own `apply_path`/`unapply_path` over edge fractions restated literally (not read from the graph), plus the literal `1 X = 5163/20 K` and its inverse. m01 and m19 are now killed by this test; m10 and m17 are still killed. |
+| FND-002 | fixed | `tc_201_affine_arithmetic_is_refused_with_zero_charges` adds `1 m * 1 degC`, `1 m / 1 degC`, `1 K + 1 degC` and `1 K - 1 degC`, each expecting `AffineUnitArithmetic` with zero charges under both limit tuples. m14 and m15 are now killed. |
+| FND-003 | fixed | The sweep adds `BIG = 10^20 + 3` (above `i64::MAX`) as a scale and an offset numerator, which gives 80 edges and 80x80x3 conversions, all asserted. The doc comment is corrected, and the oracle uses checked i128 arithmetic, so an overflow would panic rather than pass. |

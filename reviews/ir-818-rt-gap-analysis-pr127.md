@@ -45,3 +45,11 @@ Ticket: IR-818. Planless gap analysis of PR 127. It checks the criteria-to-matri
 - Stubs and coverage inflation: none. All eight tests run real code with literal expected values.
 - Semantic review: focused oracle-strength check per the dispatching brief (reviewer mutants; results in SR-12005). No full fan-out.
 - Plan completion: not assessed
+
+## Dispositions
+
+Round 1, head 2ba10e4f630e39c27bc3dd8ff23977e95e1dd1e6, verified against the fix commit.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The stale sentence is deleted. The FR-007 verification note now reads "`Decimal` and `Integer` targets and any `RoundingMode` are not specified here. Shared-corpus agreement stays IR-669 (TC-022)." |
