@@ -14,10 +14,8 @@ impl ScratchWorktree {
     fn new(repository: &Path) -> Self {
         let root = (0..100)
             .map(|nonce| {
-                std::env::temp_dir().join(format!(
-                    "quire-rt-one-copy-{}-{nonce}",
-                    std::process::id()
-                ))
+                std::env::temp_dir()
+                    .join(format!("quire-rt-one-copy-{}-{nonce}", std::process::id()))
             })
             .find(|path| fs::create_dir(path).is_ok())
             .expect("a unique temporary directory is available");
@@ -90,7 +88,11 @@ fn deny_rejects_a_second_first_party_git_lock_entry() {
         fs::write(&lock_path, &original).unwrap();
         let mut lock = OpenOptions::new().append(true).open(&lock_path).unwrap();
         // A new first-party name needs two entries; a resolved name needs one extra.
-        let copies = if name == "synthetic-first-party" { 2 } else { 1 };
+        let copies = if name == "synthetic-first-party" {
+            2
+        } else {
+            1
+        };
         for _ in 0..copies {
             writeln!(
                 lock,
