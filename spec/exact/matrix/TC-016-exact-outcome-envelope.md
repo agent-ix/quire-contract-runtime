@@ -15,7 +15,9 @@ surface. The former RT-local kernel tests left with the copied implementation.
 
 ## Ownership and evidence
 
-Kernel-owned after IR-349 removes the local copy. Kernel refusal code and cause spellings
+Kernel-owned after IR-349 removes the local copy. Former RT FR-006-AC-1 is retired to
+`ix://agent-ix/quire-exact/FR-362-AC-11`; this RT test case retains only
+FR-006-AC-3. Kernel refusal code and cause spellings
 are tested by `ix://agent-ix/quire-exact/FR-096-AC-8`; public scalar outcome stops by
 `FR-362-AC-11`; charge and limit spellings by `FR-368-AC-1` and `FR-368-AC-2`.
 FR-006-AC-6 is an ownership inspection, not a TC-016 test criterion. The two retired

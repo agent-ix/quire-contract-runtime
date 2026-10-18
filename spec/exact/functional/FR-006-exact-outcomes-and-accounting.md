@@ -64,7 +64,6 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-006-AC-1 | The four outcome dispositions are distinct; completed `false` is a value; refusal, undefined and incomplete reasons are closed enums. | Test (TC-016) |
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
@@ -103,6 +102,16 @@ operations; it shall define no replacement kernel or re-export path ([FR-275](./
 The criteria above remain obligations on that consumed behavior. They do not require RT-local
 kernel tests. [The exact matrix](../matrix/tests.md) records current local evidence separately
 from its disposition after the implementation removes the copy.
+
+The former RT FR-006-AC-1 is retired from this crate: its four dispositions,
+completed `false`, and typed closed reasons are owned by
+`ix://agent-ix/quire-exact/FR-362-AC-11`. The owner implementation is
+`quire_exact::Outcome`, `Undefined`, `Refusal`, `Incomplete`, `LimitKind`, and
+`ChargePoint` in `quire-exact/src/outcome.rs` and `src/accounting.rs`;
+`quire-exact/tests/ir673_scalar.rs::scalar_outcomes_keep_only_admitted_prefixes`
+asserts the four outcomes and the absence of a partial value at a stop. RT does
+not claim a local test for that kernel behavior. TC-016 remains for the still-open
+FR-006-AC-3 vocabulary and accounting clauses.
 
 Owner evidence covers only matching subsets: `ix://agent-ix/quire-exact/FR-096-AC-8` owns
 kernel refusal codes and causes; `FR-362-AC-11` covers public scalar outcome stops;

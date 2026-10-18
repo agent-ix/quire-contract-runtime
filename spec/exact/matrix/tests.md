@@ -10,7 +10,6 @@ type: TestMatrix
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |---|---|---|---|
-| FR-006 | FR-006-AC-1 | TC-016 | 🚧 owner-backed by quire-exact FR-362-AC-11 for scalar outcome stops; RT-local TC-016 tests left with the copied kernel, and the RT row has no local binder |
 | FR-006 | FR-006-AC-6 | — (Inspection) | 🚧 owner-backed by quire-exact FR-096-AC-8 for code/cause; RT consumes typed `Outcome::Refused(Refusal)` directly through `src/exact/mod.rs`, but no RT-local inspection binder remains after the stale four-code test was removed |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | 🚧 owner-backed by quire-exact FR-368-AC-1/2 for vocabulary and FR-359-AC-6/7 for meter ordering; local kernel tests removed |
@@ -77,7 +76,7 @@ type: TestMatrix
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 |---|---|---|---|---|---|
-| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3 | 🚧 local kernel tests and stale four-code tags removed; owner FR-096-AC-8, FR-362-AC-11 and FR-368-AC-1/2 test matching kernel behavior |
+| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-3 | 🚧 local kernel tests and stale four-code tags removed; former RT FR-006-AC-1 is retired to owner FR-362-AC-11; owner FR-368-AC-1/2 tests matching vocabulary behavior |
 | TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | 🚧 local kernel meter tests removed; matching owner evidence is FR-358/359/368 |
 | TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 local allocation tests removed; owner dividend-bit exact/one-under evidence exists, arithmetic `max(bits(a), bits(b))` remains unproved (IR-678), and two-sided agreement remains IR-669 work |
 | TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | 🚧 local allocation tests removed; owner FR-361-AC-9 tests the denied upscale, and two-sided agreement remains IR-669 work |
