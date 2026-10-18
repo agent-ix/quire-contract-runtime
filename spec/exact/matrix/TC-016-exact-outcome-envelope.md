@@ -15,9 +15,9 @@ surface. The former RT-local kernel tests left with the copied implementation.
 
 ## Ownership and evidence
 
-Kernel-owned after IR-349 removes the local copy. Former RT FR-006-AC-1 is retired to
-`ix://agent-ix/quire-exact/FR-362-AC-11`; this RT test case retains only
-FR-006-AC-3. Kernel refusal code and cause spellings
+Kernel-owned after IR-349 removes the local copy. RT FR-006-AC-1 remains open:
+`ix://agent-ix/quire-exact/FR-362-AC-11` tests scalar stop dispositions but
+does not establish the whole closed-reason census or RT consumption. Kernel refusal code and cause spellings
 are tested by `ix://agent-ix/quire-exact/FR-096-AC-8`; public scalar outcome stops by
 `FR-362-AC-11`; charge and limit spellings by `FR-368-AC-1` and `FR-368-AC-2`.
 FR-006-AC-6 is an ownership inspection, not a TC-016 test criterion. The two retired
@@ -28,13 +28,16 @@ establish the kernel vocabulary; RT retains no duplicate census.
 
 1. Build one outcome of each disposition, including completed `true` and `false`; compare every
    pair for equality and check that only completed outcomes yield a value.
-2. Inspect the kernel `Outcome::Refused(Refusal)` and `Outcome::Undefined(Undefined)` reason types
-   for distinct typed variants; do not infer the kernel
+2. Inspect the consumed kernel `Outcome::Refused(Refusal)` and `Outcome::Undefined(Undefined)`
+   reason enums and the `Incomplete` record with its `LimitKind` and `ChargePoint` fields.
+   Confirm the runtime exposes no separate reason carrier. Do not infer the kernel
    code/cause census from the retired local four-code tests.
 3. Round-trip every `ChargePoint` and `LimitKind` through its spelling; check the eleven QSpec
    families are present and `equality.plan-form` is absent.
 
 ## Expected Results
 
-Four distinct dispositions and typed reasons; the charge and limit spellings match QSpec.
+Four distinct dispositions; only `Completed` yields a value. `Refusal` and `Undefined`
+are closed reason enums, while `Incomplete` carries closed `LimitKind` and `ChargePoint`
+reasons in a typed record. The charge and limit spellings match QSpec.
 FR-006-AC-6's kernel code/cause ownership is inspected separately under FR-275.
