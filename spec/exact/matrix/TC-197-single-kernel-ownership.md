@@ -26,8 +26,8 @@ IR-349; it is planned until then.
    (FR-275-AC-3, FR-275-AC-4).
 3. Run `make deny`; expect success, and `awk -f scripts/check_one_copy.awk Cargo.lock` to report one
    entry each for `quire-exact` and `quire-semantic-value`, plus one each for transitive
-   `quire-canonical` and `quire-canonical-derive`. Add a duplicate first-party Git crate entry in a scratch lockfile and expect the gate to
-   fail (FR-275-AC-5, FR-275-AC-6).
+   `quire-canonical` and `quire-canonical-derive` (FR-275-AC-5). TC-202 separately
+   checks that the gate rejects a duplicate first-party Git crate entry.
 4. List the files under `tests/`, `src/` and any fixture directory; expect no test that runs a second
    kernel implementation, no use of the QSL Git repository, and no file copied from the
    QSL repository (FR-275-AC-12, FR-275-AC-13).
