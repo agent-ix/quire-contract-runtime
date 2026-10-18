@@ -101,7 +101,7 @@ type: TestMatrix
 | TC-198 | Fail the build on a dependency from the QSL Git source | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | 🚧 source rejection gate exists in `deny.toml` and `make deny-mutations`; Quire has no test-symbol binder for TC-198 |
 | TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-006-AC-8, FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | 🚧 exact profile and footprint gates exist in `make test-features`, `make size` and `make msrv`; Quire has no test-symbol binder for TC-199 |
 | TC-201 | Convert a quantity exactly between units of one dimension | Unit | P0 | FR-007-AC-20, FR-007-AC-21, FR-007-AC-22, FR-007-AC-23, FR-007-AC-24, FR-007-AC-25 | ✅ RT-local `tests/exact_quantity_conversion.rs` (IR-818); QSL agreement stays IR-669 (TC-022) |
-| TC-202 | Reject duplicate first-party Git lock entries through make deny | Integration | P0 | FR-275-AC-6 | ✅ `tests/deny_one_copy.rs` checks the real Make target and its one-copy diagnostic in a temporary worktree |
+| TC-202 | Reject duplicate first-party Git lock entries through make deny | Integration | P0 | FR-275-AC-6 | ✅ `tests/deny_one_copy.rs` checks the real Make target and its one-copy diagnostic in a scratch repository holding the working-tree gate files |
 
 FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 uses owner
 FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and
@@ -148,8 +148,8 @@ The table records what this slice actually changed; future dispositions are stat
 | `tests/exact_debug_parity.rs` | TC-035 | retained subset | residue Debug cases remain; duplicate kernel Debug cases were removed |
 | `src/exact_accounting_tests.rs`, `src/exact_integer_tests.rs` | TC-023, TC-031, TC-032 | removed | in-crate tests of the deleted RT kernel implementation |
 
-For the kernel, RT keeps the consumption checks TC-197 to TC-199 in the end state: direct
-consumption, no copied code and guarded edges. RT also keeps evidence of its own lazy connective
+For the kernel, RT keeps the consumption checks TC-197 to TC-199 and the one-copy gate check TC-202 in the end state: direct
+consumption, no copied code, guarded edges and the duplicate-entry lock gate. RT also keeps evidence of its own lazy connective
 in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not remove those checks.
 
 ## Evidence Locations
@@ -162,7 +162,9 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   `scripts/run_feature_matrix.py` (row `build-exact-no-std-msrv`, `make test-features`),
   `make msrv` and `make size` (linked band, panic relocations and the footprint-graph check that
   `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive` are absent).
-  Neither has a Rust test.
+  Neither has a Rust test. TC-202: `tests/deny_one_copy.rs`, which copies the working-tree
+  `Makefile`, `scripts/check_one_copy.awk` and `Cargo.lock` into a scratch repository and runs
+  `make deny` against duplicate first-party Git lock entries.
 - TC-194, TC-195: `tests/exact_function_application.rs` (`--features exact`), landed under
   agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
   `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.

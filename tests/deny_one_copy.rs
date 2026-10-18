@@ -6,11 +6,15 @@ use std::process::{Command, Output};
 
 use ix_trace_rs::trace;
 
-struct ScratchWorktree {
+/// A throwaway repository holding the working-tree copies of the files
+/// `make deny` reads, so uncommitted edits to the gate are what gets tested.
+struct ScratchRepo {
     root: PathBuf,
 }
 
-impl ScratchWorktree {
+const GATE_FILES: [&str; 3] = ["Makefile", "scripts/check_one_copy.awk", "Cargo.lock"];
+
+impl ScratchRepo {
     fn new(repository: &Path) -> Self {
         let root = (0..100)
             .map(|nonce| {
@@ -19,20 +23,25 @@ impl ScratchWorktree {
             })
             .find(|path| fs::create_dir(path).is_ok())
             .expect("a unique temporary directory is available");
-        let worktree = Self { root };
-        let output = Command::new("git")
-            .current_dir(repository)
-            .args(["worktree", "add", "--detach"])
-            .arg(&worktree.root)
-            .arg("HEAD")
-            .output()
-            .expect("git can create a scratch worktree");
-        assert!(
-            output.status.success(),
-            "git worktree add failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        worktree
+        let scratch = Self { root };
+        for file in GATE_FILES {
+            let target = scratch.root.join(file);
+            fs::create_dir_all(target.parent().unwrap()).unwrap();
+            fs::copy(repository.join(file), &target).unwrap();
+        }
+        for args in [vec!["init", "--quiet"], vec!["add", "Cargo.lock"]] {
+            let output = Command::new("git")
+                .current_dir(&scratch.root)
+                .args(args)
+                .output()
+                .expect("git can prepare the scratch repository");
+            assert!(
+                output.status.success(),
+                "git setup failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        scratch
     }
 
     fn make_deny(&self) -> Output {
@@ -42,25 +51,20 @@ impl ScratchWorktree {
             .current_dir(&self.root)
             .args(["deny", "CARGO=true"])
             .output()
-            .expect("make deny can run in the scratch worktree")
+            .expect("make deny can run in the scratch repository")
     }
 }
 
-impl Drop for ScratchWorktree {
+impl Drop for ScratchRepo {
     fn drop(&mut self) {
-        let _ = Command::new("git")
-            .current_dir(env!("CARGO_MANIFEST_DIR"))
-            .args(["worktree", "remove", "--force"])
-            .arg(&self.root)
-            .status();
-        let _ = fs::remove_dir(&self.root);
+        let _ = fs::remove_dir_all(&self.root);
     }
 }
 
 #[trace("TC-202", "FR-275-AC-6")]
 #[test]
 fn deny_rejects_a_second_first_party_git_lock_entry() {
-    let worktree = ScratchWorktree::new(Path::new(env!("CARGO_MANIFEST_DIR")));
+    let worktree = ScratchRepo::new(Path::new(env!("CARGO_MANIFEST_DIR")));
     let baseline = worktree.make_deny();
     assert!(
         baseline.status.success(),
