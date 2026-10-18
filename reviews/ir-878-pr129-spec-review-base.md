@@ -24,3 +24,9 @@ FAIL
 ## Checks and limitations
 
 The changed files are spec-only. `quire validate` passed (200/200). `quire coverage --strict` measured 86/184 backed, 109 unbacked, 0 contradicted; `make ci` stops on that existing debt. Owner quire-exact main was inspected read-only. Other Cargo and Kani gates were requested separately with one isolated target and shared lock; see reviewer report for final results.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | At 402699c, FR-006-AC-1 is restored as a Planned TC-016 obligation; TC-016 again maps to both AC-1 and AC-3, and its procedure and expected result match the restored outcome census. |
