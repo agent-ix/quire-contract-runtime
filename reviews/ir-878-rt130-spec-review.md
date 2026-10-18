@@ -46,3 +46,9 @@ scope:
   role: examined
   excerpt: "Reject duplicate first-party Git lock entries through make deny"
 ```
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Round 1, head 7a45ff8: tests.md:151 now names TC-202 and the duplicate-entry lock gate in the end-state checks, and Evidence Locations gains a TC-202 entry naming `tests/deny_one_copy.rs`, the copied gate files and `make deny`; the TC-202 row's status text matches the new scratch-repository mechanism. |

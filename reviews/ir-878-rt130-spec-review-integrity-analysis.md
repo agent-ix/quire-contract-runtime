@@ -42,3 +42,9 @@ scope:
   role: examined
   excerpt: "`make deny` exits non-zero when `Cargo.lock` holds a second entry for any first-party Git crate."
 ```
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Round 1, head 7a45ff8: spec/spec.md:82 now lists TC-202 among the verification-matrix test cases. |

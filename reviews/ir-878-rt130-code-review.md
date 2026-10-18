@@ -53,3 +53,10 @@ scope:
   role: context_only
   excerpt: "Reject duplicate first-party Git lock entries through make deny"
 ```
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Round 1, head 7a45ff8: `ScratchRepo::new` copies the working-tree `Makefile`, `scripts/check_one_copy.awk` and `Cargo.lock` into a fresh `git init` repo and stages `Cargo.lock`. Re-measured: uncommitted awk `exit 0`, uncommitted removal of the awk recipe line and an uncommitted `quire-*` predicate narrowing each now fail the test; nothing else the `deny` recipe reads comes from committed state (`git ls-files` reads the scratch index; `SIBLINGS` `$(shell git ...)` is lazily expanded and unused by `deny`). |
+| FND-002 | fixed | Round 1, head 7a45ff8: no `git worktree` is created; Drop runs `fs::remove_dir_all` on the scratch dir, and `Self { root }` is built before any fallible copy, so a panic in setup or the body still removes it. Re-measured: zero `quire-rt-one-copy-*` dirs and an unchanged `git worktree list` after one passing and three failing runs. |
