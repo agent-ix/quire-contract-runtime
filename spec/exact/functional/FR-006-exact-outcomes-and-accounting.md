@@ -38,7 +38,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
   typed `Outcome::Refused(Refusal)` directly and SHALL define no separate refusal record or
   code/cause mapping. RT imports the typed kernel outcome directly in its consumers;
   FR-275 defines that boundary. The kernel owns
-  `Refusal::code()` and `Refusal::cause()` under `ix://agent-ix/quire-exact/FR-096-AC-8`.
+  `Refusal::code()` and `Refusal::cause()` under [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096).
 - Each charge is decided before the work it pays for, and each size amount is derived before the
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
 - The kernel owns meter storage and accounting. Its bounded diagnostic charge log is exposed
@@ -68,7 +68,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
-| FR-006-AC-6 | Inspection identifies `ix://agent-ix/quire-exact/FR-096-AC-8` as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
+| FR-006-AC-6 | Inspection identifies [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096) as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
 | FR-006-AC-7 | Inspection of `src/exact/` finds no host floating-point types, fields, casts or operations in the exact surface, including `f32` and `f64` uses. | Inspection |
 | FR-006-AC-8 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi` on the supported MSRV through the `build-exact-no-std-msrv` row of `make test-features`. | compile-time-check (TC-199, `make test-features`) |
 | FR-006-AC-9 | Every public item exposed through `quire_contract_runtime::exact` is re-exported by `src/exact/mod.rs` from a private child module; child module paths are inaccessible to consumers. | compile-time-check |
@@ -104,7 +104,7 @@ The criteria above remain obligations on that consumed behavior. They do not req
 kernel tests. [The exact matrix](../matrix/tests.md) records current local evidence separately
 from its disposition after the implementation removes the copy.
 
-FR-006-AC-1 remains open in RT. `ix://agent-ix/quire-exact/FR-362-AC-11` and
+FR-006-AC-1 remains open in RT. [quire-exact FR-362-AC-11](ix://agent-ix/quire-exact/FR-362) and
 `quire-exact/tests/ir673_scalar.rs::scalar_outcomes_keep_only_admitted_prefixes`
 establish the four scalar stop dispositions, including completed `false`, but do
 not census every closed reason type. The owner declarations are
@@ -114,7 +114,7 @@ not census every closed reason type. The owner declarations are
 typed reason fields use those closed enums. TC-016 retains the RT consumer
 check of the whole criterion, which has no local binder yet.
 
-Owner evidence covers only matching subsets: `ix://agent-ix/quire-exact/FR-096-AC-8` owns
+Owner evidence covers only matching subsets: [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096) owns
 kernel refusal codes and causes; `FR-362-AC-11` covers public scalar outcome stops;
 `FR-368-AC-1` and `FR-368-AC-2` cover the charge and limit vocabularies;
 `FR-359-AC-6` and `FR-359-AC-7` cover counter order and consumption;

@@ -17,7 +17,7 @@ oracle. They do not establish quire-spec-language shared-corpus agreement (Linea
 ## Ownership and evidence
 
 Kernel arithmetic, ordering, atom charges and already-decided Boolean retention leave RT
-in IR-349: `ix://agent-ix/quire-exact/FR-362-AC-1` through `FR-362-AC-9` and
+in IR-349: [quire-exact FR-362-AC-1](ix://agent-ix/quire-exact/FR-362) through `FR-362-AC-9` and
 `FR-362-AC-11` through `FR-362-AC-18` own tested scalar subsets; decimal ordering belongs to
 `FR-363-AC-1` through `FR-363-AC-7`, and specified denied-work allocation bounds to
 `FR-361-AC-1` through `FR-361-AC-9`. `FR-362-AC-10` remains planned and untagged because

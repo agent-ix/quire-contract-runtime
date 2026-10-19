@@ -34,7 +34,7 @@ accounting schedule.
   remainder outside the consumer domain is refused without a value as `ModuloOutOfDomain`.
   Compiler admission refuses a package selecting a non-Euclidean `mod` law with
   `invalid_package` / `incompatible-definition`, as specified by
-  `ix://agent-ix/quire-specification/FR-147-AC-5` and QSpec TC-192 DIV-03. RT carries the
+  [quire-specification FR-147-AC-5](ix://agent-ix/quire-specification/FR-147) and QSpec TC-192 DIV-03. RT carries the
   refusal vocabulary but neither produces nor tests this admission refusal. `div`
   checks only its exposed quotient against the consumer domain; `rem` checks only its exposed
   remainder. An out-of-domain exposed member is refused without a value, while the unexposed
@@ -86,7 +86,7 @@ accounting schedule.
   `convert_quantity` over `UnitQuantity` at the revision in RT's `Cargo.lock`, which has the same
   `Exact` target. There is no new RT symbol and no wrapper (FR-275-AC-18). The converted magnitude
   is the `ConvertedValue::Exact` rational in the `Conversion` and its unit is the target unit.
-  There is no rounding parameter because `ix://agent-ix/quire-contract-ir/FR-038-AC-213` admits
+  There is no rounding parameter because [quire-contract-ir FR-038-AC-213](ix://agent-ix/quire-contract-ir/FR-038) admits
   only the `exact` mode for `quire.op.quantity.convert`; `Decimal` and `Integer` targets are out
   of this slice. A direct conversion needs equal dimensions: two declared units must share one
   dimension node, so distinct nodes with equal base-dimension maps are refused, while a compound
@@ -153,7 +153,7 @@ accounting schedule.
 
 FR-007-AC-20 through FR-007-AC-25 are backed by RT-local tests of the existing
 `convert_quantity` and `evaluate_quantity` (TC-201, `tests/exact_quantity_conversion.rs`) under
-`--features exact` (IR-818). They cite QSpec `ix://agent-ix/quire-specification/FR-142-AC-1`, `FR-142-AC-2`,
+`--features exact` (IR-818). They cite QSpec [quire-specification FR-142-AC-1](ix://agent-ix/quire-specification/FR-142), `FR-142-AC-2`,
 `FR-142-AC-4`, `FR-142-AC-5`, `FR-142-AC-7` (exact-bound accounting; denial is incomplete with no
 partial quantity) and `FR-142-AC-10`, and TC-187 rows U01, U03, U04, U05, U09, U10, U15, U20, U22,
 U25 and U26 by id; they do not copy those bytes. `FR-142-AC-3` (lossy conversion) is out of this
@@ -178,7 +178,7 @@ The runtime shall consume kernel scalar operations directly from `quire-exact`, 
 local implementation or re-export ([FR-275](./FR-275-single-exact-kernel.md)). The criteria
 remain obligations on consumed behavior; they do not require RT to retest the kernel.
 
-For FR-007-AC-7, `ix://agent-ix/quire-exact/FR-362-AC-1` through `FR-362-AC-9` and
+For FR-007-AC-7, [quire-exact FR-362-AC-1](ix://agent-ix/quire-exact/FR-362) through `FR-362-AC-9` and
 `FR-362-AC-11` through `FR-362-AC-18` own the tested integer/rational values, atom charges,
 stops and already-decided Boolean truth tables. `FR-362-AC-10` is planned and untagged:
 the rational-normalize bit amount cannot be observed independently through the public meter;
@@ -191,7 +191,7 @@ decision to skip a right operand to the caller. RT therefore retains
 propagation required by FR-011-AC-3 and FR-011-AC-8 and evidenced by TC-032, not by the
 kernel's already-decided Boolean tests.
 
-FR-007-AC-1's large floor-division subset maps to `ix://agent-ix/quire-exact/FR-361-AC-7`
+FR-007-AC-1's large floor-division subset maps to [quire-exact FR-361-AC-7](ix://agent-ix/quire-exact/FR-361)
 and `FR-361-AC-8` at `integer-division.operands`; its injected division/modulus subset maps
 to `FR-361-AC-3`. None of these tests establishes AC-1's exact and one-under
 `max(bits(a), bits(b))` charge at `integer-division.arithmetic` or
@@ -201,7 +201,7 @@ FR-007-AC-2's decimal allocation subset maps to `FR-361-AC-4` through `FR-361-AC
 These owner contracts do not prove QSpec/QSL shared-corpus agreement or the whole decimal
 family. `FR-360` concerns
 `Integer::abs(i64::MIN)` only and is not evidence for those broader claims.
-For FR-007-AC-11, `ix://agent-ix/quire-exact/FR-363-AC-6` and `FR-363-AC-7` specify the
+For FR-007-AC-11, [quire-exact FR-363-AC-6](ix://agent-ix/quire-exact/FR-363) and `FR-363-AC-7` specify the
 normalized-value and retained-operand-charge distinction; the kernel's
 `tests/ir673_decimal.rs` tests the equal values, retained representations and exact
 `8/3/1` versus `4/2/0` size counters with one result unit in each comparison.

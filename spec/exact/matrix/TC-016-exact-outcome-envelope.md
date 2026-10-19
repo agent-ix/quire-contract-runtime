@@ -16,9 +16,9 @@ surface. The former RT-local kernel tests left with the copied implementation.
 ## Ownership and evidence
 
 Kernel-owned after IR-349 removes the local copy. RT FR-006-AC-1 remains open:
-`ix://agent-ix/quire-exact/FR-362-AC-11` tests scalar stop dispositions but
+[quire-exact FR-362-AC-11](ix://agent-ix/quire-exact/FR-362) tests scalar stop dispositions but
 does not establish the whole closed-reason census or RT consumption. Kernel refusal code and cause spellings
-are tested by `ix://agent-ix/quire-exact/FR-096-AC-8`; public scalar outcome stops by
+are tested by [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096); public scalar outcome stops by
 `FR-362-AC-11`; charge and limit spellings by `FR-368-AC-1` and `FR-368-AC-2`.
 FR-006-AC-6 is an ownership inspection, not a TC-016 test criterion. The two retired
 four-code tests and their stale tags were removed with the local kernel tests. Owner tests

@@ -172,7 +172,7 @@ name and order; and no operator here decides anything the authority does not.
 
 The consumed kernel exposes 62 charge points. The former RT-wide census assertion was
 removed in IR-349; the retained TC-024/025/026 tests cover selected spellings and residue
-charge denials, not the full census. Quire-exact (ix://agent-ix/quire-exact/FR-368-AC-1 and ix://agent-ix/quire-exact/FR-368-AC-2) now tests the full
+charge denials, not the full census. Quire-exact ([FR-368-AC-1](ix://agent-ix/quire-exact/FR-368) and [FR-368-AC-2](ix://agent-ix/quire-exact/FR-368)) now tests the full
 62-member vocabulary and round trips. FR-008-AC-8 combines that owner evidence with
 retained RT tests of the twelve added charge-point denials. The owner tests do not
 establish RT/QSL agreement.

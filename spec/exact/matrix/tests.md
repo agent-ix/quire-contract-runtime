@@ -73,7 +73,8 @@ type: TestMatrix
 | FR-275 | FR-275-AC-6 | TC-202 | ✅ `tests/deny_one_copy.rs` exercises `make deny` against duplicate lock entries for every resolved first-party Git crate and a synthetic first-party name, with the cargo-deny stage isolated |
 | FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | 🚧 `deny.toml` and `make deny-mutations` (`scripts/check_deny_bans.sh`) contain the QSL Git source guard and normal, build and dev dependency mutation checks; AC-7 is an inspection, while AC-8 and TC-198 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
 | FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | 🚧 `make test-features`, `make size` and `make msrv` contain the exact no-std, footprint graph, size and toolchain checks; AC-20 is an inspection, while AC-9 through AC-11, AC-21 and TC-199 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
-
+| FR-277 | FR-277-AC-1, FR-277-AC-2, FR-277-AC-3, FR-277-AC-4, FR-277-AC-5, FR-277-AC-6, FR-277-AC-7 | TC-203 | 🚧 Planned: FR-275 kernel routing first, then RT tests; AC-7 Kani lane owner titan:kani:plan |
+| FR-278 | FR-278-AC-1, FR-278-AC-2 | TC-204 | 🚧 Planned: overlapping TC-194/TC-026 assertions exist, FR-278 tags and remaining typed-cause controls pending IR-497 |
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
@@ -102,6 +103,8 @@ type: TestMatrix
 | TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-006-AC-8, FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | 🚧 exact profile and footprint gates exist in `make test-features`, `make size` and `make msrv`; Quire has no test-symbol binder for TC-199 |
 | TC-201 | Convert a quantity exactly between units of one dimension | Unit | P0 | FR-007-AC-20, FR-007-AC-21, FR-007-AC-22, FR-007-AC-23, FR-007-AC-24, FR-007-AC-25 | ✅ RT-local `tests/exact_quantity_conversion.rs` (IR-818); QSL agreement stays IR-669 (TC-022) |
 | TC-202 | Reject duplicate first-party Git lock entries through make deny | Integration | P0 | FR-275-AC-6 | ✅ `tests/deny_one_copy.rs` checks the real Make target and its one-copy diagnostic in a scratch repository holding the working-tree gate files |
+| TC-203 | Exercise checked equality through the kernel plan and runtime meter | Unit | P0 | FR-277-AC-1, FR-277-AC-2, FR-277-AC-3, FR-277-AC-4, FR-277-AC-5, FR-277-AC-6, FR-277-AC-7 | 🚧 Planned: kernel routing and RT controls pending; AC-7 remains the separate titan:kani:plan claim |
+| TC-204 | Retag runtime checked-invariant producer controls | Unit | P0 | FR-278-AC-1, FR-278-AC-2 | 🚧 Planned: FR-278 tags and remaining controls; existing overlap is TC-194 and `src/exact/equality.rs` unit tests tagged FR-008-AC-5 |
 
 FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 uses owner
 FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and
