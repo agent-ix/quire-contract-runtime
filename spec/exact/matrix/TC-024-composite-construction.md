@@ -13,17 +13,19 @@ relationships:
 Check `TypeEnvironment` admission, `record`/`tuple`/`evaluate_record`/`evaluate_tuple` construction,
 `ValueGraph`/`build` containment using RT's current `Value`, and selected accounting vocabulary. IR-882
 plans the kernel-valued rewrite. Evidence:
-`tests/exact_composite.rs` (`--features exact`). The kernel-wide 62-point census and spelling
-round-trip obligation has no local RT census after IR-349; quire-exact FR-368-AC-1/2
-tests all 62 spellings and round trips. The retained RT tests establish selected
-spellings and residue behavior.
+`tests/exact_composite.rs` (`--features exact`). RT locally pins the kernel's 63-point
+`ChargePoint::ALL` census, including `temporal.visit` as its last member, and round-trips
+selected spellings. quire-exact FR-368-AC-1/2 owns the full vocabulary round-trip checks.
+The retained RT tests also establish residue behavior.
 
 ## Test Procedure
 
-1. Check owner FR-368-AC-1/2 for the full 62-member `ChargePoint` census and spelling
-   round trips. Locally check `function.call` and `collection.visit`
-   spellings and that neither appears in this construction test's charge sequence. Function
-   application charges `function.call` in TC-194; do not infer a global absence from this test.
+1. Locally check that `ChargePoint::ALL` has exactly 63 members, ends with `temporal.visit`,
+   and contains `function.call` and `collection.visit`. Check these three spellings and their
+   `from_code` round trips; owner FR-368-AC-1/2 covers the full vocabulary round trips. Check
+   that `function.call` and `collection.visit` do not appear in this construction test's charge
+   sequence. Function application charges `function.call` in TC-194; do not infer a global
+   absence from this test.
 2. Admit a declaration set with a duplicate key, a duplicate field/attribute name, an unnamed-edge
    cycle and a non-escaping-edge cycle; check each refuses at its originating declaration with the
    named `DeclarationCause` and, for the two recursion cases, the exact offending cycle.

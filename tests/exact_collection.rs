@@ -6,6 +6,10 @@ use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     construct_collection, form_collection, CollectionType, Component, CompositeDeclaration,
@@ -48,7 +52,7 @@ fn int_value(n: i128) -> Value {
 
 fn charges_of(meter: &Meter, point: ChargePoint) -> usize {
     meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .filter(|admitted| **admitted == point)
         .count()
@@ -75,7 +79,7 @@ fn tc_025_p1_construct_collection_charges_element_before_running_and_stops_at_fi
                 let ran = Rc::clone(&ran);
                 Box::new(move |meter: &mut Meter| {
                     assert_eq!(
-                        meter.admitted_charges().last(),
+                        meter.admitted_charge_points().last(),
                         Some(&ChargePoint::CollectionElement),
                         "collection.element must be charged before this element runs"
                     );
@@ -191,7 +195,7 @@ fn tc_025_p3_collection_membership_charges_retention_order_and_result_retain() {
             "kind {kind:?}"
         );
 
-        let charges = meter.admitted_charges();
+        let charges = meter.admitted_charge_points();
         assert_eq!(
             charges.get(charges.len() - 2),
             Some(&ChargePoint::CollectionBound)
@@ -317,7 +321,7 @@ fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
     }
     // `collection.bound` precedes the uncharged bound check; nothing follows it.
     assert_eq!(
-        meter.admitted_charges().last(),
+        meter.admitted_charge_points().last(),
         Some(&ChargePoint::CollectionBound)
     );
 
@@ -339,7 +343,7 @@ fn tc_025_p4_cardinality_bound_violations_are_typed_and_distinct() {
         other => panic!("expected CardinalityOutOfBound, got {other:?}"),
     }
     assert_eq!(
-        meter.admitted_charges().last(),
+        meter.admitted_charge_points().last(),
         Some(&ChargePoint::CollectionBound)
     );
 }

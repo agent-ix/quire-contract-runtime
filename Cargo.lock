@@ -3,6 +3,12 @@
 version = 4
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -144,6 +150,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "once_cell"
+version = "1.21.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -180,7 +192,7 @@ dependencies = [
 [[package]]
 name = "quire-canonical"
 version = "0.3.0"
-source = "git+https://github.com/agent-ix/quire-canonical?branch=main#5dc4e12db63b8fae647825b4e4b78df9b6dcadfe"
+source = "git+https://github.com/agent-ix/quire-canonical?branch=main#8b69bedcafa708141958ff222fef2cc272cc4e46"
 dependencies = [
  "quire-canonical-derive",
  "ryu-js",
@@ -192,7 +204,7 @@ dependencies = [
 [[package]]
 name = "quire-canonical-derive"
 version = "0.3.0"
-source = "git+https://github.com/agent-ix/quire-canonical?branch=main#5dc4e12db63b8fae647825b4e4b78df9b6dcadfe"
+source = "git+https://github.com/agent-ix/quire-canonical?branch=main#8b69bedcafa708141958ff222fef2cc272cc4e46"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -226,11 +238,13 @@ dependencies = [
 [[package]]
 name = "quire-exact"
 version = "0.1.0"
-source = "git+https://github.com/agent-ix/quire-exact?branch=main#6f4cc48fc4ca2d3d8ede792cac93bf3806c0998a"
+source = "git+https://github.com/agent-ix/quire-exact?branch=main#1c6cbcb6d523fe1e07f05510918b00047a48233e"
 dependencies = [
+ "allocator-api2",
  "num-bigint",
  "num-integer",
  "num-traits",
+ "once_cell",
  "thiserror",
  "unicode-normalization",
 ]
@@ -238,7 +252,7 @@ dependencies = [
 [[package]]
 name = "quire-semantic-value"
 version = "0.1.0"
-source = "git+https://github.com/agent-ix/quire-semantic-value?branch=main#bd3e1500050bbd35fce8094794930d15327d05fd"
+source = "git+https://github.com/agent-ix/quire-semantic-value?branch=main#9fd137520668ad987391176dfdd6fd38ea62f54d"
 dependencies = [
  "quire-canonical",
  "quire-exact",

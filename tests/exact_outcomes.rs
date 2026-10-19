@@ -10,6 +10,10 @@
 use std::collections::BTreeSet;
 use std::num::NonZeroU64;
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
@@ -296,6 +300,9 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
             usize::try_from(record.consumed).unwrap(),
             "{point:?}"
         );
-        assert!(!meter.admitted_charges().contains(&point), "{point:?}");
+        assert!(
+            !meter.admitted_charge_points().contains(&point),
+            "{point:?}"
+        );
     }
 }

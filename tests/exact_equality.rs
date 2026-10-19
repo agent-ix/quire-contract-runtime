@@ -2,6 +2,10 @@
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use proptest::prelude::*;
 use quire_contract_runtime::exact::{
@@ -318,7 +322,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     let outcome = checked.evaluate(&int_value(5), &int_value(5), &mut meter);
     assert_eq!(outcome, Outcome::Completed(true));
     assert_eq!(
-        meter.admitted_charges(),
+        meter.admitted_charge_points(),
         [
             ChargePoint::DecimalOperands,
             ChargePoint::DecimalScaleExpansion,
@@ -396,7 +400,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     let mut expected = vec![ChargePoint::EqualityPlanForm, ChargePoint::EqualityPlan];
     expected.extend([ChargePoint::EqualityPair; 5]);
     expected.push(ChargePoint::EqualityResultRetain);
-    assert_eq!(meter.admitted_charges(), expected.as_slice());
+    assert_eq!(meter.admitted_charge_points(), expected.as_slice());
 
     // A top-level text, enum and quantity pair each run their own schedule
     // instead of the occurrence-pair plan: no `equality.*` charge appears.
@@ -418,7 +422,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     let outcome = checked.evaluate(&Value::Text(text.clone()), &Value::Text(text), &mut meter);
     assert_eq!(outcome, Outcome::Completed(true));
     assert!(meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .all(|point| !point.as_str().starts_with("equality.")));
 
@@ -440,7 +444,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     );
     assert_eq!(outcome, Outcome::Completed(true));
     assert!(meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .all(|point| !point.as_str().starts_with("equality.")));
 
@@ -465,7 +469,7 @@ fn tc_026_p3_evaluate_charges_conversions_then_the_plan_schedule_in_order() {
     );
     assert_eq!(outcome, Outcome::Completed(true));
     assert!(meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .all(|point| !point.as_str().starts_with("equality.")));
 }
@@ -962,7 +966,7 @@ proptest! {
         // This depth-3, width-4-bounded generator stays below that capacity,
         // so every admitted `equality.pair` charge is in `admitted_charges`.
         let admitted_pairs = meter
-            .admitted_charges()
+            .admitted_charge_points()
             .iter()
             .filter(|point| **point == ChargePoint::EqualityPair)
             .count() as u64;

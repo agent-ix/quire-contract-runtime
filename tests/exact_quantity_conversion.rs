@@ -5,6 +5,10 @@
 //! criteria restate; no QSpec bytes are copied.
 #![cfg(feature = "exact")]
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     convert_quantity, evaluate_quantity, Conversion, ConvertedValue, NodeKey, Quantity,
@@ -554,7 +558,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     let metre = declared(&graph, M);
     let (conversion, meter) = completed(&source, &metre, limits(8, 0, 1, 1, 6, 1));
     assert_eq!(exact_value(&conversion), &ratio(1, 1));
-    assert_eq!(meter.admitted_charges(), schedule(1, 2));
+    assert_eq!(meter.admitted_charge_points(), schedule(1, 2));
     assert_consumed(
         &meter,
         [
@@ -585,7 +589,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     let centimetre = declared(&graph, CM);
     let (conversion, meter) = completed(&inch, &centimetre, limits(15, 0, 2, 1, 9, 1));
     assert_eq!(exact_value(&conversion), &ratio(127, 50));
-    assert_eq!(meter.admitted_charges(), schedule(2, 4));
+    assert_eq!(meter.admitted_charge_points(), schedule(2, 4));
     assert_consumed(
         &meter,
         [
@@ -626,7 +630,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     let square = Quantity::new(ratio(4, 1), compound(&graph, &[(M, 2)]));
     let (conversion, meter) = completed(&square, &declared(&graph, CM2), limits(17, 0, 1, 1, 6, 1));
     assert_eq!(exact_value(&conversion), &ratio(40000, 1));
-    assert_eq!(meter.admitted_charges(), schedule(1, 2));
+    assert_eq!(meter.admitted_charge_points(), schedule(1, 2));
     assert_consumed(
         &meter,
         [
@@ -642,7 +646,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     // U22 m2: one read, target admission and retention, no edge and no event.
     let (conversion, meter) = completed(&square, &declared(&graph, M2), limits(3, 0, 0, 1, 3, 1));
     assert_eq!(exact_value(&conversion), &ratio(4, 1));
-    assert_eq!(meter.admitted_charges(), schedule(0, 0));
+    assert_eq!(meter.admitted_charge_points(), schedule(0, 0));
     assert_consumed(
         &meter,
         [
@@ -663,7 +667,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     let (first, meter) = completed(&torque, &base_form, tuple);
     assert_eq!(exact_value(&first), &ratio(1, 1));
     assert_eq!(first.unit(), &base_form);
-    assert_eq!(meter.admitted_charges(), schedule(0, 0));
+    assert_eq!(meter.admitted_charge_points(), schedule(0, 0));
     assert_consumed(
         &meter,
         [
@@ -679,7 +683,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     let (second, meter) = completed(&second_source, &declared(&graph, J), tuple);
     assert_eq!(exact_value(&second), &ratio(1, 1));
     assert_eq!(second.unit(), &declared(&graph, J));
-    assert_eq!(meter.admitted_charges(), schedule(0, 0));
+    assert_eq!(meter.admitted_charge_points(), schedule(0, 0));
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 3);
 
     // U26 first tuple: 1 u2 to u1 is -9 after one read, three edges (u2 to u1, u1 to K, K to
@@ -690,7 +694,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
         limits(6, 0, 3, 1, 12, 1),
     );
     assert_eq!(exact_value(&conversion), &ratio(-9, 1));
-    assert_eq!(meter.admitted_charges(), schedule(3, 6));
+    assert_eq!(meter.admitted_charge_points(), schedule(3, 6));
     assert_eq!(meter.consumed(LimitKind::UnitEdges), 3);
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 12);
     assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
@@ -766,7 +770,9 @@ fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
         .completed()
         .expect("a non-affine sum completes");
     assert_eq!(sum, quantity(&graph, U2, 3, 1));
-    assert!(!meter.admitted_charges().contains(&ChargePoint::UnitEdge));
+    assert!(!meter
+        .admitted_charge_points()
+        .contains(&ChargePoint::UnitEdge));
 }
 
 #[trace("TC-201", "FR-007-AC-25")]
@@ -791,7 +797,7 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
         )
     );
     assert_eq!(
-        meter.admitted_charges().last(),
+        meter.admitted_charge_points().last(),
         Some(&ChargePoint::UnitTargetDomain)
     );
 
@@ -806,7 +812,7 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
         record(LimitKind::UnitEdges, 1, 1, 2, ChargePoint::UnitEdge)
     );
     assert_eq!(
-        meter.admitted_charges(),
+        meter.admitted_charge_points(),
         [ChargePoint::UnitIdentityRead, ChargePoint::UnitEdge]
     );
 
@@ -824,7 +830,7 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
         )
     );
     assert_eq!(
-        meter.admitted_charges(),
+        meter.admitted_charge_points(),
         [
             ChargePoint::UnitIdentityRead,
             ChargePoint::UnitEdge,
@@ -843,7 +849,7 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
         record(LimitKind::UnitEdges, 2, 2, 3, ChargePoint::UnitEdge)
     );
     assert_eq!(
-        meter.admitted_charges(),
+        meter.admitted_charge_points(),
         [
             ChargePoint::UnitIdentityRead,
             ChargePoint::UnitEdge,

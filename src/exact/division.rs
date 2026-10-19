@@ -28,6 +28,10 @@ impl IntegerDivisionBounds {
 }
 
 /// The consumer of one integer-division item at I13 negotiation.
+#[expect(
+    clippy::large_enum_variant,
+    reason = "the kernel's larger IntegerInterval makes the Finite variant 288 bytes; boxing it would change public consumer construction in this lock-only slice"
+)]
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IntegerDivisionConsumer {

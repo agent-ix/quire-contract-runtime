@@ -5,6 +5,10 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     negotiate_ieee, negotiate_integer_division, plan_call, plan_evaluation, CheckCause, CheckMode,
@@ -111,7 +115,7 @@ fn tc_194_linked_package_applies_every_declared_function() {
     assert!(evaluation.location.is_none());
     assert!(evaluation.losses.is_empty());
     assert!(meter
-        .admitted_charges()
+        .admitted_charge_points()
         .contains(&ChargePoint::FunctionCall));
 }
 
@@ -397,7 +401,7 @@ fn tc_194_function_call_precedes_the_body() {
                 // `charged: false` and complete anyway.
                 match frame.meter(|meter| {
                     meter
-                        .admitted_charges()
+                        .admitted_charge_points()
                         .contains(&ChargePoint::FunctionCall)
                 }) {
                     Ok(charged) => Outcome::Completed(Value::Boolean(charged)),
@@ -459,7 +463,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
         Outcome::Completed(Value::Boolean(true))
     ));
     assert!(!meter
-        .admitted_charges()
+        .admitted_charge_points()
         .contains(&ChargePoint::FunctionCall));
 
     // Two applications reached, both of `leaf`.
@@ -489,7 +493,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
         Outcome::Completed(Value::Boolean(true))
     ));
     let calls = meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .filter(|point| **point == ChargePoint::FunctionCall)
         .count();
@@ -550,7 +554,7 @@ fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
         .unwrap();
     assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
     let admitted_calls = meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .filter(|&&point| point == ChargePoint::FunctionCall)
         .count();
@@ -571,7 +575,7 @@ fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
         .unwrap();
     assert!(matches!(evaluation.outcome, Outcome::Completed(_)));
     let admitted_calls = meter
-        .admitted_charges()
+        .admitted_charge_points()
         .iter()
         .filter(|&&point| point == ChargePoint::FunctionCall)
         .count();
@@ -792,7 +796,7 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
         Outcome::Completed(Value::Boolean(true))
     ));
     assert!(!meter
-        .admitted_charges()
+        .admitted_charge_points()
         .contains(&ChargePoint::FunctionCall));
 }
 
@@ -981,7 +985,7 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
                     let attempt: Result<Value, Refusal> = frame
                         .meter(|meter| {
                             meter
-                                .admitted_charges()
+                                .admitted_charge_points()
                                 .iter()
                                 .filter(|&&charge| charge == ChargePoint::FunctionCall)
                                 .count()
@@ -1107,7 +1111,7 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
         evaluation.outcome,
         Outcome::Completed(Value::Boolean(true))
     ));
-    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
@@ -1143,7 +1147,7 @@ fn checked_body_missing_function_has_distinct_invariant_cause() {
             cause: CheckedInvariantCause::UnknownCheckedFunction,
         })
     ));
-    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
@@ -1182,7 +1186,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
             cause: CheckedInvariantCause::MeterBorrowConflict
         })
     ));
-    assert_eq!(meter.admitted_charges(), &[ChargePoint::FunctionCall]);
+    assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
