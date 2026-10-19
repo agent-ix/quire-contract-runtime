@@ -22,7 +22,7 @@ Every runtime checked-invariant producer SHALL emit the precise shared quire-exa
 
 ## Behavior
 
-The runtime SHALL use the quire-exact FR-369 cause table for the producer sites it owns. No producer SHALL flatten a typed nested cause to a message. Fuel exhaustion SHALL remain an `Incomplete` outcome.
+The runtime SHALL use the quire-exact FR-369 cause table for the producer sites it owns. No producer SHALL flatten a typed nested cause to a message. Fuel exhaustion SHALL remain an `Incomplete` outcome. FR-278-AC-1 overlaps the already tagged FR-273-AC-8/TC-194 producer tests; FR-278-AC-2 overlaps the six `operand_value` cases in FR-008-AC-5/TC-026. These inherited criteria preserve the owner allocation, while distinct FR-278 tags and any remaining typed-cause controls are pending. The no-`CallDepthExceeded` carrier shape is owned by quire-exact FR-369-AC-1 and gated on the IR-497 cutover, while RT FR-273 owns explicit frames and fuel.
 
 ## Acceptance Criteria
 
@@ -38,4 +38,4 @@ The runtime SHALL use the quire-exact FR-369 cause table for the producer sites 
 
 ## Status
 
-PLANNED: runtime producer tests have not landed.
+PLANNED for FR-278 tags: RT tests already assert the overlapping producer paths under FR-273-AC-8/TC-194 and FR-008-AC-5/TC-026. Rebind those tests when the typed carrier lands and add only missing controls. The kernel-owned no-`CallDepthExceeded` carrier gate remains quire-exact FR-369-AC-1 at IR-497.

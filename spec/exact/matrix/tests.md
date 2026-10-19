@@ -73,10 +73,8 @@ type: TestMatrix
 | FR-275 | FR-275-AC-6 | TC-202 | ✅ `tests/deny_one_copy.rs` exercises `make deny` against duplicate lock entries for every resolved first-party Git crate and a synthetic first-party name, with the cargo-deny stage isolated |
 | FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | 🚧 `deny.toml` and `make deny-mutations` (`scripts/check_deny_bans.sh`) contain the QSL Git source guard and normal, build and dev dependency mutation checks; AC-7 is an inspection, while AC-8 and TC-198 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
 | FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | 🚧 `make test-features`, `make size` and `make msrv` contain the exact no-std, footprint graph, size and toolchain checks; AC-20 is an inspection, while AC-9 through AC-11, AC-21 and TC-199 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
-
-| FR-277 | FR-277-AC-1 through FR-277-AC-6 | — | 🚧 PLANNED: checked-evaluator tests at the runtime owner; no TC or trace tag is credited by this spec allocation |
-| FR-278 | FR-278-AC-1, FR-278-AC-2 | — | 🚧 PLANNED: runtime producer-cause tests; no TC or trace tag is credited by this spec allocation |
-
+| FR-277 | FR-277-AC-1, FR-277-AC-2, FR-277-AC-3, FR-277-AC-4, FR-277-AC-5, FR-277-AC-6, FR-277-AC-7 | TC-203 | 🚧 Planned: FR-275 kernel routing first, then RT tests; AC-7 Kani lane owner titan:kani:plan |
+| FR-278 | FR-278-AC-1, FR-278-AC-2 | TC-204 | 🚧 Planned: overlapping TC-194/TC-026 assertions exist, FR-278 tags and remaining typed-cause controls pending IR-497 |
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
