@@ -1,0 +1,46 @@
+---
+id: FR-277
+title: "Exercise checked equality through the runtime evaluator and kernel meter"
+type: FR
+relationships:
+  - target: ix://agent-ix/quire-exact/FR-375
+    type: depends_on
+---
+# FR-277: Exercise checked equality through the runtime evaluator and kernel meter
+
+## Description
+
+The runtime SHALL execute checked equality through its real `CheckedEquality::evaluate` implementation in `src/exact/equality.rs`, consuming the quire-exact planned relation and `Meter` effects. This requirement allocates the end-to-end controls formerly in quire-exact FR-375-AC-1 through AC-5 and AC-8 to the runtime that owns the evaluator.
+
+## Inputs
+
+- The bounded depth-four List operands and their checked composite declarations.
+- A runtime meter with the stated charge limits or injected denial.
+
+## Outputs
+
+- The existing typed equality outcome and admitted meter charges.
+
+## Behavior
+
+The runtime SHALL preserve the kernel plan's relation and complete pair schedule. The meter SHALL admit only successful charges, in the order plan-form, plan, each pair, and result retention. Checked construction SHALL reject unlike static composite declarations before evaluation. The quire-exact FR-375-AC-6 proof claim remains in its Kani lane; this requirement makes no proof claim.
+
+## Acceptance Criteria
+
+| ID | Criteria | Verification |
+| --- | --- | --- |
+| FR-277-AC-1 | On the bounded depth-four `List` input with equal operands, the actual `CheckedEquality::evaluate` path completes `true`; the result-bearing kernel seam reports 17 planned pair events; the meter admits exactly 17 `EqualityPair` charges, in the schedule after `EqualityPlanForm` and `EqualityPlan` and before `EqualityResultRetain`. | Test |
+| FR-277-AC-2 | On the same bounded shape with the first head unequal, the actual `CheckedEquality::evaluate` path completes `false` and still admits the complete 17-pair schedule and result-retain charge; equality does not short-circuit its occurrence-pair traversal or charge schedule. | Test |
+| FR-277-AC-3 | If a test meter denies the 17th `EqualityPair`, evaluation returns the existing typed `Incomplete` outcome at `EqualityPair`; only the preceding 16 pair charges are admitted, and `EqualityResultRetain` is not admitted. A denial of `EqualityResultRetain` occurs only after all 17 pair charges have been admitted. | Test |
+| FR-277-AC-4 | With equal-shaped operands whose declared (static) composite types differ, checked construction refuses with `IllTypedCause::TypeMismatch` before `CheckedEquality::evaluate`; the evaluator is not called and no equality pair charge is admitted. | Test |
+| FR-277-AC-5 | With `work_units = 50` and the bounded equal pair, the actual checked evaluation admits plan-form work of 32, then refuses `equality.plan` because its atomic reservation requires 19 remaining work units but only 18 remain. It returns the existing typed `Incomplete` at `WorkUnits` with limit 50, consumed 32 and `next_charge = 19`; no plan, pair, or result-retain charge is admitted and no equality result is returned. | Test |
+| FR-277-AC-6 | With `result_units = 0` and sufficient work and occurrence limits, the actual checked evaluation admits `equality.plan-form`, then refuses `equality.plan` atomically with typed `Incomplete { limit_kind: ResultUnits, limit: 0, consumed: 0, next_charge: 1 }`. No plan, pair, or result-retain charge is admitted and no equality result is returned. A version that checks result capacity only after pair charges fails this control. | Test |
+
+## Dependencies
+
+- [quire-exact FR-375](ix://agent-ix/quire-exact/FR-375) owns equality planning and metering semantics.
+- [IR-878](https://linear.app/agent-ix/issue/IR-878) tracks the owner allocation. Tests for these criteria are PLANNED until a runtime test PR lands.
+
+## Status
+
+PLANNED: no runtime test is credited by this spec allocation.

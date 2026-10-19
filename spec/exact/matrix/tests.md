@@ -74,6 +74,9 @@ type: TestMatrix
 | FR-275 | FR-275-AC-7, FR-275-AC-8 | TC-198 | 🚧 `deny.toml` and `make deny-mutations` (`scripts/check_deny_bans.sh`) contain the QSL Git source guard and normal, build and dev dependency mutation checks; AC-7 is an inspection, while AC-8 and TC-198 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
 | FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | 🚧 `make test-features`, `make size` and `make msrv` contain the exact no-std, footprint graph, size and toolchain checks; AC-20 is an inspection, while AC-9 through AC-11, AC-21 and TC-199 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
 
+| FR-277 | FR-277-AC-1 through FR-277-AC-6 | — | 🚧 PLANNED: checked-evaluator tests at the runtime owner; no TC or trace tag is credited by this spec allocation |
+| FR-278 | FR-278-AC-1, FR-278-AC-2 | — | 🚧 PLANNED: runtime producer-cause tests; no TC or trace tag is credited by this spec allocation |
+
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
