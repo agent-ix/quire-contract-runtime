@@ -2,37 +2,103 @@
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/k8DVhuYBR2)
 
-`quire-contract-runtime` is the small `no_std` support library linked by generated contract oracles.
-It keeps successful checks, failed postconditions, and rejected preconditions distinct and observable.
+When a contract says *given a valid request, the handler's output must match*, three different
+things can happen when you test it: the output matches, the output is wrong, or the request was
+never valid to begin with. `quire-contract-runtime` is the small `no_std` Rust library that gives
+those three cases three different names, so a test harness can tell them apart.
+
+It is the runtime that the oracles emitted by `quire-contract-codegen` link against. Without it,
+every generated oracle would reinvent its own pass/fail type, and a rejected input would quietly
+turn into a "pass" the moment someone converted the result to a `bool`. This crate has no such
+conversion, so a rejected precondition can never be counted as evidence that the code is correct.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/hero-dark.svg">
+  <img alt="A generated oracle passes observed values to quire-contract-runtime, which returns one of three verdicts: Passed, FailedPostcondition or RejectedPrecondition. A campaign report counts every verdict." src="docs/images/hero-light.svg">
+</picture>
+
+> **Status: public prerelease.** The API is still changing, the crate is `publish = false`, and
+> nothing is released to a registry yet. Expect breaking changes.
+
+## A first verdict
+
+A verdict carries the identity of the contract (requirement and revision), the point in execution
+where it was checked, and the clauses that were observed. This is the fixture and the campaign
+test from [`tests/integration.rs`](tests/integration.rs):
 
 ```rust
 use quire_contract_runtime::{
-    ContractIdentity, ExecutionPoint, RequirementId, RevisionId, Verdict, VerdictContext,
+    CampaignReport, ClauseId, ClauseKind, ClauseOutcome, ContractIdentity, ExecutionPoint,
+    FailureDetail, FailureKind, Observation, RequirementId, RevisionId, Verdict, VerdictContext,
 };
 
+static OBSERVATIONS: [Observation<'static>; 1] = [Observation::new(
+    ClauseId::new("post-1"),
+    ClauseKind::Postcondition,
+    ClauseOutcome::Failed,
+    Some(FailureDetail::new(
+        ClauseId::new("post-1"),
+        FailureKind::Postcondition,
+        17,
+        Some("expected output"),
+    )),
+)];
+let identity = ContractIdentity::new(RequirementId::new("FR-001"), RevisionId::new("rev-7"));
 let context = VerdictContext::new(
-    ContractIdentity::new(RequirementId::new("REQ-42"), RevisionId::new("sha256:...")),
-    ExecutionPoint::new("after-update"),
-    &[],
+    identity,
+    ExecutionPoint::new("after-handler"),
+    &OBSERVATIONS,
 );
-let verdict = Verdict::passed(context);
+let detail = OBSERVATIONS[0].detail.unwrap();
+
+let mut report = CampaignReport::new(identity);
+assert!(report.record_verdict(&Verdict::passed(context)).is_ok());
+assert!(report
+    .record_verdict(&Verdict::failed_postcondition(context, detail))
+    .is_ok());
+assert!(report
+    .record_verdict(&Verdict::rejected_precondition(context, detail))
+    .is_ok());
+report.record_discard();
+
+assert_eq!(report.counts().accepted(), 2);
+assert_eq!(report.counts().failed(), 1);
+assert_eq!(report.counts().rejected(), 1);
+assert_eq!(report.counts().discarded(), 1);
+assert_eq!(report.counts().total(), 4);
+assert_eq!(
+    report.to_string(),
+    "requirement=FR-001 revision=rev-7 accepted=2 rejected=1 failed=1 discarded=1"
+);
 ```
 
-There is intentionally no `Verdict -> bool` conversion. Callers must preserve `Passed`,
-`FailedPostcondition`, and `RejectedPrecondition` rather than allowing a rejected input to become
-successful evidence.
+In a campaign, a failed postcondition counts as accepted (the input was valid) and as failed, and
+a rejected precondition counts only as rejected. Recording a verdict for a different contract
+identity is an error, not a silent merge.
 
-## Runtime surface
+## What is in the crate
 
-- Borrowed requirement/revision, execution-point, and clause identities.
-- Allocation-free per-clause outcomes and structured failure details.
-- Separately named short-circuit and total Boolean/implication operators.
-- Checked option, slice-index, integer arithmetic, division, and remainder helpers.
-- Complete, saturating accepted/rejected/failed/discarded campaign counts.
-- An opt-in adapter to proptest's success/failure/rejection result.
+| Module | What it gives a generated oracle |
+| --- | --- |
+| `identity` | Borrowed requirement, revision, execution-point and clause identities. |
+| `observation` | Per-clause outcomes (`Passed`, `Failed`, `Rejected`, `NotEvaluated`, `Undefined`), clause kinds, and allocation-free failure details. |
+| `verdict` | `Verdict`: `Passed`, `FailedPostcondition` or `RejectedPrecondition`, with no conversion to `bool`. |
+| `operators` | Separately named short-circuit and total `and`, `or` and `implies`; checked option, slice-index, add, sub, mul, div and rem helpers that return `None` when undefined. |
+| `accounting` | `CampaignReport` and `CampaignCounts`: accepted, rejected, failed and discarded counts that saturate instead of panicking. |
+| `proptest_adapter` | Optional: maps a verdict onto proptest's success, failure and rejection. |
+| `exact` | Optional: runtime-owned negotiation and the remaining exact-value helpers, built on `quire-exact` and `quire-semantic-value`. |
 
-The default feature set is empty. `alloc` and `std` are explicit opt-ins reserved for convenience
-surfaces; `proptest` implies `std` and is intended only for development harnesses.
+## Features
+
+The default feature set is empty, so the core is `no_std`, allocation-free and dependency-free.
+
+| Feature | Adds |
+| --- | --- |
+| `alloc` | Opt-in convenience surfaces that need an allocator. |
+| `std` | Implies `alloc`. |
+| `proptest` | The proptest adapter. Implies `std`; meant for development harnesses only. |
+| `snapshot-json` | Encode and decode a campaign snapshot as bounded JSON (`runtime.campaign-snapshot/v1`). Implies `alloc`. |
+| `exact` | The `exact` module and its dependencies on `quire-exact` and `quire-semantic-value`. Implies `alloc`. |
 
 ```toml
 [dependencies]
@@ -42,28 +108,47 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-runtime", features = ["proptest"] }
 ```
 
-## Contracts and limitations
+## Guarantees and limits
 
-- The core is safe Rust, performs no allocation or I/O, and has no required dependency.
+- The core is safe Rust (`#![forbid(unsafe_code)]`), performs no allocation or I/O, and has no
+  required dependency.
 - Undefined partial operations return `None`; counters saturate rather than panic.
-- Public data enums are non-exhaustive for forward-compatible retention of future states.
-- Exact type and release artifact sizes are target-dependent. The v0.1 gate fixes Rust 1.98.1 and
-  `thumbv7em-none-eabi`, then limits the representative static-library fixed-population
-  consumer's linked `.text` plus `.rodata` to 4 KiB with no panic relocation.
-- The crate is `AGPL-3.0-or-later` and `publish = false`.
+- Public data enums are `#[non_exhaustive]`, so consumers must keep unknown future states instead
+  of converting them to success.
+- Exact type and release artifact sizes are target-dependent. The size gate fixes Rust 1.98.1 and
+  `thumbv7em-none-eabi`, then limits the representative static-library consumer's linked `.text`
+  plus `.rodata` to 4 KiB with no panic relocation.
+- A decoded snapshot is validated for shape and limits. Validation does not authenticate that the
+  campaign really ran.
 
-## Verification
+## The Quire ecosystem
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/ecosystem-dark.svg">
+  <img alt="The Quire repositories in four bands. Foundations: quire-exact, quire-semantic-value, quire-walk, quire-canonical, quire-verification-contracts, quire-observation. Language: quire-specification, quire-spec-language, quire-contract-ir. Backends: quire-contract-codegen, quire-contract-runtime, quire-analyze, quire-protocol, quire-mltl. Orchestration: quire-verification, quire-driver, quire-integration." src="docs/images/ecosystem-light.svg">
+</picture>
+
+`quire-contract-runtime` is a backend. It is linked by the oracles that `quire-contract-codegen`
+emits. Its only first-party dependencies are the optional `quire-exact` and `quire-semantic-value`
+crates, pulled in by the `exact` feature.
+
+## Building and testing
 
 ```bash
 make ci          # every mandatory local gate; hosted CI stays manual-only
 ```
 
-The checked-in Kani harnesses run under `make kani`, which fails when a proof fails or `cargo-kani`
-is absent. Requirements, test cases, the matrix and architecture descriptions live under `spec/`; plans
+`make ci` runs formatting, the spec check, clippy, the feature matrix, docs, the MSRV check, the
+size gate, `cargo deny`, and the Kani proofs. The checked-in Kani harnesses run under `make kani`,
+which fails when a proof fails or `cargo-kani` is absent. `make test` runs the plain test suite.
+Requirements, test cases, the matrix and architecture descriptions live under `spec/`; plans
 under `plan/`; and code reviews and gap analyses under `reviews/`.
 
-Agent-assisted contributions remain subject to the same traceability and review as every other
-contribution.
+## Contributing
+
+Every contribution needs a signed Contributor License Agreement; see [CONTRIBUTING.md](CONTRIBUTING.md)
+and [CLA.md](CLA.md). Agent-assisted contributions are welcome and held to the same traceability
+and review as every other contribution.
 
 ## License
 
