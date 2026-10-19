@@ -10,6 +10,10 @@
 
 use std::cell::Cell;
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     evaluate_boolean_short_circuit, evaluate_quantity, CompoundUnit, CompoundUnitCause,
@@ -144,7 +148,10 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
             );
             assert!(!called.get());
             assert_eq!(outcome, Outcome::Completed(expected));
-            assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
+            assert_eq!(
+                meter.admitted_charge_points(),
+                [ChargePoint::BooleanResultRetain]
+            );
             assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
             assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
         }
@@ -164,7 +171,7 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
             let outcome =
                 evaluate_boolean_short_circuit(connective, left, || stop.clone(), &mut meter);
             assert_eq!(outcome, stop);
-            assert_eq!(meter.admitted_charges(), []);
+            assert_eq!(meter.admitted_charge_points(), []);
             assert_eq!(meter.consumed(LimitKind::WorkUnits), 0);
             assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
         }
@@ -189,7 +196,10 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
             &mut meter,
         );
         assert_eq!(outcome, Outcome::Completed(expected));
-        assert_eq!(meter.admitted_charges(), [ChargePoint::BooleanResultRetain]);
+        assert_eq!(
+            meter.admitted_charge_points(),
+            [ChargePoint::BooleanResultRetain]
+        );
         assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
     }
@@ -276,7 +286,10 @@ fn tc_032_ac6_derived_amount_past_u64_max_is_denied_not_admitted() {
         }
         other => panic!("expected Incomplete, got {other:?}"),
     }
-    assert_eq!(meter.admitted_charges(), [ChargePoint::UnitIdentityRead]);
+    assert_eq!(
+        meter.admitted_charge_points(),
+        [ChargePoint::UnitIdentityRead]
+    );
 }
 
 #[trace("TC-032", "FR-011-AC-7")]

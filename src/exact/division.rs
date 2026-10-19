@@ -28,6 +28,9 @@ impl IntegerDivisionBounds {
 }
 
 /// The consumer of one integer-division item at I13 negotiation.
+// The kernel's larger IntegerInterval makes Finite exceed Clippy's size threshold.
+// Boxing this public variant would change existing consumer construction in a lock-only slice.
+#[allow(clippy::large_enum_variant)]
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IntegerDivisionConsumer {

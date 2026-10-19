@@ -6,6 +6,10 @@ use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
+#[path = "support/charge_points.rs"]
+mod charge_points;
+use charge_points::ChargePoints;
+
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     form_collection, CollectionType, Component, CompositeDeclaration, CompositeShape,
@@ -80,11 +84,15 @@ fn consumed(meter: &Meter) -> Vec<u64> {
 
 #[trace("TC-024", "FR-008-AC-8")]
 #[test]
-fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point() {
+fn tc_024_p1_charge_point_vocabulary_pins_kernel_census_and_spellings() {
+    assert_eq!(ChargePoint::ALL.len(), 63);
+    assert_eq!(ChargePoint::ALL.last(), Some(&ChargePoint::TemporalVisit));
     assert!(ChargePoint::ALL.contains(&ChargePoint::FunctionCall));
     assert!(ChargePoint::ALL.contains(&ChargePoint::CollectionVisit));
+    assert!(ChargePoint::ALL.contains(&ChargePoint::TemporalVisit));
     assert_eq!(ChargePoint::FunctionCall.as_str(), "function.call");
     assert_eq!(ChargePoint::CollectionVisit.as_str(), "collection.visit");
+    assert_eq!(ChargePoint::TemporalVisit.as_str(), "temporal.visit");
     assert_eq!(
         ChargePoint::from_code("function.call"),
         Some(ChargePoint::FunctionCall)
@@ -92,6 +100,10 @@ fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point(
     assert_eq!(
         ChargePoint::from_code("collection.visit"),
         Some(ChargePoint::CollectionVisit)
+    );
+    assert_eq!(
+        ChargePoint::from_code("temporal.visit"),
+        Some(ChargePoint::TemporalVisit)
     );
 
     // `function.call` is charged elsewhere (FR-273's `CheckedPackage::call`/
@@ -115,10 +127,10 @@ fn tc_024_p1_charge_point_vocabulary_names_the_uncharged_collection_visit_point(
     .unwrap();
     assert!(matches!(outcome, Outcome::Completed(_)));
     assert!(!meter
-        .admitted_charges()
+        .admitted_charge_points()
         .contains(&ChargePoint::CollectionVisit));
     assert!(!meter
-        .admitted_charges()
+        .admitted_charge_points()
         .contains(&ChargePoint::FunctionCall));
 }
 
@@ -387,7 +399,7 @@ fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
     let outcome = env.evaluate_record(key(1), ok_fields, &mut meter).unwrap();
     let value = outcome.completed().unwrap();
     assert_eq!(
-        meter.admitted_charges().last(),
+        meter.admitted_charge_points().last(),
         Some(&ChargePoint::CompositeResultRetain)
     );
     // 1 for the record itself, plus 1 for the present `a`; `b` is absent.
@@ -407,7 +419,7 @@ fn tc_024_p4_construction_refusals_and_deferred_declaration_order() {
         .unwrap();
     assert!(outcome.completed().is_some());
     assert_eq!(
-        meter.admitted_charges().last(),
+        meter.admitted_charge_points().last(),
         Some(&ChargePoint::CompositeResultRetain)
     );
 }

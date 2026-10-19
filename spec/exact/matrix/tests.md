@@ -29,7 +29,7 @@ type: TestMatrix
 | FR-008 | FR-008-AC-1, FR-008-AC-2 | TC-024 | ✅ implemented |
 | FR-008 | FR-008-AC-3, FR-008-AC-4 | TC-025 | ✅ implemented |
 | FR-008 | FR-008-AC-5, FR-008-AC-6 | TC-026 | 🚧 current RT controls are tagged; AC-5 kernel behavior changes and TC-026 rewrite remain planned for IR-882; AC-6 current triple is implemented, kernel triple planned |
-| FR-008 | FR-008-AC-7, FR-008-AC-8 | TC-024, TC-025, TC-026 | ✅ current 62-point owner census and round trips; retained RT tests check the twelve added denial points and residue behavior. The next kernel census and AC-8 text are planned in IR-882 slice 0 |
+| FR-008 | FR-008-AC-7, FR-008-AC-8 | TC-024, TC-025, TC-026 | ✅ 63-point kernel census including `temporal.visit` pinned by RT; retained RT tests check the twelve added denial points and residue behavior |
 | FR-008 | FR-008-AC-9 | TC-024, TC-025 | ✅ implemented against RT's current `Value`; kernel-valued test rewrite planned in IR-882 |
 | FR-008 | FR-008-AC-13 | TC-024 | ✅ implemented: deep metadata clone, equality, formatting and drop in a small-stack thread and default-stack child process |
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-025 | 🚧 AC-10 membership charges and AC-11 retention are tested for all four kinds in `tests/exact_collection.rs`; decimal tests check ordered-set first-occurrence retention and bag multiplicity using each member's first-supplied representation; AC-12 visiting order remains unbacked |
