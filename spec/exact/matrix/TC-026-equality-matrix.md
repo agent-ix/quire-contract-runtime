@@ -10,7 +10,8 @@ relationships:
 
 ## Description
 
-Check `check_equality`, `plan_equality`, `CheckedEquality::evaluate` and terminal `Reference<T>`
+Check `check_equality`, RT's current `plan_equality`, `CheckedEquality::evaluate` over
+RT's current `Value`, and terminal `Reference<T>`
 identity. Evidence: `tests/exact_equality.rs` and `src/exact/equality.rs` unit tests (`--features exact`). A Kani proof of the
 plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked as IR-241 (Linear).
 
@@ -30,7 +31,7 @@ plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked a
    `equality.plan-form`, `equality.plan`, one `equality.pair` per planned pair and
    `equality.result-retain`, all before the Boolean result is exposed. Evaluate a top-level text,
    enum and quantity pair and check each runs its own schedule instead.
-4. Check an `ObjectReference` carries exactly its supplied `(universe, object-type, identity)`
+4. Check RT's current `ObjectReference` carries exactly its supplied `(UniverseId, NodeKey, ObjectIdentity)`
    triple, that equality never reads or requires the referenced object's attributes, and that no
    record, tuple or collection constructor accepts a component value in place of a supplied
    reference.

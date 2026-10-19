@@ -16,7 +16,11 @@ relationships:
 
 Where the `exact` feature is enabled, the runtime shall take the exact value kernel from the one
 `quire-exact` crate (the kernel crate, QSL ADR-011 X-1, now in the `agent-ix/quire-exact` repository) and shall hold no copy,
-port or re-implementation of any item `quire-exact` exports. The end state is that the runtime holds
+port or re-implementation of any item `quire-exact` exports. The runtime shall remove
+its distinct `Value` enum, `planned_equality`, `plan_pairs` and collection membership
+walker; its checked evaluator shall accept `quire_exact::Value` directly and call
+`quire_exact::planned_equality_with_plan` for its planned pair schedule. The runtime shall define
+no conversion layer or old-`Value` re-export. The end state also holds
 no ported QSL code at all: it is reached via `quire-exact`, `quire-semantic-value` (QSL-358),
 and the QSL evaluation leaf after IR-590 target acceptance.
 The runtime has no `quire_contract_runtime::exact` module: it re-exports
@@ -152,7 +156,7 @@ crates that the runtime consumes.
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-275-AC-1 | With `exact` enabled, no public item the runtime defines (in `scalar` or any other module) has the name of an item that `quire-exact` or `quire-semantic-value` exports. | Inspection (TC-197) |
-| FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable. | Inspection (TC-197) |
+| FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined second `Value`, pair walker or membership walker and no conversion layer or old-`Value` re-export. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`. | Test (TC-197, `make deny`) |
@@ -204,10 +208,18 @@ and is deleted in step 1.
 - **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`
   plus `alloc` leaf the runtime may depend on. The dependency spelling and one-copy rules above
   apply to it once it exists.
-- **Kernel shape change.** `quire-exact`'s `Value` is not the runtime's today (it shares through
-  `Arc`, carries no object graph, and lacks cross-unit quantity arithmetic and the equality
-  conversion table). QSL-358 slice 0 gives it an iterative `Value` (as relayed). Adapting the
-  runtime to the new shape is code-step work (IR-349, QSL-358) and is not decided here.
+- **Kernel shape change.** The locked `quire_exact::Value` has `Arc`-backed
+  option, composite and collection nodes, iterative formatting and nested-node
+  drop, and direct constructors and collection operations. It is distinct from
+  RT's current `Rc`-backed `Value`. IR-882 migrates RT to the kernel value
+  with no conversion layer; the RT `repr(u64)` tag is a layout choice, not a
+  semantic requirement. The code step measures Kani and footprint effects.
+- **Caller-owned identity and units.** The kernel has no cross-unit quantity arithmetic
+  or equality conversion table. RT owns the `UnitId` to unit resolver, unit graph and
+  conversion table, the enum `EnumShape` registry, and the object-type `EffectiveId`
+  registry. The migration must resolve the current quantity, enum and reference
+  payloads through these registries before calling kernel operations; it must not
+  add a second value representation.
 
 ## Dependencies
 

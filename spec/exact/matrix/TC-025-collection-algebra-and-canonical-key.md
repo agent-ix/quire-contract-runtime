@@ -10,6 +10,10 @@ relationships:
 
 ## Description
 
+The code step for IR-882 moves collection formation, membership comparisons
+and canonical keys to `quire-exact`. RT consumes `quire_exact::Value`
+directly; no RT-local membership or pair walker is acceptable evidence.
+
 Check `construct_collection`/`form_collection` charge and refusal ordering, membership-comparison
 and bound charges, each of the four kinds' retained and visiting order, and the total canonical key
 that fixes set and bag order. Evidence:
