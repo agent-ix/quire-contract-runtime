@@ -214,12 +214,14 @@ and is deleted in step 1.
   RT's current `Rc`-backed `Value`. IR-882 migrates RT to the kernel value
   with no conversion layer; the RT `repr(u64)` tag is a layout choice, not a
   semantic requirement. The code step measures Kani and footprint effects.
-- **Caller-owned identity and units.** The kernel has no cross-unit quantity arithmetic
-  or equality conversion table. RT owns the `UnitId` to unit resolver, unit graph and
-  conversion table, the enum `EnumShape` registry, and the object-type `EffectiveId`
-  registry. The migration must resolve the current quantity, enum and reference
-  payloads through these registries before calling kernel operations; it must not
-  add a second value representation.
+- **Shared identity and declaration owners.** The kernel has no cross-unit quantity
+  arithmetic or equality conversion table. RT consumes `quire-semantic-value`'s
+  `UnitTable::get(UnitId)` for admitted units, `TypeEnvironment::object_type(EffectiveId)`
+  for object declarations, and `EnumMemberIndex::resolve(VariantId)` with
+  `EnumDeclaration` for enum members and shapes. The IR-882 migration repoints
+  quantity, enum and reference payloads to those owner types directly, with no
+  RT-owned `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, second
+  value representation or adapter.
 
 ## Dependencies
 
