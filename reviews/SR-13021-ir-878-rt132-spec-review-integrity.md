@@ -43,3 +43,4 @@ The two new rows in spec/exact/matrix/tests.md come after the blank line that en
 | --- | --- | --- |
 | FND-001 | fixed | Round 1 (5312d30): the rows are now inside the coverage table. `quire coverage --strict` reports them as tests.md:76 (FR-277) and tests.md:77 (FR-278) functional-coverage rows, with 0 contradicted statuses ("🚧 Planned:" accepted) |
 | FND-002 | fixed | Round 1: the AC ids are listed individually (AC-1..AC-7) and the rows name TC-203 and TC-204 |
+| FND-003 | fixed | Round 2 (e815aca): TC-203 and TC-204 rows are in the tests.md Test Case Summary (parsed as tests.md:106/107), and spec.md lists "TC-202–TC-204" |

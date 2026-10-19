@@ -59,3 +59,6 @@ The defects are in what surrounds the verbatim text. FR-277 presents RT's `Check
 | FND-002 | fixed | Round 1: Inputs now define RT-constructed depth-four `CollectionKind::Sequence` operands (16 occurrences each, a 17-pair plan, the first-head-unequal control) and say QSL `e21_operands` is not imported |
 | FND-003 | fixed | Round 1: Behavior and Status state the overlap with FR-273-AC-8/TC-194 and FR-008-AC-5 and say only the FR-278 tags and the missing controls are pending. The test-location imprecision is new finding FND-007 |
 | FND-004 | fixed | Round 1: Behavior says the no-`CallDepthExceeded` carrier shape is owned by quire-exact FR-369-AC-1, gated on IR-497 |
+| FND-005 | fixed | Round 2 (e815aca): the FR-277-AC-7 criteria cell is byte-identical (`cmp`) to the quire-exact origin/main FR-375-AC-6 cell. The ownership sentence moved to FR-277 Behavior |
+| FND-006 | fixed | Round 2: the AC-7 row now follows AC-6; the table order is AC-1..AC-7 |
+| FND-007 | fixed | Round 2: FR-278 Behavior and Status and TC-204 Description, procedure step 2 and Status now place the six `operand_value` assertions in the `src/exact/equality.rs` unit tests tagged FR-008-AC-5 (naming `equality_operand_failures_keep_distinct_causes`) and say they are not TC-026 tests |
