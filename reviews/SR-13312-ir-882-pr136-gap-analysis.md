@@ -41,3 +41,9 @@ Strict coverage: `make spec` at the head and at `origin/main` (b4ea9710) both re
 ## Dispositions
 
 Review pass only; no disposition round has run yet.
+
+Disposition pass 1, against head f3ca275dcfb2074b486126144c28d2ec9af25309 (fix commit "IR-882: resolve PR 136 round-one review findings"). The TC-024 Description and Test Procedure step 1 now state the 63-point local census. The TC-024 row of `spec/exact/matrix/tests.md` now says "RT pins the 63-point kernel census and `temporal.visit`". Both agree with FR-008-AC-8 and with the assertions of `tc_024_p1_charge_point_vocabulary_pins_kernel_census_and_spellings` (len 63, last `TemporalVisit`, the `as_str`/`from_code` round trips for `function.call`, `collection.visit` and `temporal.visit`). `make spec` at the head reports 228/228 grammar-clean; the 2 extra documents are the committed SR files. It also reports 90/198 rows backed and 124 unbacked rows (strict), the same coverage as origin/main.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | TC-024 now reads "RT locally pins the kernel's 63-point `ChargePoint::ALL` census, including `temporal.visit` as its last member, and round-trips selected spellings" and step 1 "Locally check that `ChargePoint::ALL` has exactly 63 members, ends with `temporal.visit`, and contains `function.call` and `collection.visit`" |

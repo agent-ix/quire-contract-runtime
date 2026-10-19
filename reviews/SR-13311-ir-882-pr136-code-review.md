@@ -42,3 +42,9 @@ Measured by the reviewer at the head, in a fresh worktree with its own target di
 ## Dispositions
 
 Review pass only; no disposition round has run yet.
+
+Disposition pass 1, against head f3ca275dcfb2074b486126144c28d2ec9af25309 (fix commit "IR-882: resolve PR 136 round-one review findings"; merge-base b4ea9710, origin/main). The reviewer measured the following in a fresh worktree with its own target dir. `Cargo.lock` and `Cargo.toml` are unchanged by the fix commit. Every first-party revision still equals upstream `main`. `make fmt-check lint doc deny test-features msrv` and `cargo test --all-features` pass. Lint passing also shows that the `#[expect]` is fulfilled.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | src/exact/division.rs:31-34 now reads `#[expect(clippy::large_enum_variant, reason = "the kernel's larger IntegerInterval makes the Finite variant 288 bytes; boxing it would change public consumer construction in this lock-only slice")]`, and the `//` comment lines are gone |
