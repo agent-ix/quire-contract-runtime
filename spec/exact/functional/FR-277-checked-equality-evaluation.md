@@ -45,4 +45,4 @@ The runtime SHALL route `CheckedEquality::evaluate` in `src/exact/equality.rs` t
 
 ## Status
 
-PLANNED: first route `CheckedEquality::evaluate` through the result-bearing quire-exact kernel seam and remove RT-local equality-walker residue under FR-275; then add and tag TC-203 runtime controls. No test may be tagged FR-277-AC-1 before that code change. FR-277-AC-7 remains PLANNED in titan:kani:plan.
+PLANNED: first route `CheckedEquality::evaluate` through the result-bearing quire-exact kernel seam and remove RT-local equality-walker residue under FR-275; then add and tag TC-203 runtime controls. No test may be tagged FR-277-AC-1 before that code change. FR-277-AC-7 remains PLANNED in titan:kani:plan. FR-277-AC-8 (inspection) stays PLANNED until the direct kernel call lands.

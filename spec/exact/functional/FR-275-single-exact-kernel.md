@@ -208,7 +208,7 @@ and is deleted in step 1.
 - **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`
   plus `alloc` leaf the runtime may depend on. The dependency spelling and one-copy rules above
   apply to it once it exists.
-- **Kernel shape change.** The locked `quire-exact::Value` has `Arc`-backed
+- **Kernel shape change.** The locked `quire_exact::Value` has `Arc`-backed
   option, composite and collection nodes, iterative formatting and nested-node
   drop, and direct constructors and collection operations. It is distinct from
   RT's current `Rc`-backed `Value`. IR-882 migrates RT to the kernel value

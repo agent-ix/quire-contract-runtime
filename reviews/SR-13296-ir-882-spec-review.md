@@ -69,6 +69,12 @@ specified (FND-003, FND-004).
 | --- | --- | --- | --- |
 | FND-006 | low | The new FR-008 Behavior bullet says membership "passes the sought member before the candidate to the kernel planner", and AC-5 says `ForeignReference` "names the sought member as `required` and candidate as `supplied`". The kernel's `member_equal(candidate, member)` calls `plan_pairs(member, candidate)`, where `member` is the collection's already-retained element and `candidate` is the probe. In a membership test the probe is the thing sought, so "sought member" reads as the opposite operand and can invert the stated direction. Fix: write "the collection's retained member as `required` and the probed candidate as `supplied`" in both places. | spec/exact/functional/FR-008-composite-collection-and-equality.md:91-97,175 |
 
+## New findings (disposition pass 2)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-007 | low | The FND-006 fix leaves a doubled article in FR-008-AC-5: "names the the collection's retained member as `required`". Fix: delete one "the". | spec/exact/functional/FR-008-composite-collection-and-equality.md:175 |
+
 ## Dispositions
 
 | FND | outcome | reason |
@@ -78,3 +84,5 @@ specified (FND-003, FND-004).
 | FND-003 | fixed | FR-275 adds a "Caller-owned identity and units" bullet: the kernel has no cross-unit arithmetic or conversion table, and RT owns the `UnitId` resolver, unit graph, conversion table, `EnumShape` and `EffectiveId` registries. Slice 1 implements and tests them. |
 | FND-004 | fixed | FR-008 Behavior and AC-5 record all three deltas, and slice 1 names three tests that pin them. The wording of the membership-direction delta is FND-006. |
 | FND-005 | fixed | The PR body lists exact CG test files and states that the QSL path is absent from QSL main. |
+| FND-006 | fixed | Commit 5510821 changes the FR-008 Behavior bullet to "the collection's retained member before the probed candidate" and AC-5 to the retained member as `required` and the probed candidate as `supplied`, which matches the kernel's `plan_pairs(member, candidate)`. |
+| FND-007 | fixed | Commit aa15ee2 removes the doubled article: AC-5 now reads "names the collection's retained member as `required` and the probed candidate as `supplied`". |
