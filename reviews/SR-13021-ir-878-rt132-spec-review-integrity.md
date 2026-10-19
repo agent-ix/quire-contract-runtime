@@ -30,3 +30,16 @@ The two new rows in spec/exact/matrix/tests.md come after the blank line that en
 ## Verdict
 
 **FAIL (changes requested)**: move the two rows inside the table, with no blank line before them, and list the AC ids individually. Then re-run `quire coverage --strict` to confirm the matrix document counts 26 rows and accepts the status wording.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | low | The new TC-203 and TC-204 are named in the coverage rows but are missing from the tests.md Test Case Summary table (which ends at TC-202) and from spec.md's TC list ("TC-202, planned TC-200 and TC-201") | spec/exact/matrix/tests.md:105; spec/spec.md:82 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Round 1 (5312d30): the rows are now inside the coverage table. `quire coverage --strict` reports them as tests.md:76 (FR-277) and tests.md:77 (FR-278) functional-coverage rows, with 0 contradicted statuses ("🚧 Planned:" accepted) |
+| FND-002 | fixed | Round 1: the AC ids are listed individually (AC-1..AC-7) and the rows name TC-203 and TC-204 |

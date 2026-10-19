@@ -42,3 +42,20 @@ The defects are in what surrounds the verbatim text. FR-277 presents RT's `Check
 ## Verdict
 
 **FAIL (changes requested)**: the re-homed AC text is faithful and the files are well formed. FND-001 needs a spec decision: either FR-277 states the RT code change (route `CheckedEquality::evaluate` through the kernel seam, tied to FR-275 residue removal) and its status says so, or the kernel-seam clause stays with quire-exact. FND-002 and FND-003 should be fixed in the same PR.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-005 | low | FR-277-AC-7 is not byte-equal to quire-exact origin/main FR-375-AC-6. It inserts "The real evaluator is owned by quire-contract-runtime;" before "a plan-only equality or duplicated QSL walker does not satisfy this criterion" (origin/main: "A plan-only equality ..."). The clause adds an ownership statement and weakens nothing, but quire-exact #56 (c58ab92) calls the move "verbatim" | spec/exact/functional/FR-277-checked-equality-evaluation.md:37 |
+| FND-006 | low | The FR-277-AC-7 row sits between AC-5 and AC-6 in the acceptance-criteria table, so the ids are out of order | spec/exact/functional/FR-277-checked-equality-evaluation.md:36-38 |
+| FND-007 | low | FR-278 Behavior and TC-204 step 2 put the six `operand_value` cause assertions in TC-026. They are actually the in-crate unit tests in src/exact/equality.rs (lines 636, 686, 723 and the `equality_operand_failures_keep_distinct_causes` test), tagged FR-008-AC-5 only, not TC-026. The review pass's FND-003 wording repeated the same imprecision | spec/exact/functional/FR-278-runtime-checked-invariant-causes.md:25; spec/exact/matrix/TC-204-runtime-checked-invariant-causes.md:18; src/exact/equality.rs:636 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Round 1 (5312d30): the Description now requires routing `CheckedEquality::evaluate` through `quire_exact::planned_equality_with_plan` and removing the RT-local walker under FR-275. Behavior and Status say the code change comes first and that no test may be tagged FR-277-AC-1 before it |
+| FND-002 | fixed | Round 1: Inputs now define RT-constructed depth-four `CollectionKind::Sequence` operands (16 occurrences each, a 17-pair plan, the first-head-unequal control) and say QSL `e21_operands` is not imported |
+| FND-003 | fixed | Round 1: Behavior and Status state the overlap with FR-273-AC-8/TC-194 and FR-008-AC-5 and say only the FR-278 tags and the missing controls are pending. The test-location imprecision is new finding FND-007 |
+| FND-004 | fixed | Round 1: Behavior says the no-`CallDepthExceeded` carrier shape is owned by quire-exact FR-369-AC-1, gated on IR-497 |

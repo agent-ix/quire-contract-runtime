@@ -31,3 +31,10 @@ There are two gaps. First, RT's checked evaluation never reaches the kernel equa
 ## Verdict
 
 **FAIL (changes requested)**: FND-001 shows that FR-277 as allocated implies an unstated code change. FND-002 shows that the FR-278 status overstates the work missing. Neither is a problem with the verbatim text itself.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Round 1 (5312d30): FR-277 now states the RT code change (route through `planned_equality_with_plan`, remove the RT-local `planned_equality`/`plan_pairs`) as a requirement, and its status orders code before tests. The code itself is unchanged by design, since this is a spec-only PR and the code change is ticketed separately |
+| FND-002 | fixed | Round 1: FR-278 Status now says the overlapping assertions exist and only the FR-278 tags and the missing controls are pending. TC-204 is a retag procedure |
