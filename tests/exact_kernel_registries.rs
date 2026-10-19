@@ -73,14 +73,14 @@ fn enum_shapes_and_effective_object_types_are_admitted_once() {
     let first = VariantId::from_digest([5; 32]);
     let second = VariantId::from_digest([6; 32]);
     registry
-        .register_enum(declaration.clone(), [first, second])
+        .register_enum(&declaration, [first, second])
         .unwrap();
     let shape = registry.enum_shape(declaration.key()).unwrap();
     assert_eq!(shape.rank(first), Some(0));
     assert_eq!(shape.rank(second), Some(1));
     assert!(shape.is_ordered());
     assert_eq!(
-        registry.register_enum(declaration, [first, second]),
+        registry.register_enum(&declaration, [first, second]),
         Err(RegistryCause::DuplicateIdentity)
     );
     let effective = EffectiveId::from_digest([7; 32]);

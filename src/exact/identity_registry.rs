@@ -91,7 +91,7 @@ impl<'a> KernelIdentityRegistry<'a> {
     /// Bind the admitted variants of an enum in canonical declaration order.
     pub fn register_enum(
         &mut self,
-        declaration: EnumDeclaration,
+        declaration: &EnumDeclaration,
         variants: impl IntoIterator<Item = VariantId>,
     ) -> Result<(), RegistryCause> {
         let variants: alloc::vec::Vec<_> = variants.into_iter().collect();
