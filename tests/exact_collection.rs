@@ -13,9 +13,9 @@ use quire_contract_runtime::exact::{
     NodeKey, Presence, TypeEnvironment, Value, ValueType,
 };
 use quire_exact::{
-    BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind,
-    Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits,
-    Undefined,
+    BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, Decimal,
+    DecimalType, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal,
+    RoundingMode, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -146,7 +146,8 @@ fn checked_collection_element_outside_declared_type_has_precise_cause() {
     ));
 }
 
-#[trace("TC-025", "FR-008-AC-3", "FR-008-AC-10", "FR-008-AC-11")]
+// IR-885: ordering is checked here, but AC-11 stays untagged until the bag retains every occurrence.
+#[trace("TC-025", "FR-008-AC-3", "FR-008-AC-10")]
 #[test]
 fn tc_025_p3_collection_membership_charges_retention_order_and_result_retain() {
     let bound = CardinalityBound::new(0, 10).unwrap();
@@ -198,6 +199,47 @@ fn tc_025_p3_collection_membership_charges_retention_order_and_result_retain() {
         );
         assert_eq!(charges.last(), Some(&ChargePoint::CollectionResultRetain));
     }
+}
+
+// IR-885: this proves the ordered-set first-occurrence clause; the bag clause still needs work.
+#[test]
+fn ordered_set_retains_first_equal_decimal_representation() {
+    let collection_type = CollectionType::new(
+        CollectionKind::OrderedSet,
+        ValueType::Decimal(
+            DecimalType::new(
+                Integer::zero(),
+                Integer::from(100_i64),
+                0,
+                2,
+                RoundingMode::Exact,
+            )
+            .unwrap(),
+        ),
+        CardinalityBound::new(0, 3).unwrap(),
+    );
+    let mut meter = Meter::new(UNLIMITED);
+    let occurrences = vec![
+        Value::Decimal(Decimal::new(Integer::from(10_i64), 1)),
+        Value::Decimal(Decimal::new(Integer::from(2_i64), 0)),
+        Value::Decimal(Decimal::new(Integer::from(100_i64), 2)),
+    ];
+    let outcome = form_collection(&collection_type, occurrences, &mut meter)
+        .unwrap()
+        .completed()
+        .unwrap();
+    let Value::Collection(collection) = &outcome else {
+        panic!("expected a collection value")
+    };
+    let scales: Vec<u32> = collection
+        .elements()
+        .iter()
+        .map(|value| match value {
+            Value::Decimal(decimal) => decimal.representation().scale(),
+            other => panic!("expected a decimal element, got {other:?}"),
+        })
+        .collect();
+    assert_eq!(scales, [1, 0]);
 }
 
 #[trace("TC-025", "FR-008-AC-7")]
