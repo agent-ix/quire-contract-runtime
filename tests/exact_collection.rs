@@ -146,8 +146,7 @@ fn checked_collection_element_outside_declared_type_has_precise_cause() {
     ));
 }
 
-// IR-885: ordering is checked here, but AC-11 stays untagged until the bag retains every occurrence.
-#[trace("TC-025", "FR-008-AC-3", "FR-008-AC-10")]
+#[trace("TC-025", "FR-008-AC-3", "FR-008-AC-10", "FR-008-AC-11")]
 #[test]
 fn tc_025_p3_collection_membership_charges_retention_order_and_result_retain() {
     let bound = CardinalityBound::new(0, 10).unwrap();
@@ -201,7 +200,7 @@ fn tc_025_p3_collection_membership_charges_retention_order_and_result_retain() {
     }
 }
 
-// IR-885: this proves the ordered-set first-occurrence clause; the bag clause still needs work.
+#[trace("TC-025", "FR-008-AC-11")]
 #[test]
 fn ordered_set_retains_first_equal_decimal_representation() {
     let collection_type = CollectionType::new(
@@ -240,6 +239,53 @@ fn ordered_set_retains_first_equal_decimal_representation() {
         })
         .collect();
     assert_eq!(scales, [1, 0]);
+}
+
+#[trace("TC-025", "FR-008-AC-11")]
+#[test]
+fn bag_repeats_first_supplied_equal_decimal_by_multiplicity() {
+    let collection_type = CollectionType::new(
+        CollectionKind::Bag,
+        ValueType::Decimal(
+            DecimalType::new(
+                Integer::zero(),
+                Integer::from(100_i64),
+                0,
+                3,
+                RoundingMode::Exact,
+            )
+            .unwrap(),
+        ),
+        CardinalityBound::new(0, 4).unwrap(),
+    );
+    let cases = [
+        (vec![(10, 1), (2, 0), (100, 2)], vec![1, 1, 0]),
+        (vec![(2, 0), (1000, 3), (10, 1), (100, 2)], vec![3, 3, 3, 0]),
+    ];
+    for (representations, expected_scales) in cases {
+        let occurrences = representations
+            .into_iter()
+            .map(|(coefficient, scale)| {
+                Value::Decimal(Decimal::new(Integer::from(i64::from(coefficient)), scale))
+            })
+            .collect();
+        let outcome = form_collection(&collection_type, occurrences, &mut Meter::new(UNLIMITED))
+            .unwrap()
+            .completed()
+            .unwrap();
+        let Value::Collection(collection) = &outcome else {
+            panic!("expected a collection value")
+        };
+        let scales: Vec<u32> = collection
+            .elements()
+            .iter()
+            .map(|value| match value {
+                Value::Decimal(decimal) => decimal.representation().scale(),
+                other => panic!("expected a decimal element, got {other:?}"),
+            })
+            .collect();
+        assert_eq!(scales, expected_scales);
+    }
 }
 
 #[trace("TC-025", "FR-008-AC-7")]
