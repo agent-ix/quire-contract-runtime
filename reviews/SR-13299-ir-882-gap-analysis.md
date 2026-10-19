@@ -43,3 +43,9 @@ existing binders still assert RT's `Value`.
 **PASS with one finding.** FR-277-AC-1 is correctly uncredited, and the FR-008-AC-10 to AC-12
 statuses match their tags. Within this PR's scope the only gap is that FR-008-AC-9's existing
 bindings no longer assert the criterion as reworded.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-008-AC-9 names RT's current `Value` again, so its five binders assert the criterion as worded. The kernel rewrite of those tests is planned in slice 1. |

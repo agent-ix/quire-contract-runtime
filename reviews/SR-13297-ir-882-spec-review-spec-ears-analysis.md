@@ -35,3 +35,11 @@ statements that carry no `shall`, and one AC mixes a test property with an inspe
 **PASS with findings.** All three statements keep a valid EARS frame. The added
 prohibitions should become `shall` clauses, and AC-9's structural sentence should move to an
 inspection criterion.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-275 now reads "The runtime shall remove its distinct `Value` enum ...; its checked evaluator shall accept `quire_exact::Value` directly ... The runtime shall define no conversion layer or old-`Value` re-export." |
+| FND-002 | fixed | FR-008 now reads "the runtime shall use `quire_exact`'s `Value`, `ValueType`, collection, membership, canonical-key and equality-plan operations directly and shall define no second value representation or walker after the IR-882 value-bearing cutover." |
+| FND-003 | fixed | "RT defines no second `Value`" is removed from FR-008-AC-9. FR-275-AC-2 (Inspection, TC-197) now carries "no RT-defined second `Value`, pair walker or membership walker and no conversion layer or old-`Value` re-export". |

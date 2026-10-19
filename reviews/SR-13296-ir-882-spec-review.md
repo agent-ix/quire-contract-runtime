@@ -62,3 +62,19 @@ kept PLANNED with no kernel-only credit. But the plan's first slice cannot go gr
 It depends on a kernel function RT's lock does not have (FND-001). The step-4 gate is open
 (FND-002). The RT-side resolver work that makes "no missing kernel capability" true is not
 specified (FND-003, FND-004).
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-006 | low | The new FR-008 Behavior bullet says membership "passes the sought member before the candidate to the kernel planner", and AC-5 says `ForeignReference` "names the sought member as `required` and candidate as `supplied`". The kernel's `member_equal(candidate, member)` calls `plan_pairs(member, candidate)`, where `member` is the collection's already-retained element and `candidate` is the probe. In a membership test the probe is the thing sought, so "sought member" reads as the opposite operand and can invert the stated direction. Fix: write "the collection's retained member as `required` and the probed candidate as `supplied`" in both places. | spec/exact/functional/FR-008-composite-collection-and-equality.md:91-97,175 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | PR body slice 0 updates `Cargo.lock` to quire-exact main and handles String/Uuid/Timestamp/Union, the IR-705/IR-895 `Meter` changes and the 62-to-63 census in FR-008-AC-8/TC-024, green on its own. The boundary claim is corrected. tests.md marks the AC-8 text change as planned for slice 0. |
+| FND-002 | fixed | AD-004:394 reads "its first code slice requires Q-5 to be answered". The Q-5 paragraph at 434-441 states that the standing ruling does not answer it and that QSL decides before slice 1. The plan's slice 1 is "after Q-5". |
+| FND-003 | fixed | FR-275 adds a "Caller-owned identity and units" bullet: the kernel has no cross-unit arithmetic or conversion table, and RT owns the `UnitId` resolver, unit graph, conversion table, `EnumShape` and `EffectiveId` registries. Slice 1 implements and tests them. |
+| FND-004 | fixed | FR-008 Behavior and AC-5 record all three deltas, and slice 1 names three tests that pin them. The wording of the membership-direction delta is FND-006. |
+| FND-005 | fixed | The PR body lists exact CG test files and states that the QSL path is absent from QSL main. |

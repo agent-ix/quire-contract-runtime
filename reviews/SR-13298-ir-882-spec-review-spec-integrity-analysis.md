@@ -61,3 +61,12 @@ names an adapter.
 **FAIL.** Grammar is clean, no ids are reused, and FR-277 status is correctly kept PLANNED.
 FND-001 is a real status overclaim: the matrix marks an AC implemented that the current code
 contradicts. FND-002 to FND-004 are consistency and verification-method defects.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-008-AC-9 is back to "RT's current `Value` has iterative `Debug` and nested-node `Drop` ...". Its row reads "✅ implemented against RT's current `Value`; kernel-valued test rewrite planned in IR-882". The tag subject and the AC agree again. |
+| FND-002 | fixed | TC-024, TC-026 step 4 and the FR-008 reference bullet now describe RT's current `(UniverseId, NodeKey, ObjectIdentity)` and current `Value`, and mark the kernel form as the planned cutover. The TC-026 and FR-008-AC-5/6 rows are now 🚧 with the planned rewrite stated. |
+| FND-003 | fixed | AD-004:116 now reads "delete in the step; consumers repoint to the owner type, no adapter". |
+| FND-004 | fixed | FR-277-AC-1 is now Test-only (17 admitted `EqualityPair` charges in order on the real evaluate path). The new FR-277-AC-8, Inspection (TC-203), carries the direct `planned_equality_with_plan` call. Both are PLANNED and untagged, and the matrix and TC-203 rows include AC-8. |
