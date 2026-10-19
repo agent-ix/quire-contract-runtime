@@ -70,6 +70,7 @@ mod division;
 mod enumeration;
 mod equality;
 mod expression;
+mod identity_registry;
 mod ieee;
 mod key;
 mod node;
@@ -103,6 +104,7 @@ pub use expression::{
     EvaluationRefusal, Frame, FunctionDeclaration, InputRefusal, LocatedLoss, Location, Origin,
     PackageDeclarations, ValueLoss, MAX_CALL_DEPTH,
 };
+pub use identity_registry::{KernelIdentityRegistry, RegistryCause};
 pub use ieee::{
     negotiate_ieee, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause,

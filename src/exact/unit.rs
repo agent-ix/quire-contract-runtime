@@ -256,6 +256,11 @@ impl UnitGraph {
         self.units.get(&key)
     }
 
+    /// All admitted declared units, in key order.
+    pub(crate) fn admitted_units(&self) -> impl Iterator<Item = &Unit> {
+        self.units.values()
+    }
+
     /// Construct a compound unit: every term must name an admitted canonical
     /// root unit with a nonzero exponent, strictly ascending by key.
     pub fn compound_unit(
