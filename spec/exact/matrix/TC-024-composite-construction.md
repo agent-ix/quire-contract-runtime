@@ -11,7 +11,7 @@ relationships:
 ## Description
 
 Check `TypeEnvironment` admission, `record`/`tuple`/`evaluate_record`/`evaluate_tuple` construction,
-`ValueGraph`/`build` containment, and selected accounting vocabulary. Evidence:
+`ValueGraph`/`build` containment using `quire_exact::Value` directly, and selected accounting vocabulary. Evidence:
 `tests/exact_composite.rs` (`--features exact`). The kernel-wide 62-point census and spelling
 round-trip obligation has no local RT census after IR-349; quire-exact FR-368-AC-1/2
 tests all 62 spellings and round trips. The retained RT tests establish selected

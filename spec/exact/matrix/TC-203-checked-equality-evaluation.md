@@ -14,8 +14,8 @@ Verify FR-277-AC-1 through AC-6 only after `CheckedEquality::evaluate` routes th
 
 ## Test Procedure
 
-1. Construct the admitted depth-four RT `CollectionKind::Sequence` operands defined in FR-277 Inputs, with equal heads and one first-head-unequal control. Use the normal checker to construct `CheckedEquality`; evaluate each with a fresh sufficient meter.
-2. Compare the kernel result-bearing plan's relation and 17 pair events with the actual admitted `EqualityPair` log. Check the ordered plan-form, plan, pair and result-retain charges for both relations.
+1. Construct the admitted depth-four `quire_exact::Value` operands defined in FR-277 Inputs, with equal heads and one first-head-unequal control. Use the normal checker to construct `CheckedEquality`; evaluate each with a fresh sufficient meter.
+2. Inspect the production evaluator's direct call to `quire_exact::planned_equality_with_plan` and use of that call's result and plan. In the behavioral test, compare the actual admitted `EqualityPair` log with 17 planned events for the same operands. A separate kernel-only assertion does not satisfy FR-277-AC-1. Check the ordered plan-form, plan, pair and result-retain charges for both relations.
 3. Evaluate with 50 work units and other limits sufficient. Inject denial at the 17th `EqualityPair` and separately at `EqualityResultRetain`, recording each admitted prefix and typed stop.
 4. Evaluate with zero result units and sufficient work and occurrence limits. Record the admitted prefix and typed stop.
 5. Construct equal-shaped operands with different declared static composite types. Check construction and the unchanged meter before evaluating.
@@ -29,4 +29,4 @@ Verify FR-277-AC-1 through AC-6 only after `CheckedEquality::evaluate` routes th
 
 ## Status
 
-PLANNED after FR-275 kernel routing. No FR-277-AC-1 test tag is credited before that code change.
+PLANNED after FR-275 kernel routing and deletion of RT's distinct `Value` and pair walker. No FR-277-AC-1 test tag is credited before the real evaluator calls the kernel.

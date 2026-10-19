@@ -17,6 +17,10 @@ relationships:
 Where the `exact` feature is enabled, the runtime shall take the exact value kernel from the one
 `quire-exact` crate (the kernel crate, QSL ADR-011 X-1, now in the `agent-ix/quire-exact` repository) and shall hold no copy,
 port or re-implementation of any item `quire-exact` exports. The end state is that the runtime holds
+no distinct `Value` enum, `planned_equality`, `plan_pairs` or collection membership
+walker; RT's checked evaluator accepts `quire_exact::Value` directly and calls
+`quire_exact::planned_equality_with_plan` for its planned pair schedule. There is
+no conversion layer or old-`Value` re-export. The end state also holds
 no ported QSL code at all: it is reached via `quire-exact`, `quire-semantic-value` (QSL-358),
 and the QSL evaluation leaf after IR-590 target acceptance.
 The runtime has no `quire_contract_runtime::exact` module: it re-exports
@@ -204,10 +208,12 @@ and is deleted in step 1.
 - **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`
   plus `alloc` leaf the runtime may depend on. The dependency spelling and one-copy rules above
   apply to it once it exists.
-- **Kernel shape change.** `quire-exact`'s `Value` is not the runtime's today (it shares through
-  `Arc`, carries no object graph, and lacks cross-unit quantity arithmetic and the equality
-  conversion table). QSL-358 slice 0 gives it an iterative `Value` (as relayed). Adapting the
-  runtime to the new shape is code-step work (IR-349, QSL-358) and is not decided here.
+- **Kernel shape change.** The locked `quire-exact::Value` has `Arc`-backed
+  option, composite and collection nodes, iterative formatting and nested-node
+  drop, and direct constructors and collection operations. It is distinct from
+  RT's current `Rc`-backed `Value`. IR-882 migrates RT to the kernel value
+  with no conversion layer; the RT `repr(u64)` tag is a layout choice, not a
+  semantic requirement. The code step measures Kani and footprint effects.
 
 ## Dependencies
 

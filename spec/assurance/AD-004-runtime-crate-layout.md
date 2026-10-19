@@ -391,6 +391,18 @@ CG PR that adopts the new paths.
 | 5 | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
 | 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
 
+IR-882 is the spec-first entry to step 4. At this boundary the value owner is
+`quire_exact::Value`, including its `Arc`-backed option, composite and collection
+nodes. RT deletes the distinct `src/exact/composite.rs` `Value` enum, its
+`repr(u64)` layout choice, `src/exact/equality.rs` `planned_equality` and
+`plan_pairs`, and the RT membership walker in `src/exact/collection.rs`.
+The `CheckedEquality::evaluate` path calls
+`quire_exact::planned_equality_with_plan`; collection formation and membership
+use kernel operations. Containment and enumeration construct and carry the
+same kernel values. No conversion layer, alias, old-`Value` re-export or
+second pair traversal is a step-4 output. FR-277-AC-1 stays planned until
+the production evaluator executes that kernel call.
+
 Why step 4 is one step: `Value` holds `Quantity`, `EnumValue`, `ObjectReference` and `NodeKey`, whose
 shared forms use `UnitId`, `EnumMember`, `UniverseId` and `EffectiveId`, and `ValueType::Reference` names a
 `NodeKey` where the shared one names an `EffectiveId` (PR #95's own finding, re-read in both sources).

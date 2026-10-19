@@ -14,7 +14,7 @@ The runtime SHALL route `CheckedEquality::evaluate` in `src/exact/equality.rs` t
 
 ## Inputs
 
-- Two separately constructed, admitted depth-four runtime `Value` sequences (`CollectionKind::Sequence`) with the same checked composite declaration identity, 16 visited value occurrences per operand and a 17-pair kernel plan; the unequal control differs at its first head. RT constructs these values directly and does not import QSL `e21_operands`.
+- Two separately constructed, admitted depth-four `quire_exact::Value` sequences (`CollectionKind::Sequence`) with the same checked composite declaration identity, 16 visited value occurrences per operand and a 17-pair kernel plan; the unequal control differs at its first head. RT constructs these values through kernel constructors and does not import QSL `e21_operands`.
 - A runtime meter with the stated charge limits or injected denial.
 
 ## Outputs
@@ -23,13 +23,13 @@ The runtime SHALL route `CheckedEquality::evaluate` in `src/exact/equality.rs` t
 
 ## Behavior
 
-`CheckedEquality::evaluate` currently calls RT-local `planned_equality` and `plan_pairs`, so the kernel route is a required code change before the controls can pass. The runtime SHALL preserve the kernel plan's relation and complete pair schedule. The meter SHALL admit only successful charges, in the order plan-form, plan, each pair, and result retention. Checked construction SHALL reject unlike static composite declarations before evaluation. The real evaluator is owned by quire-contract-runtime. The Kani claim is FR-277-AC-7, owned by titan:kani:plan; this requirement grants no proof credit before that lane runs.
+`CheckedEquality::evaluate` currently calls RT-local `planned_equality` and `plan_pairs`, so the kernel route is a required code change before the controls can pass. RT SHALL accept `quire_exact::Value` directly, delete its distinct `Value` and local pair walker, and preserve the kernel plan's relation and complete pair schedule. The meter SHALL admit only successful charges, in the order plan-form, plan, each pair, and result retention. Checked construction SHALL reject unlike static composite declarations before evaluation. The real evaluator is owned by quire-contract-runtime. The Kani claim is FR-277-AC-7, owned by titan:kani:plan; this requirement grants no proof credit before that lane runs.
 
 ## Acceptance Criteria
 
 | ID | Criteria | Verification |
 | --- | --- | --- |
-| FR-277-AC-1 | On the bounded depth-four `List` input with equal operands, the actual `CheckedEquality::evaluate` path completes `true`; the result-bearing kernel seam reports 17 planned pair events; the meter admits exactly 17 `EqualityPair` charges, in the schedule after `EqualityPlanForm` and `EqualityPlan` and before `EqualityResultRetain`. | Test |
+| FR-277-AC-1 | On the bounded depth-four `Sequence` input with equal `quire_exact::Value` operands, the actual `CheckedEquality::evaluate` path calls `quire_exact::planned_equality_with_plan` and completes `true`; that kernel call reports 17 planned pair events, and the same evaluation admits exactly 17 `EqualityPair` charges after `EqualityPlanForm` and `EqualityPlan` and before `EqualityResultRetain`. A separate kernel call does not establish this criterion. | Test |
 | FR-277-AC-2 | On the same bounded shape with the first head unequal, the actual `CheckedEquality::evaluate` path completes `false` and still admits the complete 17-pair schedule and result-retain charge; equality does not short-circuit its occurrence-pair traversal or charge schedule. | Test |
 | FR-277-AC-3 | If a test meter denies the 17th `EqualityPair`, evaluation returns the existing typed `Incomplete` outcome at `EqualityPair`; only the preceding 16 pair charges are admitted, and `EqualityResultRetain` is not admitted. A denial of `EqualityResultRetain` occurs only after all 17 pair charges have been admitted. | Test |
 | FR-277-AC-4 | With equal-shaped operands whose declared (static) composite types differ, checked construction refuses with `IllTypedCause::TypeMismatch` before `CheckedEquality::evaluate`; the evaluator is not called and no equality pair charge is admitted. | Test |

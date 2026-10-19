@@ -14,12 +14,12 @@ relationships:
 
 When the `exact` feature is enabled, the runtime shall construct composite and collection values,
 compare values for equality, build finite values from a containment graph, and carry terminal object
-references, with values and outcome kinds equal to the quire-spec-language authority
+references using `quire_exact::Value` directly, with values and outcome kinds equal to the quire-spec-language authority
 on every shared-corpus vector, and charges equal to the QSpec accounting
-schedule. As with FR-006 and FR-007, the runtime is an implementation of that definition, not a
-second semantic authority: `quire_spec_language::value` decides every construction, comparison and
-canonical-order question; every type, field and variant this requirement adds keeps the authority's
-name and order; and no operator here decides anything the authority does not.
+schedule. As with FR-006 and FR-007, the runtime consumes the shared kernel:
+`quire_exact` owns `Value`, `ValueType`, collection formation, membership,
+canonical keys and equality planning. RT's checked environment and containment
+entry points use those owner types directly and define no second representation or walker.
 
 ## Inputs
 
@@ -91,10 +91,10 @@ name and order; and no operator here decides anything the authority does not.
   bottom-up: a node reached through more than one slot becomes one shared immutable value, and a
   node that contains itself through value containment refuses as `ContainmentCycle` at the node that
   closes the cycle. Sharing a contained value never creates object identity.
-- A `Reference<T>` value is terminal: its identity is the supplied `(UniverseIdentity, object-type
-  key, ObjectIdentity)` triple, equality never inspects referenced state, and no source form
+- A `Reference<T>` value is terminal: its identity is the supplied `(UniverseId, EffectiveId,
+  ObjectId)` triple, equality never inspects referenced state, and no source form
   constructs one from a component value.
-- `Value` carries no structural equality; the ix://agent-ix/quire-specification/FR-149 relation reached through `plan_equality` and
+- `quire_exact::Value` carries no structural equality; the ix://agent-ix/quire-specification/FR-149 relation reached through kernel `plan_equality` and
   `CheckedEquality::evaluate` is the only equality, because a structural comparison would be a second,
   unmetered relation and would be wrong for signed zero, NaN-bearing values, decimal values retained
   at differing scales, and reference pairs from different universes.
@@ -103,13 +103,13 @@ name and order; and no operator here decides anything the authority does not.
 - Every operation that walks a value's occurrence tree — canonical-key comparison, equality-plan
   formation and pairing, and containment-graph construction — is iterative over an explicit
   worklist, never host-stack recursive, so no admitted value depth can exhaust the call stack.
-- `Value`'s `Debug` and `Drop` are hand-written and iterative over an explicit worklist, not
+- The consumed kernel `Value`'s `Debug` and nested-node `Drop` are hand-written and iterative over an explicit worklist, not
   derived: on the governed `thumbv7em-none-eabi` target a host-stack overflow is silent memory
   corruption, not a panic, so a value nested past a recursive walk's stack limit must still format
   and free without recursing, in time and allocation proportional to the value's size. The
-  hand-written `Debug` output is pinned by an exact literal string, in both compact and alternate
+  kernel `Debug` output is pinned by an exact literal string, in both compact and alternate
   form, on small fixed composite and collection values.
-- `ValueType`'s `Clone`, `PartialEq`, `Debug` and `Drop` traverse `Option` and `Collection`
+- The consumed kernel `ValueType`'s `Clone`, `PartialEq`, `Debug` and `Drop` traverse `Option` and `Collection`
   nesting with heap worklists, never a recursive host-stack walk. The same rule applies when an
   enclosing declaration or collection type invokes those operations on its `ValueType` member.
   The declared type keeps its exact equality and debug representation at every depth.
@@ -167,7 +167,7 @@ name and order; and no operator here decides anything the authority does not.
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 62 members, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
-| FR-008-AC-9 | `Value`'s `Debug` and `Drop` are hand-written and iterative: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and the hand-written `Debug` output is an exact literal string, in both compact and alternate form, on a small fixed value. | Test (TC-024, TC-025) |
+| FR-008-AC-9 | The consumed `quire_exact::Value` has iterative `Debug` and nested-node `Drop`: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and its kernel-owned `Debug` output is pinned by an exact literal string in both compact and alternate form on a small fixed value. RT defines no second `Value`. | Test (TC-024, TC-025) |
 | FR-008-AC-13 | For an `Option`/`Collection`-nested `ValueType` whose depth exceeds a recursive host-stack walk under the admitted source-size cap, `Clone`, `PartialEq`, `Debug` and `Drop` complete on a small-stack thread and a default-stack child process without host-stack overflow; unequal leaf, collection kind and bound remain unequal, and the shallow compact and alternate `Debug` output matches the derived representation exactly. | Test (TC-024) |
 
 ## Kernel ownership
