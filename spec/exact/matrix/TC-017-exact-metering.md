@@ -15,13 +15,13 @@ the public meter. The former RT-local kernel tests left with the copied implemen
 
 ## Ownership and evidence
 
-Kernel-owned after IR-349 removes the local copy. `ix://agent-ix/quire-exact/FR-358-AC-1` and `FR-358-AC-2` own
+Kernel-owned after IR-349 removes the local copy. [quire-exact FR-358-AC-1](ix://agent-ix/quire-exact/FR-358) and `FR-358-AC-2` own
 named denial subsets; `FR-358-AC-8` through `FR-358-AC-11` own the post-cap test-support log;
 `FR-359-AC-1` through `FR-359-AC-6` own cumulative-boundary and first-short-counter checks;
 `FR-368-AC-1` and `FR-368-AC-2` own the spelling census.
 The RT residue charge-point driver remains in `tests/exact_outcomes.rs` under TC-031.
 The exact injected record and ordinary-limit precedence now have direct owner evidence under
-`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`;
+[quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358) and [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358);
 RT's older quire-exact dependency revision still needs a separate refresh.
 
 ## Test Procedure

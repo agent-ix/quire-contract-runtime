@@ -22,7 +22,7 @@ retaining a completed connective result exactly once. Current evidence is
 `tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once` in the file above
 (FR-011-AC-3 and FR-011-AC-8). Its future API home is `scalar`, as interface-001 requires.
 The already-decided truth-table test is kernel-owned under
-`ix://agent-ix/quire-exact/FR-362-AC-9`, which does not test lazy closure invocation.
+[quire-exact FR-362-AC-9](ix://agent-ix/quire-exact/FR-362), which does not test lazy closure invocation.
 `FR-362-AC-11` covers scalar stop prefixes; `FR-359-AC-6` and `FR-359-AC-7` cover scan order
 and consumed readers; `FR-358-AC-8` through `FR-358-AC-11` cover post-cap accounting;
 `FR-359-AC-1` through `FR-359-AC-5` cover cumulative boundaries and atomicity; and

@@ -19,13 +19,13 @@ agreement suites. Evidence:
 
 ## Ownership and evidence
 
-`ix://agent-ix/quire-exact/FR-365-AC-1` tests all six modes on both signs of a tie, and
+[quire-exact FR-365-AC-1](ix://agent-ix/quire-exact/FR-365) tests all six modes on both signs of a tie, and
 `FR-365-AC-2` tests the default;
 `FR-366-AC-1` through `FR-366-AC-4` test IEEE NaNs, signed zero and total order;
 `FR-362-AC-12` and `FR-362-AC-13` test rational canonical form and membership; and
 `FR-363-AC-6` and `FR-363-AC-7`, traced by kernel `tests/ir673_decimal.rs`, test decimal
 normalized values versus retained ordering size charges and the unchanged Boolean result unit.
-`ix://agent-ix/quire-exact/FR-357-AC-2` (`only_the_exposed_member_must_be_in_domain`) tests
+[quire-exact FR-357-AC-2](ix://agent-ix/quire-exact/FR-357) (`only_the_exposed_member_must_be_in_domain`) tests
 single-member admission, `FR-357-AC-3` tests exposed-member domain refusal, and
 `FR-357-AC-7` tests all four `mod` sign quadrants independently of the division profile.
 Those are kernel subsets only. RT-local `tests/exact_semantics.rs` now backs the consumed
@@ -76,7 +76,7 @@ remain separate obligations.
     dimensionless, with neither `IncompatibleDimensions` nor `DistinctUnits`.
 
 Compiler admission of a non-Euclidean `mod` selection belongs to
-`ix://agent-ix/quire-specification/FR-147-AC-5` and QSpec TC-192 DIV-03. RT neither produces
+[quire-specification FR-147-AC-5](ix://agent-ix/quire-specification/FR-147) and QSpec TC-192 DIV-03. RT neither produces
 nor tests that admission refusal.
 
 ## Expected Results

@@ -18,7 +18,7 @@ removed with the copied kernel; owner FR-361-AC-9 tests the matching upscale den
 ## Ownership and evidence
 
 Steps 1–3 remain a QSL agreement gap under IR-669. Step 5's RT allocation
-coverage left with the RT copy. `ix://agent-ix/quire-exact/FR-361-AC-6` and
+coverage left with the RT copy. [quire-exact FR-361-AC-6](ix://agent-ix/quire-exact/FR-361) and
 `FR-361-AC-9` own tested denied retain-upscale cases; `FR-361-AC-4` and `FR-361-AC-5`
 cover scale-expansion/arithmetic denial. `FR-363-AC-1` through `FR-363-AC-7` own tested
 retained-representation decimal ordering subsets.

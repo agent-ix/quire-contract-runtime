@@ -15,7 +15,7 @@ relationships:
 When a qualification harness must observe how an RT exact-feature oracle behaves at a denied
 charge it cannot provoke by setting a limit, the runtime shall use the `quire-exact` meter's
 `InjectedDenial` seam. The kernel owns the injected record and ordinary-limit precedence under
-`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`;
+[quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358) and [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358);
 RT owns the charge-point drivers for its remaining operations.
 
 ## Inputs
@@ -27,13 +27,13 @@ RT owns the charge-point drivers for its remaining operations.
 ## Outputs
 
 - The kernel's `Incomplete` for the matching charge, as specified by
-  `ix://agent-ix/quire-exact/FR-358-AC-12`.
+  [quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358).
 - No change to any counter, to the admitted-charge log, or to the meter's occurrence counter.
 
 ## Behavior
 
 - The kernel decides injected-versus-ordinary-limit precedence under
-  `ix://agent-ix/quire-exact/FR-358-AC-13`. RT passes its charge requests to that meter.
+  [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358). RT passes its charge requests to that meter.
 - The occurrence is 1-based and counts **admitted** charges at the injected point. The `n`th
   occurrence is the `n`th charge at that point that reaches the counters and is admitted; a charge
   at that point that a short counter denies does not advance the occurrence counter, and neither
@@ -43,7 +43,7 @@ RT owns the charge-point drivers for its remaining operations.
 - A `Meter` carries at most one `InjectedDenial`, and it names exactly one point. Charges at every
   other point are unaffected, including charges at other points interleaved with the injected one.
 - The `equality.plan` reservation recorded by an injected denial is defined by
-  `ix://agent-ix/quire-exact/FR-358-AC-12`.
+  [quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358).
 - The denied charge consumes nothing and exposes no partial value: FR-011's stop discipline applies
   unchanged to an injected `Incomplete`.
 - The occurrence counter is saturating. Past `u64::MAX` admitted charges at the injected point no
@@ -53,9 +53,9 @@ RT owns the charge-point drivers for its remaining operations.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-010-AC-1 | For every charge point that an RT-owned residue operation can issue through the `quire-exact` meter, an occurrence-1 injected denial returns `Incomplete` with `WorkUnits` and that point; the observed work consumption equals the record's `consumed`, result consumption is zero, and the denied point is absent from the admitted-charge log. `ix://agent-ix/quire-exact/FR-358-AC-1` owns full meter-state atomicity. | Test (TC-031); Test (owner TC-906) |
-| FR-010-AC-2 | A denial reached through an RT exact-feature charge-point driver returns the `quire-exact` record specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-12`; RT adds no second record definition. | Test (owner TC-906); Inspection (RT dependency) |
-| FR-010-AC-3 | An RT exact-feature charge-point driver uses the `quire-exact` injection-versus-ordinary-limit precedence specified and directly tested by `ix://agent-ix/quire-exact/FR-358-AC-13`; RT adds no second precedence rule. | Test (owner TC-906); Inspection (RT dependency) |
+| FR-010-AC-1 | For every charge point that an RT-owned residue operation can issue through the `quire-exact` meter, an occurrence-1 injected denial returns `Incomplete` with `WorkUnits` and that point; the observed work consumption equals the record's `consumed`, result consumption is zero, and the denied point is absent from the admitted-charge log. [quire-exact FR-358-AC-1](ix://agent-ix/quire-exact/FR-358) owns full meter-state atomicity. | Test (TC-031); Test (owner TC-906) |
+| FR-010-AC-2 | A denial reached through an RT exact-feature charge-point driver returns the `quire-exact` record specified and directly tested by [quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358); RT adds no second record definition. | Test (owner TC-906); Inspection (RT dependency) |
+| FR-010-AC-3 | An RT exact-feature charge-point driver uses the `quire-exact` injection-versus-ordinary-limit precedence specified and directly tested by [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358); RT adds no second precedence rule. | Test (owner TC-906); Inspection (RT dependency) |
 | FR-010-AC-4 | An injection at occurrence `n` fires on the `n`th admitted charge at that point, counting no charge at any other point and no charge at that point that a short counter denied. | Test (TC-031) |
 | FR-010-AC-5 | After the injected denial fires, further charges are metered against the configured limits and no second charge is injected-denied. | Test (TC-031) |
 | FR-010-AC-6 | A 0-based `occurrence` cannot be constructed, so an injected denial can never silently match no charge and degrade into "no fault injected". | Test (TC-031) |
@@ -68,10 +68,10 @@ This requirement stays in force and binds the `exact` feature as a whole; where 
 moves to the kernel's repository the matrix says so and keeps the row, without deleting any
 acceptance criterion.
 
-`ix://agent-ix/quire-exact/FR-358-AC-1` tests named admitted occurrences and one-shot
-behavior; `ix://agent-ix/quire-exact/FR-358-AC-2` tests denial and retry at `equality.plan`;
-`ix://agent-ix/quire-exact/FR-358-AC-3` fixes the nonzero occurrence type.
-`ix://agent-ix/quire-exact/FR-358-AC-12` and `ix://agent-ix/quire-exact/FR-358-AC-13`
+[quire-exact FR-358-AC-1](ix://agent-ix/quire-exact/FR-358) tests named admitted occurrences and one-shot
+behavior; [quire-exact FR-358-AC-2](ix://agent-ix/quire-exact/FR-358) tests denial and retry at `equality.plan`;
+[quire-exact FR-358-AC-3](ix://agent-ix/quire-exact/FR-358) fixes the nonzero occurrence type.
+[quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358) and [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358)
 directly test the complete injected record and ordinary-limit precedence at the public meter.
 RT's retained TC-031 driver checks its residue charge points against that meter. The RT lockfile
 still resolves an older `quire-exact` revision; refreshing that dependency is separate from this

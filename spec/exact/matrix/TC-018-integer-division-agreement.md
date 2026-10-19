@@ -20,7 +20,7 @@ removed with the copied kernel; owner evidence covers only matching kernel cases
 Steps 1–3 remain a QSL agreement gap with open quire-integration ticket IR-669. Local RT
 allocation checks covered subsets of steps 4–5; that kernel evidence left with the RT copy,
 without replacement tests in RT.
-`ix://agent-ix/quire-exact/FR-361-AC-3` owns injected division/modulus denial before large
+[quire-exact FR-361-AC-3](ix://agent-ix/quire-exact/FR-361) owns injected division/modulus denial before large
 allocation. `FR-361-AC-7` and `FR-361-AC-8` test the large floor quotient at the exact and
 one-under dividend-bit limit at `integer-division.operands`. They do not test step 5's
 `max(bits(a), bits(b))` arithmetic charge at exact and one-under limits for division or

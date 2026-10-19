@@ -10,12 +10,12 @@ relationships:
 
 ## Description
 
-Bind the existing RT producer controls to FR-278 after the IR-497 typed carrier cutover. TC-194 already exercises FR-273-AC-8 function producer cases, and TC-026 exercises FR-008-AC-5 equality operand cases.
+Bind the existing RT producer controls to FR-278 after the IR-497 typed carrier cutover. TC-194 already exercises FR-273-AC-8 function producer cases, and the six `operand_value` cause assertions are in `src/exact/equality.rs` unit tests tagged FR-008-AC-5, including `equality_operand_failures_keep_distinct_causes`.
 
 ## Test Procedure
 
 1. Reuse the existing foreign expression, unknown function and meter reborrow assertions in TC-194, checking their precise typed causes and prior admitted charges.
-2. Reuse TC-026's six `operand_value` causes and check that scheduled comparison and checked equality quantity conversion preserve their original `IllTypedCause` payloads.
+2. Reuse the six `operand_value` cause assertions in the `src/exact/equality.rs` unit tests tagged FR-008-AC-5 and check that scheduled comparison and checked equality quantity conversion preserve their original `IllTypedCause` payloads.
 3. Inspect the quire-exact FR-369-AC-1 carrier gate for absence of `CallDepthExceeded`; verify RT FR-273 fuel exhaustion remains `Incomplete`.
 
 ## Expected Results
@@ -24,4 +24,4 @@ Each reached RT producer reports its assigned table cause without message flatte
 
 ## Status
 
-PLANNED for FR-278 tags and any missing controls; overlapping tests already exist under TC-194 and TC-026.
+PLANNED for FR-278 tags and any missing controls; overlapping tests already exist under TC-194 and in the `src/exact/equality.rs` unit tests tagged FR-008-AC-5.

@@ -23,7 +23,7 @@ The runtime SHALL route `CheckedEquality::evaluate` in `src/exact/equality.rs` t
 
 ## Behavior
 
-`CheckedEquality::evaluate` currently calls RT-local `planned_equality` and `plan_pairs`, so the kernel route is a required code change before the controls can pass. The runtime SHALL preserve the kernel plan's relation and complete pair schedule. The meter SHALL admit only successful charges, in the order plan-form, plan, each pair, and result retention. Checked construction SHALL reject unlike static composite declarations before evaluation. The Kani claim is FR-277-AC-7, owned by titan:kani:plan; this requirement grants no proof credit before that lane runs.
+`CheckedEquality::evaluate` currently calls RT-local `planned_equality` and `plan_pairs`, so the kernel route is a required code change before the controls can pass. The runtime SHALL preserve the kernel plan's relation and complete pair schedule. The meter SHALL admit only successful charges, in the order plan-form, plan, each pair, and result retention. Checked construction SHALL reject unlike static composite declarations before evaluation. The real evaluator is owned by quire-contract-runtime. The Kani claim is FR-277-AC-7, owned by titan:kani:plan; this requirement grants no proof credit before that lane runs.
 
 ## Acceptance Criteria
 
@@ -34,8 +34,8 @@ The runtime SHALL route `CheckedEquality::evaluate` in `src/exact/equality.rs` t
 | FR-277-AC-3 | If a test meter denies the 17th `EqualityPair`, evaluation returns the existing typed `Incomplete` outcome at `EqualityPair`; only the preceding 16 pair charges are admitted, and `EqualityResultRetain` is not admitted. A denial of `EqualityResultRetain` occurs only after all 17 pair charges have been admitted. | Test |
 | FR-277-AC-4 | With equal-shaped operands whose declared (static) composite types differ, checked construction refuses with `IllTypedCause::TypeMismatch` before `CheckedEquality::evaluate`; the evaluator is not called and no equality pair charge is admitted. | Test |
 | FR-277-AC-5 | With `work_units = 50` and the bounded equal pair, the actual checked evaluation admits plan-form work of 32, then refuses `equality.plan` because its atomic reservation requires 19 remaining work units but only 18 remain. It returns the existing typed `Incomplete` at `WorkUnits` with limit 50, consumed 32 and `next_charge = 19`; no plan, pair, or result-retain charge is admitted and no equality result is returned. | Test |
-| FR-277-AC-7 | The IR-241 Kani claim remains `plan_equality(left, right).pair_events() == count_of_EqualityPair_charges_from_the_same_real_CheckedEquality::evaluate(left, right, meter)` for both equal and first-head-unequal bounded operands, with the existing exact operand bound and proof ceiling. The real evaluator is owned by quire-contract-runtime; a plan-only equality or duplicated QSL walker does not satisfy this criterion. | Test |
 | FR-277-AC-6 | With `result_units = 0` and sufficient work and occurrence limits, the actual checked evaluation admits `equality.plan-form`, then refuses `equality.plan` atomically with typed `Incomplete { limit_kind: ResultUnits, limit: 0, consumed: 0, next_charge: 1 }`. No plan, pair, or result-retain charge is admitted and no equality result is returned. A version that checks result capacity only after pair charges fails this control. | Test |
+| FR-277-AC-7 | The IR-241 Kani claim remains `plan_equality(left, right).pair_events() == count_of_EqualityPair_charges_from_the_same_real_CheckedEquality::evaluate(left, right, meter)` for both equal and first-head-unequal bounded operands, with the existing exact operand bound and proof ceiling. A plan-only equality or duplicated QSL walker does not satisfy this criterion. | Test |
 
 ## Dependencies
 
