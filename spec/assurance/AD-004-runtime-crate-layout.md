@@ -113,7 +113,7 @@ those six, so "same declaration" is a candidate for "same semantics", settled by
 | Same declaration except RT adds `#[non_exhaustive]` | 45 | delete; consumers lose `#[non_exhaustive]` (see Risks) | e.g. `Outcome`, `LimitKind`, `RoundingMode`, `IeeeWidth`, `IllTypedCause`, `ComparisonOperator`, `ValueLoss`, `CheckMode`, `Component` |
 | Same fields, boxed in RT | 7 | delete; representation only | `Decimal`, `DecimalType`, `Rational`, `RationalDomain`, `Text`, `EnumValue`, `CompoundUnit` |
 | Same value, different representation | 1 | delete; layout only | `Integer` (RT `{small: i64, big: Option<Box<BigInt>>}`, QSL `(BigInt)`) |
-| Same name, different declaration | 22 | delete after the adapter in the step | `Meter`, `ChargePoint`, `InjectedDenial`, `Refusal`, `Undefined`, `Value`, `ValueType`, `Quantity`, `QuantityOperation`, `ObjectReference`, `ObjectTypeDeclaration`, `FieldDeclaration`, `TypeEnvironment`, `CheckedEquality`, `DeclarationCause`, `CollectionType`, `UnitGraph`, `CheckingLimits`, `InputRefusal`, `PackageCause`, `Origin`, `Location` |
+| Same name, different declaration | 22 | delete in the step; consumers repoint to the owner type, no adapter | `Meter`, `ChargePoint`, `InjectedDenial`, `Refusal`, `Undefined`, `Value`, `ValueType`, `Quantity`, `QuantityOperation`, `ObjectReference`, `ObjectTypeDeclaration`, `FieldDeclaration`, `TypeEnvironment`, `CheckedEquality`, `DeclarationCause`, `CollectionType`, `UnitGraph`, `CheckingLimits`, `InputRefusal`, `PackageCause`, `Origin`, `Location` |
 | RT-only | 27 types, 7 free items and the alias `Body` | keep (the 11 `scalar` items), delete when the evaluation leaf lands (the `expression` items, Q-1), or delete with a successor (below) | see What this crate keeps |
 
 The six read in full:
@@ -391,7 +391,7 @@ CG PR that adopts the new paths.
 | 5 | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
 | 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
 
-IR-882 is the spec-first entry to step 4. At this boundary the value owner is
+IR-882 specifies step 4; its first code slice requires Q-5 to be answered. At this boundary the value owner is
 `quire_exact::Value`, including its `Arc`-backed option, composite and collection
 nodes. RT deletes the distinct `src/exact/composite.rs` `Value` enum, its
 `repr(u64)` layout choice, `src/exact/equality.rs` `planned_equality` and
@@ -431,8 +431,14 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 Q-1 to Q-4 and Q-6 are answered. The answers are the owner's, given in the IR planner's session on
 2026-10-04 and recorded verbatim by the planner on IR-349 (Q-1 to Q-4), IR-346 and IR-582 (Q-6).
 QSL FR-262 now separates the Q-1 interface (IR-583) from the usable `no_std` implementation (IR-590).
-Q-5 stays open,
-routed to QSL by this lane, with no owner answer recorded.
+Q-5 stays open, routed to QSL by this lane, with no owner answer recorded. The
+standing owner ruling to extract both kernels, use one owned copy, avoid an exact
+re-export and two versions, and decide Q-3/Q-4/Q-5 on their merits does not
+answer the constructor precondition. RT itself constructs no `NodeKey`, but CG
+emits literal keys and decodes hex outside the documented `decode_admitted`
+allow-list. Choosing a constructor here would assert an upstream admission rule
+without evidence. QSL must decide the permitted constructor, precondition and
+hex-decoding owner before the paired CG and RT value-bearing cutover (slice 1).
 
 | Question | Owner | Answer (source) | Consequence in this AD |
 | --- | --- | --- | --- |
