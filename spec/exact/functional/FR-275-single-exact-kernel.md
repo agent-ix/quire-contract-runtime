@@ -86,6 +86,14 @@ crates that the runtime consumes.
   The runtime defines none of them (interface-001-AC-3 and AC-5 state the same rule per item; AC-2 and AC-4 state that no path re-exports them).
   Deleting the runtime's definitions is deletion, not relocation: no module, re-export alias,
   feature or wrapper keeps the old definitions reachable.
+- **Shared identity and declaration owners.** The kernel has no cross-unit quantity
+  arithmetic or equality conversion table. RT consumes `quire-semantic-value`'s
+  `UnitTable::get(UnitId)` for admitted units, `TypeEnvironment::object_type(EffectiveId)`
+  for object declarations, and `EnumMemberIndex::resolve(VariantId)` with
+  `EnumDeclaration` for enum members and shapes. The IR-882 migration repoints
+  quantity, enum and reference payloads to those owner types directly, with no
+  RT-owned `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, second
+  value representation or adapter.
 - **The residue (not authorized).** The `exact` items `quire-exact` does not export, other than the
   runtime-owned `scalar` items (the negotiators and their types, `evaluate_boolean_short_circuit` and
   `ShortCircuitConnective`, which are not residue), are still in the runtime's source: function application (FR-273, AD-002), the static
@@ -156,7 +164,7 @@ crates that the runtime consumes.
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-275-AC-1 | With `exact` enabled, no public item the runtime defines (in `scalar` or any other module) has the name of an item that `quire-exact` or `quire-semantic-value` exports. | Inspection (TC-197) |
-| FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined second `Value`, pair walker or membership walker and no conversion layer or old-`Value` re-export. | Inspection (TC-197) |
+| FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined second `Value`, pair walker or membership walker, `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, copy of `UnitTable`, `TypeEnvironment`, `EnumMemberIndex` or `EnumDeclaration`, conversion layer, adapter or old-`Value` re-export. Quantity, enum and reference payloads use the QSV owners directly. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`. | Test (TC-197, `make deny`) |
@@ -214,14 +222,6 @@ and is deleted in step 1.
   RT's current `Rc`-backed `Value`. IR-882 migrates RT to the kernel value
   with no conversion layer; the RT `repr(u64)` tag is a layout choice, not a
   semantic requirement. The code step measures Kani and footprint effects.
-- **Shared identity and declaration owners.** The kernel has no cross-unit quantity
-  arithmetic or equality conversion table. RT consumes `quire-semantic-value`'s
-  `UnitTable::get(UnitId)` for admitted units, `TypeEnvironment::object_type(EffectiveId)`
-  for object declarations, and `EnumMemberIndex::resolve(VariantId)` with
-  `EnumDeclaration` for enum members and shapes. The IR-882 migration repoints
-  quantity, enum and reference payloads to those owner types directly, with no
-  RT-owned `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, second
-  value representation or adapter.
 
 ## Dependencies
 
