@@ -13,9 +13,9 @@ use quire_contract_runtime::exact::{
     NodeKey, Presence, TypeEnvironment, Value, ValueType,
 };
 use quire_exact::{
-    BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind,
-    Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits,
-    Undefined,
+    BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, Decimal,
+    DecimalType, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal,
+    RoundingMode, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -146,19 +146,22 @@ fn checked_collection_element_outside_declared_type_has_precise_cause() {
     ));
 }
 
-#[trace("TC-025", "FR-008-AC-3")]
+// IR-885: ordering is checked here, but AC-11 stays untagged until the bag retains every occurrence.
+#[trace("TC-025", "FR-008-AC-3", "FR-008-AC-10")]
 #[test]
-fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
+fn tc_025_p3_collection_membership_charges_retention_order_and_result_retain() {
     let bound = CardinalityBound::new(0, 10).unwrap();
-    let cases: [(CollectionKind, Vec<i128>); 2] = [
-        (CollectionKind::Set, vec![1, 2, 3]),
-        (CollectionKind::Bag, vec![1, 1, 2, 3]),
+    let cases: [(CollectionKind, Vec<i128>, usize); 4] = [
+        (CollectionKind::Sequence, vec![2, 1, 2, 3], 0),
+        (CollectionKind::OrderedSet, vec![2, 1, 3], 4),
+        (CollectionKind::Set, vec![1, 2, 3], 4),
+        (CollectionKind::Bag, vec![1, 2, 2, 3], 4),
     ];
-    for (kind, expected_elements) in cases {
+    for (kind, expected_elements, expected_comparisons) in cases {
         let collection_type = CollectionType::new(kind, ValueType::Integer, bound);
         let mut meter = Meter::new(UNLIMITED);
-        // Occurrences with repeats, deliberately out of canonical order.
-        let occurrences = vec![int_value(1), int_value(2), int_value(1), int_value(3)];
+        // A repeated member and noncanonical order distinguish all four kinds.
+        let occurrences = vec![int_value(2), int_value(1), int_value(2), int_value(3)];
         let outcome = form_collection(&collection_type, occurrences, &mut meter)
             .unwrap()
             .completed()
@@ -176,10 +179,18 @@ fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
             .collect();
         assert_eq!(observed, expected_elements, "kind {kind:?}");
 
-        // One member-walk and one member-test per comparison against members
-        // retained so far, stopping at the first equal member: 0 + 1 + 1 + 2 = 4.
-        assert_eq!(charges_of(&meter, ChargePoint::CollectionMemberWalk), 4);
-        assert_eq!(charges_of(&meter, ChargePoint::CollectionMemberTest), 4);
+        // Non-sequences compare against retained members until equal:
+        // 0 + 1 + 1 + 2 = 4; sequences do no membership comparisons.
+        assert_eq!(
+            charges_of(&meter, ChargePoint::CollectionMemberWalk),
+            expected_comparisons,
+            "kind {kind:?}"
+        );
+        assert_eq!(
+            charges_of(&meter, ChargePoint::CollectionMemberTest),
+            expected_comparisons,
+            "kind {kind:?}"
+        );
 
         let charges = meter.admitted_charges();
         assert_eq!(
@@ -188,6 +199,47 @@ fn tc_025_p3_set_and_bag_membership_charges_and_result_retain() {
         );
         assert_eq!(charges.last(), Some(&ChargePoint::CollectionResultRetain));
     }
+}
+
+// IR-885: this proves the ordered-set first-occurrence clause; the bag clause still needs work.
+#[test]
+fn ordered_set_retains_first_equal_decimal_representation() {
+    let collection_type = CollectionType::new(
+        CollectionKind::OrderedSet,
+        ValueType::Decimal(
+            DecimalType::new(
+                Integer::zero(),
+                Integer::from(100_i64),
+                0,
+                2,
+                RoundingMode::Exact,
+            )
+            .unwrap(),
+        ),
+        CardinalityBound::new(0, 3).unwrap(),
+    );
+    let mut meter = Meter::new(UNLIMITED);
+    let occurrences = vec![
+        Value::Decimal(Decimal::new(Integer::from(10_i64), 1)),
+        Value::Decimal(Decimal::new(Integer::from(2_i64), 0)),
+        Value::Decimal(Decimal::new(Integer::from(100_i64), 2)),
+    ];
+    let outcome = form_collection(&collection_type, occurrences, &mut meter)
+        .unwrap()
+        .completed()
+        .unwrap();
+    let Value::Collection(collection) = &outcome else {
+        panic!("expected a collection value")
+    };
+    let scales: Vec<u32> = collection
+        .elements()
+        .iter()
+        .map(|value| match value {
+            Value::Decimal(decimal) => decimal.representation().scale(),
+            other => panic!("expected a decimal element, got {other:?}"),
+        })
+        .collect();
+    assert_eq!(scales, [1, 0]);
 }
 
 #[trace("TC-025", "FR-008-AC-7")]
