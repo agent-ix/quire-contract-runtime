@@ -250,29 +250,25 @@ fn coalesce(
     occurrences: Vec<Value>,
     meter: &mut Meter,
 ) -> Result<Vec<Value>, Stop> {
-    // (member, multiplicity) in retention order.
-    let mut members: Vec<(Value, usize)> = Vec::new();
+    let mut retained = Vec::new();
+    // First occurrence of each distinct member, in membership comparison order.
+    let mut members = Vec::new();
     for candidate in occurrences {
-        let mut equal_member = None;
-        for (index, (member, _)) in members.iter().enumerate() {
-            if member_equal(&candidate, member, meter)? {
-                equal_member = Some(index);
+        let mut equal_member = false;
+        for &index in &members {
+            if member_equal(&candidate, &retained[index], meter)? {
+                equal_member = true;
                 break;
             }
         }
-        match equal_member.and_then(|index| members.get_mut(index)) {
-            Some((_, multiplicity)) => {
-                if kind == CollectionKind::Bag {
-                    *multiplicity = multiplicity.saturating_add(1);
-                }
-            }
-            None => members.push((candidate, 1)),
+        if !equal_member {
+            members.push(retained.len());
+        }
+        if kind == CollectionKind::Bag || !equal_member {
+            retained.push(candidate);
         }
     }
-    Ok(members
-        .into_iter()
-        .flat_map(|(member, multiplicity)| core::iter::repeat_n(member, multiplicity))
-        .collect())
+    Ok(retained)
 }
 
 /// One charged membership comparison of candidate `c` with member `m`.
