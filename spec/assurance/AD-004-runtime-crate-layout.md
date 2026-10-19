@@ -279,7 +279,7 @@ the charge log, `charge_log_truncated` nor `CHARGE_LOG_CAPACITY` (grep). The har
 
 | Piece | Verified at QSL `origin/main` | Result |
 | --- | --- | --- |
-| H3, `NodeKey::decode_admitted` (QSL-479, #590) | `quire-exact/src/node.rs` defines it; PR state MERGED | present, but not a rename of `from_bytes`: it ships with QSL's T12-F call-site allow-list and the precondition that the bytes come from a package that passed the admitted-package identity check, and the type itself accepts any 32 bytes. `from_digest` is check-only (T12-B). RT library code calls no `NodeKey` constructor today (every call is in a test); CG's emitted literals and its hex-decode path are covered by neither the allow-list nor, shown here, the precondition: Q-5 |
+| H3, `NodeKey::decode_admitted` (QSL-479, #590) | `quire-exact/src/node.rs` defines it; PR state MERGED | present, but not a rename of `from_bytes`: it has the precondition that the bytes come from a package that passed the admitted-package identity check, and the type itself accepts any 32 bytes. `from_digest` is check-only (T12-B). Q-5 is answered on QSL-530: CG's emitted literals use `decode_admitted`; its emitter and emitted-oracle modules belong in CG's own `arch-lint` admitted-package reader set (CG #89). RT library code calls no `NodeKey` constructor today (every call is in a test), so RT's corresponding reader set (RT #56) names no module. |
 | H2, `ObjectClosure` (QSL-478, #608) | `quire-semantic-value/src/object_closure.rs`; PR state MERGED | present; signatures differ from RT's `ObjectEnvironment` (above) |
 | QSL-358 residue slices | `quire-semantic-value` holds `stop`, `quantity`, `unit`, `declaration`, `containment`, `enumeration`, `definition`, `semantic_node`, `checking`, `call`, `loss`, `location`, `object_closure` | present; QSL-358 is Done |
 | FR-275 step 2 (the residue) | the 15 `expression` items and the lazy connective | not delivered, although interface-001 and FR-275 expect QSL-358 to move function application: no QSL crate this crate may depend on defines it. QSL-358 is Done. The lazy connective is absent from both crates |
@@ -288,7 +288,7 @@ Still missing for this crate, each stated to QSL below: the evaluation leaf's IR
 IR-590 usable `no_std` implementation (Q-1); RT's `CheckingLimits::depth`,
 `DepthAboveMaximum` and `MAX_CALL_DEPTH` are obsolete under QSL FR-262's work-fuel-only call rule
 (the FR-273 amendment is separate IR-512 work);
-`NodeKey::from_hex`; `PackageCause` lacks three variants RT has (`RevisionMismatch`,
+the pending `quire-exact::parse_hex32(&str) -> Option<[u8; 32]>` byte parser (Q-5, QSL-530), which mints no `NodeKey`; `PackageCause` lacks three variants RT has (`RevisionMismatch`,
 `DigestDomainMismatch`, `ByteDigestMismatch`); the injected denial is not single-shot and `occurrence`
 admits zero (FR-010-AC-5, AC-6); `Origin` and `Location` are defined twice by QSL, in `quire-exact` as a
 provenance pair (node key and occurrence) and in `quire-semantic-value` as the call-path pair this
@@ -387,7 +387,7 @@ CG PR that adopts the new paths.
 | 1 | Spec only; needs no ticket. Amend Group 1 only, the statements that hold today: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim-copy Open question stays open (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
 | 2 | IR-582 delivered the repositories and `quire-exact` already uses its own repository. Add optional `quire-semantic-value` under `exact` (`Cargo.toml`, lock); admit the three own-repository Git sources and their scoped licences in `deny.toml`; remove the QSL-repository `allow-git` and the 14 name bans; amend Group 2, TC-197 through TC-199 and `CLAUDE.md`; require the QSL source rejection in `make deny-mutations` and keep the footprint graph free of the shared crates. No runtime source deletion or semantic behavior claim | none | G, with `deny-mutations` green; the script proves the QSL Git source is rejected |
 | 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `scripts/check_kani_mutations.py` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4), and interface-001's `compatibility.enums: non-exhaustive` statement is amended in this step to match | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
-| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, `NodeKey` construction (Q-5), the three serializable mirrors | G; Q-5 answered |
+| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration` | the different-declaration use sites, CG's `NodeKey::decode_admitted` literals after admitted-package identity checking and `quire-exact::parse_hex32` byte parsing (Q-5, QSL-530), the three serializable mirrors; CG #89 names its emitter and emitted-oracle modules in its own `arch-lint` reader set, while RT #56 names no RT module because RT library code constructs no `NodeKey` | G; Q-5 answered (QSL-530); the separate `parse_hex32` quire-exact PR and the paired CG changes still precede the cutover |
 | 5 | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
 | 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
 
@@ -431,14 +431,15 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 Q-1 to Q-4 and Q-6 are answered. The answers are the owner's, given in the IR planner's session on
 2026-10-04 and recorded verbatim by the planner on IR-349 (Q-1 to Q-4), IR-346 and IR-582 (Q-6).
 QSL FR-262 now separates the Q-1 interface (IR-583) from the usable `no_std` implementation (IR-590).
-Q-5 stays open, routed to QSL by this lane, with no owner answer recorded. The
-standing owner ruling to extract both kernels, use one owned copy, avoid an exact
-re-export and two versions, and decide Q-3/Q-4/Q-5 on their merits does not
-answer the constructor precondition. RT itself constructs no `NodeKey`, but CG
-emits literal keys and decodes hex outside the documented `decode_admitted`
-allow-list. Choosing a constructor here would assert an upstream admission rule
-without evidence. QSL must decide the permitted constructor, precondition and
-hex-decoding owner before the paired CG and RT value-bearing cutover (slice 1).
+Q-5 is answered by the QSL spec owner on QSL-530. The `quire-exact` source confirms
+`NodeKey::decode_admitted` and its admitted-package identity precondition; the separate
+`parse_hex32` byte parser is still pending in quire-exact. No new constructor is authorized.
+The standing owner ruling remains one kernel, with no RT copy (AD-004, FR-275).
+RT may hold `NodeKey`s within `quire_exact::Value` and constructs none in library code.
+QSL ADR-012's RT rows (the function lookup table and the ADR-013 `NodeKey` question)
+currently say RT holds no `NodeKey`; those rows need amendment in the QSL repository to
+allow this contained value without granting RT a constructor. The RT-side contract is
+recorded here for the paired CG and RT value-bearing cutover (IR-882).
 
 | Question | Owner | Answer (source) | Consequence in this AD |
 | --- | --- | --- | --- |
@@ -446,7 +447,7 @@ hex-decoding owner before the paired CG and RT value-bearing cutover (slice 1).
 | Q-2. No `exact` re-export path | owner | decided: confirmed (IR-349 answer): step 1 amends FR-275 and interface-001, and CG changes in the same step | Decision B stands; the Group 1 amendments under the end state are decided and land in step 1 |
 | Q-3. Kani against the shared `Integer` | owner | decided: prove against the shared type (IR-349 answer) | the proofs run against the shared `Integer`, with no RT-local shadow type; stated in step 3 |
 | Q-4. `#[non_exhaustive]` on shared enums | owner | decided: follow the shared crate, none (IR-349 answer): this crate drops its 66 attributes in `src/exact` and matches are exhaustive | stated in step 3; the five kept `scalar` enums that carry it drop it; the 6 sites outside `exact` are not part of this answer |
-| Q-5. May a consumer crate construct a `NodeKey` at all, and under what precondition? `decode_admitted` is for bytes of an admitted package under QSL's allow-list; CG emits literal keys and decodes hex (`from_hex`, absent from QSL), which neither the allow-list nor, shown here, the precondition covers. RT library code constructs none | QSL | open, routed to QSL by this lane; no owner answer is recorded (the IR-349 answer covers Q-1 to Q-4 only): QSL states which constructor a generator or an emitted oracle may use and where hex decoding lives | the CG paths that build keys stay unresolved in step 4 until QSL answers |
+| Q-5. May a consumer crate construct a `NodeKey` at all, and under what precondition? `decode_admitted` is for bytes of an admitted package; CG emits literal keys and decodes hex, while RT library code constructs none | QSL (QSL-530) | answered: no new `NodeKey` constructor; CG's emitted literals use `NodeKey::decode_admitted` only after the package passes the admitted-package identity check, and a decoded key does not assert that `check` freshly minted it. `quire-exact::parse_hex32(&str) -> Option<[u8; 32]>` parses exactly 64 lowercase hex digits without a prefix and mints nothing (separate quire-exact PR, pending). The admitted-package reader set is enforced by each backend's own `arch-lint` run: CG #89 names its emitter and emitted-oracle modules; RT #56 names no RT module because RT library code calls no constructor. QSL's own T12-B and T12-F caller lists stay unchanged | step 4 may proceed after the pending byte parser and paired CG changes; RT holds shared `NodeKey`s inside `quire_exact::Value` without constructing them, preserving the one-kernel rule. QSL ADR-012's contrary RT rows require a QSL-side correction |
 | Q-6. Where do `quire-exact` and `quire-semantic-value` live (O-1 of AD-007)? | owner | decided: extract both into their own repositories (IR-346 and IR-582; work IR-582, QSL lane); IR-349 is blocked by IR-582 | the end state depends on the extracted repositories; step 2, with the Group 2 amendments, needs IR-582 |
 
 ### Routed gaps
@@ -455,7 +456,7 @@ To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldD
 `quire-exact` and `quire-semantic-value`; R-2 superseded by QSL FR-262's work-fuel-only call rule,
 with RT FR-273 correction owned by IR-512; R-3 the `PackageCause` variants, or their retirement; R-4 the injected denial
 single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
-behaviour is the specification; R-5 Q-4 and Q-5; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
+behaviour is the specification; R-5 Q-4 and Q-5 answered (Q-5 on QSL-530), with the `parse_hex32` quire-exact PR, CG #89 reader-set enforcement and QSL ADR-012 RT-row correction still routed to their owners; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
 
 To CG: the paired PR for each of steps 3 to 5 (the table above); mirrors of `DeclarationCause`, `Origin` and
 `Location` follow the shared definitions (AD-003 R3-C8).
