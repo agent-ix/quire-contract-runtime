@@ -3,7 +3,7 @@
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    EnumDeclaration, KernelIdentityRegistry, NodeKey, ObjectTypeDeclaration, RegistryCause,
+    CompoundUnit, EnumDeclaration, KernelIdentityRegistry, NodeKey, ObjectTypeDeclaration, RegistryCause,
     TypeEnvironment, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{EffectiveId, Integer, Rational, UnitId, VariantId};
@@ -27,11 +27,16 @@ fn declared_unit_id_resolves_only_an_admitted_unit() {
         })],
     ).unwrap();
     let types = TypeEnvironment::new([], []).unwrap();
-    let registry = KernelIdentityRegistry::new(&graph, &types);
+    let mut registry = KernelIdentityRegistry::new(&graph, &types);
     let id = UnitId::declared(quire_exact::NodeKey::from_digest(*unit.as_bytes()));
     assert_eq!(registry.resolve_unit(id).unwrap().key(), unit);
     assert!(registry.resolve_unit(UnitId::compound(*unit.as_bytes())).is_none());
     assert!(registry.resolve_unit(UnitId::declared(quire_exact::NodeKey::from_digest([3; 32]))).is_none());
+    let compound = UnitId::compound([4; 32]);
+    registry.register_compound(compound, CompoundUnit::dimensionless()).unwrap();
+    assert_eq!(registry.resolve_compound(compound), Some(&CompoundUnit::dimensionless()));
+    assert_eq!(registry.register_compound(compound, CompoundUnit::dimensionless()), Err(RegistryCause::DuplicateIdentity));
+    assert_eq!(registry.register_compound(id, CompoundUnit::dimensionless()), Err(RegistryCause::WrongUnitDomain));
 }
 
 #[trace("TC-024", "FR-008-AC-1")]
