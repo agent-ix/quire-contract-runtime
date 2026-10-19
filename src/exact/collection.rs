@@ -250,8 +250,8 @@ fn coalesce(
     occurrences: Vec<Value>,
     meter: &mut Meter,
 ) -> Result<Vec<Value>, Stop> {
-    // First occurrence and later occurrences of each distinct member, in comparison order.
-    let mut members: Vec<(Value, Vec<Value>)> = Vec::new();
+    // (member, multiplicity) in retention order.
+    let mut members: Vec<(Value, usize)> = Vec::new();
     for candidate in occurrences {
         let mut equal_member = None;
         for (index, (member, _)) in members.iter().enumerate() {
@@ -261,17 +261,17 @@ fn coalesce(
             }
         }
         match equal_member.and_then(|index| members.get_mut(index)) {
-            Some((_, repeats)) => {
+            Some((_, multiplicity)) => {
                 if kind == CollectionKind::Bag {
-                    repeats.push(candidate);
+                    *multiplicity = multiplicity.saturating_add(1);
                 }
             }
-            None => members.push((candidate, Vec::new())),
+            None => members.push((candidate, 1)),
         }
     }
     Ok(members
         .into_iter()
-        .flat_map(|(member, repeats)| core::iter::once(member).chain(repeats))
+        .flat_map(|(member, multiplicity)| core::iter::repeat_n(member, multiplicity))
         .collect())
 }
 

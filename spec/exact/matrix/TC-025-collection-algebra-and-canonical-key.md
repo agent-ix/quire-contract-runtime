@@ -40,11 +40,11 @@ that fixes set and bag order. Evidence:
    whose supplied order differs from ascending canonical-key order: a sequence in supplied
    occurrence order, an ordered set as the first occurrence of each distinct member in
    first-occurrence order, a set as one occurrence of each distinct member in ascending
-   canonical-key order, and a bag as every occurrence in ascending canonical-key order with equal
-   occurrences adjacent. Use numerically equal decimals with different scales to check that the
-   ordered set keeps the first representation and the bag keeps each representation in authored
-   order among equal keys. Check for each kind that this stored order is also the visiting order used
-   by equality and further formation, and that the canonical key ranks `Absent < Null < Present`
+   canonical-key order, and a bag as every occurrence in ascending canonical-key order by
+   multiplicity. Use numerically equal decimals with different scales to check that the
+   ordered set keeps the first representation and the bag repeats each distinct member's
+   first-supplied representation by its multiplicity. Check for each kind that this stored order
+   is also the visiting order used by equality and further formation, and that the canonical key ranks `Absent < Null < Present`
    across option and composite slots nested inside collection elements.
 6. Compare canonical keys of two values nested past typical host recursion limits and check the
    comparison completes with no stack overflow, proving the task-stack walk is iterative.

@@ -243,7 +243,7 @@ fn ordered_set_retains_first_equal_decimal_representation() {
 
 #[trace("TC-025", "FR-008-AC-11")]
 #[test]
-fn bag_retains_each_decimal_occurrence_in_stable_key_order() {
+fn bag_repeats_first_supplied_equal_decimal_by_multiplicity() {
     let collection_type = CollectionType::new(
         CollectionKind::Bag,
         ValueType::Decimal(
@@ -259,11 +259,8 @@ fn bag_retains_each_decimal_occurrence_in_stable_key_order() {
         CardinalityBound::new(0, 4).unwrap(),
     );
     let cases = [
-        (vec![(10, 1), (2, 0), (100, 2)], vec![1, 2, 0]),
-        (
-            vec![(300, 2), (1000, 3), (30, 1), (10, 1)],
-            vec![3, 1, 2, 1],
-        ),
+        (vec![(10, 1), (2, 0), (100, 2)], vec![1, 1, 0]),
+        (vec![(2, 0), (1000, 3), (10, 1), (100, 2)], vec![3, 3, 3, 0]),
     ];
     for (representations, expected_scales) in cases {
         let occurrences = representations
