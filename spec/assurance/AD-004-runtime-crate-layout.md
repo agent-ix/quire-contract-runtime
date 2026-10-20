@@ -410,6 +410,10 @@ as one compileable step-4 slice: RT deletes `src/exact/node.rs`, uses QSV's
 and enum code, and exposes no replacement alias or re-export. The locked QSV
 `PackageCause` has three variants while RT's definition vocabulary carries six;
 `definition.rs` cannot leave in this slice without dropping three causes.
+CG main's `tests/exact_scalar_support/agreement_cases.rs` and `agreement.rs`
+still use `rt::InvalidSemanticGraph` and `rt::SemanticGraphCause`; those
+imports must move to `quire_semantic_value::semantic_node` when CG's RT lock
+moves past this slice.
 This slice does not satisfy FR-275-AC-2 or FR-277-AC-1; the `Value`-bearing
 set, definition vocabulary and their acceptance evidence remain in the next
 cutover.

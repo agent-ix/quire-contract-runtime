@@ -351,8 +351,8 @@ fn root(dimension: NodeKey) -> UnitDeclaration {
 }
 
 // --- AC-4 admissible inputs, one per structural `SemanticGraphCause` reachable through the
-// public `UnitGraph::admit`. `check_terms` is `pub(crate)`, so the three term causes are reached
-// through `admit`'s `dimensions` parameter, as the requirement's own `Behavior` clause describes
+// public `UnitGraph::admit`. The three term causes are reached through
+// `admit`'s `dimensions` parameter, as the requirement's own `Behavior` clause describes
 // them: dimension terms it checks for well-formedness before graph topology.
 
 fn zero_exponent_admit() -> Result<UnitGraph, InvalidSemanticGraph> {
