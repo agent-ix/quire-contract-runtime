@@ -37,6 +37,14 @@ FR-007-AC-20 through AC-25, not copied from QSpec. Lossy conversion (`FR-142-AC-
 7. Run the denying tuples of FR-007-AC-25 (U10 with `result_units: 0`, U15 and U22 and U26 second
    tuples); check each `Incomplete` field and that no partial quantity is returned. A differing executed
    value for the U10 tuple is a finding, never a reason to change the test to fit.
+8. At the AD-004 step-4 cutover, run U25 through QSV: identify the compound target with
+   `IdentifiedUnit::new`, retain it in `UnitScope`, and resolve the first conversion's result
+   through that scope before converting it to `J`. Check that the retained and resolved IDs
+   are the same compound-arm `UnitId`, the result is exact `1 J`, and the existing U25 charge
+   order is unchanged. Exercise equal raw ID bytes in the declared and compound arms and
+   expect distinct IDs. Exercise compound identity refusal and expect no returned quantity
+   or retained unit (FR-275-AC-23). This step is planned until the value-bearing cutover;
+   current RT-local conversion tests cover FR-007-AC-20 through AC-25.
 
 ## Expected Results
 

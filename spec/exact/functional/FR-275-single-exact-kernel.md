@@ -185,6 +185,7 @@ crates that the runtime consumes.
 | FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
 | FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |
 | FR-275-AC-22 | Inspection of runtime source finds no local definition or alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including definitions emitted by macros. | Inspection (TC-205) |
+| FR-275-AC-23 | After the step-4 value-bearing cutover, a compound quantity carries QSV's compound-arm `UnitId`, computed with `IdentifiedUnit::new` and retained in QSV's `UnitScope`; a later operation resolves that quantity through `UnitScope::resolve` to the same normalized `QuantityUnit::Compound`. The declared and compound arms remain distinct even for equal ID bytes. An identity refusal yields no quantity or retained unit. TC-187 U25's compound-target conversion can feed its result into the conversion to `J` with exact value `1` and FR-007-AC-23's charges. RT defines no `CompoundUnit` identity, `UnitId` resolver, parallel unit table or conversion adapter. | Test |
 
 ## Residue list (not authorized; to be deleted)
 

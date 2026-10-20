@@ -25,6 +25,9 @@ IR-349; it is planned until then.
    `UnitTable::get(UnitId)`, `TypeEnvironment::object_type(EffectiveId)`,
    `EnumMemberIndex::resolve(VariantId)` and `EnumDeclaration` directly, with no RT-owned
    identity resolver, enum or object-type registry, QSV owner copy or adapter (FR-275-AC-2).
+   For FR-275-AC-23, inspect the compound-unit path for QSV's `IdentifiedUnit`,
+   `UnitScope` and typed `UnitId`; expect no RT `CompoundUnit` ID computation, parallel
+   unit table or conversion adapter.
 2. Read `Cargo.toml`; expect `quire-exact` and `quire-semantic-value` optional, enabled only by `exact`,
    each using its own Git repository, `branch = "main"`, and no `rev`, `tag`, `path` or `[patch]`
    (FR-275-AC-3, FR-275-AC-4).
