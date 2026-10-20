@@ -36,7 +36,6 @@ fn identity_package() -> CheckedPackage {
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
-    .ok()
     .expect("a linked identity function admits")
 }
 
