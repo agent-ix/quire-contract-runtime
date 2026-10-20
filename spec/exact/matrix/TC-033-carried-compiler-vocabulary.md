@@ -27,7 +27,8 @@ preserved below as historical FR-012-AC-1 text.
 2. Compare the kernel's `NODE_KEY_DOMAIN` and RT's `COMPOUND_UNIT_DOMAIN` with their normative strings.
 3. Check `SelectionRefusalCode::ALL` order, each `as_str`, `from_code` over each spelling and over
    unlisted spellings, and `PackageRefusalCode::as_str`.
-4. Drive `UnitGraph::admit` and `check_terms` into each structural `SemanticGraphCause`.
+4. Drive RT `UnitGraph::admit` and `check_terms`, and QSV `EnumDeclaration::new` and
+   `EnumDeclaration::member`, into their structural `SemanticGraphCause` outcomes.
 5. Build `Dimension` and `CompoundUnit` from the same terms in several orders; compare and iterate.
 
 ## Retired Procedure (FR-012-AC-1)

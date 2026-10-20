@@ -61,11 +61,11 @@ recompute, re-derive or invent any of them.
   preference:
   - *Raised by the runtime over a graph it is handed*: zero exponent, duplicate term, unsorted
     terms, zero scale, non-identity root, duplicate node, unknown dimension, non-base dimension
-    term, unknown target, cross-dimension target, missing root, duplicate root, target cycle — and
-    undeclared case, raised where a case is read against its declaration rather than at graph
-    admission.
-  - *Raised by the runtime at its own declaration-admission point*: `EnumDeclaration::new` admits a
-    declaration node from caller-supplied member strings, and that is a runtime admission, so it
+    term, unknown target, cross-dimension target, missing root, duplicate root, target cycle.
+    QSV raises `UndeclaredCase` when `EnumDeclaration::member` reads a case outside its admitted
+    declaration; RT tests consume that owner path directly.
+  - *Raised by the QSV declaration-admission point consumed by the runtime*: `EnumDeclaration::new` admits a
+    declaration node from caller-supplied member strings, so it
     raises `NonCanonicalPreimage` for an empty, repeated or non-identifier member list and
     `UnsortedUnorderedMembers` for an unordered declaration whose cases are not sorted. Those two
     causes are raised there and nowhere else; no graph handed to the runtime raises either.
