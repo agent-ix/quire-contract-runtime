@@ -85,6 +85,91 @@ fn use_defines_node_key_alias(tree: &syn::UseTree) -> bool {
     }
 }
 
+fn is_definition_vocabulary_ident(ident: &syn::Ident) -> bool {
+    matches!(
+        ident.to_string().as_str(),
+        "PackageCause"
+            | "PackageRefusal"
+            | "PackageRefusalCode"
+            | "SelectionRefusalCode"
+            | "MissingMember"
+            | "ConflictingDefinition"
+            | "IncompatibleDefinition"
+            | "RevisionMismatch"
+            | "DigestDomainMismatch"
+            | "ByteDigestMismatch"
+    )
+}
+
+fn inspect_definition_macro_tokens(tokens: TokenStream, findings: &mut Vec<String>) {
+    for token in tokens {
+        match token {
+            TokenTree::Ident(ident) if is_definition_vocabulary_ident(&ident) => {
+                findings.push(format!("definition vocabulary in macro: {ident}"));
+            }
+            TokenTree::Group(group) => inspect_definition_macro_tokens(group.stream(), findings),
+            _ => {}
+        }
+    }
+}
+
+fn publicly_exposes_qsv_definition(tree: &syn::UseTree, path_state: u8) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => {
+            let state = match (path_state, path.ident.to_string().as_str()) {
+                (0, "quire_semantic_value") => 1,
+                (1, "definition") => 2,
+                (2, _) => 2,
+                _ => 0,
+            };
+            publicly_exposes_qsv_definition(&path.tree, state)
+        }
+        syn::UseTree::Name(name) => {
+            path_state == 2 || (path_state == 1 && name.ident == "definition")
+        }
+        syn::UseTree::Rename(rename) => {
+            path_state == 2 || (path_state == 1 && rename.ident == "definition")
+        }
+        syn::UseTree::Glob(_) => path_state == 2,
+        syn::UseTree::Group(group) => group
+            .items
+            .iter()
+            .any(|item| publicly_exposes_qsv_definition(item, path_state)),
+    }
+}
+
+#[derive(Default)]
+struct ProductionDefinitionInspection {
+    findings: Vec<String>,
+}
+
+impl<'ast> Visit<'ast> for ProductionDefinitionInspection {
+    fn visit_item(&mut self, item: &'ast syn::Item) {
+        if is_test_only(item_attrs(item)) {
+            return;
+        }
+        if let syn::Item::Use(use_item) = item {
+            if matches!(use_item.vis, syn::Visibility::Public(_))
+                && publicly_exposes_qsv_definition(&use_item.tree, 0)
+            {
+                self.findings.push("public QSV definition re-export".into());
+            }
+        }
+        visit::visit_item(self, item);
+    }
+
+    fn visit_ident(&mut self, ident: &'ast syn::Ident) {
+        if is_definition_vocabulary_ident(ident) {
+            self.findings
+                .push(format!("RT definition vocabulary: {ident}"));
+        }
+    }
+
+    fn visit_macro(&mut self, item: &'ast syn::Macro) {
+        inspect_definition_macro_tokens(item.tokens.clone(), &mut self.findings);
+    }
+}
+
 #[derive(Default)]
 struct ProductionKeyInspection {
     findings: Vec<String>,
@@ -775,6 +860,41 @@ fn tc_033_definition_refusals_have_only_the_qsv_owner() {
     let exact_module = std::fs::read_to_string(root.join("src/exact/mod.rs")).unwrap();
     assert!(!exact_module.contains("mod definition;"));
     assert!(!exact_module.contains("pub use definition::"));
+
+    let mut sources = Vec::new();
+    rust_sources(&root.join("src"), &mut sources);
+    assert!(!sources.is_empty());
+    let mut findings = Vec::new();
+    for path in sources {
+        let source = std::fs::read_to_string(&path).unwrap();
+        let parsed =
+            syn::parse_file(&source).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        let mut inspection = ProductionDefinitionInspection::default();
+        inspection.visit_file(&parsed);
+        findings.extend(
+            inspection
+                .findings
+                .into_iter()
+                .map(|finding| format!("{}: {finding}", path.display())),
+        );
+    }
+    assert!(findings.is_empty(), "{}", findings.join("\n"));
+
+    for source in [
+        "pub enum ShadowPackageCause { MissingMember, ConflictingDefinition }",
+        "pub type RefusalAlias = quire_semantic_value::definition::PackageRefusal;",
+        "pub use quire_semantic_value::definition::*;",
+        "pub struct LocalAdapter(quire_semantic_value::definition::PackageCause);",
+        "macro_rules! local_copy { () => { enum Copy { ByteDigestMismatch } } }",
+    ] {
+        let parsed = syn::parse_file(source).unwrap();
+        let mut inspection = ProductionDefinitionInspection::default();
+        inspection.visit_file(&parsed);
+        assert!(
+            !inspection.findings.is_empty(),
+            "source-inspection mutation escaped: {source}"
+        );
+    }
 
     let causes = [
         (PackageCause::MissingMember, "missing-member"),
