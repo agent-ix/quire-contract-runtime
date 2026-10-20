@@ -17,7 +17,7 @@ use core::fmt;
 
 use quire_exact::{Integer, NodeKey, Rational};
 
-use super::node::{check_terms, refuse, InvalidSemanticGraph, SemanticGraphCause};
+use quire_semantic_value::semantic_node::{check_terms, InvalidSemanticGraph, SemanticGraphCause};
 
 /// Evaluator domain of a compound-unit value.
 pub const COMPOUND_UNIT_DOMAIN: &str = "quire.value.compound-unit/v1";
@@ -220,17 +220,23 @@ impl UnitGraph {
         let mut keys = BTreeSet::new();
         let mut admitted_dimensions = BTreeMap::new();
         for (key, terms) in dimensions {
-            check_terms(&terms).map_err(refuse)?;
+            check_terms(&terms).map_err(|cause| InvalidSemanticGraph { cause })?;
             if !keys.insert(key) {
-                return Err(refuse(SemanticGraphCause::DuplicateNode));
+                return Err(InvalidSemanticGraph {
+                    cause: SemanticGraphCause::DuplicateNode,
+                });
             }
             admitted_dimensions.insert(key, terms);
         }
         let mut admitted_units = BTreeMap::new();
         for (key, declaration) in units {
-            let edge = declaration.check_semantics().map_err(refuse)?;
+            let edge = declaration
+                .check_semantics()
+                .map_err(|cause| InvalidSemanticGraph { cause })?;
             if !keys.insert(key) {
-                return Err(refuse(SemanticGraphCause::DuplicateNode));
+                return Err(InvalidSemanticGraph {
+                    cause: SemanticGraphCause::DuplicateNode,
+                });
             }
             admitted_units.insert(
                 key,
@@ -298,9 +304,15 @@ fn dimension_maps(
             }
             for (term, _) in terms {
                 match dimensions.get(term) {
-                    None => return Err(refuse(SemanticGraphCause::UnknownDimension)),
+                    None => {
+                        return Err(InvalidSemanticGraph {
+                            cause: SemanticGraphCause::UnknownDimension,
+                        })
+                    }
                     Some(base) if !base.is_empty() => {
-                        return Err(refuse(SemanticGraphCause::NonBaseDimensionTerm));
+                        return Err(InvalidSemanticGraph {
+                            cause: SemanticGraphCause::NonBaseDimensionTerm,
+                        });
                     }
                     Some(_) => {}
                 }
@@ -319,18 +331,24 @@ fn unit_paths(
         .values()
         .any(|unit| !dimensions.contains_key(&unit.dimension))
     {
-        return Err(refuse(SemanticGraphCause::UnknownDimension));
+        return Err(InvalidSemanticGraph {
+            cause: SemanticGraphCause::UnknownDimension,
+        });
     }
     let targets = || units.values().filter_map(|unit| Some((unit, unit.target?)));
     if targets().any(|(_, target)| !units.contains_key(&target)) {
-        return Err(refuse(SemanticGraphCause::UnknownTarget));
+        return Err(InvalidSemanticGraph {
+            cause: SemanticGraphCause::UnknownTarget,
+        });
     }
     if targets().any(|(unit, target)| {
         units
             .get(&target)
             .is_some_and(|target| target.dimension != unit.dimension)
     }) {
-        return Err(refuse(SemanticGraphCause::CrossDimensionTarget));
+        return Err(InvalidSemanticGraph {
+            cause: SemanticGraphCause::CrossDimensionTarget,
+        });
     }
     let mut roots: BTreeMap<NodeKey, Vec<NodeKey>> = BTreeMap::new();
     for (key, unit) in units {
@@ -340,10 +358,14 @@ fn unit_paths(
         }
     }
     if roots.values().any(Vec::is_empty) {
-        return Err(refuse(SemanticGraphCause::MissingRoot));
+        return Err(InvalidSemanticGraph {
+            cause: SemanticGraphCause::MissingRoot,
+        });
     }
     if roots.values().any(|found| found.len() > 1) {
-        return Err(refuse(SemanticGraphCause::DuplicateRoot));
+        return Err(InvalidSemanticGraph {
+            cause: SemanticGraphCause::DuplicateRoot,
+        });
     }
     units
         .iter()
@@ -356,7 +378,9 @@ fn unit_paths(
             let mut current = (*key, unit);
             while let Some(target) = current.1.target {
                 if path.len() >= units.len() {
-                    return Err(refuse(SemanticGraphCause::TargetCycle));
+                    return Err(InvalidSemanticGraph {
+                        cause: SemanticGraphCause::TargetCycle,
+                    });
                 }
                 let edge = current.1.edge.clone();
                 canonical = UnitEdge {
@@ -364,15 +388,18 @@ fn unit_paths(
                     offset: edge.scale.mul(&canonical.offset).add(&edge.offset),
                 };
                 path.push(edge);
-                let next = units
-                    .get(&target)
-                    .ok_or(refuse(SemanticGraphCause::UnknownTarget))?;
+                let next = units.get(&target).ok_or(InvalidSemanticGraph {
+                    cause: SemanticGraphCause::UnknownTarget,
+                })?;
                 current = (target, next);
             }
-            let dimension = dimensions
-                .get(&unit.dimension)
-                .cloned()
-                .ok_or(refuse(SemanticGraphCause::UnknownDimension))?;
+            let dimension =
+                dimensions
+                    .get(&unit.dimension)
+                    .cloned()
+                    .ok_or(InvalidSemanticGraph {
+                        cause: SemanticGraphCause::UnknownDimension,
+                    })?;
             Ok((
                 *key,
                 Unit {

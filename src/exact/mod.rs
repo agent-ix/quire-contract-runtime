@@ -40,8 +40,9 @@
 //! Node keys, definition-lock selection, owner joins, stale keys and package
 //! admission are compiler work. The runtime consumes admitted keys and
 //! profiles, and carries the closed refusal vocabularies
-//! ([`SelectionRefusalCode`], [`PackageRefusal`], [`SemanticGraphCause`]) so a
-//! compiler refusal is reported with its exact code. No host floating-point
+//! through its remaining definition vocabulary and
+//! `quire_semantic_value::semantic_node`, so a compiler refusal is reported
+//! with its exact code. No host floating-point
 //! operation, panic path or ambient effect exists on any semantic path.
 //!
 //! Every algorithm that walks a [`Value`] (the canonical key, the equality
@@ -72,7 +73,6 @@ mod equality;
 mod expression;
 mod ieee;
 mod key;
-mod node;
 mod quantity;
 mod reference;
 mod stop;
@@ -107,7 +107,6 @@ pub use ieee::{
     negotiate_ieee, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause,
 };
-pub use node::{InvalidSemanticGraph, SemanticGraphCause};
 pub use quantity::{
     compare_quantity, convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity,
     QuantityOperation, QuantityTarget, QuantityUnit,

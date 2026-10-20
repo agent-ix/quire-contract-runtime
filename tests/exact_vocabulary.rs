@@ -5,10 +5,11 @@
 use ix_trace_rs::trace;
 use proc_macro2::{TokenStream, TokenTree};
 use quire_contract_runtime::exact::{
-    CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, PackageRefusalCode,
-    SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
+    CompoundUnit, Dimension, EnumDeclaration, EnumValue, PackageRefusalCode, SelectionRefusalCode,
+    UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
 };
 use quire_exact::{Integer, NodeKey, Rational, NODE_KEY_DOMAIN};
+use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 use std::path::{Path, PathBuf};
 use syn::visit::{self, Visit};
 
@@ -350,8 +351,8 @@ fn root(dimension: NodeKey) -> UnitDeclaration {
 }
 
 // --- AC-4 admissible inputs, one per structural `SemanticGraphCause` reachable through the
-// public `UnitGraph::admit`. `check_terms` is `pub(crate)`, so the three term causes are reached
-// through `admit`'s `dimensions` parameter, as the requirement's own `Behavior` clause describes
+// public `UnitGraph::admit`. The three term causes are reached through
+// `admit`'s `dimensions` parameter, as the requirement's own `Behavior` clause describes
 // them: dimension terms it checks for well-formedness before graph topology.
 
 fn zero_exponent_admit() -> Result<UnitGraph, InvalidSemanticGraph> {

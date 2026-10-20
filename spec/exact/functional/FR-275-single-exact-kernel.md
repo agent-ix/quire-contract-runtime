@@ -184,6 +184,7 @@ crates that the runtime consumes.
 | FR-275-AC-19 | The runtime defines `negotiate_integer_division`, `negotiate_ieee` and their types in its own source and depends on no QSL crate for them. | Inspection (TC-197) |
 | FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
 | FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |
+| FR-275-AC-22 | Inspection of runtime source finds no local definition or alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including definitions emitted by macros. | Inspection (TC-205) |
 
 ## Residue list (not authorized; to be deleted)
 
@@ -198,7 +199,7 @@ residue item is listed: the exported item is deleted in step 1. The negotiators 
 | Function application: `PackageDeclarations`, `CheckedPackage`, `Frame`, `Body`, `Evaluation`, `plan_call` | FR-273 | `src/exact/expression.rs` |
 | Checking environments: `TypeEnvironment`, composite declarations, `ObjectEnvironment`, `CheckedEquality` | FR-008 | `src/exact/composite.rs` (declarations and `TypeEnvironment`, not `Value`/`ValueType`), `reference.rs` (`ObjectEnvironment` and its refusal types only; the identities and `ObjectReference` are exported by `quire-exact` and are deleted in step 1), `equality.rs` (`CheckedEquality`, not the equality plan) |
 | Containment and unit graphs, enumeration declarations | FR-008, FR-007 | `src/exact/containment.rs`, `unit.rs`, `enumeration.rs` |
-| Carried compiler vocabulary | FR-012 | `src/exact/definition.rs`, `node.rs` (`SemanticGraphCause` and `InvalidSemanticGraph` only; `NodeKey` is exported by `quire-exact` and is deleted in step 1) |
+| Carried compiler vocabulary | FR-012 | `src/exact/node.rs` was deleted in the IR-882 QSV semantic-node slice; `definition.rs` remains until AD-004 R-3 is resolved, and `unit.rs` remains with the value-bearing cutover. |
 
 The list is a classification aid, not a frozen record; an item `quire-exact` exports is not residue
 and is deleted in step 1.

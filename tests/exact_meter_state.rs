@@ -17,13 +17,14 @@ use charge_points::ChargePoints;
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     evaluate_boolean_short_circuit, evaluate_quantity, CompoundUnit, CompoundUnitCause,
-    InvalidCompoundUnit, InvalidSemanticGraph, Quantity, QuantityOperation, QuantityUnit,
-    SemanticGraphCause, ShortCircuitConnective, UnitDeclaration, UnitGraph,
+    InvalidCompoundUnit, Quantity, QuantityOperation, QuantityUnit, ShortCircuitConnective,
+    UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
     ChargePoint, Incomplete, Integer, LimitKind, Meter, NodeKey, Outcome, Rational, Refusal,
     ScalarLimits, Undefined,
 };
+use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
 
