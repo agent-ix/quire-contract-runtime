@@ -9,7 +9,7 @@
 //! - the runtime-owned I13 negotiators ([`negotiate_integer_division`], [`negotiate_ieee`] and
 //!   their types; FR-009, interface-001-AC-8), and
 //! - the remaining ported QSL code, pending removal under QSL-358: quantity, unit,
-//!   enumeration, expression and carried-vocabulary modules. This residue is an open
+//!   expression and carried-vocabulary modules. This residue is an open
 //!   FR-275 defect. It is built over kernel scalars and metering.
 //!
 //! Trace: interface-001-AC-2, interface-001-AC-4
@@ -20,8 +20,8 @@
 //!
 //! Layers:
 //!
-//! 1. the runtime's remaining quantity and enum residue: [`EnumValue`] and [`Quantity`]
-//!    over a [`UnitGraph`] ([`compare_enum`], [`evaluate_quantity`],
+//! 1. the runtime's remaining quantity residue: [`Quantity`]
+//!    over a [`UnitGraph`] ([`evaluate_quantity`],
 //!    [`compare_quantity`], [`convert_quantity`]);
 //! 2. [`evaluate_boolean_short_circuit`], the stop-carrying lazy-right connective;
 //! 3. the quire-specification/FR-146 function-application surface:
@@ -43,7 +43,6 @@
 mod boolean;
 mod definition;
 mod division;
-mod enumeration;
 mod expression;
 mod ieee;
 mod quantity;
@@ -56,7 +55,6 @@ pub use division::{
     negotiate_integer_division, IntegerDivisionBounds, IntegerDivisionConsumer,
     IntegerDivisionDisposition,
 };
-pub use enumeration::{compare_enum, EnumDeclaration, EnumValue};
 pub use expression::{
     plan_call, plan_evaluation, Body, CallPlan, CheckCause, CheckMode, CheckRefusal,
     CheckedExpression, CheckedPackage, CheckingLimits, DepthAboveMaximum, Evaluation,

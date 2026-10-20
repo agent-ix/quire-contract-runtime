@@ -64,8 +64,8 @@ recompute, re-derive or invent any of them.
     term, unknown target, cross-dimension target, missing root, duplicate root, target cycle — and
     undeclared case, raised where a case is read against its declaration rather than at graph
     admission.
-  - *Raised by the runtime at its own declaration-admission point*: `EnumDeclaration::new` admits a
-    declaration node from caller-supplied member strings, and that is a runtime admission, so it
+  - *Raised by the QSV declaration-admission point consumed by the runtime*: `EnumDeclaration::new` admits a
+    declaration node from caller-supplied member strings, so it
     raises `NonCanonicalPreimage` for an empty, repeated or non-identifier member list and
     `UnsortedUnorderedMembers` for an unordered declaration whose cases are not sorted. Those two
     causes are raised there and nowhere else; no graph handed to the runtime raises either.

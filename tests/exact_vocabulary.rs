@@ -1,14 +1,15 @@
 //! FR-012 carried compiler vocabulary: node keys, refusal vocabularies, semantic-graph causes and
-//! normalized unit values, through the public `exact` surface.
+//! normalized unit values. Enum declarations use the QSV owner directly.
 #![cfg(feature = "exact")]
 
 use ix_trace_rs::trace;
 use proc_macro2::{TokenStream, TokenTree};
 use quire_contract_runtime::exact::{
-    CompoundUnit, Dimension, EnumDeclaration, EnumValue, PackageRefusalCode, SelectionRefusalCode,
-    UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
+    CompoundUnit, Dimension, PackageRefusalCode, SelectionRefusalCode, UnitDeclaration, UnitGraph,
+    COMPOUND_UNIT_DOMAIN,
 };
 use quire_exact::{Integer, NodeKey, Rational, NODE_KEY_DOMAIN};
+use quire_semantic_value::enumeration::{EnumDeclaration, EnumValue};
 use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 use std::path::{Path, PathBuf};
 use syn::visit::{self, Visit};
@@ -515,11 +516,12 @@ fn target_cycle_admit() -> Result<UnitGraph, InvalidSemanticGraph> {
 }
 
 /// `UndeclaredCase` is structural but is never raised by `UnitGraph::admit` or `check_terms`: it
-/// is raised only by `EnumDeclaration::member` (`src/exact/enumeration.rs`), a public item that
+/// is raised only by QSV `EnumDeclaration::member`, a public item that
 /// FR-012-AC-4's text does not name as a witness path. Reached here for completeness; see the
 /// report on this gap.
 fn undeclared_case_member() -> Result<EnumValue, InvalidSemanticGraph> {
-    let declaration = EnumDeclaration::new(key(1), true, &["red", "green"]).unwrap();
+    let declaration =
+        EnumDeclaration::new(key(1), true, vec!["red".into(), "green".into()]).unwrap();
     declaration.member("blue", key(2))
 }
 
@@ -831,10 +833,10 @@ fn tc_033_compound_unit_is_independent_of_admission_order_and_ascending() {
 
 #[trace("TC-033", "FR-012-AC-4")]
 #[test]
-fn tc_033_enum_declaration_new_is_the_only_runtime_admission_point() {
-    let empty = EnumDeclaration::new(key(1), true, &[]);
-    let repeated = EnumDeclaration::new(key(1), true, &["a", "a"]);
-    let non_identifier = EnumDeclaration::new(key(1), true, &["1a"]);
+fn tc_033_qsv_enum_declaration_checks_structural_admission() {
+    let empty = EnumDeclaration::new(key(1), true, vec![]);
+    let repeated = EnumDeclaration::new(key(1), true, vec!["a".into(), "a".into()]);
+    let non_identifier = EnumDeclaration::new(key(1), true, vec!["1a".into()]);
     for refused in [empty, repeated, non_identifier] {
         assert_eq!(
             refused.unwrap_err().cause,
@@ -842,13 +844,13 @@ fn tc_033_enum_declaration_new_is_the_only_runtime_admission_point() {
         );
     }
 
-    let unsorted = EnumDeclaration::new(key(1), false, &["b", "a"]);
+    let unsorted = EnumDeclaration::new(key(1), false, vec!["b".into(), "a".into()]);
     assert_eq!(
         unsorted.unwrap_err().cause,
         SemanticGraphCause::UnsortedUnorderedMembers
     );
 
     // An ordered declaration may list its cases in any order.
-    assert!(EnumDeclaration::new(key(1), true, &["b", "a"]).is_ok());
-    assert!(EnumDeclaration::new(key(1), false, &["a", "b"]).is_ok());
+    assert!(EnumDeclaration::new(key(1), true, vec!["b".into(), "a".into()]).is_ok());
+    assert!(EnumDeclaration::new(key(1), false, vec!["a".into(), "b".into()]).is_ok());
 }

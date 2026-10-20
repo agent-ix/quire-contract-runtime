@@ -202,7 +202,7 @@ residue item is listed: the exported item is deleted in step 1. The negotiators 
 |---|---|---|
 | Function application: `PackageDeclarations`, `CheckedPackage`, `Frame`, `Body`, `Evaluation`, `plan_call` | FR-273 | `src/exact/expression.rs` |
 | Checking environments, composite declarations, object closure and `CheckedEquality` | FR-008 | RT's copies in `src/exact/composite.rs`, `reference.rs` and `equality.rs` were removed in the IR-882 value-bearing cutover; QSV owns these interfaces. |
-| Containment and unit graphs, enumeration declarations | FR-008, FR-007 | RT's `src/exact/containment.rs` was removed in the IR-882 value-bearing cutover; `unit.rs` and `enumeration.rs` remain until the quantity and enum owner cutover. |
+| Containment and unit graphs, enumeration declarations | FR-008, FR-007 | RT's `src/exact/containment.rs` was removed in the IR-882 value-bearing cutover; this enum owner slice removes `enumeration.rs` and consumes QSV's declaration directly. `unit.rs` remains until the quantity owner cutover. |
 | Carried compiler vocabulary | FR-012 | `src/exact/node.rs` was deleted in the IR-882 QSV semantic-node slice; `definition.rs` remains until AD-004 R-3 is resolved, and `unit.rs` remains with the value-bearing cutover. |
 
 The list is a classification aid, not a frozen record; an item `quire-exact` exports is not residue

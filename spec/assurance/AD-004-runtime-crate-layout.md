@@ -480,6 +480,10 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 
 ### Owner answers and open questions
 
+IR-882's subsequent enum-owner slice removes `src/exact/enumeration.rs` and its RT re-export;
+tests that still exercise enum declaration admission import QSV directly. The quantity and
+unit residue, definition-vocabulary R-3 gap, and evaluation-leaf dependency remain.
+
 Q-1 to Q-4 and Q-6 are answered. The answers are the owner's, given in the IR planner's session on
 2026-10-04 and recorded verbatim by the planner on IR-349 (Q-1 to Q-4), IR-346 and IR-582 (Q-6).
 QSL FR-262 now separates the Q-1 interface (IR-583) from the usable `no_std` implementation (IR-590).

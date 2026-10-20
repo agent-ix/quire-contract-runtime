@@ -3,7 +3,7 @@
 //!
 //! The kernel `Outcome`, `Refusal`, `Meter` and injected-denial tests left with the kernel to the
 //! `quire-exact` crate (FR-275; the matrix section "Evidence at the kernel move"). What stays
-//! here is `CheckedPackage`, enumeration comparison and quantity arithmetic.
+//! here is `CheckedPackage` and quantity arithmetic.
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
@@ -15,13 +15,12 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    compare_enum, evaluate_quantity, CheckMode, CheckingLimits, EnumDeclaration,
-    FunctionDeclaration, PackageDeclarations, Quantity, QuantityOperation, QuantityUnit,
-    UnitDeclaration, UnitGraph,
+    evaluate_quantity, CheckMode, CheckingLimits, FunctionDeclaration, PackageDeclarations,
+    Quantity, QuantityOperation, QuantityUnit, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
-    ChargePoint, ComparisonOperator, Incomplete, InjectedDenial, Integer, LimitKind, Meter,
-    NodeKey, Outcome, Rational, ScalarLimits, Value, ValueType,
+    ChargePoint, Incomplete, InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome, Rational,
+    ScalarLimits, Value, ValueType,
 };
 use quire_semantic_value::declaration::TypeEnvironment as SharedTypeEnvironment;
 use quire_semantic_value::object_closure::ObjectClosure;
@@ -88,18 +87,6 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
     expect_incomplete(evaluation.outcome)
 }
 
-fn drive_enum(meter: &mut Meter) -> Incomplete {
-    let declaration =
-        EnumDeclaration::new(NodeKey::from_digest([9; 32]), true, &["a", "b"]).unwrap();
-    let a = declaration
-        .member("a", NodeKey::from_digest([10; 32]))
-        .unwrap();
-    let b = declaration
-        .member("b", NodeKey::from_digest([11; 32]))
-        .unwrap();
-    expect_incomplete(compare_enum(ComparisonOperator::Equal, &a, &b, meter).unwrap())
-}
-
 /// `a ^ 2` of a quantity in a non-canonical (one-edge) unit: charges
 /// `unit.identity-read`, `unit.edge`, `unit.rational-arithmetic` (from the
 /// edge traversal and the power itself), `unit.target-domain` and
@@ -151,8 +138,6 @@ type Driver = fn(&mut Meter) -> Incomplete;
 fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
     let drivers: Vec<(ChargePoint, Driver)> = vec![
         (ChargePoint::FunctionCall, drive_function_call),
-        (ChargePoint::EnumIdentityRead, drive_enum),
-        (ChargePoint::EnumResultRetain, drive_enum),
         (ChargePoint::UnitIdentityRead, drive_quantity),
         (ChargePoint::UnitEdge, drive_quantity),
         (ChargePoint::UnitRationalArithmetic, drive_quantity),
