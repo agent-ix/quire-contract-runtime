@@ -9,6 +9,8 @@ relationships:
     type: implements
   - target: ix://agent-ix/quire-specification/FR-142
     type: implements
+  - target: ix://agent-ix/quire-specification/FR-272
+    type: references
 ---
 # FR-012: Carry the compiler's semantic vocabulary without re-deciding it
 
@@ -19,7 +21,8 @@ definition-selection refusal, a package refusal, or the topology of a unit graph
 carry the compiler's exact spellings so the oracle reports what it was handed, and shall not
 recompute, re-derive or invent any of them.
 
-`src/exact/mod.rs` exports the remaining runtime definition and unit vocabulary.
+`src/exact/mod.rs` exports the remaining runtime definition and unit vocabulary until their
+owner cutovers. The R-3 definition cutover consumes `quire_semantic_value::definition` directly.
 `NodeKey` and `NODE_KEY_DOMAIN` are consumed directly from `quire_exact`;
 `InvalidSemanticGraph` and `SemanticGraphCause` are consumed directly from
 `quire_semantic_value::semantic_node`.
@@ -34,8 +37,9 @@ recompute, re-derive or invent any of them.
 ## Outputs
 
 - The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
-- The remaining runtime definition vocabulary supplies `SelectionRefusalCode`,
-  `PackageRefusalCode`, `PackageCause` and `PackageRefusal` with their normative spellings.
+- QSV's definition vocabulary supplies `SelectionRefusalCode`, `PackageRefusalCode`,
+  `PackageCause` and `PackageRefusal` with their normative spellings after the R-3 cutover.
+  Until that cutover, RT's local definition vocabulary is residue under FR-275.
 - An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
   path to its canonical root, or a QSV `InvalidSemanticGraph` carrying one typed
   `SemanticGraphCause`.
@@ -56,6 +60,16 @@ recompute, re-derive or invent any of them.
   spelling for each, and `from_code` is its exact inverse: it resolves every listed spelling and
   resolves nothing else. `PackageRefusalCode::as_str` is `invalid_package`. A generated oracle
   reports a compiler refusal by carrying one of these; it never spells a code itself.
+- **R-3 retires three RT-only package causes.** RT's local `PackageCause` currently includes
+  `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` without a producer,
+  consumer or test outside the local definition. Those causes are not members of the
+  `invalid_package` definition-admission subset: QSpec FR-272 assigns digest mismatches to
+  `stale_dependency`, while QSV's definition vocabulary carries only `MissingMember`,
+  `ConflictingDefinition` and `IncompatibleDefinition`. The R-3 cutover deletes RT's local
+  `PackageCause`, `PackageRefusal` and `PackageRefusalCode` definitions, imports QSV's three-cause
+  vocabulary at use sites, and adds no alias, re-export or compatibility adapter. QSV owns the
+  valid code/cause pairing and its tests; RT keeps the existing selection and package-code
+  spelling obligations in FR-012-AC-3.
 - **`SemanticGraphCause` is one closed vocabulary shared with the compiler, split by who raises
   each cause.** Three groups, and the split is a fact about this runtime's API shape, not a
   preference:
@@ -102,6 +116,7 @@ recompute, re-derive or invent any of them.
 | FR-012-AC-4 | Each of the thirteen graph causes is raised by an admissible input to `UnitGraph::admit`, and `UndeclaredCase` by reading a case against its declaration; no graph input raises any of the four compiler-admission causes; `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for exactly the malformed member lists named above; and `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no raise site in the crate. | Test (TC-033) |
 | FR-012-AC-5 | `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every construction order of the same terms. | Test (TC-033) |
 | FR-012-AC-6 | At the IR-882 step-4 cutover, inspection finds no RT-local `NodeKey`, no RT `from_bytes` or `from_hex` constructor, and no TC-033 parser or round-trip test of those local constructors. RT library code has no `NodeKey` construction or hex decoder. | Inspection |
+| FR-012-AC-7 | After the R-3 cutover, inspection finds no RT-local `PackageCause`, `PackageRefusal` or `PackageRefusalCode` definition, type alias, public re-export or adapter. The RT consumers of selection and package refusals use QSV's definition types directly; `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` are absent from RT's `invalid_package` surface, while FR-012-AC-3's eight selection spellings and `invalid_package` code remain available from QSV. | Inspection (TC-033) |
 
 ## Kernel ownership
 
