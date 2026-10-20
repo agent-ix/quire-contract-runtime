@@ -15,20 +15,26 @@ use quire_contract_runtime::exact::{
     CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum, EvaluationRefusal,
     FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause, InputRefusal, IntegerDivisionConsumer, IntegerDivisionDisposition,
-    Location, ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin,
-    PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
+    Location, Origin, PackageDeclarations, MAX_CALL_DEPTH,
 };
 use quire_exact::{
-    ChargePoint, CheckedInvariantCause, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter,
-    NodeKey, Outcome, Refusal, RoundingMode, ScalarLimits, UniverseId,
+    ChargePoint, CheckedInvariantCause, EffectiveId, IeeeOperationKind, IeeeWidth, Integer,
+    LimitKind, Meter, ObjectId, ObjectReference, Outcome, Refusal, RoundingMode, ScalarLimits,
+    UniverseId, Value, ValueType,
 };
+use quire_semantic_value::declaration::{ObjectTypeDeclaration, TypeEnvironment};
+use quire_semantic_value::object_closure::ObjectClosure;
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
-/// attributes: enough for `ValueType::Reference(key(9))` to check.
+/// attributes: enough for `ValueType::Reference(effective(9))` to check.
 fn object_type_environment() -> TypeEnvironment {
     TypeEnvironment::new(
         Vec::new(),
-        vec![ObjectTypeDeclaration::new(key(9), "Widget", Vec::new())],
+        vec![ObjectTypeDeclaration::new(
+            effective(9),
+            "Widget",
+            Vec::new(),
+        )],
     )
     .unwrap()
 }
@@ -57,15 +63,15 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
     result_units: u64::MAX,
 };
 
-fn key(byte: u8) -> NodeKey {
-    NodeKey::from_digest([byte; 32])
+fn effective(byte: u8) -> EffectiveId {
+    EffectiveId::from_digest([byte; 32])
 }
 
 fn a_reference() -> ObjectReference {
     ObjectReference::new(
         UniverseId::from_digest([0x75; 32]),
-        key(9),
-        ObjectIdentity::new(b"o").unwrap(),
+        effective(9),
+        ObjectId::new("o").unwrap(),
     )
 }
 
@@ -103,7 +109,7 @@ fn tc_194_linked_package_applies_every_declared_function() {
     let package = identity_package()
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("identity", vec![Value::Boolean(true)], &objects, &mut meter)
@@ -125,7 +131,7 @@ fn tc_194_arity_mismatch_refuses_before_any_charge() {
     let package = identity_package()
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call("identity", Vec::new(), &objects, &mut meter)
@@ -149,7 +155,7 @@ fn tc_194_wrong_value_kind_refuses_before_any_charge() {
     let package = identity_package()
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call(
@@ -172,8 +178,8 @@ fn tc_194_dangling_reference_refuses_before_any_charge() {
         types: object_type_environment(),
         functions: vec![FunctionDeclaration {
             name: "take".to_string(),
-            parameters: vec![("r".to_string(), ValueType::Reference(key(9)))],
-            result: ValueType::Reference(key(9)),
+            parameters: vec![("r".to_string(), ValueType::Reference(effective(9)))],
+            result: ValueType::Reference(effective(9)),
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
@@ -182,7 +188,7 @@ fn tc_194_dangling_reference_refuses_before_any_charge() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call(
@@ -204,7 +210,7 @@ fn tc_194_unknown_function_refuses_before_any_charge() {
     let package = identity_package()
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call("missing", Vec::new(), &objects, &mut meter)
@@ -233,7 +239,7 @@ fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
             name: "two".to_string(),
             parameters: vec![
                 ("a".to_string(), ValueType::Boolean),
-                ("b".to_string(), ValueType::Reference(key(9))),
+                ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
@@ -244,7 +250,7 @@ fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
 
     // UnknownFunction
     let refusal = plan_call(&identity, "missing", &[], &objects).unwrap_err();
@@ -298,7 +304,7 @@ fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
             name: "two".to_string(),
             parameters: vec![
                 ("a".to_string(), ValueType::Boolean),
-                ("b".to_string(), ValueType::Reference(key(9))),
+                ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
@@ -309,7 +315,7 @@ fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call(
@@ -346,7 +352,7 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
             name: "two".to_string(),
             parameters: vec![
                 ("a".to_string(), ValueType::Boolean),
-                ("b".to_string(), ValueType::Reference(key(9))),
+                ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
@@ -357,7 +363,7 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let refusal = package
         .call(
@@ -412,7 +418,7 @@ fn tc_194_function_call_precedes_the_body() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("observe", Vec::new(), &objects, &mut meter)
@@ -444,7 +450,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
 
     // Zero applications reached: the root itself is not an application.
     let expression_zero = checked
@@ -524,7 +530,7 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED).with_injected_denial(quire_exact::InjectedDenial {
         point: ChargePoint::FunctionCall,
         occurrence: std::num::NonZeroU64::MIN,
@@ -544,7 +550,7 @@ fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
     let package = identity_package()
         .check(CheckMode::Linked, CheckingLimits::default())
         .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
 
     let plan = plan_call(&package, "identity", &[Value::Boolean(true)], &objects).unwrap();
     assert_eq!(*plan.call_events(), Integer::one());
@@ -596,15 +602,19 @@ fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
-    let live_objects =
-        ObjectEnvironment::new(&object_type_environment(), [(a_reference(), Vec::new())]).unwrap();
+    let objects = ObjectClosure::default();
+    let live_objects = ObjectClosure::new(
+        &object_type_environment(),
+        [(a_reference(), Vec::new())],
+        &[],
+    )
+    .unwrap();
 
     let expression = two_param
         .check_expression(
             vec![
                 ("a".to_string(), ValueType::Boolean),
-                ("b".to_string(), ValueType::Reference(key(9))),
+                ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             ValueType::Boolean,
             Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
@@ -697,14 +707,18 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
-    let live_objects =
-        ObjectEnvironment::new(&object_type_environment(), [(a_reference(), Vec::new())]).unwrap();
+    let objects = ObjectClosure::default();
+    let live_objects = ObjectClosure::new(
+        &object_type_environment(),
+        [(a_reference(), Vec::new())],
+        &[],
+    )
+    .unwrap();
     let expression = package
         .check_expression(
             vec![
                 ("a".to_string(), ValueType::Boolean),
-                ("b".to_string(), ValueType::Reference(key(9))),
+                ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             ValueType::Boolean,
             Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
@@ -814,7 +828,7 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
 #[trace("TC-194")]
 #[test]
 fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
 
     // Moved into an `Rc` after `check_expression`.
     let package = PackageDeclarations {
@@ -881,7 +895,7 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
 #[trace("TC-194")]
 #[test]
 fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let freed_address: usize;
     let expression = {
         let package = Box::new(
@@ -1005,7 +1019,7 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("root", Vec::new(), &objects, &mut meter)
@@ -1059,7 +1073,7 @@ fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
     }
     .check(CheckMode::Linked, limits)
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("loop", Vec::new(), &objects, &mut meter)
@@ -1102,7 +1116,7 @@ fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("reentrant_meter", Vec::new(), &objects, &mut meter)
@@ -1134,12 +1148,7 @@ fn checked_body_missing_function_has_distinct_invariant_cause() {
     .unwrap();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
-        .call(
-            "caller",
-            Vec::new(),
-            &ObjectEnvironment::default(),
-            &mut meter,
-        )
+        .call("caller", Vec::new(), &ObjectClosure::default(), &mut meter)
         .unwrap();
     assert!(matches!(
         evaluation.outcome,
@@ -1175,7 +1184,7 @@ fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking(
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("reentrant_call", Vec::new(), &objects, &mut meter)
@@ -1220,7 +1229,7 @@ fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
                     .as_ref()
                     .expect("holder populated before first call")
                     .clone();
-                let objects = ObjectEnvironment::default();
+                let objects = ObjectClosure::default();
                 let mut meter = Meter::new(UNLIMITED);
                 match package.call("loop", Vec::new(), &objects, &mut meter) {
                     Ok(evaluation) => evaluation.outcome,
@@ -1233,7 +1242,7 @@ fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
     .unwrap();
     let package = Rc::new(package);
     *holder.borrow_mut() = Some(Rc::clone(&package));
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package
         .call("loop", Vec::new(), &objects, &mut meter)
@@ -1384,7 +1393,7 @@ fn tc_195_supported_function_applies_normally_and_produces_no_disposition() {
         vec![IeeeDisposition::Supported]
     );
 
-    let objects = ObjectEnvironment::default();
+    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
     let evaluation = package.call("f", Vec::new(), &objects, &mut meter).unwrap();
     assert!(matches!(
