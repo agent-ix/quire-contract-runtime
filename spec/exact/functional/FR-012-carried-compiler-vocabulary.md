@@ -19,10 +19,10 @@ definition-selection refusal, a package refusal, or the topology of a unit graph
 carry the compiler's exact spellings so the oracle reports what it was handed, and shall not
 recompute, re-derive or invent any of them.
 
-`src/exact/mod.rs` exports the remaining runtime vocabulary; `NodeKey` and
-`NODE_KEY_DOMAIN` are consumed directly from `quire_exact`. Until this requirement
-it was carried by no requirement and asserted by no acceptance criterion: roughly sixty public items
-across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anywhere in `spec/`.
+`src/exact/mod.rs` exports the remaining runtime definition and unit vocabulary.
+`NodeKey` and `NODE_KEY_DOMAIN` are consumed directly from `quire_exact`;
+`InvalidSemanticGraph` and `SemanticGraphCause` are consumed directly from
+`quire_semantic_value::semantic_node`.
 
 ## Inputs
 
@@ -34,10 +34,11 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 ## Outputs
 
 - The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
-- `SelectionRefusalCode`, `PackageRefusalCode`, `PackageCause` and `PackageRefusal` values with
-  their normative `as_str` spellings.
+- The remaining runtime definition vocabulary supplies `SelectionRefusalCode`,
+  `PackageRefusalCode`, `PackageCause` and `PackageRefusal` with their normative spellings.
 - An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
-  path to its canonical root, or an `InvalidSemanticGraph` carrying one typed `SemanticGraphCause`.
+  path to its canonical root, or a QSV `InvalidSemanticGraph` carrying one typed
+  `SemanticGraphCause`.
 - An `InvalidCompoundUnit` carrying one typed `CompoundUnitCause`, where a compound unit is refused
   at construction.
 

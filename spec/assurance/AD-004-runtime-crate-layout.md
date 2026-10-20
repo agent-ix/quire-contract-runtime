@@ -404,6 +404,16 @@ same kernel values. No conversion layer, alias, old-`Value` re-export or
 second pair traversal is a step-4 output. FR-277-AC-1 stays planned until
 the production evaluator executes that kernel call.
 
+The semantic-node refusal vocabulary has no `Value` edge. It can leave first
+as one compileable step-4 slice: RT deletes `src/exact/node.rs`, uses QSV's
+`InvalidSemanticGraph` and `SemanticGraphCause` directly in its remaining unit
+and enum code, and exposes no replacement alias or re-export. The locked QSV
+`PackageCause` has three variants while RT's definition vocabulary carries six;
+`definition.rs` cannot leave in this slice without dropping three causes.
+This slice does not satisfy FR-275-AC-2 or FR-277-AC-1; the `Value`-bearing
+set, definition vocabulary and their acceptance evidence remain in the next
+cutover.
+
 Why step 4 is one step: `Value` holds `Quantity`, `EnumValue`, `ObjectReference` and `NodeKey`, whose
 shared forms use `UnitId`, `EnumMember`, `UniverseId` and `EffectiveId`, and `ValueType::Reference` names a
 `NodeKey` where the shared one names an `EffectiveId` (PR #95's own finding, re-read in both sources).

@@ -198,7 +198,7 @@ residue item is listed: the exported item is deleted in step 1. The negotiators 
 | Function application: `PackageDeclarations`, `CheckedPackage`, `Frame`, `Body`, `Evaluation`, `plan_call` | FR-273 | `src/exact/expression.rs` |
 | Checking environments: `TypeEnvironment`, composite declarations, `ObjectEnvironment`, `CheckedEquality` | FR-008 | `src/exact/composite.rs` (declarations and `TypeEnvironment`, not `Value`/`ValueType`), `reference.rs` (`ObjectEnvironment` and its refusal types only; the identities and `ObjectReference` are exported by `quire-exact` and are deleted in step 1), `equality.rs` (`CheckedEquality`, not the equality plan) |
 | Containment and unit graphs, enumeration declarations | FR-008, FR-007 | `src/exact/containment.rs`, `unit.rs`, `enumeration.rs` |
-| Carried compiler vocabulary | FR-012 | `src/exact/definition.rs`, `node.rs` (`SemanticGraphCause` and `InvalidSemanticGraph` only; `NodeKey` is exported by `quire-exact` and is deleted in step 1) |
+| Carried compiler vocabulary | FR-012 | `src/exact/node.rs` was deleted in the IR-882 QSV semantic-node slice; `definition.rs` remains until QSV supplies the three additional `PackageCause` variants RT still carries, and `unit.rs` remains with the value-bearing cutover. |
 
 The list is a classification aid, not a frozen record; an item `quire-exact` exports is not residue
 and is deleted in step 1.

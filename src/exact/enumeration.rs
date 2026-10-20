@@ -13,11 +13,11 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use quire_exact::{
-    Charge, ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, LimitKind, Meter, NodeKey,
-    Outcome,
+    is_identifier, Charge, ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, LimitKind,
+    Meter, NodeKey, Outcome,
 };
+use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 
-use super::node::{is_identifier, refuse, InvalidSemanticGraph, SemanticGraphCause};
 use super::stop::{OutcomeStop, Stop};
 
 /// An admitted enum declaration node.
@@ -45,14 +45,18 @@ impl EnumDeclaration {
             && distinct.len() == members.len()
             && members.iter().all(|case| is_identifier(case));
         if !well_formed {
-            return Err(refuse(SemanticGraphCause::NonCanonicalPreimage));
+            return Err(InvalidSemanticGraph {
+                cause: SemanticGraphCause::NonCanonicalPreimage,
+            });
         }
         let sorted = members
             .iter()
             .zip(members.iter().skip(1))
             .all(|(left, right)| left <= right);
         if !ordered && !sorted {
-            return Err(refuse(SemanticGraphCause::UnsortedUnorderedMembers));
+            return Err(InvalidSemanticGraph {
+                cause: SemanticGraphCause::UnsortedUnorderedMembers,
+            });
         }
         Ok(Self {
             key,
@@ -83,7 +87,9 @@ impl EnumDeclaration {
             .members
             .iter()
             .position(|declared| declared == case)
-            .ok_or(refuse(SemanticGraphCause::UndeclaredCase))?;
+            .ok_or(InvalidSemanticGraph {
+                cause: SemanticGraphCause::UndeclaredCase,
+            })?;
         Ok(EnumValue(Box::new(EnumValueFields {
             declaration: self.key,
             member,
