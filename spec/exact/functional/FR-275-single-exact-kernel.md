@@ -97,11 +97,12 @@ crates that the runtime consumes.
   quantity, enum and reference payloads to those owner types directly, with no
   RT-owned `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, second
   value representation or adapter.
-- **The residue (not authorized).** The `exact` items `quire-exact` does not export, other than the
+- **The residue (not authorized).** The `exact` items retained in the runtime's source beyond the
   runtime-owned `scalar` items (the negotiators and their types, `evaluate_boolean_short_circuit` and
-  `ShortCircuitConnective`, which are not residue), are still in the runtime's source: function application (FR-273, AD-002), the static
-  checking environments, containment and unit graphs, enumeration declarations and the carried
-  compiler vocabulary (FR-012). They are a port of QSL code: vendored code that violates the
+  `ShortCircuitConnective`) are function application (FR-273, AD-002), quantity and unit graphs,
+  and the carried definition vocabulary (FR-012). RT's checking environments, containment and
+  enumeration declarations have been removed by IR-882 slices. The retained items are ports of QSL
+  code: vendored code that violates the
   no-vendoring rule, with no exception, no expiry and no approval. Each is a defect against
   FR-275-AC-1's end state, recorded in the residue list below, and is to be deleted. Where they
   consume `quire-exact`, they use its `Value`, `Meter`, `Outcome` and `ScalarLimits` and define no
