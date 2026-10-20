@@ -54,6 +54,7 @@ Round 1 checked fix commit `792755c` at head `792755cdf038c5d36bb7fd1fc7c55baff1
 | FND-002 | still-open | New in round 1; see below |
 | FND-002 | fixed | Round 2 (head `6ac954f`): the test is tagged `#[trace("FR-275-AC-22")]` only. Fresh `origin/main` f5c3570 gives 125 unbacked; the head gives 124 unbacked and 0 contradicted. FR-275-AC-1 to AC-5 and AC-12 to AC-19 (13 ACs, including AC-2) are reported unbacked again. The one-row difference from main is the TC-197 traces-to row, recorded as FND-003 |
 | FND-003 | still-open | New in round 2; see below |
+| FND-003 | fixed | Round 3 (fix commit `02d7197`, head `02d7197a8acfcf2b60fe1c40fff5143cd701ada7`), measured by the reviewer. FR-275-AC-22 is now verified by `Inspection (TC-205)`. TC-197 no longer lists AC-22. Both tests are tagged `#[trace("TC-205", "FR-275-AC-22")]`. Strict coverage gives 125 unbacked and 0 contradicted, equal to fresh `origin/main` f5c3570 (125). The unbacked list is identical line for line. TC-197's traces-to row, FR-275-AC-2 and the other 12 TC-197 ACs are all unbacked. `git log --all -S TC-205` finds only `02d7197`, so the id was never used before. `make spec` reports 239/239 grammar-clean. `make fmt-check lint test-features doc msrv size deny test` exited 0 |
 
 ## New findings (disposition pass 1)
 
