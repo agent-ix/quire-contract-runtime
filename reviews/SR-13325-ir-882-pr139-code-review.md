@@ -71,15 +71,10 @@ Round 1 checked the fix commit `abe9f4a` at head `abe9f4ac6c95b5d7d483682975ea7c
 | FND-001 | fixed | The test now walks every `.rs` file under `src/`, `verification/`, `examples/`, `measurement/` and `scripts/` with `syn`, skipping only items marked `#[cfg(test)]`. All 11 first-pass mutants now fail it, each with the expected message, including the 7 that survived before |
 | FND-002 | fixed | `NodeKey` was merged into the existing `use quire_exact::{..}` groups in composite, enumeration, reference and unit and in all test files. Each file now has one `use quire_exact` line |
 | FND-003 | still-open | New in round 1; see below |
+| FND-003 | fixed | Round 2 (fix commit `f933788`, head `f9337880da592df5ceeec75eeb6adb4327b7ff99`), measured by the reviewer. `visit_macro` now scans each macro's token stream for the constructor and hex-decoding names and for `struct`/`enum`/`type`/`union NodeKey`. The digest-signature check now also accepts `&[u8]` input. TC-033 step 1 now describes only the checks the test performs. All 15 reviewer mutants (11 first-pass and 4 round-1) fail the test, each with the expected message. The gates were re-run and exited 0. The dev-dependency change is `proc-macro2 = "1"` plus `syn = "2"` as a caret requirement; the lock adds no package and no new first-party revision (quire-exact is locked once), and `make deny` passed |
 
 ## New findings (disposition pass 1)
 
 | ID | Severity | Summary | Refs |
 | --- | --- | --- | --- |
 | FND-003 | low | The `syn` visitor never looks inside macro invocations, because `syn` keeps macro bodies as raw tokens. Three round-1 reviewer mutants survive: `alloc::vec![NodeKey::from_digest([0; 32])]` in `unit.rs` production code; a `macro_rules!` that expands to a local `struct NodeKey` in `key.rs`; and a `&[u8]`-to-`Option<[u8; 32]>` nibble decoder named `decode_digest`. TC-033 step 1 says the inspection covers "any constructor reference or call" and "a hex decoder under any name", which claims more than the test checks. At this head, AC-6 still holds: a grep finds no constructor outside `#[cfg(test)]` (`src/exact/equality.rs:689`). A fix could scan each `syn::Macro` token stream for the constructor idents and `NodeKey` definitions, or the TC-033 wording could be narrowed | tests/exact_vocabulary.rs:84-196; spec/exact/matrix/TC-033-carried-compiler-vocabulary.md:19-23 |
-
-## Dispositions (round 2)
-
-| FND | outcome | reason |
-| --- | --- | --- |
-| FND-003 | fixed | The AC-6 visitor now inspects macro token streams for all four forbidden constructor names and local `struct`/`enum`/`type`/`union NodeKey` definitions. Its signature check also catches a `&[u8]`-to-`[u8; 32]` decoder through `Option` or `Result`. TC-033 step 1 now names the signature and named-path checks it actually performs. The three round-1 mutants and all eleven original mutants each failed the AC-6 test when injected individually, and each source file was restored after its run. |
