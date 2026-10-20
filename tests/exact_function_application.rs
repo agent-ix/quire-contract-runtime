@@ -18,11 +18,14 @@ use quire_contract_runtime::exact::{
     Location, Origin, PackageDeclarations, MAX_CALL_DEPTH,
 };
 use quire_exact::{
-    ChargePoint, CheckedInvariantCause, EffectiveId, IeeeOperationKind, IeeeWidth, Integer,
-    LimitKind, Meter, ObjectId, ObjectReference, Outcome, Refusal, RoundingMode, ScalarLimits,
-    UniverseId, Value, ValueType,
+    ChargePoint, CheckedInvariantCause, EffectiveId, Identifier, IeeeOperationKind, IeeeWidth,
+    Integer, LimitKind, Meter, NodeKey, ObjectId, ObjectReference, Outcome, Refusal, RoundingMode,
+    ScalarLimits, UnionMember, UnionValue, UniverseId, Value, ValueType,
 };
-use quire_semantic_value::declaration::{ObjectTypeDeclaration, TypeEnvironment};
+use quire_semantic_value::declaration::{
+    CompositeDeclaration, CompositeShape, ObjectTypeDeclaration, TypeEnvironment,
+    UnionMemberDeclaration,
+};
 use quire_semantic_value::object_closure::ObjectClosure;
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -201,6 +204,59 @@ fn tc_194_dangling_reference_refuses_before_any_charge() {
     assert_eq!(refusal, InputRefusal::DanglingReference { parameter: 0 });
     assert_eq!(refusal.code(), "dangling_reference");
     assert_eq!(refusal.cause(), "absent-target-in-complete-population");
+    assert!(meter.admitted_charges().is_empty());
+}
+
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-3")]
+#[test]
+fn tc_194_dangling_reference_inside_union_refuses_before_any_charge() {
+    let declaration_key = NodeKey::from_digest([10; 32]);
+    let member = UnionMember::from_admitted(
+        declaration_key,
+        NodeKey::from_digest([11; 32]),
+        Identifier::new("with_ref").unwrap(),
+    );
+    let types = TypeEnvironment::new(
+        [CompositeDeclaration::new(
+            declaration_key,
+            "ReferenceUnion",
+            CompositeShape::Union(vec![UnionMemberDeclaration::from_verified(
+                member.clone(),
+                vec![ValueType::Reference(effective(9))],
+            )]),
+        )],
+        [ObjectTypeDeclaration::new(
+            effective(9),
+            "Widget",
+            Vec::new(),
+        )],
+    )
+    .unwrap();
+    let package = PackageDeclarations {
+        types,
+        functions: vec![FunctionDeclaration {
+            name: "take_union".to_string(),
+            parameters: vec![("u".to_string(), ValueType::Composite(declaration_key))],
+            result: ValueType::Boolean,
+            ieee_requirements: Vec::new(),
+            integer_division_consumers: Vec::new(),
+            measure_discharged: true,
+            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+        }],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let argument = UnionValue::from_admitted(member, vec![Value::Reference(a_reference())]);
+    let mut meter = Meter::new(UNLIMITED);
+    let refusal = package
+        .call(
+            "take_union",
+            vec![argument],
+            &ObjectClosure::default(),
+            &mut meter,
+        )
+        .unwrap_err();
+    assert_eq!(refusal, InputRefusal::DanglingReference { parameter: 0 });
     assert!(meter.admitted_charges().is_empty());
 }
 
