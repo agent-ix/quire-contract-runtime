@@ -32,3 +32,10 @@ FR-007-AC-13 (examined): complete nine-type boxed Debug rendering test. FR-012-A
 ## Detail
 
 The two summary statuses would tell a reader the test cases are discharged even though the changed detail rows explicitly defer parts of the evidence. Preserve the planned reasons in the summary rows.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | TC-035 summary now marks owner pins planned while naming the retained RT `CompoundUnit` pin. |
+| FND-002 | fixed | TC-033 summary now marks QSV enum owner evidence mapping planned while naming the checks that pass. |

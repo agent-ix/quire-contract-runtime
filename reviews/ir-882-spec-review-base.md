@@ -31,3 +31,9 @@ FR-012-AC-4 (examined): thirteen graph causes are raised by `UnitGraph::admit`, 
 ## Detail
 
 The changed enum-admission bullet correctly names QSV, but the preceding "Raised by the runtime over a graph it is handed" bullet includes undeclared case. The changed TC-033 procedure and `tests/exact_vocabulary.rs` now call QSV `EnumDeclaration::member` directly. Move `UndeclaredCase` to the QSV owner group or otherwise state the boundary accurately.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-012 explicitly states QSV raises `UndeclaredCase` through `EnumDeclaration::member`, and RT tests consume that owner path directly. |

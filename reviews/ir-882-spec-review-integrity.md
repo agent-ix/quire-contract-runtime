@@ -31,3 +31,9 @@ FR-275 statement and behavior (examined): RT consumes QSV's `EnumDeclaration` an
 ## Detail
 
 The narrative at the start of FR-275's residue section lists "enumeration declarations" among items still in RT source. The edited table at line 205 and AD-004 say the opposite, and `src/exact/enumeration.rs` is deleted. Correct the narrative to leave the remaining residue list accurate.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-275 now lists only function application, quantity and unit graphs, and carried definition vocabulary as retained source, and explicitly says enum declarations were removed. |
