@@ -48,4 +48,10 @@ These hold:
 
 ## Dispositions
 
-Review pass only; no disposition round has run yet.
+Round 1 checked the fix commit `abe9f4a` at head `abe9f4ac6c95b5d7d483682975ea7c582473a59f`. The reviewer re-ran the gates on a fresh worktree: `make fmt-check lint test-features doc msrv size deny test` exited 0. `make spec` reports 235/235 grammar-clean, and strict coverage has 125 unbacked rows and 0 contradicted, unchanged from the first pass.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | TC-033 now opens with "Check the absence of RT-local node-key ownership after the IR-882 key-owner cutover". Step 1 runs `tc_033_runtime_has_no_local_node_key_constructor` as the AC-6 inspection. The retired steps moved to "Retired Procedure (FR-012-AC-1)", and Expected Results now state the AC-6 outcome |
+| FND-002 | fixed | Both interface-001 rows in `spec/core/matrix/tests.md` now record the evidence: the AC-5 row says its `NodeKey` clause holds, and the AC-6 row names the recursive inspection test |
+| FND-003 | fixed | FR-012-AC-2 now has its own row: "checks kernel-owned `quire_exact::NODE_KEY_DOMAIN` and RT-owned `COMPOUND_UNIT_DOMAIN`; the NodeKey domain assertion is owner evidence, not RT vocabulary evidence" |

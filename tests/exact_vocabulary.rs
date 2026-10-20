@@ -3,6 +3,7 @@
 #![cfg(feature = "exact")]
 
 use ix_trace_rs::trace;
+use proc_macro2::{TokenStream, TokenTree};
 use quire_contract_runtime::exact::{
     CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, PackageRefusalCode,
     SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
@@ -86,6 +87,10 @@ struct ProductionKeyInspection {
 }
 
 impl<'ast> Visit<'ast> for ProductionKeyInspection {
+    fn visit_macro(&mut self, item: &'ast syn::Macro) {
+        inspect_macro_tokens(item.tokens.clone(), &mut self.findings);
+    }
+
     fn visit_item(&mut self, item: &'ast syn::Item) {
         if is_test_only(item_attrs(item)) {
             return;
@@ -123,7 +128,8 @@ impl<'ast> Visit<'ast> for ProductionKeyInspection {
                 return;
             }
             let name = method.sig.ident.to_string();
-            if is_key_constructor_or_hex_decoder(&name) || has_text_to_digest_signature(&method.sig)
+            if is_key_constructor_or_hex_decoder(&name)
+                || has_text_or_bytes_to_digest_signature(&method.sig)
             {
                 self.findings
                     .push(format!("key constructor or hex decoder: {name}"));
@@ -171,11 +177,47 @@ impl<'ast> Visit<'ast> for ProductionKeyInspection {
 
     fn visit_item_fn(&mut self, item: &'ast syn::ItemFn) {
         let name = item.sig.ident.to_string();
-        if is_key_constructor_or_hex_decoder(&name) || has_text_to_digest_signature(&item.sig) {
+        if is_key_constructor_or_hex_decoder(&name)
+            || has_text_or_bytes_to_digest_signature(&item.sig)
+        {
             self.findings
                 .push(format!("key constructor or hex decoder: {name}"));
         }
         visit::visit_item_fn(self, item);
+    }
+}
+
+fn inspect_macro_tokens(tokens: TokenStream, findings: &mut Vec<String>) {
+    fn collect_idents(tokens: TokenStream, idents: &mut Vec<String>) {
+        for token in tokens {
+            match token {
+                TokenTree::Ident(ident) => idents.push(ident.to_string()),
+                TokenTree::Group(group) => collect_idents(group.stream(), idents),
+                _ => {}
+            }
+        }
+    }
+
+    let mut idents = Vec::new();
+    collect_idents(tokens, &mut idents);
+    for name in &idents {
+        if matches!(
+            name.as_str(),
+            "from_digest"
+                | "decode_admitted"
+                | "from_bytes"
+                | "from_hex"
+                | "from_str_radix"
+                | "to_digit"
+        ) {
+            findings.push(format!("key construction or hex decoding in macro: {name}"));
+        }
+    }
+    for pair in idents.windows(2) {
+        if matches!(pair[0].as_str(), "struct" | "enum" | "type" | "union") && pair[1] == "NodeKey"
+        {
+            findings.push(format!("local {} NodeKey in macro", pair[0]));
+        }
     }
 }
 
@@ -186,15 +228,21 @@ fn is_key_constructor_or_hex_decoder(name: &str) -> bool {
     ) || (name.contains("hex") && (name.contains("key") || name.contains("decode")))
 }
 
-fn has_text_to_digest_signature(signature: &syn::Signature) -> bool {
-    let takes_text = signature.inputs.iter().any(|input| match input {
+fn has_text_or_bytes_to_digest_signature(signature: &syn::Signature) -> bool {
+    let takes_text_or_bytes = signature.inputs.iter().any(|input| match input {
         syn::FnArg::Typed(argument) => match argument.ty.as_ref() {
-            syn::Type::Reference(reference) => matches!(reference.elem.as_ref(), syn::Type::Path(path) if path.path.is_ident("str")),
+            syn::Type::Reference(reference) => match reference.elem.as_ref() {
+                syn::Type::Path(path) => path.path.is_ident("str"),
+                syn::Type::Slice(slice) => {
+                    matches!(slice.elem.as_ref(), syn::Type::Path(path) if path.path.is_ident("u8"))
+                }
+                _ => false,
+            },
             _ => false,
         },
         syn::FnArg::Receiver(_) => false,
     });
-    takes_text
+    takes_text_or_bytes
         && matches!(&signature.output, syn::ReturnType::Type(_, output) if contains_digest(output))
 }
 

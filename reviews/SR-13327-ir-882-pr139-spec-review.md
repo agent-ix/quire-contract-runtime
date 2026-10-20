@@ -49,4 +49,8 @@ Sub-analyses were not run. The edits are wording and matrix-status changes to on
 
 ## Dispositions
 
-Review pass only; no disposition round has run yet.
+Round 1 checked the fix commit `abe9f4a` at head `abe9f4ac6c95b5d7d483682975ea7c582473a59f`. The reviewer re-ran the gates on a fresh worktree: `make fmt-check lint test-features doc msrv size deny test` exited 0. `make spec` reports 235/235 grammar-clean, and strict coverage has 125 unbacked rows and 0 contradicted, unchanged from the first pass.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-012 Outputs now reads "The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.", which agrees with the Description |

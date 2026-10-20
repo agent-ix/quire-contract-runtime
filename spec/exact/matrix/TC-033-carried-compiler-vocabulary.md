@@ -20,8 +20,10 @@ preserved below as historical FR-012-AC-1 text.
 1. Run `tc_033_runtime_has_no_local_node_key_constructor`. Walk every Rust source recursively
    under `src/`, `verification/`, `examples/`, `measurement/` and `scripts/`, excluding only
    `#[cfg(test)]` items. Inspect for a local `NodeKey` type or alias, a public re-export, any
-   constructor reference or call (including function pointers and qualified paths), and a hex
-   decoder under any name. Confirm the retired parser and round-trip tests are absent.
+   constructor reference or call (including function pointers, qualified paths and macro token
+   streams), and local `NodeKey` definitions inside macros. Flag named hex decoding paths and
+   functions taking `&str` or `&[u8]` and returning `[u8; 32]` (also through `Option` or
+   `Result`). Confirm the retired parser and round-trip tests are absent.
 2. Compare the kernel's `NODE_KEY_DOMAIN` and RT's `COMPOUND_UNIT_DOMAIN` with their normative strings.
 3. Check `SelectionRefusalCode::ALL` order, each `as_str`, `from_code` over each spelling and over
    unlisted spellings, and `PackageRefusalCode::as_str`.
