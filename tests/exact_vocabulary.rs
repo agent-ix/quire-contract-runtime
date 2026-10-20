@@ -85,14 +85,17 @@ fn use_defines_node_key_alias(tree: &syn::UseTree) -> bool {
     }
 }
 
-fn is_definition_vocabulary_ident(ident: &syn::Ident) -> bool {
+fn is_definition_type_ident(ident: &syn::Ident) -> bool {
     matches!(
         ident.to_string().as_str(),
-        "PackageCause"
-            | "PackageRefusal"
-            | "PackageRefusalCode"
-            | "SelectionRefusalCode"
-            | "MissingMember"
+        "PackageCause" | "PackageRefusal" | "PackageRefusalCode" | "SelectionRefusalCode"
+    )
+}
+
+fn is_definition_cause_variant(ident: &syn::Ident) -> bool {
+    matches!(
+        ident.to_string().as_str(),
+        "MissingMember"
             | "ConflictingDefinition"
             | "IncompatibleDefinition"
             | "RevisionMismatch"
@@ -101,13 +104,56 @@ fn is_definition_vocabulary_ident(ident: &syn::Ident) -> bool {
     )
 }
 
-fn inspect_definition_macro_tokens(tokens: TokenStream, findings: &mut Vec<String>) {
+#[derive(Default)]
+struct DefinitionTypeUse(bool);
+
+impl<'ast> Visit<'ast> for DefinitionTypeUse {
+    fn visit_ident(&mut self, ident: &'ast syn::Ident) {
+        self.0 |= is_definition_type_ident(ident);
+    }
+}
+
+fn type_uses_definition(ty: &syn::Type) -> bool {
+    let mut use_check = DefinitionTypeUse::default();
+    use_check.visit_type(ty);
+    use_check.0
+}
+
+fn use_mentions_definition(tree: &syn::UseTree, renamed_only: bool) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => use_mentions_definition(&path.tree, renamed_only),
+        syn::UseTree::Name(name) => !renamed_only && is_definition_type_ident(&name.ident),
+        syn::UseTree::Rename(rename) => is_definition_type_ident(&rename.ident),
+        syn::UseTree::Glob(_) => false,
+        syn::UseTree::Group(group) => group
+            .items
+            .iter()
+            .any(|item| use_mentions_definition(item, renamed_only)),
+    }
+}
+
+fn inspect_definition_macro_tokens(
+    tokens: TokenStream,
+    in_declaration: bool,
+    findings: &mut Vec<String>,
+) {
+    let mut declaration = in_declaration;
     for token in tokens {
         match token {
-            TokenTree::Ident(ident) if is_definition_vocabulary_ident(&ident) => {
-                findings.push(format!("definition vocabulary in macro: {ident}"));
+            TokenTree::Ident(ident) => {
+                declaration |= matches!(
+                    ident.to_string().as_str(),
+                    "enum" | "struct" | "type" | "union"
+                );
+                if declaration
+                    && (is_definition_type_ident(&ident) || is_definition_cause_variant(&ident))
+                {
+                    findings.push(format!("local definition in macro: {ident}"));
+                }
             }
-            TokenTree::Group(group) => inspect_definition_macro_tokens(group.stream(), findings),
+            TokenTree::Group(group) => {
+                inspect_definition_macro_tokens(group.stream(), declaration, findings)
+            }
             _ => {}
         }
     }
@@ -148,25 +194,59 @@ impl<'ast> Visit<'ast> for ProductionDefinitionInspection {
         if is_test_only(item_attrs(item)) {
             return;
         }
-        if let syn::Item::Use(use_item) = item {
-            if matches!(use_item.vis, syn::Visibility::Public(_))
-                && publicly_exposes_qsv_definition(&use_item.tree, 0)
-            {
-                self.findings.push("public QSV definition re-export".into());
+        match item {
+            syn::Item::Use(use_item) => {
+                let public = matches!(use_item.vis, syn::Visibility::Public(_));
+                if (public && publicly_exposes_qsv_definition(&use_item.tree, 0))
+                    || use_mentions_definition(&use_item.tree, !public)
+                {
+                    self.findings.push("definition alias or re-export".into());
+                }
             }
+            syn::Item::Enum(item) => {
+                if is_definition_type_ident(&item.ident)
+                    || item.variants.iter().any(|variant| {
+                        is_definition_cause_variant(&variant.ident)
+                            || variant
+                                .fields
+                                .iter()
+                                .any(|field| type_uses_definition(&field.ty))
+                    })
+                {
+                    self.findings
+                        .push("local definition enum or adapter".into());
+                }
+            }
+            syn::Item::Struct(item) => {
+                let newtype_adapter = match &item.fields {
+                    syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
+                        type_uses_definition(&fields.unnamed[0].ty)
+                    }
+                    _ => false,
+                };
+                if is_definition_type_ident(&item.ident) || newtype_adapter {
+                    self.findings
+                        .push("local definition struct or adapter".into());
+                }
+            }
+            syn::Item::Type(item) => {
+                if is_definition_type_ident(&item.ident) || type_uses_definition(&item.ty) {
+                    self.findings.push("local definition type alias".into());
+                }
+            }
+            syn::Item::Union(item) if is_definition_type_ident(&item.ident) => {
+                self.findings.push("local definition union".into());
+            }
+            syn::Item::Mod(item) if item.ident == "definition" => {
+                self.findings.push("local definition module".into());
+            }
+            _ => {}
         }
         visit::visit_item(self, item);
     }
 
-    fn visit_ident(&mut self, ident: &'ast syn::Ident) {
-        if is_definition_vocabulary_ident(ident) {
-            self.findings
-                .push(format!("RT definition vocabulary: {ident}"));
-        }
-    }
-
     fn visit_macro(&mut self, item: &'ast syn::Macro) {
-        inspect_definition_macro_tokens(item.tokens.clone(), &mut self.findings);
+        inspect_definition_macro_tokens(item.tokens.clone(), false, &mut self.findings);
     }
 }
 
@@ -882,6 +962,7 @@ fn tc_033_definition_refusals_have_only_the_qsv_owner() {
 
     for source in [
         "pub enum ShadowPackageCause { MissingMember, ConflictingDefinition }",
+        "use quire_semantic_value::definition::PackageCause as LocalCause;",
         "pub type RefusalAlias = quire_semantic_value::definition::PackageRefusal;",
         "pub use quire_semantic_value::definition::*;",
         "pub struct LocalAdapter(quire_semantic_value::definition::PackageCause);",
@@ -895,6 +976,19 @@ fn tc_033_definition_refusals_have_only_the_qsv_owner() {
             "source-inspection mutation escaped: {source}"
         );
     }
+    let direct_owner_use = syn::parse_file(
+        "use quire_semantic_value::definition::PackageCause; \
+         pub fn carry(cause: PackageCause) -> PackageCause { cause } \
+         pub struct Holder { cause: PackageCause }",
+    )
+    .unwrap();
+    let mut inspection = ProductionDefinitionInspection::default();
+    inspection.visit_file(&direct_owner_use);
+    assert!(
+        inspection.findings.is_empty(),
+        "private direct QSV use must remain allowed: {:?}",
+        inspection.findings
+    );
 
     let causes = [
         (PackageCause::MissingMember, "missing-member"),
