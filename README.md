@@ -2,15 +2,13 @@
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/k8DVhuYBR2)
 
-When a contract says *given a valid request, the handler's output must match*, three different
-things can happen when you test it: the output matches, the output is wrong, or the request was
-never valid to begin with. `quire-contract-runtime` is the small `no_std` Rust library that gives
-those three cases three different names, so a test harness can tell them apart.
+`quire-contract-runtime` is a small `no_std` Rust library of verdict types for contract testing. It
+names the three results of testing a contract such as "given a valid request, the handler's output
+must match": the output matches, the output is wrong, or the request was not valid.
 
-It is the runtime that the oracles emitted by `quire-contract-codegen` link against. Without it,
-every generated oracle would reinvent its own pass/fail type, and a rejected input would quietly
-turn into a "pass" the moment someone converted the result to a `bool`. This crate has no such
-conversion, so a rejected precondition can never be counted as evidence that the code is correct.
+It is the runtime that the oracles emitted by `quire-contract-codegen` link against. It gives every
+generated oracle the same pass/fail type for test harnesses. The crate has no conversion from a
+verdict to `bool`, so a rejected precondition is never counted as a pass.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/hero-dark.svg">
@@ -20,7 +18,7 @@ conversion, so a rejected precondition can never be counted as evidence that the
 > **Status: public prerelease.** The API is still changing, the crate is `publish = false`, and
 > nothing is released to a registry yet. Expect breaking changes.
 
-## A first verdict
+## Usage
 
 A verdict carries the identity of the contract (requirement and revision), the point in execution
 where it was checked, and the clauses that were observed. This is the fixture and the campaign
@@ -72,11 +70,11 @@ assert_eq!(
 );
 ```
 
-In a campaign, a failed postcondition counts as accepted (the input was valid) and as failed, and
-a rejected precondition counts only as rejected. Recording a verdict for a different contract
-identity is an error, not a silent merge.
+In a campaign, a failed postcondition counts as accepted (the input was valid) and as failed. A
+rejected precondition counts as rejected. Recording a verdict for a different contract identity
+returns an error.
 
-## What is in the crate
+## Modules
 
 | Module | What it gives a generated oracle |
 | --- | --- |
@@ -84,7 +82,7 @@ identity is an error, not a silent merge.
 | `observation` | Per-clause outcomes (`Passed`, `Failed`, `Rejected`, `NotEvaluated`, `Undefined`), clause kinds, and allocation-free failure details. |
 | `verdict` | `Verdict`: `Passed`, `FailedPostcondition` or `RejectedPrecondition`, with no conversion to `bool`. |
 | `operators` | Separately named short-circuit and total `and`, `or` and `implies`; checked option, slice-index, add, sub, mul, div and rem helpers that return `None` when undefined. |
-| `accounting` | `CampaignReport` and `CampaignCounts`: accepted, rejected, failed and discarded counts that saturate instead of panicking. |
+| `accounting` | `CampaignReport` and `CampaignCounts`: accepted, rejected, failed and discarded counts that saturate and do not panic. |
 | `proptest_adapter` | Optional: maps a verdict onto proptest's success, failure and rejection. |
 | `exact` | Optional: runtime-owned negotiation and the remaining exact-value helpers, built on `quire-exact` and `quire-semantic-value`. |
 
@@ -112,25 +110,25 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 
 - The core is safe Rust (`#![forbid(unsafe_code)]`), performs no allocation or I/O, and has no
   required dependency.
-- Undefined partial operations return `None`; counters saturate rather than panic.
-- Public data enums are `#[non_exhaustive]`, so consumers must keep unknown future states instead
-  of converting them to success.
+- Undefined partial operations return `None`; counters saturate and do not panic.
+- Public data enums are `#[non_exhaustive]`, so consumers must handle unknown future states and
+  cannot treat them as success.
 - Exact type and release artifact sizes are target-dependent. The size gate fixes Rust 1.98.1 and
   `thumbv7em-none-eabi`, then limits the representative static-library consumer's linked `.text`
   plus `.rodata` to 4 KiB with no panic relocation.
 - A decoded snapshot is validated for shape and limits. Validation does not authenticate that the
-  campaign really ran.
+  campaign ran.
 
-## The Quire ecosystem
+## Quire ecosystem
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/ecosystem-dark.svg">
   <img alt="The Quire repositories. The main chain runs from the standard, quire-specification, to the compiler, quire-spec-language, then quire-contract-ir, quire-contract-codegen and quire-contract-runtime. quire-spec-language also feeds quire-protocol, and quire-contract-ir feeds quire-analyze. quire-observation feeds quire-protocol and quire-mltl. Above the chain, quire-driver runs it, quire-integration tests it and quire-verification plans verification. Below it, shared libraries used throughout: quire-exact, quire-semantic-value, quire-walk, quire-canonical and quire-verification-contracts." src="docs/images/ecosystem-light.svg">
 </picture>
 
-`quire-contract-runtime` is a backend. It is linked by the oracles that `quire-contract-codegen`
-emits. Its only first-party dependencies are the optional `quire-exact` and `quire-semantic-value`
-crates, pulled in by the `exact` feature.
+`quire-contract-runtime` is a backend. The oracles that `quire-contract-codegen` emits link it. Its only first-party
+dependencies are the optional `quire-exact` and `quire-semantic-value` crates, pulled in by the
+`exact` feature.
 
 ## Building and testing
 
