@@ -198,11 +198,11 @@ function-application deletion also needs IR-583, IR-590 and RT target acceptance
 Classified against what `quire-exact` exports; IR-349 part 1 re-measures it. Where a source file holds both an exported item and a residue item, only the
 residue item is listed: the exported item is deleted in step 1. The negotiators are not on this list: they are runtime-owned.
 
-| Residue | Requirement | Source today |
+| Residue or disposition | Requirement | Source status |
 |---|---|---|
 | Function application: `PackageDeclarations`, `CheckedPackage`, `Frame`, `Body`, `Evaluation`, `plan_call` | FR-273 | `src/exact/expression.rs` |
-| Checking environments: `TypeEnvironment`, composite declarations, `ObjectEnvironment`, `CheckedEquality` | FR-008 | `src/exact/composite.rs` (declarations and `TypeEnvironment`, not `Value`/`ValueType`), `reference.rs` (`ObjectEnvironment` and its refusal types only; the identities and `ObjectReference` are exported by `quire-exact` and are deleted in step 1), `equality.rs` (`CheckedEquality`, not the equality plan) |
-| Containment and unit graphs, enumeration declarations | FR-008, FR-007 | `src/exact/containment.rs`, `unit.rs`, `enumeration.rs` |
+| Checking environments, composite declarations, object closure and `CheckedEquality` | FR-008 | RT's copies in `src/exact/composite.rs`, `reference.rs` and `equality.rs` were removed in the IR-882 value-bearing cutover; QSV owns these interfaces. |
+| Containment and unit graphs, enumeration declarations | FR-008, FR-007 | RT's `src/exact/containment.rs` was removed in the IR-882 value-bearing cutover; `unit.rs` and `enumeration.rs` remain until the quantity and enum owner cutover. |
 | Carried compiler vocabulary | FR-012 | `src/exact/node.rs` was deleted in the IR-882 QSV semantic-node slice; `definition.rs` remains until AD-004 R-3 is resolved, and `unit.rs` remains with the value-bearing cutover. |
 
 The list is a classification aid, not a frozen record; an item `quire-exact` exports is not residue

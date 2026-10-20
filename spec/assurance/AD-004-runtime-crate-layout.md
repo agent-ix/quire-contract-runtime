@@ -404,8 +404,9 @@ QSV's plan schedule calls `quire_exact::planned_equality_with_plan` and owns
 the result-bearing evaluator. Collection formation and membership use kernel
 operations. Containment and enumeration construct and carry the same kernel
 values. No conversion layer, alias, old-`Value` re-export or second pair
-traversal is a step-4 output. FR-277-AC-1 stays planned until the locked QSV
-evaluator executes that kernel call and RT's duplicate is gone.
+traversal is a step-4 output. The value and equality portion of step 4 now
+consumes the locked QSV evaluator through TC-203; the quantity, unit,
+enumeration and definition portion remains open.
 
 Compound-unit identity in step 4 has one owner: `quire-semantic-value` (QSV).
 Its `QuantityUnit::Compound` holds QSV's `CompoundUnit`, whose normalized

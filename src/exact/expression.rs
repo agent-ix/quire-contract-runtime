@@ -12,7 +12,7 @@
 //! termination measure) before any package becomes callable and before any
 //! charge, mirroring the authority's own admit-before-call ordering.
 //!
-//! The plan/execute split mirrors [`super::equality`]: [`plan_call`] and
+//! The plan/execute split mirrors the shared equality planner: [`plan_call`] and
 //! [`plan_evaluation`] validate a call's arguments and take no [`Meter`] at
 //! all, so every [`InputRefusal`] is reachable with no charge in scope,
 //! before [`CheckedPackage::call`]/[`CheckedPackage::evaluate`] charge
@@ -522,7 +522,7 @@ pub struct Evaluation {
 }
 
 /// The events a planned call or evaluation contributes at its own root, with
-/// no charge and no body invoked. Mirrors [`super::equality::EqualityPlan`].
+/// no charge and no body invoked. Mirrors [`quire_exact::EqualityPlan`].
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct CallPlan {
     call_events: Integer,

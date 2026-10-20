@@ -10,13 +10,12 @@ relationships:
 
 ## Description
 
-Check `TypeEnvironment` admission, `record`/`tuple`/`evaluate_record`/`evaluate_tuple` construction,
-`ValueGraph`/`build` containment using RT's current `Value`, and selected accounting vocabulary. IR-882
-plans the kernel-valued rewrite. Evidence:
-`tests/exact_composite.rs` (`--features exact`). RT locally pins the kernel's 63-point
-`ChargePoint::ALL` census, including `temporal.visit` as its last member, and round-trips
-selected spellings. quire-exact FR-368-AC-1/2 owns the full vocabulary round-trip checks.
-The retained RT tests also establish residue behavior.
+Check QSV `TypeEnvironment` admission, shared composite construction,
+`ValueGraph`/`build` containment over `quire_exact::Value`, and selected accounting
+vocabulary. IR-882 removed RT's duplicate implementation and its former
+`tests/exact_composite.rs` controls. Quire-exact FR-368-AC-1/2 owns the full
+vocabulary census. The remaining procedures below require owner evidence and
+RT consumer controls to be mapped before they receive acceptance credit.
 
 ## Test Procedure
 
@@ -60,3 +59,8 @@ graphs build bottom-up with sharing and no recursion-depth failure; the injected
 partial value, and `CheckedInvariant` is unreachable from every admitted vector in this test's corpus.
 The deliberately invalid deferred field carries `DeferredResultNotAdmitted`.
 Deep type metadata survives cloning, comparison, formatting and freeing without host-stack recursion.
+
+## Status
+
+PLANNED: retained under FR-275-AC-14 after removal of RT's duplicate implementation.
+No deleted RT test is counted as evidence for this procedure.

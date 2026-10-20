@@ -29,4 +29,7 @@ Verify FR-277-AC-1 through AC-6 by RT consumer tests and AC-8 by inspection only
 
 ## Status
 
-PLANNED after the QSV result-bearing kernel route and RT's deletion of its distinct `Value`, evaluator and pair walker. No FR-277-AC-1 test tag is credited before the consumed QSV evaluator calls the result-bearing kernel seam.
+PARTIAL: `tests/ir882_equality_owner.rs` exercises AC-1 through AC-6 through
+the locked QSV result-bearing kernel route after RT removed its distinct
+`Value`, evaluator and pair walker. AC-8 also requires source inspection;
+AC-7 remains the separate titan:kani:plan claim.

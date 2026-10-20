@@ -140,11 +140,6 @@ impl EnumValue {
         self.0.member
     }
 
-    /// Zero-based declaration position of the member.
-    pub(crate) fn position(&self) -> usize {
-        self.0.position
-    }
-
     /// Whether the declaration is an `ordered enum`.
     pub fn is_ordered(&self) -> bool {
         self.0.ordered
