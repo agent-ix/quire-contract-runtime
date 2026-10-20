@@ -48,4 +48,10 @@ Round 1, verified against fix commit a9b45d77 on the PR head:
 
 | FND | outcome | reason |
 | --- | --- | --- |
-| FND-002 | fixed | FR-012-AC-1 again states the original RT-local constructors and is marked retired at step 4. `quire trace --id FR-012-AC-1` correctly resolves both constructor tests; the matrix says they are removed at cutover. Separate FR-012-AC-6 inspects that removal |
+| FND-002 | still-open | New this round; awaiting a fix round |
+
+Round 2, verified against fix commit 36cb2cee on the PR head:
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-002 | fixed | The two tests keep `#[trace("TC-033", "FR-012-AC-1")]`, and AC-1 again states the RT-local `from_hex`/`from_bytes` criterion they assert. The bindings are now correct, and `quire trace --id FR-012-AC-1` resolves both. The new FR-012-AC-6 (Inspection) has no claim, and its matrix row is truthfully "planned". Strict coverage moves from 124 to 126 unbacked rows: the new AC-6 verification row and its FR-012 matrix row, both planned inspections. There are 0 contradicted statuses |
