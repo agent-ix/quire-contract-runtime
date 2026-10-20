@@ -36,10 +36,10 @@ R-3 definition cutover consumes `quire_semantic_value::definition` directly.
 
 ## Outputs
 
-- The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
+- The kernel-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string, consumed without an RT copy.
 - QSV's definition vocabulary supplies `SelectionRefusalCode`, `PackageRefusalCode`,
   `PackageCause` and `PackageRefusal` with their normative spellings.
-- An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
+- A QSV-admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
   path to its canonical root, or a QSV `InvalidSemanticGraph` carrying one typed
   `SemanticGraphCause`.
 - An `InvalidCompoundUnit` carrying one typed `CompoundUnitCause`, where a compound unit is refused
@@ -70,32 +70,31 @@ R-3 definition cutover consumes `quire_semantic_value::definition` directly.
   valid code/cause pairing and its tests; RT keeps the existing selection and package-code
   spelling obligations in FR-012-AC-3.
 - **`SemanticGraphCause` is one closed vocabulary shared with the compiler, split by who raises
-  each cause.** Three groups, and the split is a fact about this runtime's API shape, not a
-  preference:
-  - *Raised by the runtime over a graph it is handed*: zero exponent, duplicate term, unsorted
-    terms, zero scale, non-identity root, duplicate node, unknown dimension, non-base dimension
-    term, unknown target, cross-dimension target, missing root, duplicate root, target cycle.
+  each cause.** QSV owns the graph and enum checks; RT consumes their typed results directly:
+  - *Raised by QSV's checked-node and graph boundaries*: zero exponent, duplicate term, unsorted
+    terms, zero scale, non-identity root, unknown dimension, non-base dimension term, unknown
+    target, cross-dimension target, missing root, duplicate root and target cycle. `DuplicateNode`
+    is carried in the shared vocabulary but is unrepresentable at QSV's keyed-map graph boundary.
     QSV raises `UndeclaredCase` when `EnumDeclaration::member` reads a case outside its admitted
     declaration; RT tests consume that owner path directly.
   - *Raised by the QSV declaration-admission point consumed by the runtime*: `EnumDeclaration::new` admits a
     declaration node from caller-supplied member strings, so it
     raises `NonCanonicalPreimage` for an empty, repeated or non-identifier member list and
     `UnsortedUnorderedMembers` for an unordered declaration whose cases are not sorted. Those two
-    causes are raised there and nowhere else; no graph handed to the runtime raises either.
+    causes are raised there and nowhere else; no QSV graph input raises either.
   - *Carried only, never raised here*: `OwnerNotSelected` and `StaleKey`, which only a compiler that
     computes keys and resolves a lock selection can decide; and `ForeignDeclaration` and
     `UnreducedRational`, which this API cannot present — a member node never carries a declaration
     key of its own for the runtime to compare, and `Rational`'s only public constructor reduces, so
-    no unreduced scale or offset can reach `UnitDeclaration::check_semantics`. The runtime carries
+    no unreduced scale or offset can reach `UnitNode::checked`. The runtime carries
     all four so a generated oracle can report a compiler refusal it was handed.
-- **Every unit-graph refusal is `invalid_semantic_graph` with one typed cause naming the first
-  failed check**, in the order fixed by FR-011: per-node semantics, then duplicate keys, then graph
-  topology. The runtime admits a graph or refuses it; it never repairs one and never admits a graph
-  with a repaired node.
-- **A `UnitEdge` is one exact affine edge `target = scale × source + offset`.** `UnitDeclaration`
-  admits it, as `check_semantics`'s `Ok` result, after refusing a zero scale or a non-identity
-  root; each `Unit`'s path to its canonical root and its own canonical edge are `UnitEdge` values,
-  carried unchanged.
+- **Every QSV unit-graph refusal is `invalid_semantic_graph` with one typed cause naming the first
+  failed check**, after per-node checks by `DimensionNode::checked` and `UnitNode::checked` and the
+  topology order of `UnitGraph::from_checked_nodes`. The keyed maps admit no duplicate key.
+  RT consumes the result without repairing or rebuilding the graph.
+- **A `UnitEdge` is one exact affine edge `target = scale × source + offset`.** QSV's
+  `UnitNode::checked` admits it after refusing a zero scale or a non-identity root; each `Unit`'s
+  path to its canonical root and its own canonical edge are `UnitEdge` values, carried unchanged.
 - **A `CompoundUnit` construction that fails is refused as `InvalidCompoundUnit`, carrying one
   typed `CompoundUnitCause`.** The five causes are `NonCanonicalPreimage` (compiler-reader
   preimage only), `ZeroExponent`, `DuplicateTerm`, `UnsortedTerms` and `NotRootUnit`.
