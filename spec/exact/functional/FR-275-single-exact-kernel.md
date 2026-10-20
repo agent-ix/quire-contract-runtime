@@ -184,7 +184,7 @@ crates that the runtime consumes.
 | FR-275-AC-19 | The runtime defines `negotiate_integer_division`, `negotiate_ieee` and their types in its own source and depends on no QSL crate for them. | Inspection (TC-197) |
 | FR-275-AC-20 | The runtime's declared `rust-version` is 1.98.1. | Inspection (TC-199) |
 | FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |
-| FR-275-AC-22 | Inspection of runtime source finds no local definition or alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including definitions emitted by macros. | Inspection (TC-197) |
+| FR-275-AC-22 | Inspection of runtime source finds no local definition or alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including definitions emitted by macros. | Inspection (TC-205) |
 
 ## Residue list (not authorized; to be deleted)
 

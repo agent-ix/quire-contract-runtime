@@ -52,9 +52,17 @@ Round 1 checked fix commit `792755c` at head `792755cdf038c5d36bb7fd1fc7c55baff1
 | --- | --- | --- |
 | FND-001 | fixed | The TC-197 row now reads "`ir882_qsv_vocabulary` backs only FR-275-AC-22 by inspecting runtime source for local semantic-node vocabulary definitions", and the test is now bound to FR-275-AC-22. What the row's text claims matches the test. What Quire computes from the row does not; see FND-002 |
 | FND-002 | still-open | New in round 1; see below |
+| FND-002 | fixed | Round 2 (head `6ac954f`): the test is tagged `#[trace("FR-275-AC-22")]` only. Fresh `origin/main` f5c3570 gives 125 unbacked; the head gives 124 unbacked and 0 contradicted. FR-275-AC-1 to AC-5 and AC-12 to AC-19 (13 ACs, including AC-2) are reported unbacked again. The one-row difference from main is the TC-197 traces-to row, recorded as FND-003 |
+| FND-003 | still-open | New in round 2; see below |
 
 ## New findings (disposition pass 1)
 
 | ID | Severity | Summary | Refs |
 | --- | --- | --- | --- |
 | FND-002 | high | `#[trace("TC-197", "FR-275-AC-22")]` binds the shared `TC-197` id. Every FR-275 AC verified by `Inspection (TC-197)` therefore now counts as backed by this one name-check test: AC-1, AC-2, AC-3, AC-4, AC-5 and AC-12 to AC-19, plus the TC-197 traces-to row and an FR-275 functional-coverage row. That is 15 rows, and it accounts exactly for the drop from 125 to 110 unbacked. The PR, the TC-197 row and AD-004 all say FR-275-AC-2 stays unbacked, yet `quire coverage --strict` no longer lists it. This is coverage inflation. The reviewer probed the fix: tagging only `#[trace("FR-275-AC-22")]` gives 124 unbacked, and FR-275-AC-2 and the other TC-197 ACs are reported unbacked again. Alternatively, give AC-22 its own TC id | tests/ir882_qsv_vocabulary.rs:137; spec/exact/matrix/tests.md:104; spec/exact/functional/FR-275-single-exact-kernel.md:187 |
+
+## New findings (disposition pass 2)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | low | The TC-197 matrix row now counts as backed in strict coverage: its traces-to line drops out of the unbacked list, which accounts for 125 to 124. The reason is that the row lists FR-275-AC-22 among its targets, and the AC-22 tag satisfies it. The row's own text says the test "does not bind TC-197 or back the other criteria in this row", and the row's other 13 ACs are unbacked, yet Quire reads the planned TC-197 row as backed by a semantic-node name check. A fix is to give FR-275-AC-22 its own TC row so TC-197 stays unbacked. Alternatively, accept it as Quire's any-target row semantics, with that reason recorded | spec/exact/matrix/tests.md:104; spec/exact/functional/FR-275-single-exact-kernel.md:187 |

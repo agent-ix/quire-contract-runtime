@@ -236,7 +236,7 @@ fn inspect_sources(directory: &Path, definitions: &mut Vec<String>) {
     }
 }
 
-#[trace("FR-275-AC-22")]
+#[trace("TC-205", "FR-275-AC-22")]
 #[test]
 fn qsv_owns_semantic_node_vocabulary() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -245,7 +245,7 @@ fn qsv_owns_semantic_node_vocabulary() {
     assert!(definitions.is_empty(), "{}", definitions.join("\n"));
 }
 
-#[trace("FR-275-AC-22")]
+#[trace("TC-205", "FR-275-AC-22")]
 #[test]
 fn inspection_rejects_renamed_semantic_node_copies() {
     let cases = [

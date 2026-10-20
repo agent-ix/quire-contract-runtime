@@ -76,6 +76,7 @@ Reviewer mutants against `qsv_owns_semantic_node_vocabulary`:
 | FND-002 | fixed | The comment no longer claims `check_terms` is `pub(crate)` |
 | FND-003 | fixed | The PR body now states the history accurately: `0cb88a2` was a different red test (`qsv_owns_definition_and_semantic_node_vocabulary`, TC-197, also requiring `definition.rs` absent), `2a5119f` renamed and narrowed it, and "the shipped version was not committed red in that form" |
 | FND-004 | still-open | New in round 1; see below |
+| FND-004 | fixed | Round 2 (fix commit `6ac954f`, head `6ac954fbf88dba7d4a494ddd732f26d9155f3558`), measured by the reviewer. Type aliases and `use` renames are now checked by their target path, enums are checked for the 20-variant shape of `SemanticGraphCause`, and fns and methods are checked for raising all three term causes. The reviewer re-ran all seven round-1 mutants: m1, m2, m3, m5, m6 and m7 are killed. m4 (a `bool` fn checking only zero exponents) survives, but it raises no cause and implements one rule of three, so it is not a copy of the term checker. Two faithful renamed `Result`-returning copies of `check_terms` are also killed, one direct (m8) and one through `use SemanticGraphCause as C` (m9). `make fmt-check lint test-features doc msrv size deny test` exited 0 |
 
 ## New findings (disposition pass 1)
 
