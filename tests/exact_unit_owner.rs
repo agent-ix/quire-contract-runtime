@@ -183,3 +183,15 @@ fn tc_033_qsv_dimension_and_compound_terms_are_canonical_across_graph_order() {
     assert_eq!(visited, vec![(key(11), &int(2)), (key(12), &int(-2))]);
     assert!(visited.iter().all(|(_, exponent)| !exponent.is_zero()));
 }
+
+/// Trace: FR-007-AC-13
+#[trace("TC-035", "FR-007-AC-13")]
+#[test]
+fn tc_035_qsv_compound_unit_debug_names_every_boxed_field() {
+    let graph = UnitGraph::from_checked_nodes(&BTreeMap::new(), &BTreeMap::new()).unwrap();
+    let dimensionless = graph.compound_unit(&[]).unwrap();
+    assert_eq!(
+        format!("{dimensionless:?}"),
+        "CompoundUnit { terms: {}, dimension: Dimension({}) }"
+    );
+}
