@@ -1,27 +1,28 @@
 ---
 id: TC-204
-title: "Retag runtime checked-invariant producer controls"
+title: "Runtime checked-invariant producer controls"
 type: TC
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/FR-278
     type: verifies
 ---
-# TC-204: Retag runtime checked-invariant producer controls
+# TC-204: Runtime checked-invariant producer controls
 
 ## Description
 
-Bind the existing RT producer controls to FR-278 after the IR-497 typed carrier cutover. TC-194 already exercises FR-273-AC-8 function producer cases, and the six `operand_value` cause assertions are in `src/exact/equality.rs` unit tests tagged FR-008-AC-5, including `equality_operand_failures_keep_distinct_causes`.
+Bind typed-cause evidence to the producer sites the runtime still owns. Preserve the test case during the kernel move under FR-275-AC-14. The six former `operand_value` assertions cover equality and quantity, not collection or composite producers; quire-semantic-value FR-122-AC-1 and AC-4 own those controls after the cutover.
 
 ## Test Procedure
 
-1. Reuse the existing foreign expression, unknown function and meter reborrow assertions in TC-194, checking their precise typed causes and prior admitted charges.
-2. Reuse the six `operand_value` cause assertions in the `src/exact/equality.rs` unit tests tagged FR-008-AC-5 and check that scheduled comparison and checked equality quantity conversion preserve their original `IllTypedCause` payloads.
-3. Inspect the quire-exact FR-369-AC-1 carrier gate for absence of `CallDepthExceeded`; verify RT FR-273 fuel exhaustion remains `Incomplete`.
+1. Reuse TC-194's foreign expression, unknown function and meter reborrow assertions and check their precise typed causes and prior admitted charges.
+2. While RT owns collection and composite producers, exercise each reached checked-invariant cause and check that nested typed causes are retained. Record missing producer controls as planned rather than citing the six equality/quantity assertions as evidence.
+3. Inspect quire-semantic-value FR-122-AC-1 and TC-906 for the five reached former `operand_value` causes, and FR-122-AC-4 for non-exact placement; inspect RT for absence of duplicate equality and quantity producers after the move.
+4. Inspect quire-exact FR-369-AC-1 for absence of `CallDepthExceeded`; verify RT FR-273 fuel exhaustion remains `Incomplete`.
 
 ## Expected Results
 
-Each reached RT producer reports its assigned table cause without message flattening. Existing charge boundaries remain unchanged, while the kernel carrier and RT fuel follow their owning criteria.
+Each reached RT producer reports its assigned typed cause without message flattening. Producer controls transferred out of RT have named owner evidence and no duplicate runtime implementation. Existing charge boundaries remain unchanged.
 
 ## Status
 
-PLANNED for FR-278 tags and any missing controls; overlapping tests already exist under TC-194 and in the `src/exact/equality.rs` unit tests tagged FR-008-AC-5.
+PLANNED: TC-194 overlaps function cases. RT collection and composite producer controls require distinct evidence until those producers move. Equality and quantity controls are owned by quire-semantic-value FR-122-AC-1 and AC-4.

@@ -10,12 +10,12 @@ relationships:
 
 ## Description
 
-Verify FR-277-AC-1 through AC-6 by test and AC-8 by inspection only after `CheckedEquality::evaluate` routes through `quire_exact::planned_equality_with_plan`. FR-277-AC-7 is the separate titan:kani:plan claim.
+Verify FR-277-AC-1 through AC-6 by RT consumer tests and AC-8 by inspection only after QSV's `CheckedEquality::evaluate` routes through `quire_exact::planned_equality_with_plan` and RT removes its duplicate. FR-277-AC-7 is the separate titan:kani:plan claim.
 
 ## Test Procedure
 
-1. Construct the admitted depth-four `quire_exact::Value` operands defined in FR-277 Inputs, with equal heads and one first-head-unequal control. Use the normal checker to construct `CheckedEquality`; evaluate each with a fresh sufficient meter.
-2. Inspect the production evaluator's direct call to `quire_exact::planned_equality_with_plan` on the evaluated operands and its use of that call's relation and plan (AC-8). In the behavioral test, assert exactly 17 admitted `EqualityPair` charges in occurrence-pair order on the real evaluation path (AC-1). A separate kernel-only assertion does not satisfy either criterion. Check the ordered plan-form, plan, pair and result-retain charges for both relations.
+1. Construct the admitted depth-four `quire_exact::Value` operands defined in FR-277 Inputs, with equal heads and one first-head-unequal control. Use QSV's normal checker and its `TypeEnvironment` to construct `CheckedEquality`; evaluate each through QSV's method with a fresh sufficient meter.
+2. Inspect the locked QSV evaluator's direct call to `quire_exact::planned_equality_with_plan` on the evaluated operands and its use of that call's Boolean relation; confirm RT has no local evaluator or pair walker (AC-8). In the behavioral test, assert exactly 17 admitted `EqualityPair` charges in occurrence-pair order on that same consumed QSV evaluation path (AC-1). The kernel plan need not leave QSV's existing `Outcome<bool>` API. A separate kernel-only assertion does not satisfy either criterion. Check the ordered plan-form, plan, pair and result-retain charges for both relations.
 3. Evaluate with 50 work units and other limits sufficient. Inject denial at the 17th `EqualityPair` and separately at `EqualityResultRetain`, recording each admitted prefix and typed stop.
 4. Evaluate with zero result units and sufficient work and occurrence limits. Record the admitted prefix and typed stop.
 5. Construct equal-shaped operands with different declared static composite types. Check construction and the unchanged meter before evaluating.
@@ -29,4 +29,4 @@ Verify FR-277-AC-1 through AC-6 by test and AC-8 by inspection only after `Check
 
 ## Status
 
-PLANNED after FR-275 kernel routing and deletion of RT's distinct `Value` and pair walker. No FR-277-AC-1 test tag is credited before the real evaluator calls the kernel.
+PLANNED after the QSV result-bearing kernel route and RT's deletion of its distinct `Value`, evaluator and pair walker. No FR-277-AC-1 test tag is credited before the consumed QSV evaluator calls the result-bearing kernel seam.
