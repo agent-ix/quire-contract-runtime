@@ -2,6 +2,7 @@
 //! FR-273), through the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use quire_exact::NodeKey;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -15,8 +16,8 @@ use quire_contract_runtime::exact::{
     CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum, EvaluationRefusal,
     FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause, InputRefusal, IntegerDivisionConsumer, IntegerDivisionDisposition,
-    Location, NodeKey, ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
-    Origin, PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
+    Location, ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin,
+    PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
 };
 use quire_exact::{
     ChargePoint, CheckedInvariantCause, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter,
@@ -58,7 +59,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 };
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn a_reference() -> ObjectReference {

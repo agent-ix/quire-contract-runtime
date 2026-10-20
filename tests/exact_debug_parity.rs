@@ -11,8 +11,9 @@
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    CompoundUnit, EnumDeclaration, NodeKey, ObjectIdentity, ObjectReference,
+    CompoundUnit, EnumDeclaration, ObjectIdentity, ObjectReference,
 };
+use quire_exact::NodeKey;
 use quire_exact::UniverseId;
 
 /// Only the runtime-held `CompoundUnit` and `Dimension` rendering is pinned here; the kernel
@@ -31,9 +32,9 @@ fn tc_035_debug_parity_compound_unit() {
 #[test]
 fn tc_035_debug_parity_enum_value_and_object_reference() {
     let declaration =
-        EnumDeclaration::new(NodeKey::from_bytes([1_u8; 32]), true, &["A", "B"]).unwrap();
+        EnumDeclaration::new(NodeKey::from_digest([1_u8; 32]), true, &["A", "B"]).unwrap();
     let member = declaration
-        .member("A", NodeKey::from_bytes([2_u8; 32]))
+        .member("A", NodeKey::from_digest([2_u8; 32]))
         .unwrap();
     assert_eq!(
         format!("{member:?}"),
@@ -44,7 +45,7 @@ fn tc_035_debug_parity_enum_value_and_object_reference() {
 
     let reference = ObjectReference::new(
         UniverseId::from_digest([1_u8; 32]),
-        NodeKey::from_bytes([3_u8; 32]),
+        NodeKey::from_digest([3_u8; 32]),
         ObjectIdentity::new(&[2_u8]).unwrap(),
     );
     assert_eq!(

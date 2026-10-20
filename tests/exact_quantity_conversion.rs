@@ -5,56 +5,113 @@
 //! criteria restate; no QSpec bytes are copied.
 #![cfg(feature = "exact")]
 
+use quire_exact::NodeKey;
 #[path = "support/charge_points.rs"]
 mod charge_points;
 use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    convert_quantity, evaluate_quantity, Conversion, ConvertedValue, NodeKey, Quantity,
-    QuantityOperation, QuantityTarget, QuantityUnit, UnitDeclaration, UnitGraph,
+    convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity, QuantityOperation,
+    QuantityTarget, QuantityUnit, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
     ChargePoint, IllTyped, IllTypedCause, Incomplete, Integer, LimitKind, Meter, Outcome, Rational,
     ScalarLimits,
 };
 
-const fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+fn key(byte: u8) -> NodeKey {
+    NodeKey::from_digest([byte; 32])
 }
 
-// Dimension nodes. `D_ALIKE` has the shape of `D_L` under a different semantic-node key.
-const D_L: NodeKey = key(1);
-const D_T: NodeKey = key(2);
-const D_THETA: NodeKey = key(3);
-const D_M: NodeKey = key(4);
-const D_TORQUE: NodeKey = key(5);
-const D_ENERGY: NodeKey = key(6);
-const D_AREA: NodeKey = key(7);
-const D_ALIKE: NodeKey = key(8);
+// Dimension nodes. `d_alike()` has the shape of `d_l()` under a different semantic-node key.
+fn d_l() -> NodeKey {
+    key(1)
+}
+fn d_t() -> NodeKey {
+    key(2)
+}
+fn d_theta() -> NodeKey {
+    key(3)
+}
+fn d_m() -> NodeKey {
+    key(4)
+}
+fn d_torque() -> NodeKey {
+    key(5)
+}
+fn d_energy() -> NodeKey {
+    key(6)
+}
+fn d_area() -> NodeKey {
+    key(7)
+}
+fn d_alike() -> NodeKey {
+    key(8)
+}
 
-// Unit nodes. The compound-unit terms must ascend by key: `KG < M < S`.
-const KG: NodeKey = key(20);
-const M: NodeKey = key(21);
-const S: NodeKey = key(22);
-const K: NodeKey = key(23);
-const CM: NodeKey = key(24);
-const IN: NodeKey = key(25);
-const DEGC: NodeKey = key(26);
-const DEGF: NodeKey = key(27);
-const N_M: NodeKey = key(28);
-const J: NodeKey = key(29);
-const M2: NodeKey = key(30);
-const U1: NodeKey = key(31);
-const U2: NodeKey = key(32);
-const U3: NodeKey = key(33);
-const REV: NodeKey = key(34);
-const CM2: NodeKey = key(35);
-const ALIAS: NodeKey = key(36);
-const ALIKE_ROOT: NodeKey = key(37);
-// `X` targets `degF` and `W` targets `X`: chains whose edges do not commute.
-const X: NodeKey = key(38);
-const W: NodeKey = key(39);
+// Unit nodes. The compound-unit terms must ascend by key: `kg() < m() < s()`.
+fn kg() -> NodeKey {
+    key(20)
+}
+fn m() -> NodeKey {
+    key(21)
+}
+fn s() -> NodeKey {
+    key(22)
+}
+fn k() -> NodeKey {
+    key(23)
+}
+fn cm() -> NodeKey {
+    key(24)
+}
+fn inch_key() -> NodeKey {
+    key(25)
+}
+fn degc() -> NodeKey {
+    key(26)
+}
+fn degf() -> NodeKey {
+    key(27)
+}
+fn n_m() -> NodeKey {
+    key(28)
+}
+fn j() -> NodeKey {
+    key(29)
+}
+fn m2() -> NodeKey {
+    key(30)
+}
+fn u1() -> NodeKey {
+    key(31)
+}
+fn u2() -> NodeKey {
+    key(32)
+}
+fn u3() -> NodeKey {
+    key(33)
+}
+fn rev() -> NodeKey {
+    key(34)
+}
+fn cm2() -> NodeKey {
+    key(35)
+}
+fn alias() -> NodeKey {
+    key(36)
+}
+fn alike_root() -> NodeKey {
+    key(37)
+}
+// `x()` targets `degF` and `w()` targets `x()`: chains whose edges do not commute.
+fn x() -> NodeKey {
+    key(38)
+}
+fn w() -> NodeKey {
+    key(39)
+}
 
 fn int(value: i128) -> Integer {
     Integer::from(value)
@@ -107,39 +164,39 @@ fn to(dimension: NodeKey, target: NodeKey, scale: Rational, offset: Rational) ->
 /// The unit graph of the vectors: length, time, temperature, mass, two distinct derived
 /// dimensions of one base-dimension map, area, and a base dimension shaped like length.
 fn graph() -> UnitGraph {
-    let terms = || vec![(D_L, int(2)), (D_T, int(-2)), (D_M, int(1))];
+    let terms = || vec![(d_l(), int(2)), (d_t(), int(-2)), (d_m(), int(1))];
     UnitGraph::admit(
         [
-            (D_L, vec![]),
-            (D_T, vec![]),
-            (D_THETA, vec![]),
-            (D_M, vec![]),
-            (D_TORQUE, terms()),
-            (D_ENERGY, terms()),
-            (D_AREA, vec![(D_L, int(2))]),
-            (D_ALIKE, vec![]),
+            (d_l(), vec![]),
+            (d_t(), vec![]),
+            (d_theta(), vec![]),
+            (d_m(), vec![]),
+            (d_torque(), terms()),
+            (d_energy(), terms()),
+            (d_area(), vec![(d_l(), int(2))]),
+            (d_alike(), vec![]),
         ],
         [
-            (M, root(D_L)),
-            (S, root(D_T)),
-            (K, root(D_THETA)),
-            (KG, root(D_M)),
-            (N_M, root(D_TORQUE)),
-            (J, root(D_ENERGY)),
-            (M2, root(D_AREA)),
-            (ALIKE_ROOT, root(D_ALIKE)),
-            (CM, to(D_L, M, ratio(1, 100), ratio(0, 1))),
-            (IN, to(D_L, M, ratio(127, 5000), ratio(0, 1))),
-            (ALIAS, to(D_L, M, ratio(1, 1), ratio(0, 1))),
-            (REV, to(D_L, M, ratio(-1, 1), ratio(0, 1))),
-            (DEGC, to(D_THETA, K, ratio(1, 1), ratio(5463, 20))),
-            (DEGF, to(D_THETA, K, ratio(5, 9), ratio(45967, 180))),
-            (U1, to(D_THETA, K, ratio(1, 1), ratio(10, 1))),
-            (U2, to(D_THETA, U1, ratio(1, 1), ratio(-10, 1))),
-            (U3, to(D_THETA, DEGC, ratio(1, 1), ratio(0, 1))),
-            (CM2, to(D_AREA, M2, ratio(1, 10000), ratio(0, 1))),
-            (X, to(D_THETA, DEGF, ratio(2, 1), ratio(3, 1))),
-            (W, to(D_THETA, X, ratio(3, 1), ratio(-1, 1))),
+            (m(), root(d_l())),
+            (s(), root(d_t())),
+            (k(), root(d_theta())),
+            (kg(), root(d_m())),
+            (n_m(), root(d_torque())),
+            (j(), root(d_energy())),
+            (m2(), root(d_area())),
+            (alike_root(), root(d_alike())),
+            (cm(), to(d_l(), m(), ratio(1, 100), ratio(0, 1))),
+            (inch_key(), to(d_l(), m(), ratio(127, 5000), ratio(0, 1))),
+            (alias(), to(d_l(), m(), ratio(1, 1), ratio(0, 1))),
+            (rev(), to(d_l(), m(), ratio(-1, 1), ratio(0, 1))),
+            (degc(), to(d_theta(), k(), ratio(1, 1), ratio(5463, 20))),
+            (degf(), to(d_theta(), k(), ratio(5, 9), ratio(45967, 180))),
+            (u1(), to(d_theta(), k(), ratio(1, 1), ratio(10, 1))),
+            (u2(), to(d_theta(), u1(), ratio(1, 1), ratio(-10, 1))),
+            (u3(), to(d_theta(), degc(), ratio(1, 1), ratio(0, 1))),
+            (cm2(), to(d_area(), m2(), ratio(1, 10000), ratio(0, 1))),
+            (x(), to(d_theta(), degf(), ratio(2, 1), ratio(3, 1))),
+            (w(), to(d_theta(), x(), ratio(3, 1), ratio(-1, 1))),
         ],
     )
     .unwrap()
@@ -253,53 +310,56 @@ fn assert_no_charge(meter: &Meter) {
 #[test]
 fn tc_201_exact_conversion_returns_the_composed_rational_in_the_target_unit() {
     let graph = graph();
-    let metre = declared(&graph, M);
-    let kelvin = declared(&graph, K);
+    let metre = declared(&graph, m());
+    let kelvin = declared(&graph, k());
 
     // U01: 250 cm is 5/2 m.
-    let source = quantity(&graph, CM, 250, 1);
+    let source = quantity(&graph, cm(), 250, 1);
     let (conversion, _) = completed(&source, &metre, UNLIMITED);
     assert_eq!(exact_value(&conversion), &ratio(5, 2));
     assert_eq!(conversion.unit(), &metre);
     assert_eq!(conversion.source(), &source);
 
-    // U04: 0 degC and 32 degF are both 5463/20 K.
-    for (unit, value) in [(DEGC, 0), (DEGF, 32)] {
+    // U04: 0 degC and 32 degF are both 5463/20 k().
+    for (unit, value) in [(degc(), 0), (degf(), 32)] {
         let (conversion, _) = completed(&quantity(&graph, unit, value, 1), &kelvin, UNLIMITED);
         assert_eq!(exact_value(&conversion), &ratio(5463, 20));
         assert_eq!(conversion.unit(), &kelvin);
     }
 
     // U22: compound 4 m^2 to the declared area unit m2 is 4.
-    let area = declared(&graph, M2);
-    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(M, 2)]));
+    let area = declared(&graph, m2());
+    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(m(), 2)]));
     let (conversion, _) = completed(&square, &area, UNLIMITED);
     assert_eq!(exact_value(&conversion), &ratio(4, 1));
     assert_eq!(conversion.unit(), &area);
 
-    // U25 second step: 1 kg*m^2*s^-2 to J is 1.
-    let joule = declared(&graph, J);
-    let energy = Quantity::new(ratio(1, 1), compound(&graph, &[(KG, 1), (M, 2), (S, -2)]));
+    // U25 second step: 1 kg*m^2*s^-2 to j() is 1.
+    let joule = declared(&graph, j());
+    let energy = Quantity::new(
+        ratio(1, 1),
+        compound(&graph, &[(kg(), 1), (m(), 2), (s(), -2)]),
+    );
     let (conversion, _) = completed(&energy, &joule, UNLIMITED);
     assert_eq!(exact_value(&conversion), &ratio(1, 1));
     assert_eq!(conversion.unit(), &joule);
 
     // U26: 1 u2 to u1 is -9.
-    let u1 = declared(&graph, U1);
-    let (conversion, _) = completed(&quantity(&graph, U2, 1, 1), &u1, UNLIMITED);
+    let u1 = declared(&graph, u1());
+    let (conversion, _) = completed(&quantity(&graph, u2(), 1, 1), &u1, UNLIMITED);
     assert_eq!(exact_value(&conversion), &ratio(-9, 1));
     assert_eq!(conversion.unit(), &u1);
 
     // U09b: a distinct unit key under the same dimension converts exactly, and the source and
     // target unit identities stay distinct.
-    let alias = quantity(&graph, ALIAS, 7, 3);
+    let alias = quantity(&graph, alias(), 7, 3);
     let (conversion, _) = completed(&alias, &metre, UNLIMITED);
     assert_eq!(exact_value(&conversion), &ratio(7, 3));
     assert_eq!(conversion.unit(), &metre);
     assert_ne!(conversion.source().unit(), conversion.unit());
 
     // A negative composed scale converts exactly through the root: 1 rev is -1 m.
-    let (conversion, _) = completed(&quantity(&graph, REV, 1, 1), &metre, UNLIMITED);
+    let (conversion, _) = completed(&quantity(&graph, rev(), 1, 1), &metre, UNLIMITED);
     assert_eq!(exact_value(&conversion), &ratio(-1, 1));
 }
 
@@ -375,14 +435,20 @@ fn sweep_edges() -> Vec<(Fraction, Fraction)> {
         .collect()
 }
 
-/// One root `R` and two units `S` and `T` targeting it with the given edges.
+/// One root `R` and two units `s()` and `T` targeting it with the given edges.
 fn sweep_graph(source: (Fraction, Fraction), target: (Fraction, Fraction)) -> UnitGraph {
     UnitGraph::admit(
-        [(D_L, vec![])],
+        [(d_l(), vec![])],
         [
-            (M, root(D_L)),
-            (CM, to(D_L, M, source.0.rational(), source.1.rational())),
-            (IN, to(D_L, M, target.0.rational(), target.1.rational())),
+            (m(), root(d_l())),
+            (
+                cm(),
+                to(d_l(), m(), source.0.rational(), source.1.rational()),
+            ),
+            (
+                inch_key(),
+                to(d_l(), m(), target.0.rational(), target.1.rational()),
+            ),
         ],
     )
     .unwrap()
@@ -401,9 +467,9 @@ fn tc_201_exact_conversion_matches_an_independent_i128_rational_oracle_over_edge
     for source_edge in &edges {
         for target_edge in &edges {
             let graph = sweep_graph(*source_edge, *target_edge);
-            let target = declared(&graph, IN);
+            let target = declared(&graph, inch_key());
             for value in values {
-                let source = Quantity::new(value.rational(), declared(&graph, CM));
+                let source = Quantity::new(value.rational(), declared(&graph, cm()));
                 let (conversion, _) = completed(&source, &target, UNLIMITED);
                 // target(v) = (scale_s * v + offset_s - offset_t) / scale_t
                 let root_value = source_edge.0.mul(value).add(source_edge.1);
@@ -441,21 +507,21 @@ fn unapply_path(path: &[(Fraction, Fraction)], value: Fraction) -> Fraction {
 fn tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths() {
     let graph = graph();
     let f = |n, d| Fraction::new(n, d);
-    // Source-to-root edges of `X` (to degF, then to K) and of `W` (to X, to degF, to K); none of
+    // Source-to-root edges of `x()` (to degF, then to k()) and of `w()` (to x(), to degF, to k()); none of
     // the adjacent edges commute.
     let degf = (f(5, 9), f(45967, 180));
     let x_path = [(f(2, 1), f(3, 1)), degf];
     let w_path = [(f(3, 1), f(-1, 1)), (f(2, 1), f(3, 1)), degf];
     let u2_path = [(f(1, 1), f(-10, 1)), (f(1, 1), f(10, 1))];
     let cases = [
-        (X, &x_path[..], K, &[][..]),
-        (K, &[][..], X, &x_path[..]),
-        (W, &w_path[..], K, &[][..]),
-        (K, &[][..], W, &w_path[..]),
-        (X, &x_path[..], W, &w_path[..]),
-        (W, &w_path[..], X, &x_path[..]),
-        (W, &w_path[..], U2, &u2_path[..]),
-        (W, &w_path[..], DEGC, &[(f(1, 1), f(5463, 20))][..]),
+        (x(), &x_path[..], k(), &[][..]),
+        (k(), &[][..], x(), &x_path[..]),
+        (w(), &w_path[..], k(), &[][..]),
+        (k(), &[][..], w(), &w_path[..]),
+        (x(), &x_path[..], w(), &w_path[..]),
+        (w(), &w_path[..], x(), &x_path[..]),
+        (w(), &w_path[..], u2(), &u2_path[..]),
+        (w(), &w_path[..], degc(), &[(f(1, 1), f(5463, 20))][..]),
     ];
     for (source_unit, source_path, target_unit, target_path) in cases {
         for value in [f(1, 1), f(-7, 3), f(0, 1)] {
@@ -471,12 +537,16 @@ fn tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths() {
             );
         }
     }
-    // 1 X is 5163/20 K: 2 + 3 = 5 degF, then 5 * 5/9 + 45967/180.
-    let (conversion, _) = completed(&quantity(&graph, X, 1, 1), &declared(&graph, K), UNLIMITED);
+    // 1 x() is 5163/20 k(): 2 + 3 = 5 degF, then 5 * 5/9 + 45967/180.
+    let (conversion, _) = completed(
+        &quantity(&graph, x(), 1, 1),
+        &declared(&graph, k()),
+        UNLIMITED,
+    );
     assert_eq!(exact_value(&conversion), &ratio(5163, 20));
     let (conversion, _) = completed(
-        &quantity(&graph, K, 5163, 20),
-        &declared(&graph, X),
+        &quantity(&graph, k(), 5163, 20),
+        &declared(&graph, x()),
         UNLIMITED,
     );
     assert_eq!(exact_value(&conversion), &ratio(1, 1));
@@ -487,19 +557,19 @@ fn tc_201_exact_conversion_orders_the_edges_of_multi_edge_paths() {
 fn tc_201_exact_conversion_refuses_incompatible_dimensions_before_any_charge() {
     let graph = graph();
     let one = |unit| quantity(&graph, unit, 1, 1);
-    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(M, 2)]));
+    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(m(), 2)]));
     let cases: [(Quantity, QuantityUnit); 7] = [
         // U03-style: length to time.
-        (one(M), declared(&graph, S)),
+        (one(m()), declared(&graph, s())),
         // U09: a base dimension shaped like length under a different semantic-node key.
-        (one(M), declared(&graph, ALIKE_ROOT)),
-        (one(ALIKE_ROOT), declared(&graph, M)),
+        (one(m()), declared(&graph, alike_root())),
+        (one(alike_root()), declared(&graph, m())),
         // U22: distinct dimension nodes with equal base-dimension maps.
-        (one(N_M), declared(&graph, J)),
-        (one(J), declared(&graph, N_M)),
+        (one(n_m()), declared(&graph, j())),
+        (one(j()), declared(&graph, n_m())),
         // Compound 4 m^2 to the length unit m, and 1 m to the compound m^2.
-        (square, declared(&graph, M)),
-        (one(M), compound(&graph, &[(M, 2)])),
+        (square, declared(&graph, m())),
+        (one(m()), compound(&graph, &[(m(), 2)])),
     ];
     for (source, unit) in &cases {
         let (result, meter) = convert(source, unit, UNLIMITED);
@@ -508,7 +578,7 @@ fn tc_201_exact_conversion_refuses_incompatible_dimensions_before_any_charge() {
         assert_no_charge(&meter);
     }
     // The refusal precedes the identity read even under a zero budget.
-    let (result, meter) = convert(&one(M), &declared(&graph, S), limits(0, 0, 0, 0, 0, 0));
+    let (result, meter) = convert(&one(m()), &declared(&graph, s()), limits(0, 0, 0, 0, 0, 0));
     assert_eq!(
         result.unwrap_err().cause,
         IllTypedCause::IncompatibleDimensions
@@ -521,28 +591,28 @@ fn tc_201_exact_conversion_refuses_incompatible_dimensions_before_any_charge() {
 fn tc_201_exact_conversion_admits_affine_source_and_target_units() {
     let graph = graph();
     let (conversion, _) = completed(
-        &quantity(&graph, DEGC, 0, 1),
-        &declared(&graph, K),
+        &quantity(&graph, degc(), 0, 1),
+        &declared(&graph, k()),
         UNLIMITED,
     );
     assert_eq!(exact_value(&conversion), &ratio(5463, 20));
     let (conversion, _) = completed(
-        &quantity(&graph, U2, 1, 1),
-        &declared(&graph, U1),
+        &quantity(&graph, u2(), 1, 1),
+        &declared(&graph, u1()),
         UNLIMITED,
     );
     assert_eq!(exact_value(&conversion), &ratio(-9, 1));
-    // An affine target: 5463/20 K is 0 degC.
+    // An affine target: 5463/20 k() is 0 degC.
     let (conversion, _) = completed(
-        &quantity(&graph, K, 5463, 20),
-        &declared(&graph, DEGC),
+        &quantity(&graph, k(), 5463, 20),
+        &declared(&graph, degc()),
         UNLIMITED,
     );
     assert_eq!(exact_value(&conversion), &ratio(0, 1));
     // An affine source and an affine target of the same dimension: 32 degF is 0 degC.
     let (conversion, _) = completed(
-        &quantity(&graph, DEGF, 32, 1),
-        &declared(&graph, DEGC),
+        &quantity(&graph, degf(), 32, 1),
+        &declared(&graph, degc()),
         UNLIMITED,
     );
     assert_eq!(exact_value(&conversion), &ratio(0, 1));
@@ -554,8 +624,8 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     let graph = graph();
 
     // U10: 100 cm to m under the exact tuple returns 1, largest amount 8 at the multiply event.
-    let source = quantity(&graph, CM, 100, 1);
-    let metre = declared(&graph, M);
+    let source = quantity(&graph, cm(), 100, 1);
+    let metre = declared(&graph, m());
     let (conversion, meter) = completed(&source, &metre, limits(8, 0, 1, 1, 6, 1));
     assert_eq!(exact_value(&conversion), &ratio(1, 1));
     assert_eq!(meter.admitted_charge_points(), schedule(1, 2));
@@ -585,8 +655,8 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
 
     // U15 first tuple: 1 in to cm is 127/50 after one read, two edges and four events whose
     // amounts are 14, 15, 15 and 14.
-    let inch = quantity(&graph, IN, 1, 1);
-    let centimetre = declared(&graph, CM);
+    let inch = quantity(&graph, inch_key(), 1, 1);
+    let centimetre = declared(&graph, cm());
     let (conversion, meter) = completed(&inch, &centimetre, limits(15, 0, 2, 1, 9, 1));
     assert_eq!(exact_value(&conversion), &ratio(127, 50));
     assert_eq!(meter.admitted_charge_points(), schedule(2, 4));
@@ -627,8 +697,9 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
 
     // U22 first tuple: compound 4 m^2 to cm2 is 40000 after one read, one reverse edge and its
     // two events, whose largest amount is 17 at the divide.
-    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(M, 2)]));
-    let (conversion, meter) = completed(&square, &declared(&graph, CM2), limits(17, 0, 1, 1, 6, 1));
+    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(m(), 2)]));
+    let (conversion, meter) =
+        completed(&square, &declared(&graph, cm2()), limits(17, 0, 1, 1, 6, 1));
     assert_eq!(exact_value(&conversion), &ratio(40000, 1));
     assert_eq!(meter.admitted_charge_points(), schedule(1, 2));
     assert_consumed(
@@ -644,7 +715,7 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     );
 
     // U22 m2: one read, target admission and retention, no edge and no event.
-    let (conversion, meter) = completed(&square, &declared(&graph, M2), limits(3, 0, 0, 1, 3, 1));
+    let (conversion, meter) = completed(&square, &declared(&graph, m2()), limits(3, 0, 0, 1, 3, 1));
     assert_eq!(exact_value(&conversion), &ratio(4, 1));
     assert_eq!(meter.admitted_charge_points(), schedule(0, 0));
     assert_consumed(
@@ -660,10 +731,10 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
     );
 
     // U25: 1 N_m to the compound kg*m^2*s^-2 is exact 1 in that compound unit, then that
-    // result to J; each step is one read, target admission and retention with no edge.
+    // result to j(); each step is one read, target admission and retention with no edge.
     let tuple = limits(1, 0, 0, 1, 3, 1);
-    let torque = quantity(&graph, N_M, 1, 1);
-    let base_form = compound(&graph, &[(KG, 1), (M, 2), (S, -2)]);
+    let torque = quantity(&graph, n_m(), 1, 1);
+    let base_form = compound(&graph, &[(kg(), 1), (m(), 2), (s(), -2)]);
     let (first, meter) = completed(&torque, &base_form, tuple);
     assert_eq!(exact_value(&first), &ratio(1, 1));
     assert_eq!(first.unit(), &base_form);
@@ -680,17 +751,17 @@ fn tc_201_exact_conversion_charges_one_read_then_edges_then_events_then_target_t
         ],
     );
     let second_source = Quantity::new(exact_value(&first).clone(), first.unit().clone());
-    let (second, meter) = completed(&second_source, &declared(&graph, J), tuple);
+    let (second, meter) = completed(&second_source, &declared(&graph, j()), tuple);
     assert_eq!(exact_value(&second), &ratio(1, 1));
-    assert_eq!(second.unit(), &declared(&graph, J));
+    assert_eq!(second.unit(), &declared(&graph, j()));
     assert_eq!(meter.admitted_charge_points(), schedule(0, 0));
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 3);
 
-    // U26 first tuple: 1 u2 to u1 is -9 after one read, three edges (u2 to u1, u1 to K, K to
+    // U26 first tuple: 1 u2 to u1 is -9 after one read, three edges (u2 to u1, u1 to k(), k() to
     // u1) and six events, with no common-ancestor shortcut.
     let (conversion, meter) = completed(
-        &quantity(&graph, U2, 1, 1),
-        &declared(&graph, U1),
+        &quantity(&graph, u2(), 1, 1),
+        &declared(&graph, u1()),
         limits(6, 0, 3, 1, 12, 1),
     );
     assert_eq!(exact_value(&conversion), &ratio(-9, 1));
@@ -708,8 +779,8 @@ fn tc_201_exact_target_admission_carries_no_size_amount() {
     // raises no size counter above the rational events' high-water marks.
     let graph = graph();
     let (_, meter) = completed(
-        &quantity(&graph, CM, 100, 1),
-        &declared(&graph, M),
+        &quantity(&graph, cm(), 100, 1),
+        &declared(&graph, m()),
         limits(8, 0, 1, 1, 6, 1),
     );
     assert_eq!(meter.consumed(LimitKind::DecimalDigits), 0);
@@ -722,8 +793,8 @@ fn tc_201_exact_target_admission_carries_no_size_amount() {
 #[test]
 fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
     let graph = graph();
-    let degc = |value| quantity(&graph, DEGC, value, 1);
-    let (one, two) = (degc(1), degc(2));
+    let celsius_quantity = |value| quantity(&graph, degc(), value, 1);
+    let (one, two) = (celsius_quantity(1), celsius_quantity(2));
     let exponent = int(2);
     // U05: Add, Subtract, Multiply and Divide of 1 degC with 2 degC, and 1 degC squared.
     let operations = [
@@ -734,18 +805,18 @@ fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
         QuantityOperation::Power(&one, &exponent),
     ];
     // U20: `u1` and `u3` are affine by composed offset.
-    let (u1_one, u1_two) = (quantity(&graph, U1, 1, 1), quantity(&graph, U1, 2, 1));
-    let (u3, metre) = (quantity(&graph, U3, 1, 1), quantity(&graph, M, 1, 1));
+    let (u1_one, u1_two) = (quantity(&graph, u1(), 1, 1), quantity(&graph, u1(), 2, 1));
+    let (u3, metre) = (quantity(&graph, u3(), 1, 1), quantity(&graph, m(), 1, 1));
     let u20 = [
         QuantityOperation::Add(&u1_one, &u1_two),
         QuantityOperation::Multiply(&u3, &metre),
     ];
-    // The affine operand on the right: `1 m * 1 degC` is refused, and `1 K + 1 degC` is refused
+    // The affine operand on the right: `1 m * 1 degC` is refused, and `1 k() + 1 degC` is refused
     // as affine arithmetic, not as distinct units. (Extra evidence beyond the AC's left forms.)
     let (kelvin, one_metre, one_degc) = (
-        quantity(&graph, K, 1, 1),
-        quantity(&graph, M, 1, 1),
-        quantity(&graph, DEGC, 1, 1),
+        quantity(&graph, k(), 1, 1),
+        quantity(&graph, m(), 1, 1),
+        quantity(&graph, degc(), 1, 1),
     );
     let right = [
         QuantityOperation::Multiply(&one_metre, &one_degc),
@@ -763,13 +834,13 @@ fn tc_201_affine_arithmetic_is_refused_with_zero_charges() {
     }
 
     // `u2`'s offsets compose to zero, so it is not affine: 1 u2 + 2 u2 is exact 3 u2.
-    let (u2_one, u2_two) = (quantity(&graph, U2, 1, 1), quantity(&graph, U2, 2, 1));
+    let (u2_one, u2_two) = (quantity(&graph, u2(), 1, 1), quantity(&graph, u2(), 2, 1));
     let mut meter = Meter::new(limits(4, 0, 0, 2, 5, 1));
     let sum = evaluate_quantity(QuantityOperation::Add(&u2_one, &u2_two), &mut meter)
         .unwrap()
         .completed()
         .expect("a non-affine sum completes");
-    assert_eq!(sum, quantity(&graph, U2, 3, 1));
+    assert_eq!(sum, quantity(&graph, u2(), 3, 1));
     assert!(!meter
         .admitted_charge_points()
         .contains(&ChargePoint::UnitEdge));
@@ -782,8 +853,8 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
 
     // The first U10 tuple with `result_units` lowered to 0 denies `unit.result-retain`.
     let (denied, meter) = incomplete(
-        &quantity(&graph, CM, 100, 1),
-        &declared(&graph, M),
+        &quantity(&graph, cm(), 100, 1),
+        &declared(&graph, m()),
         limits(8, 0, 1, 1, 6, 0),
     );
     assert_eq!(
@@ -803,8 +874,8 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
 
     // The second U15 tuple: both edges are charged before the first rational event.
     let (denied, meter) = incomplete(
-        &quantity(&graph, IN, 1, 1),
-        &declared(&graph, CM),
+        &quantity(&graph, inch_key(), 1, 1),
+        &declared(&graph, cm()),
         limits(7, 0, 1, 1, 9, 1),
     );
     assert_eq!(
@@ -817,8 +888,8 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
     );
 
     // The second U22 tuple: denied at the divide event after the subtract event's 5.
-    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(M, 2)]));
-    let (denied, meter) = incomplete(&square, &declared(&graph, CM2), limits(16, 0, 1, 1, 6, 1));
+    let square = Quantity::new(ratio(4, 1), compound(&graph, &[(m(), 2)]));
+    let (denied, meter) = incomplete(&square, &declared(&graph, cm2()), limits(16, 0, 1, 1, 6, 1));
     assert_eq!(
         denied,
         record(
@@ -840,8 +911,8 @@ fn tc_201_denied_charge_is_incomplete_with_the_denied_fields_and_no_partial_quan
 
     // The second U26 tuple: no common-ancestor shortcut, so three edges are needed.
     let (denied, meter) = incomplete(
-        &quantity(&graph, U2, 1, 1),
-        &declared(&graph, U1),
+        &quantity(&graph, u2(), 1, 1),
+        &declared(&graph, u1()),
         limits(6, 0, 2, 1, 12, 1),
     );
     assert_eq!(

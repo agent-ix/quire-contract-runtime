@@ -16,8 +16,9 @@ use quire_exact::{
     Charge, ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, LimitKind, Meter, Outcome,
 };
 
-use super::node::{is_identifier, refuse, InvalidSemanticGraph, NodeKey, SemanticGraphCause};
+use super::node::{is_identifier, refuse, InvalidSemanticGraph, SemanticGraphCause};
 use super::stop::{OutcomeStop, Stop};
+use quire_exact::NodeKey;
 
 /// An admitted enum declaration node.
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -2,6 +2,7 @@
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use quire_exact::NodeKey;
 #[path = "support/charge_points.rs"]
 mod charge_points;
 use charge_points::ChargePoints;
@@ -11,7 +12,7 @@ use proptest::prelude::*;
 use quire_contract_runtime::exact::{
     CollectionType, Component, CompositeDeclaration, CompositeShape, ConstructionCause,
     ConstructionRefusal, EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule,
-    FieldDeclaration, FieldValue, NodeKey, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
+    FieldDeclaration, FieldValue, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
     OptionValue, Presence, Quantity, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph,
     Value, ValueType,
 };
@@ -36,7 +37,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 };
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn consumed(meter: &Meter) -> Vec<u64> {

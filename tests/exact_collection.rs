@@ -2,6 +2,7 @@
 //! through the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use quire_exact::NodeKey;
 use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
@@ -14,7 +15,7 @@ use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     construct_collection, form_collection, CollectionType, Component, CompositeDeclaration,
     CompositeShape, ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue,
-    NodeKey, Presence, TypeEnvironment, Value, ValueType,
+    Presence, TypeEnvironment, Value, ValueType,
 };
 use quire_exact::{
     BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, Decimal,
@@ -36,7 +37,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 };
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn consumed(meter: &Meter) -> Vec<u64> {

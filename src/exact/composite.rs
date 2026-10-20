@@ -30,10 +30,10 @@ use quire_exact::{
 
 use super::collection::{CollectionType, CollectionValue};
 use super::enumeration::EnumValue;
-use super::node::NodeKey;
 use super::quantity::{Quantity, QuantityUnit};
 use super::reference::ObjectReference;
 use super::stop::{OutcomeStop, Stop};
+use quire_exact::NodeKey;
 
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.

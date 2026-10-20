@@ -4,11 +4,11 @@
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, NodeKey,
-    PackageRefusalCode, SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph,
-    COMPOUND_UNIT_DOMAIN, NODE_KEY_DOMAIN,
+    CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, PackageRefusalCode,
+    SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
 };
-use quire_exact::{Integer, Rational};
+use quire_exact::NodeKey;
+use quire_exact::{Integer, Rational, NODE_KEY_DOMAIN};
 
 #[trace("TC-033", "FR-012-AC-6")]
 #[test]
@@ -18,11 +18,36 @@ fn tc_033_runtime_has_no_local_node_key_constructor() {
     assert!(!node_source.contains("pub struct NodeKey"));
     assert!(!node_source.contains("fn from_bytes"));
     assert!(!node_source.contains("fn from_hex"));
-    assert!(!exact_surface.contains("pub use node::{InvalidSemanticGraph, NodeKey"));
+    assert!(!exact_surface.contains("NodeKey"));
+    assert!(!exact_surface.contains("NODE_KEY_DOMAIN"));
+    for source in [
+        include_str!("../src/exact/boolean.rs"),
+        include_str!("../src/exact/collection.rs"),
+        include_str!("../src/exact/composite.rs"),
+        include_str!("../src/exact/containment.rs"),
+        include_str!("../src/exact/definition.rs"),
+        include_str!("../src/exact/division.rs"),
+        include_str!("../src/exact/enumeration.rs"),
+        include_str!("../src/exact/equality.rs"),
+        include_str!("../src/exact/expression.rs"),
+        include_str!("../src/exact/ieee.rs"),
+        include_str!("../src/exact/key.rs"),
+        include_str!("../src/exact/node.rs"),
+        include_str!("../src/exact/quantity.rs"),
+        include_str!("../src/exact/reference.rs"),
+        include_str!("../src/exact/stop.rs"),
+        include_str!("../src/exact/unit.rs"),
+    ] {
+        let source = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(!source.contains("NodeKey::from_digest("));
+        assert!(!source.contains("NodeKey::decode_admitted("));
+        assert!(!source.contains("NodeKey::from_hex("));
+        assert!(!source.contains("NodeKey::from_bytes("));
+    }
 }
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn int(value: i128) -> Integer {
@@ -374,56 +399,6 @@ fn tc_033_structural_inputs_never_raise_a_compiler_admission_cause() {
             !compiler_admission(cause),
             "{cause:?} is a compiler-admission cause"
         );
-    }
-}
-
-#[trace("TC-033", "FR-012-AC-1")]
-#[test]
-fn tc_033_from_hex_accepts_exactly_64_lowercase_hex_digits() {
-    let valid = "0123456789abcdef".repeat(4);
-    assert_eq!(valid.len(), 64);
-    assert!(NodeKey::from_hex(&valid).is_some());
-
-    assert_eq!(NodeKey::from_hex(&"0".repeat(63)), None, "63 digits");
-    assert_eq!(NodeKey::from_hex(&"0".repeat(65)), None, "65 digits");
-    assert_eq!(NodeKey::from_hex(""), None, "empty");
-
-    let mut uppercase = "0".repeat(64);
-    uppercase.replace_range(63..64, "A");
-    assert_eq!(NodeKey::from_hex(&uppercase), None, "uppercase digit");
-
-    let mut non_hex = "0".repeat(64);
-    non_hex.replace_range(63..64, "g");
-    assert_eq!(NodeKey::from_hex(&non_hex), None, "non-hex ASCII byte");
-
-    // 62 ASCII '0' bytes plus the two UTF-8 bytes of 'é': 64 bytes, but the trailing byte pair is
-    // not a hex digit pair.
-    let non_ascii = format!("{}{}", "0".repeat(62), 'é');
-    assert_eq!(non_ascii.len(), 64);
-    assert_eq!(NodeKey::from_hex(&non_ascii), None, "non-ASCII byte");
-}
-
-#[trace("TC-033", "FR-012-AC-1")]
-#[test]
-fn tc_033_digest_round_trips_through_bytes_hex_and_display() {
-    let digests: [[u8; 32]; 3] = [
-        [0_u8; 32],
-        [0xff_u8; 32],
-        std::array::from_fn(|index| index as u8),
-    ];
-    for digest in digests {
-        let parsed_key = NodeKey::from_bytes(digest);
-        assert_eq!(parsed_key.as_bytes(), &digest);
-
-        let text = parsed_key.to_string();
-        assert_eq!(text.len(), 64);
-        assert!(text
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
-
-        let round_tripped = NodeKey::from_hex(&text).unwrap();
-        assert_eq!(round_tripped, parsed_key);
-        assert_eq!(round_tripped.as_bytes(), &digest);
     }
 }
 

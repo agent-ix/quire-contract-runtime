@@ -2,6 +2,7 @@
 //! through the public `exact` surface.
 #![cfg(feature = "exact")]
 
+use quire_exact::NodeKey;
 use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
@@ -15,8 +16,7 @@ use quire_contract_runtime::exact::{
     form_collection, CollectionType, Component, CompositeDeclaration, CompositeShape,
     ConstructionCause, ConstructionRefusal, DeclarationCause, FieldDeclaration, FieldExpression,
     FieldValue, GraphCause, GraphNode, GraphNodeId, GraphRefusal, GraphSlot, InvalidDeclaration,
-    NodeKey, ObjectTypeDeclaration, Presence, RecursionEdges, TypeEnvironment, Value, ValueGraph,
-    ValueType,
+    ObjectTypeDeclaration, Presence, RecursionEdges, TypeEnvironment, Value, ValueGraph, ValueType,
 };
 use quire_exact::{
     CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, IeeeWidth, IllTyped,
@@ -72,7 +72,7 @@ fn deferred_record_value_outside_declared_type_has_precise_cause() {
 }
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn consumed(meter: &Meter) -> Vec<u64> {

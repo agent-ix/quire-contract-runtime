@@ -107,7 +107,7 @@ pub use ieee::{
     negotiate_ieee, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause,
 };
-pub use node::{InvalidSemanticGraph, NodeKey, SemanticGraphCause, NODE_KEY_DOMAIN};
+pub use node::{InvalidSemanticGraph, SemanticGraphCause};
 pub use quantity::{
     compare_quantity, convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity,
     QuantityOperation, QuantityTarget, QuantityUnit,

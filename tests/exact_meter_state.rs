@@ -8,6 +8,7 @@
 //! division counters, IEEE flag order) left with the kernel to `quire-exact` (FR-275).
 #![cfg(feature = "exact")]
 
+use quire_exact::NodeKey;
 use std::cell::Cell;
 
 #[path = "support/charge_points.rs"]
@@ -17,7 +18,7 @@ use charge_points::ChargePoints;
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     evaluate_boolean_short_circuit, evaluate_quantity, CompoundUnit, CompoundUnitCause,
-    InvalidCompoundUnit, InvalidSemanticGraph, NodeKey, Quantity, QuantityOperation, QuantityUnit,
+    InvalidCompoundUnit, InvalidSemanticGraph, Quantity, QuantityOperation, QuantityUnit,
     SemanticGraphCause, ShortCircuitConnective, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
@@ -50,7 +51,7 @@ fn int(value: i128) -> Integer {
 fn key(byte: u8) -> NodeKey {
     let mut bytes = [0_u8; 32];
     bytes[31] = byte;
-    NodeKey::from_bytes(bytes)
+    NodeKey::from_digest(bytes)
 }
 
 #[trace("TC-032", "FR-011-AC-2")]

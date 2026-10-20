@@ -21,7 +21,7 @@ use quire_exact::UniverseId;
 use super::composite::{
     fill_slots, ConstructionRefusal, FieldValue, ObjectTypeDeclaration, TypeEnvironment, Value,
 };
-use super::node::NodeKey;
+use quire_exact::NodeKey;
 
 /// A declared object identity in its canonical identity bytes.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
