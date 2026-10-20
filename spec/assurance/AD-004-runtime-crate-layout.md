@@ -291,8 +291,8 @@ Still missing for this crate, each stated to QSL below: the evaluation leaf's IR
 IR-590 usable `no_std` implementation (Q-1); RT's `CheckingLimits::depth`,
 `DepthAboveMaximum` and `MAX_CALL_DEPTH` are obsolete under QSL FR-262's work-fuel-only call rule
 (the FR-273 amendment is separate IR-512 work);
-`PackageCause` lacks three variants RT has (`RevisionMismatch`,
-`DigestDomainMismatch`, `ByteDigestMismatch`); the injected denial is not single-shot and `occurrence`
+R-3 is now decided below: RT's three extra `PackageCause` variants retire, rather than move to
+QSV. The injected denial is not single-shot and `occurrence`
 admits zero (FR-010-AC-5, AC-6); `Origin` and `Location` are defined twice by QSL, in `quire-exact` as a
 provenance pair (node key and occurrence) and in `quire-semantic-value` as the call-path pair this
 crate's function application uses (the two crates' `Origin` and `Location` differ from each other;
@@ -446,7 +446,7 @@ as one compileable step-4 slice: RT deletes `src/exact/node.rs`, uses QSV's
 `InvalidSemanticGraph` and `SemanticGraphCause` directly in its remaining unit
 and enum code, and exposes no replacement alias or re-export. The locked QSV
 `PackageCause` has three variants while RT's definition vocabulary carries six;
-`definition.rs` cannot leave in this slice without dropping three causes.
+the later R-3 decision below retires the three extras before `definition.rs` leaves.
 CG main's `tests/exact_scalar_support/agreement_cases.rs` and `agreement.rs`
 still use `rt::InvalidSemanticGraph` and `rt::SemanticGraphCause`; those
 imports must move to `quire_semantic_value::semantic_node` when CG's RT lock
@@ -482,10 +482,24 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 
 IR-882's subsequent enum-owner slice removes `src/exact/enumeration.rs` and its RT re-export;
 tests that still exercise enum declaration admission import QSV directly. The quantity and
-unit residue, definition-vocabulary R-3 gap, and evaluation-leaf dependency remain.
-The following independent slice removes RT's private `src/exact/stop.rs` carrier and conversion
-trait; Boolean, quantity and function application code use QSV's `Stop`, `outcome_from_stop` and
-`outcome_into_stop` directly. This does not resolve the remaining residue dependencies.
+unit residue and evaluation-leaf dependency remain. The following independent slice removes
+RT's private `src/exact/stop.rs` carrier and conversion trait; Boolean, quantity and function
+application code use QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The
+definition code cutover can follow the R-3 decision below because QSV's owner FR has landed.
+
+R-3 is decided from an RT source/test/spec use audit: `RevisionMismatch`,
+`DigestDomainMismatch` and `ByteDigestMismatch` had no RT producer, consumer or test in the
+source audit. They appeared in `src/exact/definition.rs` and this AD before this amendment;
+FR-012 and FR-275 now name them to specify their retirement. QSpec FR-272 assigns digest
+mismatch causes to `stale_dependency`, so the RT `invalid_package` pairing is invalid. The
+three extras retire;
+QSV's `PackageCause` keeps `MissingMember`, `ConflictingDefinition` and
+`IncompatibleDefinition`. QSV FR-125 and TC-924 now establish their spellings, valid pairing and
+tests. RT's next code cutover deletes its local `PackageCause`, `PackageRefusal` and
+`PackageRefusalCode` with `definition.rs` and consumes QSV's types directly. QSV already exports
+`SelectionRefusalCode::ALL`, `from_code` and `as_str`, and `PackageRefusalCode::as_str`, the only
+helpers RT's remaining vocabulary tests use. FR-012-AC-7 inspects the cutover; no adapter or
+compatibility path is planned.
 
 Q-1 to Q-4 and Q-6 are answered. The answers are the owner's, given in the IR planner's session on
 2026-10-04 and recorded verbatim by the planner on IR-349 (Q-1 to Q-4), IR-346 and IR-582 (Q-6).
@@ -521,7 +535,8 @@ CG and RT value-bearing cutover (IR-882).
 
 To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldDeclaration` per name across
 `quire-exact` and `quire-semantic-value`; R-2 superseded by QSL FR-262's work-fuel-only call rule,
-with RT FR-273 correction owned by IR-512; R-3 the `PackageCause` variants, or their retirement; R-4 the injected denial
+with RT FR-273 correction owned by IR-512; R-3 decided above (retire RT's three extra
+`PackageCause` variants, then consume QSV directly); R-4 the injected denial
 single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
 behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and QSL ADR-012's contrary RT rows requiring QSL draft PR #1070 to land with or before this PR; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
 

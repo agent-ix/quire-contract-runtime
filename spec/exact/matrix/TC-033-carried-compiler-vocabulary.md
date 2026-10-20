@@ -30,6 +30,11 @@ preserved below as historical FR-012-AC-1 text.
 4. Drive RT `UnitGraph::admit` and `check_terms`, and QSV `EnumDeclaration::new` and
    `EnumDeclaration::member`, into their structural `SemanticGraphCause` outcomes.
 5. Build `Dimension` and `CompoundUnit` from the same terms in several orders; compare and iterate.
+6. After the R-3 definition cutover, inspect RT library source for local definitions, aliases,
+   re-exports or adapters of `PackageCause`, `PackageRefusal` and `PackageRefusalCode`; check that
+   RT's selection and package refusal callers import QSV's definition owner directly. Confirm the
+   retired `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` variants do not
+   occur on RT's `invalid_package` surface, and repeat step 3 through the QSV types.
 
 ## Retired Procedure (FR-012-AC-1)
 
@@ -44,3 +49,5 @@ RT has no local `NodeKey` type, alias, constructor, hex decoder or public re-exp
 source contains no `NodeKey` construction. The retired parser and round-trip tests are absent.
 The remaining vocabulary spellings are byte-exact, every structural cause is reachable, no
 compiler-admission cause is, and normalized unit values are order-independent.
+The R-3 step is planned until its owner contract and RT code cutover land; then RT has no local
+definition refusal vocabulary and the three retired causes cannot be paired with `invalid_package`.
