@@ -45,4 +45,4 @@ RT SHALL consume QSV's checked equality and `quire_exact::Value` directly, delet
 
 ## Status
 
-PLANNED: QSL changes QSV's evaluator to the result-bearing quire-exact kernel seam; RT deletes its local equality evaluator, pair walker and `Value` under FR-275, then adds and tags TC-203 consumer controls. No test may be tagged FR-277-AC-1 before that consumed path is in place. FR-277-AC-7 remains PLANNED in titan:kani:plan. FR-277-AC-8 (inspection) stays PLANNED until the QSV direct kernel call lands and RT's copy is gone.
+PLANNED for RT: QSV's evaluator uses the result-bearing quire-exact kernel seam as of QSV merge 9f1453a3. RT still must delete its local equality evaluator, pair walker and `Value` under FR-275, then add and tag TC-203 consumer controls. No test may be tagged FR-277-AC-1 before that consumed path is in place. FR-277-AC-7 remains PLANNED in titan:kani:plan. FR-277-AC-8 (inspection) stays PLANNED until RT's copy is gone and its lock consumes the QSV change.
