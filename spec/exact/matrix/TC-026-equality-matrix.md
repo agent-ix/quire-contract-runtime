@@ -10,9 +10,10 @@ relationships:
 
 ## Description
 
-Check `check_equality`, RT's current `plan_equality`, `CheckedEquality::evaluate` over
-RT's current `Value`, and terminal `Reference<T>`
-identity. Evidence: `tests/exact_equality.rs` and `src/exact/equality.rs` unit tests (`--features exact`). A Kani proof of the
+Check QSV's `check_equality`, quire-exact's `plan_equality`, QSV's
+`CheckedEquality::evaluate` over `quire_exact::Value`, and terminal `Reference<T>`
+identity through RT consumer tests. Evidence: `tests/exact_equality.rs`
+(`--features exact`), with no RT-local evaluator or pair walker. A Kani proof of the
 plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked as IR-241 (Linear).
 
 ## Test Procedure
@@ -31,8 +32,8 @@ plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked a
    `equality.plan-form`, `equality.plan`, one `equality.pair` per planned pair and
    `equality.result-retain`, all before the Boolean result is exposed. Evaluate a top-level text,
    enum and quantity pair and check each runs its own schedule instead.
-4. Check RT's current `ObjectReference` carries exactly its supplied `(UniverseId, NodeKey, ObjectIdentity)`
-   triple, that equality never reads or requires the referenced object's attributes, and that no
+4. Check the consumed kernel `ObjectReference` carries exactly its supplied
+   `(UniverseId, EffectiveId, ObjectId)` triple, that equality never reads or requires the referenced object's attributes, and that no
    record, tuple or collection constructor accepts a component value in place of a supplied
    reference.
 5. Inject a denial at each of `equality.plan-form`, `equality.plan`, `equality.pair` and
@@ -40,7 +41,7 @@ plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked a
 6. For generated `Boolean`, `Integer`, `Option`, bounded `Sequence` and tuple-record composite
    operands, check that the planned pair count equals an independently computed occurrence-pair
    count and the number of admitted `equality.pair` charges.
-7. Exercise checked equality operands that fail source admission, receive a nonintegral decimal
+7. Exercise QSV checked equality operands that fail source admission, receive a nonintegral decimal
    during integer conversion, reach no conversion shape, or fail target admission; assert the four
    distinct FR-369 causes. Reject a quantity conversion across incompatible dimensions and assert
    `EqualityQuantityConversionRejected` retains `IllTypedCause::IncompatibleDimensions`. Feed a
@@ -55,5 +56,12 @@ charged in the declared order; a cross-universe reference pair refuses by name, 
 inequality; references carry no inspected state; every injected denial fires with no partial result,
 and `CheckedInvariant` is unreachable from every admitted vector in this test's corpus. Deliberate
 collection/value kind mismatches carry their specified typed causes. Over generated
-composite values, `plan_equality`'s predicted pair count, an independently computed occurrence-pair
-count, and the number of `equality.pair` charges `CheckedEquality::evaluate` admits always agree.
+composite values, kernel `plan_equality`'s predicted pair count, an independently computed occurrence-pair
+count, and the number of `equality.pair` charges QSV `CheckedEquality::evaluate` admits always agree.
+
+## Status
+
+PLANNED for IR-882. The existing `tests/exact_equality.rs` and RT unit tests
+still exercise RT's local evaluator; they do not verify this consumed QSV
+procedure until the value-bearing cutover changes the tests and removes that
+source. Existing trace tags must not be read as QSV-path evidence yet.

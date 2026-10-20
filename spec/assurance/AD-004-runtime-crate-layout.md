@@ -395,14 +395,15 @@ CG PR that adopts the new paths.
 IR-882 specifies step 4; its first code slice requires Q-5 to be answered. At this boundary the value owner is
 `quire_exact::Value`, including its `Arc`-backed option, composite and collection
 nodes. RT deletes the distinct `src/exact/composite.rs` `Value` enum, its
-`repr(u64)` layout choice, `src/exact/equality.rs` `planned_equality` and
+`repr(u64)` layout choice, its entire `src/exact/equality.rs` evaluator and
 `plan_pairs`, and the RT membership walker in `src/exact/collection.rs`.
-The `CheckedEquality::evaluate` path calls
-`quire_exact::planned_equality_with_plan`; collection formation and membership
-use kernel operations. Containment and enumeration construct and carry the
-same kernel values. No conversion layer, alias, old-`Value` re-export or
-second pair traversal is a step-4 output. FR-277-AC-1 stays planned until
-the production evaluator executes that kernel call.
+RT consumes QSV's `CheckedEquality::evaluate` over `quire_exact::Value`;
+QSV's plan schedule calls `quire_exact::planned_equality_with_plan` and owns
+the result-bearing evaluator. Collection formation and membership use kernel
+operations. Containment and enumeration construct and carry the same kernel
+values. No conversion layer, alias, old-`Value` re-export or second pair
+traversal is a step-4 output. FR-277-AC-1 stays planned until the locked QSV
+evaluator executes that kernel call and RT's duplicate is gone.
 
 Compound-unit identity in step 4 has one owner: `quire-semantic-value` (QSV).
 Its `QuantityUnit::Compound` holds QSV's `CompoundUnit`, whose normalized

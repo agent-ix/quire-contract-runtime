@@ -17,8 +17,9 @@ relationships:
 Where the `exact` feature is enabled, the runtime shall take the exact value kernel from the one
 `quire-exact` crate (the kernel crate, QSL ADR-011 X-1, now in the `agent-ix/quire-exact` repository) and shall hold no copy,
 port or re-implementation of any item `quire-exact` exports. The runtime shall remove
-its distinct `Value` enum, `planned_equality`, `plan_pairs` and collection membership
-walker; its checked evaluator shall accept `quire_exact::Value` directly and call
+its distinct `Value` enum, `CheckedEquality` evaluator, `planned_equality`,
+`plan_pairs` and collection membership walker; it shall consume QSV's
+`CheckedEquality::evaluate` over `quire_exact::Value` directly. The QSV evaluator shall call
 `quire_exact::planned_equality_with_plan` for its planned pair schedule. The runtime shall define
 no conversion layer or old-`Value` re-export. The end state also holds
 no ported QSL code at all: it is reached via `quire-exact`, `quire-semantic-value` (QSL-358),
@@ -164,7 +165,7 @@ crates that the runtime consumes.
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-275-AC-1 | With `exact` enabled, no public item the runtime defines (in `scalar` or any other module) has the name of an item that `quire-exact` or `quire-semantic-value` exports. | Inspection (TC-197) |
-| FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined second `Value`, pair walker or membership walker, `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, copy of `UnitTable`, `TypeEnvironment`, `EnumMemberIndex` or `EnumDeclaration`, conversion layer, adapter or old-`Value` re-export. Quantity, enum and reference payloads use the QSV owners directly. | Inspection (TC-197) |
+| FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined second `Value`, `CheckedEquality` evaluator, pair walker or membership walker, `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, copy of `UnitTable`, `TypeEnvironment`, `EnumMemberIndex` or `EnumDeclaration`, conversion layer, adapter or old-`Value` re-export. Quantity, enum, reference and checked-equality paths use the QSV owners directly. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`. | Test (TC-197, `make deny`) |
