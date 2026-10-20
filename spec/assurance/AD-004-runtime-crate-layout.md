@@ -388,7 +388,7 @@ CG PR that adopts the new paths.
 | 1 | Spec only; needs no ticket. Amend Group 1 only, the statements that hold today: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim-copy Open question stays open (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
 | 2 | IR-582 delivered the repositories and `quire-exact` already uses its own repository. Add optional `quire-semantic-value` under `exact` (`Cargo.toml`, lock); admit the three own-repository Git sources and their scoped licences in `deny.toml`; remove the QSL-repository `allow-git` and the 14 name bans; amend Group 2, TC-197 through TC-199 and `CLAUDE.md`; require the QSL source rejection in `make deny-mutations` and keep the footprint graph free of the shared crates. No runtime source deletion or semantic behavior claim | none | G, with `deny-mutations` green; the script proves the QSL Git source is rejected |
 | 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `scripts/check_kani_mutations.py` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4), and interface-001's `compatibility.enums: non-exhaustive` statement is amended in this step to match | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
-| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration`; retire the original FR-012-AC-1 at this step and remove TC-033's local parser/round-trip tests; inspect the deletion under FR-012-AC-6 | the different-declaration use sites, the three serializable mirrors and paired CG changes: generated `WireNodeId` literals are converted only by QSL's admitted-node-table lookup through ADR-011 E4 and its `replay` facade. RT holds shared `NodeKey`s in `quire_exact::Value` but constructs none in library code; CG constructs none. Test-only RT fixtures may use `NodeKey::from_digest([u8; 32])`, preferably with an admitted-package key when lookup must succeed | G; Q-5 answered |
+| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration`; use QSV's compound-unit identity path described below; retire the original FR-012-AC-1 at this step and remove TC-033's local parser/round-trip tests; inspect the deletion under FR-012-AC-6 | the different-declaration use sites, the three serializable mirrors and paired CG changes: generated `WireNodeId` literals are converted only by QSL's admitted-node-table lookup through ADR-011 E4 and its `replay` facade. RT holds shared `NodeKey`s in `quire_exact::Value` but constructs none in library code; CG constructs none. Test-only RT fixtures may use `NodeKey::from_digest([u8; 32])`, preferably with an admitted-package key when lookup must succeed | G; Q-5 answered |
 | 5 | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
 | 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
 
@@ -403,6 +403,45 @@ use kernel operations. Containment and enumeration construct and carry the
 same kernel values. No conversion layer, alias, old-`Value` re-export or
 second pair traversal is a step-4 output. FR-277-AC-1 stays planned until
 the production evaluator executes that kernel call.
+
+Compound-unit identity in step 4 has one owner: `quire-semantic-value` (QSV).
+Its `QuantityUnit::Compound` holds QSV's `CompoundUnit`, whose normalized
+root-unit terms determine a compound-arm `quire_exact::UnitId` through
+`CompoundUnit::id`. A declared unit uses the declared arm from its admitted
+unit node. The arms remain distinct even if their bytes match. QSV's
+`IdentifiedUnit::new` computes and carries the unit and its typed ID together;
+`UnitScope::form` retains a formed compound unit under that ID, and
+`UnitScope::resolve` reads a kernel `Quantity`'s `UnitId` back to its owning
+`QuantityUnit`. The package's `UnitTable` supplies admitted declared units.
+If compound ID construction refuses, evaluation returns QSV's identity
+refusal without a quantity or an unresolvable ID. RT deletes its boxed
+`CompoundUnit`, `QuantityUnit`, `Quantity`, unit graph and conversion code in
+this cutover; it does not compute a digest, mint a second ID, maintain a
+parallel unit table, or translate between old and shared unit types.
+
+Step-4 acceptance uses FR-275-AC-23 and TC-201. QSV currently returns a
+`Conversion`, not a kernel `Quantity`, from `convert_quantity`; its public
+`Conversion` accessors alone do not retain the target under a `UnitId`.
+Before RT's value-bearing cutover, QSV must provide an owner-side exact-result
+construction operation, proposed as
+`Conversion::exact_quantity(&self) -> Result<Option<(quire_exact::Quantity, IdentifiedUnit)>, IdentityRefusal>`.
+For `ConvertedValue::Exact`, it clones the exact magnitude and the conversion's
+target `QuantityUnit`, constructs `IdentifiedUnit::new(target)` once, and returns
+`Quantity::new(magnitude, identified.id())` paired with that identified unit.
+For a non-exact result it returns `Ok(None)`; if target identity construction
+refuses, it returns that typed refusal and no quantity or identified unit.
+It performs no meter charge: the completed conversion already charged target
+admission and result retention. QSV's `src/declaration.rs` already pairs an
+exact converted magnitude with a target ID when forming `Value::Quantity`,
+but has no public operation for this handoff today. The QSV owner must settle
+the proposed public name and signature before the step-4 implementation;
+the semantics above are the required boundary, with no RT helper or adapter.
+For TC-187 U25, `UnitScope::form` retains the returned `IdentifiedUnit`,
+`UnitScope::resolve(&quantity)` supplies the next conversion's source, and
+the second conversion returns exact `1 J`. FR-007-AC-21 and AC-23 already cover
+compound-side dimension refusal, the first conversion's empty target path,
+the charge order and both U25 steps. Those behavioral results remain the
+oracles after TC-201 binds to QSV; no second conversion rule is introduced.
 
 The semantic-node refusal vocabulary has no `Value` edge. It can leave first
 as one compileable step-4 slice: RT deletes `src/exact/node.rs`, uses QSV's
