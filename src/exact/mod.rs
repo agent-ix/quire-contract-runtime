@@ -46,7 +46,6 @@ mod division;
 mod expression;
 mod ieee;
 mod quantity;
-mod stop;
 mod unit;
 
 pub use boolean::{evaluate_boolean_short_circuit, ShortCircuitConnective};

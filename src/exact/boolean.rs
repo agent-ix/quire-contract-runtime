@@ -8,7 +8,7 @@
 
 use quire_exact::{retain_boolean, Meter, Outcome};
 
-use super::stop::{OutcomeStop, Stop};
+use quire_semantic_value::stop::{outcome_from_stop, outcome_into_stop, Stop};
 
 /// A short-circuiting Boolean connective kind: `and`, `or` or `implies`.
 ///
@@ -38,7 +38,7 @@ pub fn evaluate_boolean_short_circuit(
     right: impl FnOnce() -> Outcome<bool>,
     meter: &mut Meter,
 ) -> Outcome<bool> {
-    Outcome::from_stop(short_circuit(connective, left, right, meter))
+    outcome_from_stop(short_circuit(connective, left, right, meter))
 }
 
 fn short_circuit(
@@ -58,7 +58,7 @@ fn short_circuit(
     let result = match decided {
         Some(result) => result,
         None => {
-            let right_value = right().into_stop()?;
+            let right_value = outcome_into_stop(right())?;
             match connective {
                 ShortCircuitConnective::And => left && right_value,
                 ShortCircuitConnective::Or => left || right_value,

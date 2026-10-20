@@ -483,6 +483,9 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 IR-882's subsequent enum-owner slice removes `src/exact/enumeration.rs` and its RT re-export;
 tests that still exercise enum declaration admission import QSV directly. The quantity and
 unit residue, definition-vocabulary R-3 gap, and evaluation-leaf dependency remain.
+The following independent slice removes RT's private `src/exact/stop.rs` carrier and conversion
+trait; Boolean, quantity and function application code use QSV's `Stop`, `outcome_from_stop` and
+`outcome_into_stop` directly. This does not resolve the remaining residue dependencies.
 
 Q-1 to Q-4 and Q-6 are answered. The answers are the owner's, given in the IR planner's session on
 2026-10-04 and recorded verbatim by the planner on IR-349 (Q-1 to Q-4), IR-346 and IR-582 (Q-6).
