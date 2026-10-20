@@ -82,7 +82,6 @@ fn energy_graph() -> UnitGraph {
     UnitGraph::from_checked_nodes(&dimensions, &units).unwrap()
 }
 
-/// Trace: FR-275-AC-23
 #[trace("TC-201", "FR-275-AC-23")]
 #[test]
 fn tc_201_qsv_handoff_resolves_compound_unit_for_second_conversion() {
@@ -149,7 +148,6 @@ fn tc_201_qsv_handoff_resolves_compound_unit_for_second_conversion() {
     assert!(!exact_module.contains("mod unit;"));
 }
 
-/// Trace: FR-275-AC-23
 #[trace("TC-201", "FR-275-AC-23")]
 #[test]
 fn tc_201_qsv_nonexact_handoff_refuses_without_charging() {

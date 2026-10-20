@@ -109,7 +109,6 @@ fn quantity(unit: u8, numerator: i64, denominator: i64) -> Quantity {
     Quantity::new(ratio(numerator, denominator), UnitId::declared(key(unit)))
 }
 
-/// Trace: FR-007-AC-20, FR-007-AC-22
 #[trace("TC-201", "FR-007-AC-20", "FR-007-AC-22")]
 #[test]
 fn tc_201_qsv_exact_conversion_composes_declared_and_affine_paths() {
@@ -156,7 +155,6 @@ fn tc_201_qsv_exact_conversion_composes_declared_and_affine_paths() {
     assert_eq!(converted.value(), &ConvertedValue::Exact(ratio(4, 1)));
 }
 
-/// Trace: FR-007-AC-20
 #[trace("TC-201", "FR-007-AC-20")]
 #[test]
 fn tc_201_qsv_fraction_sweep_matches_independent_centimetre_oracle() {
@@ -180,7 +178,6 @@ fn tc_201_qsv_fraction_sweep_matches_independent_centimetre_oracle() {
     }
 }
 
-/// Trace: FR-007-AC-20
 #[trace("TC-201", "FR-007-AC-20")]
 #[test]
 fn tc_201_qsv_scale_and_offset_sweep_matches_independent_i128_oracle() {
@@ -238,7 +235,6 @@ fn tc_201_qsv_scale_and_offset_sweep_matches_independent_i128_oracle() {
     }
 }
 
-/// Trace: FR-007-AC-21
 #[trace("TC-201", "FR-007-AC-21")]
 #[test]
 fn tc_201_qsv_incompatible_dimensions_refuse_before_charge() {
@@ -269,7 +265,6 @@ fn tc_201_qsv_incompatible_dimensions_refuse_before_charge() {
     }
 }
 
-/// Trace: FR-007-AC-23
 #[trace("TC-201", "FR-007-AC-23")]
 #[test]
 fn tc_201_qsv_conversion_charges_read_edge_arithmetic_target_then_retain() {
@@ -317,7 +312,6 @@ fn tc_201_qsv_conversion_charges_read_edge_arithmetic_target_then_retain() {
     assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
 }
 
-/// Trace: FR-007-AC-23
 #[trace("TC-201", "FR-007-AC-23")]
 #[test]
 fn tc_201_qsv_multiedge_and_compound_conversions_preserve_charge_schedule() {
@@ -377,7 +371,6 @@ fn tc_201_qsv_multiedge_and_compound_conversions_preserve_charge_schedule() {
     }
 }
 
-/// Trace: FR-007-AC-23
 #[trace("TC-201", "FR-007-AC-23")]
 #[test]
 fn tc_201_qsv_inch_to_centimetre_exposes_the_first_two_rational_amounts() {
@@ -402,7 +395,6 @@ fn tc_201_qsv_inch_to_centimetre_exposes_the_first_two_rational_amounts() {
     }
 }
 
-/// Trace: FR-007-AC-24
 #[trace("TC-201", "FR-007-AC-24")]
 #[test]
 fn tc_201_qsv_affine_arithmetic_refuses_without_charge() {
@@ -449,7 +441,6 @@ fn tc_201_qsv_affine_arithmetic_refuses_without_charge() {
     assert_eq!(sum.unit(), UnitId::declared(key(20)));
 }
 
-/// Trace: FR-007-AC-16
 #[trace("TC-034", "FR-007-AC-16")]
 #[test]
 fn tc_034_qsv_affine_power_refuses_zero_and_negative_exponents_without_charge() {
@@ -472,7 +463,6 @@ fn tc_034_qsv_affine_power_refuses_zero_and_negative_exponents_without_charge() 
     }
 }
 
-/// Trace: FR-007-AC-17
 #[trace("TC-034", "FR-007-AC-17")]
 #[test]
 fn tc_034_qsv_distinct_length_units_multiply_and_divide_in_canonical_units() {
@@ -505,7 +495,6 @@ fn tc_034_qsv_distinct_length_units_multiply_and_divide_in_canonical_units() {
     assert_eq!(quotient.unit(), dimensionless_id);
 }
 
-/// Trace: FR-007-AC-12
 #[trace("TC-034", "FR-007-AC-12")]
 #[test]
 fn tc_034_qsv_quantity_type_checks_report_the_first_cause_without_charge() {
@@ -569,7 +558,6 @@ fn tc_034_qsv_quantity_type_checks_report_the_first_cause_without_charge() {
     }
 }
 
-/// Trace: FR-011-AC-2
 #[trace("TC-032", "FR-011-AC-2")]
 #[test]
 fn tc_032_qsv_zero_divisor_and_negative_power_have_one_undefined_cause() {
@@ -602,7 +590,6 @@ fn tc_032_qsv_zero_divisor_and_negative_power_have_one_undefined_cause() {
     );
 }
 
-/// Trace: FR-011-AC-4
 #[trace("TC-032", "FR-011-AC-4")]
 #[test]
 fn tc_032_qsv_identity_read_checks_integer_bits_before_value_occurrences() {
@@ -628,7 +615,6 @@ fn tc_032_qsv_identity_read_checks_integer_bits_before_value_occurrences() {
     assert_eq!(meter.admission_count(), 0);
 }
 
-/// Trace: FR-011-AC-6
 #[trace("TC-032", "FR-011-AC-6")]
 #[test]
 fn tc_032_qsv_huge_power_denies_before_computation_with_exact_amount() {
@@ -665,7 +651,6 @@ fn tc_032_qsv_huge_power_denies_before_computation_with_exact_amount() {
     );
 }
 
-/// Trace: FR-007-AC-25
 #[trace("TC-201", "FR-007-AC-25")]
 #[test]
 fn tc_201_qsv_denied_retention_returns_incomplete_without_conversion() {
@@ -691,7 +676,6 @@ fn tc_201_qsv_denied_retention_returns_incomplete_without_conversion() {
     assert_eq!(record.charge_point, ChargePoint::UnitResultRetain);
 }
 
-/// Trace: FR-007-AC-25
 #[trace("TC-201", "FR-007-AC-25")]
 #[test]
 fn tc_201_qsv_denied_edge_and_arithmetic_charges_report_exact_prefix() {

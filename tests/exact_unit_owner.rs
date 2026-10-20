@@ -44,7 +44,6 @@ fn unit(dimension: u8, target: Option<u8>) -> UnitNode {
     .unwrap()
 }
 
-/// Trace: FR-012-AC-4, FR-011-AC-7
 #[trace("TC-033", "FR-012-AC-4", "FR-011-AC-7")]
 #[test]
 fn tc_033_qsv_checked_nodes_and_topology_refuse_in_declared_order() {
@@ -146,7 +145,6 @@ fn tc_033_qsv_checked_nodes_and_topology_refuse_in_declared_order() {
     // BTreeMap keys are unique at the API boundary, so DuplicateNode has no graph input.
 }
 
-/// Trace: FR-012-AC-5, FR-011-AC-7
 #[trace("TC-033", "FR-012-AC-5", "FR-011-AC-7")]
 #[test]
 fn tc_033_qsv_dimension_and_compound_terms_are_canonical_across_graph_order() {
@@ -193,7 +191,6 @@ fn tc_033_qsv_dimension_and_compound_terms_are_canonical_across_graph_order() {
     assert!(visited.iter().all(|(_, exponent)| !exponent.is_zero()));
 }
 
-/// Trace: FR-007-AC-13
 #[trace("TC-035", "FR-007-AC-13")]
 #[test]
 fn tc_035_qsv_compound_unit_debug_names_every_boxed_field() {
