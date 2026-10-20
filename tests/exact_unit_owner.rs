@@ -142,6 +142,51 @@ fn tc_033_qsv_checked_nodes_and_topology_refuse_in_declared_order() {
         );
     }
 
+    // QSV checks cross-dimension targets before root count, even when the
+    // same graph has both a missing root and duplicate roots.
+    let dimensions = BTreeMap::from([(key(1), dimension(&[])), (key(2), dimension(&[]))]);
+    let units = BTreeMap::from([
+        (key(11), unit(1, None)),
+        (key(12), unit(1, None)),
+        (key(13), unit(2, Some(11))),
+    ]);
+    assert_eq!(
+        UnitGraph::from_checked_nodes(&dimensions, &units)
+            .unwrap_err()
+            .cause,
+        SemanticGraphCause::CrossDimensionTarget
+    );
+
+    // A dimension with no root wins over another dimension's duplicate
+    // roots and its own target cycle.
+    let units = BTreeMap::from([
+        (key(11), unit(1, None)),
+        (key(12), unit(1, None)),
+        (key(13), unit(2, Some(14))),
+        (key(14), unit(2, Some(13))),
+    ]);
+    assert_eq!(
+        UnitGraph::from_checked_nodes(&dimensions, &units)
+            .unwrap_err()
+            .cause,
+        SemanticGraphCause::MissingRoot
+    );
+
+    // Duplicate roots win over an otherwise reachable target cycle.
+    let units = BTreeMap::from([
+        (key(11), unit(1, None)),
+        (key(12), unit(1, None)),
+        (key(13), unit(1, Some(14))),
+        (key(14), unit(1, Some(13))),
+    ]);
+    let dimensions = BTreeMap::from([(key(1), dimension(&[]))]);
+    assert_eq!(
+        UnitGraph::from_checked_nodes(&dimensions, &units)
+            .unwrap_err()
+            .cause,
+        SemanticGraphCause::DuplicateRoot
+    );
+
     // BTreeMap keys are unique at the API boundary, so DuplicateNode has no graph input.
 }
 

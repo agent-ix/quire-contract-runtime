@@ -21,8 +21,9 @@ definition-selection refusal, a package refusal, or the topology of a unit graph
 carry the compiler's exact spellings so the oracle reports what it was handed, and shall not
 recompute, re-derive or invent any of them.
 
-`src/exact/mod.rs` exports the remaining runtime unit vocabulary until its owner cutover. The
-R-3 definition cutover consumes `quire_semantic_value::definition` directly.
+`src/exact/mod.rs` no longer exports a runtime unit vocabulary; the quantity and unit cutover
+consumes QSV's checked graph and units directly. The R-3 definition cutover consumes
+`quire_semantic_value::definition` directly.
 `NodeKey` and `NODE_KEY_DOMAIN` are consumed directly from `quire_exact`;
 `InvalidSemanticGraph` and `SemanticGraphCause` are consumed directly from
 `quire_semantic_value::semantic_node`.

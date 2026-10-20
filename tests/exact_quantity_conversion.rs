@@ -182,8 +182,8 @@ fn tc_201_qsv_fraction_sweep_matches_independent_centimetre_oracle() {
 #[test]
 fn tc_201_qsv_scale_and_offset_sweep_matches_independent_i128_oracle() {
     let rational = |n: i128, d: i128| Rational::new(Integer::from(n), Integer::from(d)).unwrap();
-    let scales = [(1_i128, 2_i128), (2, 3), (3, 1)];
-    let offsets = [(-1_i128, 2_i128), (0, 1), (1, 3)];
+    let scales = [(-3_i128, 7_i128), (1, 2), (2, 3), (3, 1)];
+    let offsets = [(-1_i128, 2_i128), (0, 1), (1, 3), (7, 10)];
     for (sn, sd) in scales {
         for (tn, td) in scales {
             for (on, od) in offsets {
@@ -209,7 +209,7 @@ fn tc_201_qsv_scale_and_offset_sweep_matches_independent_i128_oracle() {
                     ]);
                     let graph = UnitGraph::from_checked_nodes(&dimensions, &units).unwrap();
                     let table = UnitTable::declared(&graph);
-                    for value in -2_i128..=2 {
+                    for value in [-2_i128, -1, 0, 1, 2, i128::from(i64::MAX) + 1_000_003] {
                         let source = Quantity::new(rational(value, 1), UnitId::declared(key(12)));
                         let Outcome::Completed(converted) = convert_quantity(
                             table.resolve(&source).unwrap(),
@@ -232,6 +232,61 @@ fn tc_201_qsv_scale_and_offset_sweep_matches_independent_i128_oracle() {
                 }
             }
         }
+    }
+}
+
+#[trace("TC-201", "FR-007-AC-20", "FR-007-AC-23")]
+#[test]
+fn tc_201_qsv_noncommuting_multiedge_paths_preserve_composition_order() {
+    let dimensions = BTreeMap::from([(
+        key(1),
+        DimensionNode::checked(vec![], NominalDeclaration::default()).unwrap(),
+    )]);
+    let unit = |target: Option<u8>, scale: Rational, offset: Rational| {
+        UnitNode::checked(
+            [1; 32],
+            target.map(|byte| [byte; 32]),
+            scale,
+            offset,
+            NominalDeclaration::default(),
+        )
+        .unwrap()
+    };
+    // Source: root = 2(-3v + 5) + 3 = -6v + 13.
+    // Target: root = 4(3z + 7) - 2 = 12z + 26.
+    let units = BTreeMap::from([
+        (key(11), unit(None, ratio(1, 1), ratio(0, 1))),
+        (key(12), unit(Some(11), ratio(2, 1), ratio(3, 1))),
+        (key(13), unit(Some(12), ratio(-3, 1), ratio(5, 1))),
+        (key(14), unit(Some(11), ratio(4, 1), ratio(-2, 1))),
+        (key(15), unit(Some(14), ratio(3, 1), ratio(7, 1))),
+    ]);
+    let graph = UnitGraph::from_checked_nodes(&dimensions, &units).unwrap();
+    let table = UnitTable::declared(&graph);
+    for (source, target, expected) in [
+        (
+            Quantity::new(ratio(2, 1), UnitId::declared(key(13))),
+            15,
+            ratio(-25, 12),
+        ),
+        (
+            Quantity::new(ratio(-25, 12), UnitId::declared(key(15))),
+            13,
+            ratio(2, 1),
+        ),
+    ] {
+        let mut meter = meter();
+        let Outcome::Completed(converted) = convert_quantity(
+            table.resolve(&source).unwrap(),
+            table.get(UnitId::declared(key(target))).unwrap(),
+            &QuantityTarget::Exact,
+            &mut meter,
+        )
+        .unwrap() else {
+            panic!("noncommuting two-edge paths convert exactly");
+        };
+        assert_eq!(converted.value(), &ConvertedValue::Exact(expected));
+        assert_eq!(meter.consumed(LimitKind::UnitEdges), 4);
     }
 }
 

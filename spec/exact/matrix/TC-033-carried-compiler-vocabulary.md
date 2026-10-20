@@ -31,6 +31,8 @@ preserved below as historical FR-012-AC-1 text.
 4. Drive QSV `DimensionNode::checked`, `UnitNode::checked`, `UnitGraph::from_checked_nodes`,
    `EnumDeclaration::new` and `EnumDeclaration::member` into their structural
    `SemanticGraphCause` outcomes. The graph's `BTreeMap` input cannot hold a repeated node key.
+   Give one graph several topology faults at once and assert the first cause in QSV's
+   cross-dimension, missing-root, duplicate-root and cycle order.
 5. Build QSV `Dimension` and `CompoundUnit` from graphs whose nodes were inserted in several
    orders; compare their identities and ascending, zero-free terms.
 6. After the R-3 definition cutover, inspect RT library source for local definitions, aliases,
