@@ -6,7 +6,9 @@ use std::collections::BTreeMap;
 use ix_trace_rs::trace;
 use quire_exact::{Integer, NodeKey, Rational};
 use quire_semantic_value::semantic_node::SemanticGraphCause;
-use quire_semantic_value::unit::{DimensionNode, NominalDeclaration, UnitGraph, UnitNode};
+use quire_semantic_value::unit::{
+    CompoundUnitCause, DimensionNode, NominalDeclaration, UnitGraph, UnitNode,
+};
 
 fn key(byte: u8) -> NodeKey {
     NodeKey::from_digest([byte; 32])
@@ -179,6 +181,13 @@ fn tc_033_qsv_dimension_and_compound_terms_are_canonical_across_graph_order() {
         .compound_unit(&[([11; 32], int(2)), ([12; 32], int(-1))])
         .unwrap();
     assert_ne!(first, different);
+    assert_eq!(
+        forward
+            .compound_unit(&[([12; 32], int(1)), ([11; 32], int(1))])
+            .unwrap_err()
+            .cause,
+        CompoundUnitCause::UnsortedTerms,
+    );
     let visited: Vec<_> = first.terms().collect();
     assert_eq!(visited, vec![(key(11), &int(2)), (key(12), &int(-2))]);
     assert!(visited.iter().all(|(_, exponent)| !exponent.is_zero()));
