@@ -419,10 +419,26 @@ refusal without a quantity or an unresolvable ID. RT deletes its boxed
 this cutover; it does not compute a digest, mint a second ID, maintain a
 parallel unit table, or translate between old and shared unit types.
 
-Step-4 acceptance uses FR-275-AC-23 and TC-201. In particular, the compound
-target of TC-187 U25 is retained under its QSV `UnitId` before the next
-conversion reads that quantity; the second conversion resolves the same
-compound unit and returns exact `1 J`. FR-007-AC-21 and AC-23 already cover
+Step-4 acceptance uses FR-275-AC-23 and TC-201. QSV currently returns a
+`Conversion`, not a kernel `Quantity`, from `convert_quantity`; its public
+`Conversion` accessors alone do not retain the target under a `UnitId`.
+Before RT's value-bearing cutover, QSV must provide an owner-side exact-result
+construction operation, proposed as
+`Conversion::exact_quantity(&self) -> Result<Option<(quire_exact::Quantity, IdentifiedUnit)>, IdentityRefusal>`.
+For `ConvertedValue::Exact`, it clones the exact magnitude and the conversion's
+target `QuantityUnit`, constructs `IdentifiedUnit::new(target)` once, and returns
+`Quantity::new(magnitude, identified.id())` paired with that identified unit.
+For a non-exact result it returns `Ok(None)`; if target identity construction
+refuses, it returns that typed refusal and no quantity or identified unit.
+It performs no meter charge: the completed conversion already charged target
+admission and result retention. QSV's `src/declaration.rs` already pairs an
+exact converted magnitude with a target ID when forming `Value::Quantity`,
+but has no public operation for this handoff today. The QSV owner must settle
+the proposed public name and signature before the step-4 implementation;
+the semantics above are the required boundary, with no RT helper or adapter.
+For TC-187 U25, `UnitScope::form` retains the returned `IdentifiedUnit`,
+`UnitScope::resolve(&quantity)` supplies the next conversion's source, and
+the second conversion returns exact `1 J`. FR-007-AC-21 and AC-23 already cover
 compound-side dimension refusal, the first conversion's empty target path,
 the charge order and both U25 steps. Those behavioral results remain the
 oracles after TC-201 binds to QSV; no second conversion rule is introduced.
