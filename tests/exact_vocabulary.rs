@@ -10,6 +10,17 @@ use quire_contract_runtime::exact::{
 };
 use quire_exact::{Integer, Rational};
 
+#[trace("TC-033", "FR-012-AC-6")]
+#[test]
+fn tc_033_runtime_has_no_local_node_key_constructor() {
+    let node_source = include_str!("../src/exact/node.rs");
+    let exact_surface = include_str!("../src/exact/mod.rs");
+    assert!(!node_source.contains("pub struct NodeKey"));
+    assert!(!node_source.contains("fn from_bytes"));
+    assert!(!node_source.contains("fn from_hex"));
+    assert!(!exact_surface.contains("pub use node::{InvalidSemanticGraph, NodeKey"));
+}
+
 fn key(byte: u8) -> NodeKey {
     NodeKey::from_bytes([byte; 32])
 }
