@@ -19,7 +19,8 @@ definition-selection refusal, a package refusal, or the topology of a unit graph
 carry the compiler's exact spellings so the oracle reports what it was handed, and shall not
 recompute, re-derive or invent any of them.
 
-`src/exact/mod.rs` re-exports this vocabulary as part of the public surface. Until this requirement
+`src/exact/mod.rs` exports the remaining runtime vocabulary; `NodeKey` and
+`NODE_KEY_DOMAIN` are consumed directly from `quire_exact`. Until this requirement
 it was carried by no requirement and asserted by no acceptance criterion: roughly sixty public items
 across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anywhere in `spec/`.
 
@@ -32,8 +33,7 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 
 ## Outputs
 
-- `NodeKey` values and the `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` digest/evaluator domain
-  strings.
+- The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
 - `SelectionRefusalCode`, `PackageRefusalCode`, `PackageCause` and `PackageRefusal` values with
   their normative `as_str` spellings.
 - An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
@@ -44,9 +44,9 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 ## Behavior
 
 - **The runtime never computes or constructs a node key in library code.** It carries admitted
-  `quire_exact::NodeKey` values inside shared values. The local `NodeKey::from_bytes` and
-  `NodeKey::from_hex` constructors are deleted with the local definition in IR-882 step 4; hex
-  decoding has no RT owner. Test-only fixtures may mint keys with the shared
+  `quire_exact::NodeKey` values in the current runtime values. The local `NodeKey::from_bytes` and
+  `NodeKey::from_hex` constructors were deleted with the local definition in the IR-882 key-owner
+  slice of step 4; hex decoding has no RT owner. Test-only fixtures may mint keys with the shared
   `NodeKey::from_digest([u8; 32])`, using a key from an admitted package when lookup must succeed.
   `NODE_KEY_DOMAIN` is `quire.checked-semantic-node/v1` and `COMPOUND_UNIT_DOMAIN` is
   `quire.value.compound-unit/v1`; both are carried verbatim and neither is constructed at runtime.
@@ -107,7 +107,7 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
 behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
 This requirement binds the `exact` feature as a whole except for the local-constructor
-contract in FR-012-AC-1, retired at IR-882 step 4. Its original text and ID remain in the record;
+contract in FR-012-AC-1, retired in the IR-882 key-owner slice of step 4. Its original text and ID remain in the record;
 FR-012-AC-6 inspects the cutover. Where other evidence
 moves to the kernel's repository, the matrix keeps its row and states the status.
 

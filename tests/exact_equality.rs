@@ -11,15 +11,15 @@ use proptest::prelude::*;
 use quire_contract_runtime::exact::{
     CollectionType, Component, CompositeDeclaration, CompositeShape, ConstructionCause,
     ConstructionRefusal, EnumDeclaration, EqualityOperand, EqualityOperator, EqualitySchedule,
-    FieldDeclaration, FieldValue, NodeKey, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
+    FieldDeclaration, FieldValue, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
     OptionValue, Presence, Quantity, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph,
     Value, ValueType,
 };
 use quire_exact::{
     admit_text, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, DecimalType,
     IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerInterval,
-    LimitKind, Meter, Outcome, Rational, Refusal, RoundingMode, ScalarLimits, Text, TextPayload,
-    TextProfile, TextType, UniverseId,
+    LimitKind, Meter, NodeKey, Outcome, Rational, Refusal, RoundingMode, ScalarLimits, Text,
+    TextPayload, TextProfile, TextType, UniverseId,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -36,7 +36,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 };
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn consumed(meter: &Meter) -> Vec<u64> {

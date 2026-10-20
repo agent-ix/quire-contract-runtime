@@ -1,72 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Opaque I04 nominal semantic-node keys and the `invalid_semantic_graph`
-//! refusal vocabulary.
+//! The `invalid_semantic_graph` refusal vocabulary for admitted semantic nodes.
 //!
 //! The compiler computes every key as the SHA-256 of the RFC 8785 JCS preimage
 //! in the `quire.checked-semantic-node/v1` domain and admits owners and stale
 //! keys. The runtime never recomputes a key: it receives admitted keys as
 //! opaque 32-byte values and checks only the structural graph rules it
-//! evaluates over.
+//! evaluates over. The key itself belongs to `quire_exact`.
 
 use alloc::collections::BTreeSet;
 use core::fmt;
 
-use quire_exact::Integer;
-
-/// Digest domain of every checked semantic node key.
-pub const NODE_KEY_DOMAIN: &str = "quire.checked-semantic-node/v1";
-
-/// An opaque `quire.checked-semantic-node/v1` node key.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct NodeKey([u8; 32]);
-
-impl NodeKey {
-    /// Wrap an admitted raw digest.
-    pub const fn from_bytes(digest: [u8; 32]) -> Self {
-        Self(digest)
-    }
-
-    /// Parse 64 lowercase hexadecimal digits.
-    pub fn from_hex(digest: &str) -> Option<Self> {
-        let bytes = digest.as_bytes();
-        if bytes.len() != 64 {
-            return None;
-        }
-        let mut key = [0_u8; 32];
-        let mut digits = bytes.iter();
-        for slot in &mut key {
-            let high = lower_hex(*digits.next()?)?;
-            let low = lower_hex(*digits.next()?)?;
-            *slot = high.checked_shl(4)? | low;
-        }
-        Some(Self(key))
-    }
-
-    /// The raw digest.
-    pub fn as_bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
-}
-
-fn lower_hex(digit: u8) -> Option<u8> {
-    match digit {
-        b'0'..=b'9' => digit.checked_sub(b'0'),
-        b'a'..=b'f' => digit.checked_sub(b'a')?.checked_add(10),
-        _ => None,
-    }
-}
-
-impl fmt::Display for NodeKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.iter().try_for_each(|byte| write!(f, "{byte:02x}"))
-    }
-}
-
-impl fmt::Debug for NodeKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NodeKey({self})")
-    }
-}
+use quire_exact::{Integer, NodeKey};
 
 /// The strict reader's `refused { code: invalid_semantic_graph }`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

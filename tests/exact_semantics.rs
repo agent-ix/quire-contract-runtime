@@ -6,13 +6,12 @@
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    evaluate_quantity, NodeKey, Quantity, QuantityOperation, QuantityUnit, UnitDeclaration,
-    UnitGraph,
+    evaluate_quantity, Quantity, QuantityOperation, QuantityUnit, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
     divide, evaluate_decimal, modulo, Decimal, DecimalOperation, DecimalType, DivisionMember,
     DivisionProfile, IllTypedCause, InexactTarget, Integer, IntegerDomain, IntegerInterval, Meter,
-    Outcome, Rational, Refusal, RoundingMode, ScalarLimits,
+    NodeKey, Outcome, Rational, Refusal, RoundingMode, ScalarLimits,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -143,12 +142,24 @@ fn tc_034_division_rounds_by_quotient_sign_and_records_exact_loss() {
     }
 }
 
-const DIM_LENGTH: NodeKey = NodeKey::from_bytes([1; 32]);
-const DIM_TEMPERATURE: NodeKey = NodeKey::from_bytes([2; 32]);
-const UNIT_METER: NodeKey = NodeKey::from_bytes([10; 32]);
-const UNIT_KILOMETER: NodeKey = NodeKey::from_bytes([11; 32]);
-const UNIT_KELVIN: NodeKey = NodeKey::from_bytes([20; 32]);
-const UNIT_CELSIUS: NodeKey = NodeKey::from_bytes([21; 32]);
+fn dim_length() -> NodeKey {
+    NodeKey::from_digest([1; 32])
+}
+fn dim_temperature() -> NodeKey {
+    NodeKey::from_digest([2; 32])
+}
+fn unit_meter() -> NodeKey {
+    NodeKey::from_digest([10; 32])
+}
+fn unit_kilometer() -> NodeKey {
+    NodeKey::from_digest([11; 32])
+}
+fn unit_kelvin() -> NodeKey {
+    NodeKey::from_digest([20; 32])
+}
+fn unit_celsius() -> NodeKey {
+    NodeKey::from_digest([21; 32])
+}
 
 /// A length dimension with a root `meter` and a non-root `kilometer`, and a
 /// temperature dimension with a root `kelvin` and an affine `celsius`
@@ -158,42 +169,42 @@ fn graph() -> UnitGraph {
     let zero = Rational::from_integer(Integer::zero());
     UnitGraph::admit(
         [
-            (DIM_LENGTH, Vec::<(NodeKey, Integer)>::new()),
-            (DIM_TEMPERATURE, Vec::new()),
+            (dim_length(), Vec::<(NodeKey, Integer)>::new()),
+            (dim_temperature(), Vec::new()),
         ],
         [
             (
-                UNIT_METER,
+                unit_meter(),
                 UnitDeclaration {
-                    dimension: DIM_LENGTH,
+                    dimension: dim_length(),
                     target: None,
                     scale: one.clone(),
                     offset: zero.clone(),
                 },
             ),
             (
-                UNIT_KILOMETER,
+                unit_kilometer(),
                 UnitDeclaration {
-                    dimension: DIM_LENGTH,
-                    target: Some(UNIT_METER),
+                    dimension: dim_length(),
+                    target: Some(unit_meter()),
                     scale: ratio(1000, 1),
                     offset: zero.clone(),
                 },
             ),
             (
-                UNIT_KELVIN,
+                unit_kelvin(),
                 UnitDeclaration {
-                    dimension: DIM_TEMPERATURE,
+                    dimension: dim_temperature(),
                     target: None,
                     scale: one.clone(),
                     offset: zero.clone(),
                 },
             ),
             (
-                UNIT_CELSIUS,
+                unit_celsius(),
                 UnitDeclaration {
-                    dimension: DIM_TEMPERATURE,
-                    target: Some(UNIT_KELVIN),
+                    dimension: dim_temperature(),
+                    target: Some(unit_kelvin()),
                     scale: one,
                     offset: ratio(273, 1),
                 },
@@ -212,10 +223,10 @@ fn quantity(graph: &UnitGraph, unit_key: NodeKey, value: i128) -> Quantity {
 #[test]
 fn tc_034_quantity_add_subtract_cause_order_first_failure_wins() {
     let graph = graph();
-    let length = quantity(&graph, UNIT_METER, 1);
-    let kilometers = quantity(&graph, UNIT_KILOMETER, 1);
-    let celsius = quantity(&graph, UNIT_CELSIUS, 1);
-    let kelvin = quantity(&graph, UNIT_KELVIN, 1);
+    let length = quantity(&graph, unit_meter(), 1);
+    let kilometers = quantity(&graph, unit_kilometer(), 1);
+    let celsius = quantity(&graph, unit_celsius(), 1);
+    let kelvin = quantity(&graph, unit_kelvin(), 1);
 
     // Incompatible dimensions and an affine operand both fail; the dimension
     // check wins because it runs first.
@@ -257,8 +268,8 @@ fn tc_034_quantity_add_subtract_cause_order_first_failure_wins() {
 #[test]
 fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
     let graph = graph();
-    let length = quantity(&graph, UNIT_KILOMETER, 2);
-    let kelvin = quantity(&graph, UNIT_KELVIN, 3);
+    let length = quantity(&graph, unit_kilometer(), 2);
+    let kelvin = quantity(&graph, unit_kelvin(), 3);
 
     // Cross-dimension operands would fail `Add`/`Subtract`'s incompatible-
     // dimensions check. Arithmetic converts declared units to canonical roots.
@@ -271,7 +282,7 @@ fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
             ratio(6000, 1),
             QuantityUnit::Compound(
                 graph
-                    .compound_unit(&[(UNIT_METER, int(1)), (UNIT_KELVIN, int(1))])
+                    .compound_unit(&[(unit_meter(), int(1)), (unit_kelvin(), int(1))])
                     .unwrap(),
             ),
         ))
@@ -286,7 +297,7 @@ fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
             ratio(2000, 3),
             QuantityUnit::Compound(
                 graph
-                    .compound_unit(&[(UNIT_METER, int(1)), (UNIT_KELVIN, int(-1))])
+                    .compound_unit(&[(unit_meter(), int(1)), (unit_kelvin(), int(-1))])
                     .unwrap(),
             ),
         ))
@@ -299,7 +310,7 @@ fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
         power.completed(),
         Some(Quantity::new(
             ratio(4_000_000, 1),
-            QuantityUnit::Compound(graph.compound_unit(&[(UNIT_METER, int(2))]).unwrap()),
+            QuantityUnit::Compound(graph.compound_unit(&[(unit_meter(), int(2))]).unwrap()),
         ))
     );
 
@@ -310,11 +321,11 @@ fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
         reciprocal.completed(),
         Some(Quantity::new(
             ratio(1, 2000),
-            QuantityUnit::Compound(graph.compound_unit(&[(UNIT_METER, int(-1))]).unwrap()),
+            QuantityUnit::Compound(graph.compound_unit(&[(unit_meter(), int(-1))]).unwrap()),
         ))
     );
 
-    let length = quantity(&graph, UNIT_METER, 5);
+    let length = quantity(&graph, unit_meter(), 5);
     let mut meter = Meter::new(UNLIMITED);
     let cancellation = evaluate_quantity(QuantityOperation::Divide(&length, &length), &mut meter)
         .expect("equal units cancel");
@@ -331,7 +342,7 @@ fn tc_034_quantity_multiply_divide_and_power_return_canonical_results() {
 #[test]
 fn tc_034_quantity_zero_power_and_affine_refusal() {
     let graph = graph();
-    let zero = quantity(&graph, UNIT_METER, 0);
+    let zero = quantity(&graph, unit_meter(), 0);
     let mut meter = Meter::new(UNLIMITED);
     let zero_power = evaluate_quantity(QuantityOperation::Power(&zero, &int(0)), &mut meter)
         .expect("zero to the zero power is defined");
@@ -351,8 +362,8 @@ fn tc_034_quantity_zero_power_and_affine_refusal() {
         quire_exact::Outcome::Undefined(quire_exact::Undefined::DivisionByZero)
     );
 
-    let celsius = quantity(&graph, UNIT_CELSIUS, 1);
-    let kelvin = quantity(&graph, UNIT_KELVIN, 1);
+    let celsius = quantity(&graph, unit_celsius(), 1);
+    let kelvin = quantity(&graph, unit_kelvin(), 1);
     for operation in [
         QuantityOperation::Multiply(&celsius, &kelvin),
         QuantityOperation::Multiply(&kelvin, &celsius),
@@ -371,7 +382,7 @@ fn tc_034_quantity_zero_power_and_affine_refusal() {
 #[test]
 fn tc_034_affine_power_refuses_zero_and_negative_exponents_without_charges() {
     let graph = graph();
-    let celsius = quantity(&graph, UNIT_CELSIUS, 1);
+    let celsius = quantity(&graph, unit_celsius(), 1);
     for exponent in [0, -1] {
         let mut meter = Meter::new(UNLIMITED);
         let error = evaluate_quantity(
@@ -388,8 +399,8 @@ fn tc_034_affine_power_refuses_zero_and_negative_exponents_without_charges() {
 #[test]
 fn tc_034_distinct_units_of_same_dimension_multiply_and_divide() {
     let graph = graph();
-    let kilometers = quantity(&graph, UNIT_KILOMETER, 2);
-    let meters = quantity(&graph, UNIT_METER, 3);
+    let kilometers = quantity(&graph, unit_kilometer(), 2);
+    let meters = quantity(&graph, unit_meter(), 3);
     let product = evaluate_quantity(
         QuantityOperation::Multiply(&kilometers, &meters),
         &mut Meter::new(UNLIMITED),
@@ -399,7 +410,7 @@ fn tc_034_distinct_units_of_same_dimension_multiply_and_divide() {
         product.completed(),
         Some(Quantity::new(
             ratio(6000, 1),
-            QuantityUnit::Compound(graph.compound_unit(&[(UNIT_METER, int(2))]).unwrap()),
+            QuantityUnit::Compound(graph.compound_unit(&[(unit_meter(), int(2))]).unwrap()),
         ))
     );
     let quotient = evaluate_quantity(

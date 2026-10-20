@@ -603,12 +603,12 @@ fn decimal_to_rational(value: &Decimal, meter: &mut Meter) -> Result<Value, Stop
 
 #[cfg(test)]
 mod tests {
-    use super::super::node::NodeKey;
     use super::super::unit::{UnitDeclaration, UnitGraph};
     use super::*;
     use alloc::boxed::Box;
     use alloc::vec::Vec;
     use ix_trace_rs::trace;
+    use quire_exact::NodeKey;
     use quire_exact::{IntegerInterval, RoundingMode, ScalarLimits};
 
     fn meter() -> Meter {
@@ -686,7 +686,7 @@ mod tests {
     #[trace("FR-008-AC-5")]
     #[test]
     fn equality_quantity_failure_retains_ill_typed_cause() {
-        let key = |byte| NodeKey::from_bytes([byte; 32]);
+        let key = |byte| NodeKey::from_digest([byte; 32]);
         let dimensions = [(key(1), Vec::new()), (key(2), Vec::new())];
         let declaration = |dimension| UnitDeclaration {
             dimension,

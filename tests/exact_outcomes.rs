@@ -18,13 +18,13 @@ use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
     CollectionType, CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration,
-    EqualityOperand, EqualityOperator, FunctionDeclaration, NodeKey, ObjectEnvironment,
-    PackageDeclarations, Quantity, QuantityOperation, QuantityUnit, TypeEnvironment,
-    UnitDeclaration, UnitGraph, Value, ValueType,
+    EqualityOperand, EqualityOperator, FunctionDeclaration, ObjectEnvironment, PackageDeclarations,
+    Quantity, QuantityOperation, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph, Value,
+    ValueType,
 };
 use quire_exact::{
     CardinalityBound, ChargePoint, CollectionKind, ComparisonOperator, Incomplete, InjectedDenial,
-    Integer, LimitKind, Meter, Outcome, Rational, ScalarLimits,
+    Integer, LimitKind, Meter, NodeKey, Outcome, Rational, ScalarLimits,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
@@ -139,7 +139,7 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
 /// its sole position completes.
 fn drive_composite(meter: &mut Meter) -> Incomplete {
     let declaration = CompositeDeclaration::new(
-        NodeKey::from_bytes([7; 32]),
+        NodeKey::from_digest([7; 32]),
         "Pair",
         CompositeShape::Tuple(vec![ValueType::Integer]),
     );
@@ -148,19 +148,19 @@ fn drive_composite(meter: &mut Meter) -> Incomplete {
         Outcome::Completed(Value::Integer(int(1)))
     })];
     expect_incomplete(
-        env.evaluate_tuple(NodeKey::from_bytes([7; 32]), positions, meter)
+        env.evaluate_tuple(NodeKey::from_digest([7; 32]), positions, meter)
             .unwrap(),
     )
 }
 
 fn drive_enum(meter: &mut Meter) -> Incomplete {
     let declaration =
-        EnumDeclaration::new(NodeKey::from_bytes([9; 32]), true, &["a", "b"]).unwrap();
+        EnumDeclaration::new(NodeKey::from_digest([9; 32]), true, &["a", "b"]).unwrap();
     let a = declaration
-        .member("a", NodeKey::from_bytes([10; 32]))
+        .member("a", NodeKey::from_digest([10; 32]))
         .unwrap();
     let b = declaration
-        .member("b", NodeKey::from_bytes([11; 32]))
+        .member("b", NodeKey::from_digest([11; 32]))
         .unwrap();
     expect_incomplete(compare_enum(ComparisonOperator::Equal, &a, &b, meter).unwrap())
 }
@@ -170,9 +170,9 @@ fn drive_enum(meter: &mut Meter) -> Incomplete {
 /// edge traversal and the power itself), `unit.target-domain` and
 /// `unit.result-retain`, in that order.
 fn drive_quantity(meter: &mut Meter) -> Incomplete {
-    let dimension = NodeKey::from_bytes([1; 32]);
-    let root = NodeKey::from_bytes([2; 32]);
-    let derived = NodeKey::from_bytes([3; 32]);
+    let dimension = NodeKey::from_digest([1; 32]);
+    let root = NodeKey::from_digest([2; 32]);
+    let derived = NodeKey::from_digest([3; 32]);
     let graph = UnitGraph::admit(
         [(dimension, Vec::new())],
         [

@@ -219,11 +219,13 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "proc-macro2",
  "proptest",
  "quire-exact",
  "quire-semantic-value",
  "serde",
  "serde_json",
+ "syn 2.0.119",
  "unicode-normalization",
 ]
 

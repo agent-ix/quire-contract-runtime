@@ -16,7 +16,7 @@ use core::fmt;
 use super::composite::{
     Component, ConstructionCause, ConstructionRefusal, FieldValue, TypeEnvironment, Value,
 };
-use super::node::NodeKey;
+use quire_exact::NodeKey;
 
 /// A graph-local node name.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

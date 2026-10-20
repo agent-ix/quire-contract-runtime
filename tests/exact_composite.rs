@@ -15,13 +15,12 @@ use quire_contract_runtime::exact::{
     form_collection, CollectionType, Component, CompositeDeclaration, CompositeShape,
     ConstructionCause, ConstructionRefusal, DeclarationCause, FieldDeclaration, FieldExpression,
     FieldValue, GraphCause, GraphNode, GraphNodeId, GraphRefusal, GraphSlot, InvalidDeclaration,
-    NodeKey, ObjectTypeDeclaration, Presence, RecursionEdges, TypeEnvironment, Value, ValueGraph,
-    ValueType,
+    ObjectTypeDeclaration, Presence, RecursionEdges, TypeEnvironment, Value, ValueGraph, ValueType,
 };
 use quire_exact::{
     CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, IeeeWidth, IllTyped,
-    IllTypedCause, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal,
-    ScalarLimits, Undefined,
+    IllTypedCause, Incomplete, InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome,
+    Refusal, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -72,7 +71,7 @@ fn deferred_record_value_outside_declared_type_has_precise_cause() {
 }
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn consumed(meter: &Meter) -> Vec<u64> {

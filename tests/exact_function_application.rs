@@ -15,12 +15,12 @@ use quire_contract_runtime::exact::{
     CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum, EvaluationRefusal,
     FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause, InputRefusal, IntegerDivisionConsumer, IntegerDivisionDisposition,
-    Location, NodeKey, ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration,
-    Origin, PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
+    Location, ObjectEnvironment, ObjectIdentity, ObjectReference, ObjectTypeDeclaration, Origin,
+    PackageDeclarations, TypeEnvironment, Value, ValueType, MAX_CALL_DEPTH,
 };
 use quire_exact::{
     ChargePoint, CheckedInvariantCause, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter,
-    Outcome, Refusal, RoundingMode, ScalarLimits, UniverseId,
+    NodeKey, Outcome, Refusal, RoundingMode, ScalarLimits, UniverseId,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no
@@ -58,7 +58,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 };
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn a_reference() -> ObjectReference {

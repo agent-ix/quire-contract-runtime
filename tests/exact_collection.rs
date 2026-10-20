@@ -14,11 +14,11 @@ use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     construct_collection, form_collection, CollectionType, Component, CompositeDeclaration,
     CompositeShape, ConstructionCause, ConstructionRefusal, Deferred, FieldDeclaration, FieldValue,
-    NodeKey, Presence, TypeEnvironment, Value, ValueType,
+    Presence, TypeEnvironment, Value, ValueType,
 };
 use quire_exact::{
     BoundViolation, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, Decimal,
-    DecimalType, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal,
+    DecimalType, Incomplete, InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome, Refusal,
     RoundingMode, ScalarLimits, Undefined,
 };
 
@@ -36,7 +36,7 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 };
 
 fn key(byte: u8) -> NodeKey {
-    NodeKey::from_bytes([byte; 32])
+    NodeKey::from_digest([byte; 32])
 }
 
 fn consumed(meter: &Meter) -> Vec<u64> {

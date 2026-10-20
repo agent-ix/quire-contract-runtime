@@ -13,10 +13,11 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use quire_exact::{
-    Charge, ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, LimitKind, Meter, Outcome,
+    Charge, ChargePoint, ComparisonOperator, IllTyped, IllTypedCause, LimitKind, Meter, NodeKey,
+    Outcome,
 };
 
-use super::node::{is_identifier, refuse, InvalidSemanticGraph, NodeKey, SemanticGraphCause};
+use super::node::{is_identifier, refuse, InvalidSemanticGraph, SemanticGraphCause};
 use super::stop::{OutcomeStop, Stop};
 
 /// An admitted enum declaration node.
