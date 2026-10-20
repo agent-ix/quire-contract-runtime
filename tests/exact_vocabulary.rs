@@ -5,10 +5,12 @@
 use ix_trace_rs::trace;
 use proc_macro2::{TokenStream, TokenTree};
 use quire_contract_runtime::exact::{
-    CompoundUnit, Dimension, PackageRefusalCode, SelectionRefusalCode, UnitDeclaration, UnitGraph,
-    COMPOUND_UNIT_DOMAIN,
+    CompoundUnit, Dimension, UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
 };
 use quire_exact::{Integer, NodeKey, Rational, NODE_KEY_DOMAIN};
+use quire_semantic_value::definition::{
+    PackageCause, PackageRefusal, PackageRefusalCode, SelectionRefusalCode,
+};
 use quire_semantic_value::enumeration::{EnumDeclaration, EnumValue};
 use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 use std::path::{Path, PathBuf};
@@ -80,6 +82,171 @@ fn use_defines_node_key_alias(tree: &syn::UseTree) -> bool {
         syn::UseTree::Rename(rename) => rename.rename == "NodeKey" && rename.ident != "NodeKey",
         syn::UseTree::Group(group) => group.items.iter().any(use_defines_node_key_alias),
         _ => false,
+    }
+}
+
+fn is_definition_type_ident(ident: &syn::Ident) -> bool {
+    matches!(
+        ident.to_string().as_str(),
+        "PackageCause" | "PackageRefusal" | "PackageRefusalCode" | "SelectionRefusalCode"
+    )
+}
+
+fn is_definition_cause_variant(ident: &syn::Ident) -> bool {
+    matches!(
+        ident.to_string().as_str(),
+        "MissingMember"
+            | "ConflictingDefinition"
+            | "IncompatibleDefinition"
+            | "RevisionMismatch"
+            | "DigestDomainMismatch"
+            | "ByteDigestMismatch"
+    )
+}
+
+#[derive(Default)]
+struct DefinitionTypeUse(bool);
+
+impl<'ast> Visit<'ast> for DefinitionTypeUse {
+    fn visit_ident(&mut self, ident: &'ast syn::Ident) {
+        self.0 |= is_definition_type_ident(ident);
+    }
+}
+
+fn type_uses_definition(ty: &syn::Type) -> bool {
+    let mut use_check = DefinitionTypeUse::default();
+    use_check.visit_type(ty);
+    use_check.0
+}
+
+fn use_mentions_definition(tree: &syn::UseTree, renamed_only: bool) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => use_mentions_definition(&path.tree, renamed_only),
+        syn::UseTree::Name(name) => !renamed_only && is_definition_type_ident(&name.ident),
+        syn::UseTree::Rename(rename) => is_definition_type_ident(&rename.ident),
+        syn::UseTree::Glob(_) => false,
+        syn::UseTree::Group(group) => group
+            .items
+            .iter()
+            .any(|item| use_mentions_definition(item, renamed_only)),
+    }
+}
+
+fn inspect_definition_macro_tokens(
+    tokens: TokenStream,
+    in_declaration: bool,
+    findings: &mut Vec<String>,
+) {
+    let mut declaration = in_declaration;
+    for token in tokens {
+        match token {
+            TokenTree::Ident(ident) => {
+                declaration |= matches!(
+                    ident.to_string().as_str(),
+                    "enum" | "struct" | "type" | "union"
+                );
+                if declaration
+                    && (is_definition_type_ident(&ident) || is_definition_cause_variant(&ident))
+                {
+                    findings.push(format!("local definition in macro: {ident}"));
+                }
+            }
+            TokenTree::Group(group) => {
+                inspect_definition_macro_tokens(group.stream(), declaration, findings)
+            }
+            _ => {}
+        }
+    }
+}
+
+fn publicly_exposes_qsv_definition(tree: &syn::UseTree, path_state: u8) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => {
+            let state = match (path_state, path.ident.to_string().as_str()) {
+                (0, "quire_semantic_value") => 1,
+                (1, "definition") => 2,
+                (2, _) => 2,
+                _ => 0,
+            };
+            publicly_exposes_qsv_definition(&path.tree, state)
+        }
+        syn::UseTree::Name(name) => {
+            path_state == 2 || (path_state == 1 && name.ident == "definition")
+        }
+        syn::UseTree::Rename(rename) => {
+            path_state == 2 || (path_state == 1 && rename.ident == "definition")
+        }
+        syn::UseTree::Glob(_) => path_state == 2,
+        syn::UseTree::Group(group) => group
+            .items
+            .iter()
+            .any(|item| publicly_exposes_qsv_definition(item, path_state)),
+    }
+}
+
+#[derive(Default)]
+struct ProductionDefinitionInspection {
+    findings: Vec<String>,
+}
+
+impl<'ast> Visit<'ast> for ProductionDefinitionInspection {
+    fn visit_item(&mut self, item: &'ast syn::Item) {
+        if is_test_only(item_attrs(item)) {
+            return;
+        }
+        match item {
+            syn::Item::Use(use_item) => {
+                let public = matches!(use_item.vis, syn::Visibility::Public(_));
+                if (public && publicly_exposes_qsv_definition(&use_item.tree, 0))
+                    || use_mentions_definition(&use_item.tree, !public)
+                {
+                    self.findings.push("definition alias or re-export".into());
+                }
+            }
+            syn::Item::Enum(item) => {
+                if is_definition_type_ident(&item.ident)
+                    || item.variants.iter().any(|variant| {
+                        is_definition_cause_variant(&variant.ident)
+                            || variant
+                                .fields
+                                .iter()
+                                .any(|field| type_uses_definition(&field.ty))
+                    })
+                {
+                    self.findings
+                        .push("local definition enum or adapter".into());
+                }
+            }
+            syn::Item::Struct(item) => {
+                let newtype_adapter = match &item.fields {
+                    syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
+                        type_uses_definition(&fields.unnamed[0].ty)
+                    }
+                    _ => false,
+                };
+                if is_definition_type_ident(&item.ident) || newtype_adapter {
+                    self.findings
+                        .push("local definition struct or adapter".into());
+                }
+            }
+            syn::Item::Type(item) => {
+                if is_definition_type_ident(&item.ident) || type_uses_definition(&item.ty) {
+                    self.findings.push("local definition type alias".into());
+                }
+            }
+            syn::Item::Union(item) if is_definition_type_ident(&item.ident) => {
+                self.findings.push("local definition union".into());
+            }
+            syn::Item::Mod(item) if item.ident == "definition" => {
+                self.findings.push("local definition module".into());
+            }
+            _ => {}
+        }
+        visit::visit_item(self, item);
+    }
+
+    fn visit_macro(&mut self, item: &'ast syn::Macro) {
+        inspect_definition_macro_tokens(item.tokens.clone(), false, &mut self.findings);
     }
 }
 
@@ -760,6 +927,87 @@ fn tc_033_package_refusal_code_as_str_is_invalid_package() {
         PackageRefusalCode::InvalidPackage.as_str(),
         "invalid_package"
     );
+}
+
+#[trace("TC-033", "FR-012-AC-7")]
+#[test]
+fn tc_033_definition_refusals_have_only_the_qsv_owner() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    assert!(
+        !root.join("src/exact/definition.rs").exists(),
+        "RT still defines a local definition refusal vocabulary"
+    );
+    let exact_module = std::fs::read_to_string(root.join("src/exact/mod.rs")).unwrap();
+    assert!(!exact_module.contains("mod definition;"));
+    assert!(!exact_module.contains("pub use definition::"));
+
+    let mut sources = Vec::new();
+    rust_sources(&root.join("src"), &mut sources);
+    assert!(!sources.is_empty());
+    let mut findings = Vec::new();
+    for path in sources {
+        let source = std::fs::read_to_string(&path).unwrap();
+        let parsed =
+            syn::parse_file(&source).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        let mut inspection = ProductionDefinitionInspection::default();
+        inspection.visit_file(&parsed);
+        findings.extend(
+            inspection
+                .findings
+                .into_iter()
+                .map(|finding| format!("{}: {finding}", path.display())),
+        );
+    }
+    assert!(findings.is_empty(), "{}", findings.join("\n"));
+
+    for source in [
+        "pub enum ShadowPackageCause { MissingMember, ConflictingDefinition }",
+        "use quire_semantic_value::definition::PackageCause as LocalCause;",
+        "pub type RefusalAlias = quire_semantic_value::definition::PackageRefusal;",
+        "pub use quire_semantic_value::definition::*;",
+        "pub struct LocalAdapter(quire_semantic_value::definition::PackageCause);",
+        "macro_rules! local_copy { () => { enum Copy { ByteDigestMismatch } } }",
+    ] {
+        let parsed = syn::parse_file(source).unwrap();
+        let mut inspection = ProductionDefinitionInspection::default();
+        inspection.visit_file(&parsed);
+        assert!(
+            !inspection.findings.is_empty(),
+            "source-inspection mutation escaped: {source}"
+        );
+    }
+    let direct_owner_use = syn::parse_file(
+        "use quire_semantic_value::definition::PackageCause; \
+         pub fn carry(cause: PackageCause) -> PackageCause { cause } \
+         pub struct Holder { cause: PackageCause }",
+    )
+    .unwrap();
+    let mut inspection = ProductionDefinitionInspection::default();
+    inspection.visit_file(&direct_owner_use);
+    assert!(
+        inspection.findings.is_empty(),
+        "private direct QSV use must remain allowed: {:?}",
+        inspection.findings
+    );
+
+    let causes = [
+        (PackageCause::MissingMember, "missing-member"),
+        (
+            PackageCause::ConflictingDefinition,
+            "conflicting-definition",
+        ),
+        (
+            PackageCause::IncompatibleDefinition,
+            "incompatible-definition",
+        ),
+    ];
+    for (cause, spelling) in causes {
+        assert_eq!(cause.as_str(), spelling);
+        assert_eq!(
+            PackageRefusal::invalid_package(cause).to_string(),
+            format!("invalid_package: {spelling}")
+        );
+    }
 }
 
 #[trace("TC-033", "FR-012-AC-5")]

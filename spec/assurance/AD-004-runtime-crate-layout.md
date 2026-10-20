@@ -485,7 +485,7 @@ tests that still exercise enum declaration admission import QSV directly. The qu
 unit residue and evaluation-leaf dependency remain. The following independent slice removes
 RT's private `src/exact/stop.rs` carrier and conversion trait; Boolean, quantity and function
 application code use QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The
-definition code cutover can follow the R-3 decision below because QSV's owner FR has landed.
+definition code cutover follows the R-3 decision below and has now landed.
 
 R-3 is decided from an RT source/test/spec use audit: `RevisionMismatch`,
 `DigestDomainMismatch` and `ByteDigestMismatch` had no RT producer, consumer or test in the
@@ -495,7 +495,7 @@ mismatch causes to `stale_dependency`, so the RT `invalid_package` pairing is in
 three extras retire;
 QSV's `PackageCause` keeps `MissingMember`, `ConflictingDefinition` and
 `IncompatibleDefinition`. QSV FR-125 and TC-924 now establish their spellings, valid pairing and
-tests. RT's next code cutover deletes its local `PackageCause`, `PackageRefusal` and
+tests. RT's definition code cutover deleted its local `PackageCause`, `PackageRefusal` and
 `PackageRefusalCode` with `definition.rs` and consumes QSV's types directly. QSV already exports
 `SelectionRefusalCode::ALL`, `from_code` and `as_str`, and `PackageRefusalCode::as_str`, the only
 helpers RT's remaining vocabulary tests use. FR-012-AC-7 inspects the cutover; no adapter or
