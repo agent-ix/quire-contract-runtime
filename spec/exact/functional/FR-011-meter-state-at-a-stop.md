@@ -103,15 +103,15 @@ acceptance criterion.
 `FR-358-AC-8` through `FR-358-AC-11` cover the bounded test-support log after its cap;
 `FR-359-AC-1` through `FR-359-AC-5` cover cumulative boundaries, exact over-`u64` charge
 requests and atomicity; and
-`FR-364-AC-1` covers IEEE flag order. These do not cover the RT quantity stop in AC-2,
-the lazy invocation and stop propagation in AC-3/AC-8, or RT dimension, compound-unit and
-graph orders in AC-7. The RT portions remain required and retain their own evidence in TC-032.
+`FR-364-AC-1` covers IEEE flag order. QSV quantity evaluation supplies AC-2 and the
+dimension, compound-unit and graph behavior in AC-7; RT exercises the consumed AC-2 stop in
+`tests/exact_quantity_conversion.rs`. The lazy invocation and stop propagation in AC-3/AC-8
+remain runtime-owned and retain their evidence in TC-032.
 In particular, kernel `FR-359-AC-3`/`FR-359-AC-4` require exact over-`u64` `next_charge`
 values and `FR-359-AC-7` covers `consumed` over `LimitKind::ALL`. QSpec
 `ix://agent-ix/quire-specification/TC-187` vector U13 requires the exact
-`next_charge = 36893488147419103232` for quantity power before computation. RT's retained
-`tests/exact_meter_state.rs` over-`u64` case checks the quantity stop, a non-`u64` amount and the
-admitted-charge prefix; `src/exact/quantity.rs` constructs the exact request.
+`next_charge = 36893488147419103232` for quantity power before computation. QSV now owns
+the quantity request; RT retains no duplicate implementation of that charge.
 
 ## Dependencies
 

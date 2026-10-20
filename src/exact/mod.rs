@@ -8,8 +8,7 @@
 //!
 //! - the runtime-owned I13 negotiators ([`negotiate_integer_division`], [`negotiate_ieee`] and
 //!   their types; FR-009, interface-001-AC-8), and
-//! - the remaining ported QSL code, pending removal under QSL-358: quantity, unit,
-//!   expression and unit modules. This residue is an open
+//! - the remaining ported QSL expression code, pending removal under QSL-358. This residue is an open
 //!   FR-275 defect. It is built over kernel scalars and metering.
 //!
 //! Trace: interface-001-AC-2, interface-001-AC-4
@@ -20,11 +19,8 @@
 //!
 //! Layers:
 //!
-//! 1. the runtime's remaining quantity residue: [`Quantity`]
-//!    over a [`UnitGraph`] ([`evaluate_quantity`],
-//!    [`compare_quantity`], [`convert_quantity`]);
-//! 2. [`evaluate_boolean_short_circuit`], the stop-carrying lazy-right connective;
-//! 3. the quire-specification/FR-146 function-application surface:
+//! 1. [`evaluate_boolean_short_circuit`], the stop-carrying lazy-right connective;
+//! 2. the quire-specification/FR-146 function-application surface:
 //!    [`PackageDeclarations::check`] and [`CheckedPackage::call`]/
 //!    [`CheckedPackage::evaluate`], ported to the boundary AD-002 sets.
 //!
@@ -44,8 +40,6 @@ mod boolean;
 mod division;
 mod expression;
 mod ieee;
-mod quantity;
-mod unit;
 
 pub use boolean::{evaluate_boolean_short_circuit, ShortCircuitConnective};
 pub use division::{
@@ -61,12 +55,4 @@ pub use expression::{
 pub use ieee::{
     negotiate_ieee, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
     IeeeUnsupportedCause,
-};
-pub use quantity::{
-    compare_quantity, convert_quantity, evaluate_quantity, Conversion, ConvertedValue, Quantity,
-    QuantityOperation, QuantityTarget, QuantityUnit,
-};
-pub use unit::{
-    CompoundUnit, CompoundUnitCause, Dimension, InvalidCompoundUnit, Unit, UnitDeclaration,
-    UnitEdge, UnitGraph, COMPOUND_UNIT_DOMAIN,
 };

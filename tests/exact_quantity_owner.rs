@@ -5,10 +5,11 @@ use std::collections::BTreeMap;
 
 use ix_trace_rs::trace;
 use quire_exact::{
-    Integer, LimitKind, Meter, NodeKey, Outcome, Quantity, Rational, ScalarLimits, UnitId,
+    Integer, IntegerInterval, LimitKind, Meter, NodeKey, Outcome, Quantity, Rational, RoundingMode,
+    ScalarLimits, UnitId,
 };
 use quire_semantic_value::quantity::{
-    convert_quantity, QuantityTarget, QuantityUnit, UnitScope, UnitTable,
+    convert_quantity, HandoffRefusal, QuantityTarget, QuantityUnit, UnitScope, UnitTable,
 };
 use quire_semantic_value::unit::{DimensionNode, NominalDeclaration, UnitGraph, UnitNode};
 
@@ -113,6 +114,11 @@ fn tc_201_qsv_handoff_resolves_compound_unit_for_second_conversion() {
     assert_eq!(quantity.magnitude(), &rational(1));
     assert_eq!(quantity.unit(), identified.id());
     assert_ne!(quantity.unit(), UnitId::declared(key(14)));
+    assert_ne!(
+        quantity.unit(),
+        UnitId::declared(NodeKey::from_digest(*quantity.unit().as_bytes())),
+        "equal digest bytes in the declared and compound arms remain distinct",
+    );
 
     let mut scope = UnitScope::new(&table);
     assert_eq!(scope.form(identified), quantity.unit());
@@ -131,10 +137,41 @@ fn tc_201_qsv_handoff_resolves_compound_unit_for_second_conversion() {
     assert_eq!(joules.unit(), UnitId::declared(key(14)));
     for meter in [&first, &second] {
         assert_eq!(meter.admission_count(), 3);
+        assert_eq!(meter.consumed(LimitKind::IntegerBits), 1);
         assert_eq!(meter.consumed(LimitKind::UnitEdges), 0);
+        assert_eq!(meter.consumed(LimitKind::ValueOccurrences), 1);
+        assert_eq!(meter.consumed(LimitKind::WorkUnits), 3);
+        assert_eq!(meter.consumed(LimitKind::ResultUnits), 1);
     }
 
     let exact_module = include_str!("../src/exact/mod.rs");
     assert!(!exact_module.contains("mod quantity;"));
     assert!(!exact_module.contains("mod unit;"));
+}
+
+/// Trace: FR-275-AC-23
+#[trace("TC-201", "FR-275-AC-23")]
+#[test]
+fn tc_201_qsv_nonexact_handoff_refuses_without_charging() {
+    let table = UnitTable::declared(&energy_graph());
+    let joule = Quantity::new(rational(1), UnitId::declared(key(14)));
+    let mut meter = meter();
+    let Outcome::Completed(converted) = convert_quantity(
+        table.resolve(&joule).unwrap(),
+        table.get(UnitId::declared(key(14))).unwrap(),
+        &QuantityTarget::Integer {
+            domain: IntegerInterval::spanning(Integer::from(0_i64), Integer::from(10_i64)),
+            rounding: RoundingMode::Exact,
+        },
+        &mut meter,
+    )
+    .unwrap() else {
+        panic!("integer conversion completes");
+    };
+    let before_handoff = meter.admission_count();
+    assert_eq!(
+        converted.identified_quantity(),
+        Err(HandoffRefusal::NotExact)
+    );
+    assert_eq!(meter.admission_count(), before_handoff);
 }
