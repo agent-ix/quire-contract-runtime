@@ -37,3 +37,12 @@ These hold:
 ## Verdict
 
 **PASS with findings.** The edits are truthful and consistent with AD-004's split rule, Q-4 and the measured QSV owner. Both findings are wording-level, and either can be fixed in this PR or accepted with a reason.
+
+## Dispositions
+
+Round 1 checked fix commit `792755c` at head `792755cdf038c5d36bb7fd1fc7c55baff1b03512`. 238/238 docs are grammar-clean. The round also adds FR-275-AC-22. It is well-formed and scoped to this slice. Its shared `Inspection (TC-197)` verification is what lets the new tag inflate coverage, which is recorded as SR-13329 FND-002.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The FR-275 residue row now reads "`definition.rs` remains until AD-004 R-3 is resolved" |
+| FND-002 | fixed | The AD-004 slice paragraph now records the CG side: "CG main's `tests/exact_scalar_support/agreement_cases.rs` and `agreement.rs` still use `rt::InvalidSemanticGraph` and `rt::SemanticGraphCause`; those imports must move to `quire_semantic_value::semantic_node` when CG's RT lock moves past this slice." |

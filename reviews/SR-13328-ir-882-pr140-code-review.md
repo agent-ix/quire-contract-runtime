@@ -53,3 +53,32 @@ Measured by the reviewer at the head, in a fresh worktree with one target dir:
 **PASS with findings.** The deletion is semantically lossless. Every deleted item has a locked owner equivalent with the same variants, payload, `Display`, `Debug`, code string and check order. The one difference is the dropped `#[non_exhaustive]`, which AD-004 Q-4 rules for. No adapter, alias or re-export was added, all callers name the owner path, the lock is untouched and all requested gates pass. Fix FND-001 in this PR before merge, because it is a false trace credit. FND-002 is a one-line comment fix. FND-003 needs a corrected PR-body claim, not a code change.
 
 Pre-existing and outside the diff (not a finding): `UnitGraph::compound_unit` (`src/exact/unit.rs:271-277`) still maps every non-term cause to `UnsortedTerms` through a `_` arm. That arm was needed while RT's enum was `#[non_exhaustive]`; Q-4 now allows it to be exhaustive.
+
+## Dispositions
+
+Round 1 checked fix commit `792755c` at head `792755cdf038c5d36bb7fd1fc7c55baff1b03512`, in a fresh worktree. `make fmt-check lint test-features doc msrv size deny test` exited 0. `Cargo.lock` is unchanged; `proc-macro2` and `syn` were already dev-dependencies. The `reviews/` copies of SR-13328 to SR-13330 are byte-identical to the review-pass files.
+
+Reviewer mutants against `qsv_owns_semantic_node_vocabulary`:
+
+| Mutant | Result |
+| --- | --- |
+| m1: RT-local `enum SemanticGraphCause` and `struct InvalidSemanticGraph` in a new `src/exact/semantic_copy.rs` (the review-pass mutant) | killed |
+| m5: `macro_rules!` expanding to `enum SemanticGraphCause` | killed |
+| m6: `type r#SemanticGraphCause = u8` | killed |
+| m2: `pub type GraphCause = quire_semantic_value::semantic_node::SemanticGraphCause` | survived |
+| m3: `pub use quire_semantic_value::semantic_node::InvalidSemanticGraph as Refusal` | survived |
+| m4: a term checker named `dimension_terms_ok` | survived |
+| m7: a 20-variant copy of the enum named `GraphCause` | survived |
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The FR-012-AC-4 tag is gone. The test is now a `syn` walk over every `.rs` file under `src`, covering macro bodies, raw identifiers, use-renames and methods, and it kills the review-pass mutant (m1). Its new `TC-197` tag causes a coverage inflation, recorded as SR-13329 FND-002 |
+| FND-002 | fixed | The comment no longer claims `check_terms` is `pub(crate)` |
+| FND-003 | fixed | The PR body now states the history accurately: `0cb88a2` was a different red test (`qsv_owns_definition_and_semantic_node_vocabulary`, TC-197, also requiring `definition.rs` absent), `2a5119f` renamed and narrowed it, and "the shipped version was not committed red in that form" |
+| FND-004 | still-open | New in round 1; see below |
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-004 | low | FR-275-AC-22 forbids any local "alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker", but the inspection checks only the alias's own name, not what it points to. `pub type GraphCause = quire_semantic_value::semantic_node::SemanticGraphCause` (m2) and `pub use ...::InvalidSemanticGraph as Refusal` (m3) both pass, and m3 is also a re-export that interface-001-AC-2 forbids. Copies under another name also pass: a 20-variant `GraphCause` enum (m7) and a term checker `dimension_terms_ok` (m4). A fix would flag any `type` item or `use` rename whose path ends in an owned name or `check_terms`. Alternatively, narrow AC-22's wording to "under these names" | tests/ir882_qsv_vocabulary.rs:5-20,76-92; spec/exact/functional/FR-275-single-exact-kernel.md:187 |

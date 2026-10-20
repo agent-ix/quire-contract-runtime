@@ -43,3 +43,18 @@ These hold:
 ## Verdict
 
 **PASS with findings.** The coverage state equals main (125 unbacked, 0 contradicted, unbacked set identical). The FR-012 and FR-275 text is truthful at the head, and no criterion lost backing. FND-001 is closed by the same change that fixes SR-13328 FND-001: reword the TC-197 row to name only what a bound test establishes.
+
+## Dispositions
+
+Round 1 checked fix commit `792755c` at head `792755cdf038c5d36bb7fd1fc7c55baff1b03512`. `make spec` reports 238/238 grammar-clean, and strict coverage shows "110 unbacked row(s) and 0 contradicted" (exit 2). The author reports the same figures but says the earlier 125 "is not reproduced". The reviewer diffed this run against the review-pass run (125) and traced the cause (FND-002).
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The TC-197 row now reads "`ir882_qsv_vocabulary` backs only FR-275-AC-22 by inspecting runtime source for local semantic-node vocabulary definitions", and the test is now bound to FR-275-AC-22. What the row's text claims matches the test. What Quire computes from the row does not; see FND-002 |
+| FND-002 | still-open | New in round 1; see below |
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-002 | high | `#[trace("TC-197", "FR-275-AC-22")]` binds the shared `TC-197` id. Every FR-275 AC verified by `Inspection (TC-197)` therefore now counts as backed by this one name-check test: AC-1, AC-2, AC-3, AC-4, AC-5 and AC-12 to AC-19, plus the TC-197 traces-to row and an FR-275 functional-coverage row. That is 15 rows, and it accounts exactly for the drop from 125 to 110 unbacked. The PR, the TC-197 row and AD-004 all say FR-275-AC-2 stays unbacked, yet `quire coverage --strict` no longer lists it. This is coverage inflation. The reviewer probed the fix: tagging only `#[trace("FR-275-AC-22")]` gives 124 unbacked, and FR-275-AC-2 and the other TC-197 ACs are reported unbacked again. Alternatively, give AC-22 its own TC id | tests/ir882_qsv_vocabulary.rs:137; spec/exact/matrix/tests.md:104; spec/exact/functional/FR-275-single-exact-kernel.md:187 |
