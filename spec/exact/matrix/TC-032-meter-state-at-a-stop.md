@@ -51,9 +51,9 @@ QSL-358's QSL-side extraction is Done.
    the denied charge admitted nothing and changed no counter or log entry. QSpec TC-187 U13
    supplies the `36893488147419103232` quantity-power vector; kernel FR-359-AC-3/4 own exact
    over-`u64` refusal and atomicity.
-9. Read `consumed` for all ten `LimitKind` members; iterate IEEE flags, dimension terms and
-   compound-unit terms built in several orders; drive `UnitGraph::admit` and `check_terms` into
-   inputs that fail more than one check.
+9. Read `consumed` for all ten `LimitKind` members; iterate IEEE flags and QSV dimension and
+   compound-unit terms built in several orders; drive QSV's checked-node constructors and
+   `UnitGraph::from_checked_nodes` into inputs that fail more than one check.
 
 ## Expected Results
 

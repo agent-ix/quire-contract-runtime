@@ -602,6 +602,69 @@ fn tc_032_qsv_zero_divisor_and_negative_power_have_one_undefined_cause() {
     );
 }
 
+/// Trace: FR-011-AC-4
+#[trace("TC-032", "FR-011-AC-4")]
+#[test]
+fn tc_032_qsv_identity_read_checks_integer_bits_before_value_occurrences() {
+    let table = UnitTable::declared(&graph());
+    let one = quantity(11, 5, 1);
+    let two = quantity(11, 5, 1);
+    let mut limits = *meter().limits();
+    limits.integer_bits = 0;
+    limits.value_occurrences = 0;
+    let mut meter = Meter::new(limits);
+    let Outcome::Incomplete(record) = evaluate_quantity(
+        QuantityOperation::Add(table.resolve(&one).unwrap(), table.resolve(&two).unwrap()),
+        &mut meter,
+    )
+    .unwrap() else {
+        panic!("identity read is denied");
+    };
+    assert_eq!(record.limit_kind, LimitKind::IntegerBits);
+    assert_eq!(record.limit, 0);
+    assert_eq!(record.consumed, 0);
+    assert_eq!(record.next_charge, int(3));
+    assert_eq!(record.charge_point, ChargePoint::UnitIdentityRead);
+    assert_eq!(meter.admission_count(), 0);
+}
+
+/// Trace: FR-011-AC-6
+#[trace("TC-032", "FR-011-AC-6")]
+#[test]
+fn tc_032_qsv_huge_power_denies_before_computation_with_exact_amount() {
+    let table = UnitTable::declared(&graph());
+    let base = quantity(11, 2, 1);
+    let exponent = Integer::from(18_446_744_073_709_551_616_i128);
+    let mut meter = Meter::new(ScalarLimits {
+        integer_bits: 64,
+        decimal_digits: 0,
+        scale_expansion: 0,
+        text_input_bytes: 0,
+        text_scalars: 0,
+        normalized_scalars: 0,
+        unit_edges: 0,
+        value_occurrences: 1,
+        work_units: 5,
+        result_units: 1,
+    });
+    let Outcome::Incomplete(record) = evaluate_quantity(
+        QuantityOperation::Power(table.resolve(&base).unwrap(), &exponent),
+        &mut meter,
+    )
+    .unwrap() else {
+        panic!("the derived amount must be denied before powering");
+    };
+    assert_eq!(record.limit_kind, LimitKind::IntegerBits);
+    assert_eq!(record.limit, 64);
+    assert_eq!(record.consumed, 2);
+    assert_eq!(record.charge_point, ChargePoint::UnitRationalArithmetic);
+    assert_eq!(record.next_charge.to_string(), "36893488147419103232");
+    assert_eq!(
+        meter.admitted_charge_points(),
+        [ChargePoint::UnitIdentityRead]
+    );
+}
+
 /// Trace: FR-007-AC-25
 #[trace("TC-201", "FR-007-AC-25")]
 #[test]

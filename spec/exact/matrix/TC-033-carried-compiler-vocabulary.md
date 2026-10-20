@@ -12,8 +12,8 @@ relationships:
 
 Check the absence of RT-local node-key ownership after the IR-882 key-owner cutover, the closed
 refusal spellings, and QSV's structural semantic-graph causes and normalized unit values. RT evidence:
-`tests/exact_vocabulary.rs` (`--features exact`); QSV owner evidence for the unit cases still needs
-mapping. The retired parser and round-trip steps are
+`tests/exact_vocabulary.rs` and `tests/exact_unit_owner.rs` (`--features exact`). The retired
+parser and round-trip steps are
 preserved below as historical FR-012-AC-1 text.
 
 ## Test Procedure
@@ -28,10 +28,11 @@ preserved below as historical FR-012-AC-1 text.
 2. Compare the kernel's `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` with their normative strings.
 3. Check `SelectionRefusalCode::ALL` order, each `as_str`, `from_code` over each spelling and over
    unlisted spellings, and `PackageRefusalCode::as_str`.
-4. Drive QSV `EnumDeclaration::new` and `EnumDeclaration::member` into their structural
-   `SemanticGraphCause` outcomes. Map QSV owner evidence for `UnitGraph` and `check_terms`.
-5. Map QSV owner evidence for building `Dimension` and `CompoundUnit` from the same terms in
-   several orders, comparing and iterating the results.
+4. Drive QSV `DimensionNode::checked`, `UnitNode::checked`, `UnitGraph::from_checked_nodes`,
+   `EnumDeclaration::new` and `EnumDeclaration::member` into their structural
+   `SemanticGraphCause` outcomes. The graph's `BTreeMap` input cannot hold a repeated node key.
+5. Build QSV `Dimension` and `CompoundUnit` from graphs whose nodes were inserted in several
+   orders; compare their identities and ascending, zero-free terms.
 6. After the R-3 definition cutover, inspect RT library source for local definitions, aliases,
    re-exports or adapters of `PackageCause`, `PackageRefusal` and `PackageRefusalCode`; check that
    RT's selection and package refusal callers import QSV's definition owner directly. Confirm the
