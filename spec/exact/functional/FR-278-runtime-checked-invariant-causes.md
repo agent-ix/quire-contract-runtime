@@ -29,7 +29,7 @@ The runtime SHALL use the quire-exact FR-369 cause table for the producer sites 
 | ID | Criteria | Verification |
 | --- | --- | --- |
 | FR-278-AC-1 | Every RT checked-package/function invariant producer returns its table cause: unknown name is `UnknownCheckedFunction`, a foreign expression is `ForeignCheckedExpression`, and each meter reborrow is `MeterBorrowConflict`. Runtime-managed calls use explicit frames and `work_units` fuel under RT FR-273; the final carrier has no `CallDepthExceeded` variant, and fuel exhaustion is `Incomplete` with `limit_kind: work_units`, never `CheckedInvariant`. | Test |
-| FR-278-AC-2 | Every collection or composite producer still owned by RT returns its assigned typed cause without flattening a nested cause to a message. Once those producers move to their owning crates, RT retains no duplicate producer and records the owner evidence. Checked equality and quantity producer controls belong to quire-semantic-value FR-122-AC-1 and AC-4; their six former `operand_value` assertions are not RT collection or composite evidence. | Test and inspection |
+| FR-278-AC-2 | Every collection or composite producer still owned by RT returns its assigned typed cause without flattening a nested cause to a message. Once those producers move to their owning crates, RT retains no duplicate producer and records the owner evidence. Checked equality and quantity producer controls belong to quire-semantic-value FR-122-AC-1 and AC-4; their six former `operand_value` assertions are not RT collection or composite evidence. | Test |
 
 ## Dependencies
 
