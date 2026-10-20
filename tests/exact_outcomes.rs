@@ -18,14 +18,16 @@ use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
     CollectionType, CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration,
-    EqualityOperand, EqualityOperator, FunctionDeclaration, ObjectEnvironment, PackageDeclarations,
-    Quantity, QuantityOperation, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph, Value,
-    ValueType,
+    EqualityOperand, EqualityOperator, FunctionDeclaration, PackageDeclarations, Quantity,
+    QuantityOperation, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph, Value, ValueType,
 };
 use quire_exact::{
     CardinalityBound, ChargePoint, CollectionKind, ComparisonOperator, Incomplete, InjectedDenial,
-    Integer, LimitKind, Meter, NodeKey, Outcome, Rational, ScalarLimits,
+    Integer, LimitKind, Meter, NodeKey, Outcome, Rational, ScalarLimits, Value as ExactValue,
+    ValueType as ExactValueType,
 };
+use quire_semantic_value::declaration::TypeEnvironment as SharedTypeEnvironment;
+use quire_semantic_value::object_closure::ObjectClosure;
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
 
@@ -116,21 +118,21 @@ fn drive_collection_membership(meter: &mut Meter) -> Incomplete {
 /// denying) ever runs.
 fn drive_function_call(meter: &mut Meter) -> Incomplete {
     let package = PackageDeclarations {
-        types: TypeEnvironment::default(),
+        types: SharedTypeEnvironment::default(),
         functions: vec![FunctionDeclaration {
             name: "f".to_string(),
             parameters: Vec::new(),
-            result: ValueType::Boolean,
+            result: ExactValueType::Boolean,
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: Box::new(|_frame, _arguments| Outcome::Completed(ExactValue::Boolean(true))),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
     let evaluation = package
-        .call("f", Vec::new(), &ObjectEnvironment::default(), meter)
+        .call("f", Vec::new(), &ObjectClosure::default(), meter)
         .unwrap();
     expect_incomplete(evaluation.outcome)
 }
