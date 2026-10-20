@@ -42,3 +42,9 @@ The allocation holds together on these points:
 ## Dispositions
 
 Review pass only; no disposition round has run yet.
+
+Round 1, verified against fix commit a9b45d77 on the PR head:
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | AD-004 lines 273-274, the H3 row, the step-4 row, the Q-5 paragraph and the Q-5 row now say only QSL converts `WireNodeId` literals to `NodeKey`, through ADR-011 E4 and the `replay` facade |

@@ -37,3 +37,19 @@ Ticket: IR-882. PR agent-ix/quire-contract-runtime#138. This is a structural and
 ## Dispositions
 
 Review pass only; no disposition round has run yet.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | medium | FR-012-AC-1 says "its ID stays reserved and is never reused", yet the same ID now carries a different criterion. The old one was a constructor Test (TC-033); the new one is a cutover Inspection. This reuses the ID in substance and contradicts its own sentence. Keep FR-012-AC-1's original text, marked retired at IR-882 step 4, and state the cutover inspection under a new ID (for example FR-012-AC-6) | spec/exact/functional/FR-012-carried-compiler-vocabulary.md:98,108-110 |
+| FND-004 | low | interface-001-AC-5 now bundles two obligations: the existing per-type "defines none of" list and a new rule to use the QSV owners with no registry or adapter. The second duplicates FR-275-AC-2's new clause, so a reviewer cannot mark AC-5 met while only one half holds. Put the QSV clause in its own interface-001 AC, or rely on FR-275-AC-2 | spec/core/functional/interface-001-runtime-api.md:246 |
+
+Round 1, verified against fix commit a9b45d77 on the PR head:
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The bullet moved to FR-275 `## Behavior`. FR-275-AC-2 now names the `UnitId` resolver, `EnumShape` and `EffectiveId` registries, QSV owner copies and adapters, and TC-197 step 1 inspects them. The FR-275 and TC-197 matrix rows say the clause is planned and untagged |
+| FND-002 | fixed | AD-004 line 412 now reads "repointing object identity to QSV's `TypeEnvironment::object_type(EffectiveId)`" |
+| FND-003 | fixed | FR-012-AC-1 again carries its original constructor text, marked retired at step 4. The unused FR-012-AC-6 now owns cutover inspection, with separate matrix status; TC-033 and its two existing trace attributes remain pre-cutover evidence for AC-1 |
+| FND-004 | fixed | interface-001-AC-5 again carries only its original per-type wording. FR-275-AC-2 remains the separate QSV-owner/no-registry criterion, as the core matrix now states |

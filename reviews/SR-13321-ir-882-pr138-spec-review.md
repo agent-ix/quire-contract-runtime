@@ -57,3 +57,10 @@ Sub-analyses run: integrity (SR-13322) and scope-boundary (SR-13323), plus gap-a
 ## Dispositions
 
 Review pass only; no disposition round has run yet.
+
+Round 1, verified against fix commit a9b45d77 on the PR head:
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The step-4 row now retires FR-012-AC-1's RT-local constructors and TC-033's parser and round-trip steps. FR-012 Behavior says hex decoding has no RT owner, and the NodeKey row names both local constructors. The fix introduced a new defect in how FR-012-AC-1 is re-specified; see SR-13322 FND-003 and SR-13324 FND-002 |
+| FND-002 | fixed | The Q-5 Owner cell now reads "QSL lane technical answer from `draco:QSL:code`, relayed by `luna:IR:plan` on 2026-10-19; tracked by IR-882". The paragraph says it is not a first-hand owner ruling and that QSL #1070 must land with or before this PR |

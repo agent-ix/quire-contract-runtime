@@ -37,3 +37,15 @@ Measured:
 ## Dispositions
 
 Review pass only; no disposition round has run yet.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-002 | medium | Two tests still carry `#[trace("TC-033", "FR-012-AC-1")]`: `tc_033_from_hex_accepts_exactly_64_lowercase_hex_digits` and `tc_033_digest_round_trips_through_bytes_hex_and_display`. Both assert RT-local `from_hex` and `from_bytes` behaviour. `quire trace --id FR-012-AC-1` credits both as verifying the rewritten AC-1, an Inspection criterion that requires those tests and constructors to be absent, and `make spec` reports FR-012 at 5/5 (100%). The matrix row says AC-1 is retired, but coverage counts it as backed by tests that contradict it | tests/exact_vocabulary.rs:369,395; spec/exact/functional/FR-012-carried-compiler-vocabulary.md:98; spec/exact/matrix/tests.md:66 |
+
+Round 1, verified against fix commit a9b45d77 on the PR head:
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-002 | fixed | FR-012-AC-1 again states the original RT-local constructors and is marked retired at step 4. `quire trace --id FR-012-AC-1` correctly resolves both constructor tests; the matrix says they are removed at cutover. Separate FR-012-AC-6 inspects that removal |

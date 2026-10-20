@@ -95,18 +95,20 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-012-AC-1 | At the IR-882 step-4 cutover, inspection finds no RT-local `NodeKey`, no RT `from_bytes` or `from_hex` constructor, and no TC-033 parser or round-trip test of those local constructors. The former constructor criterion is retired at that point; its ID stays reserved and is never reused. RT library code has no `NodeKey` construction or hex decoder. | Inspection |
+| FR-012-AC-1 | `NodeKey::from_hex` accepts exactly the 64-lowercase-hex-digit inputs and returns `None` for every wrong length, uppercase digit and non-hexadecimal byte; `from_bytes`/`as_bytes`/`from_hex`/`Display` round-trip every digest unchanged. Retired at IR-882 step 4; this ID remains reserved with its original criterion text. | Test (TC-033; pre-cutover only) |
 | FR-012-AC-2 | `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` equal their normative strings, and no code path constructs either from parts. | Test (TC-033) |
 | FR-012-AC-3 | `SelectionRefusalCode::ALL` is the eight codes in normative check order, `as_str` yields the lock spelling for each, `from_code` resolves exactly those eight spellings and nothing else, and `PackageRefusalCode::as_str` is `invalid_package`. | Test (TC-033) |
 | FR-012-AC-4 | Each of the thirteen graph causes is raised by an admissible input to `UnitGraph::admit`, and `UndeclaredCase` by reading a case against its declaration; no graph input raises any of the four compiler-admission causes; `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for exactly the malformed member lists named above; and `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no raise site in the crate. | Test (TC-033) |
 | FR-012-AC-5 | `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every construction order of the same terms. | Test (TC-033) |
+| FR-012-AC-6 | At the IR-882 step-4 cutover, inspection finds no RT-local `NodeKey`, no RT `from_bytes` or `from_hex` constructor, and no TC-033 parser or round-trip test of those local constructors. RT library code has no `NodeKey` construction or hex decoder. | Inspection |
 
 ## Kernel ownership
 
 The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
 behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).
-This requirement binds the `exact` feature as a whole except for the retired local-constructor
-contract in FR-012-AC-1. Its ID remains in the record and is never reassigned. Where other evidence
+This requirement binds the `exact` feature as a whole except for the local-constructor
+contract in FR-012-AC-1, retired at IR-882 step 4. Its original text and ID remain in the record;
+FR-012-AC-6 inspects the cutover. Where other evidence
 moves to the kernel's repository, the matrix keeps its row and states the status.
 
 ## Dependencies
