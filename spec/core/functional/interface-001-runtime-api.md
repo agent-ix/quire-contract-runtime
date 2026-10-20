@@ -144,6 +144,11 @@ observation and campaign types lie outside `exact` and are never kernel types: a
 reports what one evaluation produced, and a `Verdict` reports what an execution point established
 about a contract.
 
+For the IR-882 value cutover, RT consumes `quire-semantic-value`'s `UnitTable::get(UnitId)`,
+`TypeEnvironment::object_type(EffectiveId)`, `EnumMemberIndex::resolve(VariantId)` and
+`EnumDeclaration` directly. It owns no second unit, enum or object-type registry and adds no
+adapter for those owner types.
+
 A generated oracle proving a kernel operation, or a runtime operation that calls one, may not call
 that same operation to compute its own expectation — only an operation that is not the one under
 proof may be called this way. The expectation for a kernel operation instead comes from the QSpec

@@ -21,6 +21,10 @@ IR-349; it is planned until then.
    no name defined in the runtime that either crate exports (FR-275-AC-1, FR-275-AC-2), none defined twice
    under an alias, no `exact` module and no `pub use` of `quire-exact`, `quire-semantic-value` or the
    evaluation leaf crate (FR-275-AC-16).
+   After IR-882, inspect quantity, enum and reference payloads: they must use QSV's
+   `UnitTable::get(UnitId)`, `TypeEnvironment::object_type(EffectiveId)`,
+   `EnumMemberIndex::resolve(VariantId)` and `EnumDeclaration` directly, with no RT-owned
+   identity resolver, enum or object-type registry, QSV owner copy or adapter (FR-275-AC-2).
 2. Read `Cargo.toml`; expect `quire-exact` and `quire-semantic-value` optional, enabled only by `exact`,
    each using its own Git repository, `branch = "main"`, and no `rev`, `tag`, `path` or `[patch]`
    (FR-275-AC-3, FR-275-AC-4).
