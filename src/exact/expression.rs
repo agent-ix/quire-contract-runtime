@@ -43,14 +43,14 @@ use core::cell::{Cell, RefCell};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use quire_exact::{
-    Charge, ChargePoint, CheckedInvariantCause, DecimalLoss, IeeeExactLoss, IeeeFlags, IllTyped,
-    IllTypedCause, Integer, Meter, Outcome, Refusal,
+    Charge, ChargePoint, CheckedInvariantCause, DecimalLoss, FieldValue, IeeeExactLoss, IeeeFlags,
+    IllTyped, IllTypedCause, Integer, Meter, Outcome, Refusal, Value, ValueType,
 };
+use quire_semantic_value::declaration::TypeEnvironment;
+use quire_semantic_value::object_closure::ObjectClosure;
 
-use super::composite::{FieldValue, TypeEnvironment, Value, ValueType};
 use super::division::IntegerDivisionConsumer;
 use super::ieee::IeeeItemRequirement;
-use super::reference::ObjectEnvironment;
 use super::stop::{OutcomeStop, Stop};
 
 /// The authority's two checking modes, moved rather than added: the
@@ -447,7 +447,7 @@ pub enum InputRefusal {
         parameter: usize,
     },
     /// The argument at `parameter` contains a reference absent from the
-    /// supplied [`ObjectEnvironment`].
+    /// supplied [`ObjectClosure`].
     DanglingReference {
         /// The zero-based parameter position.
         parameter: usize,
@@ -541,7 +541,7 @@ impl CallPlan {
 fn validate_arguments(
     parameters: &[(String, ValueType)],
     arguments: &[Value],
-    objects: &ObjectEnvironment,
+    objects: &ObjectClosure,
 ) -> Result<(), InputRefusal> {
     if parameters.len() != arguments.len() {
         return Err(InputRefusal::Arity {
@@ -568,6 +568,7 @@ fn validate_arguments(
                         FieldValue::Absent | FieldValue::Null => None,
                     }));
                 }
+                Value::Union(union) => pending.extend(union.payload()),
                 Value::Collection(collection) => pending.extend(collection.elements()),
                 Value::Boolean(_)
                 | Value::Integer(_)
@@ -576,7 +577,11 @@ fn validate_arguments(
                 | Value::Float(_)
                 | Value::Quantity(_)
                 | Value::Text(_)
+                | Value::String(_)
+                | Value::Uuid(_)
+                | Value::Timestamp(_)
                 | Value::Enum(_) => {}
+                Value::Population(_) => {}
             }
         }
     }
@@ -590,7 +595,7 @@ pub fn plan_call(
     package: &CheckedPackage,
     function: &str,
     arguments: &[Value],
-    objects: &ObjectEnvironment,
+    objects: &ObjectClosure,
 ) -> Result<CallPlan, InputRefusal> {
     let declaration = package
         .function(function)
@@ -647,7 +652,7 @@ pub fn plan_evaluation(
     package: &CheckedPackage,
     expression: &CheckedExpression,
     arguments: &[Value],
-    objects: &ObjectEnvironment,
+    objects: &ObjectClosure,
 ) -> Result<CallPlan, EvaluationRefusal> {
     if expression.package != package.identity() {
         return Err(EvaluationRefusal::ForeignExpression);
@@ -773,7 +778,7 @@ impl CheckedPackage {
         &self,
         function: &str,
         arguments: Vec<Value>,
-        objects: &ObjectEnvironment,
+        objects: &ObjectClosure,
         meter: &mut Meter,
     ) -> Result<Evaluation, InputRefusal> {
         plan_call(self, function, &arguments, objects)?;
@@ -792,7 +797,7 @@ impl CheckedPackage {
         &self,
         function: &str,
         arguments: &[Value],
-        objects: &ObjectEnvironment,
+        objects: &ObjectClosure,
         meter: &mut Meter,
     ) -> Outcome<Value> {
         let Some(guard) = self.enter() else {
@@ -826,7 +831,7 @@ impl CheckedPackage {
         &self,
         expression: &CheckedExpression,
         arguments: Vec<Value>,
-        objects: &ObjectEnvironment,
+        objects: &ObjectClosure,
         meter: &mut Meter,
     ) -> Result<Evaluation, InputRefusal> {
         match plan_evaluation(self, expression, &arguments, objects) {
@@ -854,7 +859,7 @@ impl CheckedPackage {
         &self,
         expression: &CheckedExpression,
         arguments: &[Value],
-        objects: &ObjectEnvironment,
+        objects: &ObjectClosure,
         meter: &mut Meter,
     ) -> Outcome<Value> {
         let Some(guard) = self.enter() else {
@@ -888,7 +893,7 @@ impl CheckedPackage {
 }
 
 /// The re-entrant call surface a running [`Body`] sees: the applications it
-/// makes, and the [`Meter`] and [`ObjectEnvironment`] it runs against.
+/// makes, and the [`Meter`] and [`ObjectClosure`] it runs against.
 ///
 /// `depth` is informational only — read it back through [`Frame::depth`],
 /// but the bound itself is not enforced here. A `Frame`'s own field is
@@ -910,7 +915,7 @@ impl CheckedPackage {
 /// aborting the process.
 pub struct Frame<'a> {
     package: &'a CheckedPackage,
-    objects: &'a ObjectEnvironment,
+    objects: &'a ObjectClosure,
     meter: RefCell<&'a mut Meter>,
     depth: u64,
 }
@@ -981,8 +986,8 @@ impl<'a> Frame<'a> {
         Ok(run(&mut guard))
     }
 
-    /// The [`ObjectEnvironment`] this call was made against.
-    pub fn objects(&self) -> &ObjectEnvironment {
+    /// The [`ObjectClosure`] this call was made against.
+    pub fn objects(&self) -> &ObjectClosure {
         self.objects
     }
 
