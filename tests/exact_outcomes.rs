@@ -7,7 +7,6 @@
 //! collection and composite construction, enumeration comparison and quantity arithmetic.
 #![cfg(feature = "exact")]
 
-use quire_exact::NodeKey;
 use std::collections::BTreeSet;
 use std::num::NonZeroU64;
 
@@ -25,7 +24,7 @@ use quire_contract_runtime::exact::{
 };
 use quire_exact::{
     CardinalityBound, ChargePoint, CollectionKind, ComparisonOperator, Incomplete, InjectedDenial,
-    Integer, LimitKind, Meter, Outcome, Rational, ScalarLimits,
+    Integer, LimitKind, Meter, NodeKey, Outcome, Rational, ScalarLimits,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);

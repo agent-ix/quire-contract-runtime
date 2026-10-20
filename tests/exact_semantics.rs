@@ -8,11 +8,10 @@ use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     evaluate_quantity, Quantity, QuantityOperation, QuantityUnit, UnitDeclaration, UnitGraph,
 };
-use quire_exact::NodeKey;
 use quire_exact::{
     divide, evaluate_decimal, modulo, Decimal, DecimalOperation, DecimalType, DivisionMember,
     DivisionProfile, IllTypedCause, InexactTarget, Integer, IntegerDomain, IntegerInterval, Meter,
-    Outcome, Rational, Refusal, RoundingMode, ScalarLimits,
+    NodeKey, Outcome, Rational, Refusal, RoundingMode, ScalarLimits,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);

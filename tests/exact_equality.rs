@@ -2,7 +2,6 @@
 //! the public `exact` surface.
 #![cfg(feature = "exact")]
 
-use quire_exact::NodeKey;
 #[path = "support/charge_points.rs"]
 mod charge_points;
 use charge_points::ChargePoints;
@@ -19,8 +18,8 @@ use quire_contract_runtime::exact::{
 use quire_exact::{
     admit_text, CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, DecimalType,
     IeeeWidth, IllTyped, IllTypedCause, Incomplete, InjectedDenial, Integer, IntegerInterval,
-    LimitKind, Meter, Outcome, Rational, Refusal, RoundingMode, ScalarLimits, Text, TextPayload,
-    TextProfile, TextType, UniverseId,
+    LimitKind, Meter, NodeKey, Outcome, Rational, Refusal, RoundingMode, ScalarLimits, Text,
+    TextPayload, TextProfile, TextType, UniverseId,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {

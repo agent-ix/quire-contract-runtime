@@ -33,8 +33,7 @@ across `node.rs`, `definition.rs` and `unit.rs`, none of which `grep` finds anyw
 
 ## Outputs
 
-- `NodeKey` values and the `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` digest/evaluator domain
-  strings.
+- The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
 - `SelectionRefusalCode`, `PackageRefusalCode`, `PackageCause` and `PackageRefusal` values with
   their normative `as_str` spellings.
 - An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`

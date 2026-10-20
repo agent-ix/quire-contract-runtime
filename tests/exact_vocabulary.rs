@@ -7,43 +7,277 @@ use quire_contract_runtime::exact::{
     CompoundUnit, Dimension, EnumDeclaration, EnumValue, InvalidSemanticGraph, PackageRefusalCode,
     SelectionRefusalCode, SemanticGraphCause, UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
 };
-use quire_exact::NodeKey;
-use quire_exact::{Integer, Rational, NODE_KEY_DOMAIN};
+use quire_exact::{Integer, NodeKey, Rational, NODE_KEY_DOMAIN};
+use std::path::{Path, PathBuf};
+use syn::visit::{self, Visit};
+
+fn rust_sources(directory: &Path, sources: &mut Vec<PathBuf>) {
+    for entry in std::fs::read_dir(directory).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            rust_sources(&path, sources);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            sources.push(path);
+        }
+    }
+}
+
+fn is_test_only(attrs: &[syn::Attribute]) -> bool {
+    attrs.iter().any(|attr| {
+        attr.path().is_ident("cfg")
+            && attr
+                .parse_args::<syn::Path>()
+                .is_ok_and(|path| path.is_ident("test"))
+    })
+}
+
+fn item_attrs(item: &syn::Item) -> &[syn::Attribute] {
+    match item {
+        syn::Item::Const(x) => &x.attrs,
+        syn::Item::Enum(x) => &x.attrs,
+        syn::Item::ExternCrate(x) => &x.attrs,
+        syn::Item::Fn(x) => &x.attrs,
+        syn::Item::ForeignMod(x) => &x.attrs,
+        syn::Item::Impl(x) => &x.attrs,
+        syn::Item::Macro(x) => &x.attrs,
+        syn::Item::Mod(x) => &x.attrs,
+        syn::Item::Static(x) => &x.attrs,
+        syn::Item::Struct(x) => &x.attrs,
+        syn::Item::Trait(x) => &x.attrs,
+        syn::Item::TraitAlias(x) => &x.attrs,
+        syn::Item::Type(x) => &x.attrs,
+        syn::Item::Union(x) => &x.attrs,
+        syn::Item::Use(x) => &x.attrs,
+        _ => &[],
+    }
+}
+
+fn use_exposes_key_owner(tree: &syn::UseTree, from_kernel: bool) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => {
+            use_exposes_key_owner(&path.tree, from_kernel || path.ident == "quire_exact")
+        }
+        syn::UseTree::Name(name) => name.ident == "NodeKey" || name.ident == "NODE_KEY_DOMAIN",
+        syn::UseTree::Rename(rename) => {
+            rename.rename == "NodeKey"
+                || rename.ident == "NodeKey"
+                || rename.ident == "NODE_KEY_DOMAIN"
+        }
+        syn::UseTree::Glob(_) => from_kernel,
+        syn::UseTree::Group(group) => group
+            .items
+            .iter()
+            .any(|item| use_exposes_key_owner(item, from_kernel)),
+    }
+}
+
+fn use_defines_node_key_alias(tree: &syn::UseTree) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => use_defines_node_key_alias(&path.tree),
+        syn::UseTree::Rename(rename) => rename.rename == "NodeKey" && rename.ident != "NodeKey",
+        syn::UseTree::Group(group) => group.items.iter().any(use_defines_node_key_alias),
+        _ => false,
+    }
+}
+
+#[derive(Default)]
+struct ProductionKeyInspection {
+    findings: Vec<String>,
+}
+
+impl<'ast> Visit<'ast> for ProductionKeyInspection {
+    fn visit_item(&mut self, item: &'ast syn::Item) {
+        if is_test_only(item_attrs(item)) {
+            return;
+        }
+        match item {
+            syn::Item::Struct(x) if x.ident == "NodeKey" => {
+                self.findings.push("struct NodeKey".into())
+            }
+            syn::Item::Enum(x) if x.ident == "NodeKey" => self.findings.push("enum NodeKey".into()),
+            syn::Item::Union(x) if x.ident == "NodeKey" => {
+                self.findings.push("union NodeKey".into())
+            }
+            syn::Item::Type(x) if x.ident == "NodeKey" => self.findings.push("type NodeKey".into()),
+            syn::Item::Const(x) if x.ident == "NODE_KEY_DOMAIN" => {
+                self.findings.push("local NODE_KEY_DOMAIN".into())
+            }
+            syn::Item::Use(x) => {
+                if use_defines_node_key_alias(&x.tree) {
+                    self.findings.push("local NodeKey use alias".into());
+                }
+                if matches!(x.vis, syn::Visibility::Public(_))
+                    && use_exposes_key_owner(&x.tree, false)
+                {
+                    self.findings.push("public key owner re-export".into());
+                }
+            }
+            _ => {}
+        }
+        visit::visit_item(self, item);
+    }
+
+    fn visit_impl_item(&mut self, item: &'ast syn::ImplItem) {
+        if let syn::ImplItem::Fn(method) = item {
+            if is_test_only(&method.attrs) {
+                return;
+            }
+            let name = method.sig.ident.to_string();
+            if is_key_constructor_or_hex_decoder(&name) || has_text_to_digest_signature(&method.sig)
+            {
+                self.findings
+                    .push(format!("key constructor or hex decoder: {name}"));
+            }
+        }
+        visit::visit_impl_item(self, item);
+    }
+
+    fn visit_trait_item(&mut self, item: &'ast syn::TraitItem) {
+        if let syn::TraitItem::Fn(method) = item {
+            if is_test_only(&method.attrs) {
+                return;
+            }
+        }
+        visit::visit_trait_item(self, item);
+    }
+
+    fn visit_foreign_item(&mut self, item: &'ast syn::ForeignItem) {
+        if let syn::ForeignItem::Fn(function) = item {
+            if is_test_only(&function.attrs) {
+                return;
+            }
+        }
+        visit::visit_foreign_item(self, item);
+    }
+
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        for segment in &path.segments {
+            let name = segment.ident.to_string();
+            if matches!(
+                name.as_str(),
+                "from_digest"
+                    | "decode_admitted"
+                    | "from_bytes"
+                    | "from_hex"
+                    | "from_str_radix"
+                    | "to_digit"
+            ) {
+                self.findings
+                    .push(format!("key construction or hex decoding: {name}"));
+            }
+        }
+        visit::visit_path(self, path);
+    }
+
+    fn visit_item_fn(&mut self, item: &'ast syn::ItemFn) {
+        let name = item.sig.ident.to_string();
+        if is_key_constructor_or_hex_decoder(&name) || has_text_to_digest_signature(&item.sig) {
+            self.findings
+                .push(format!("key constructor or hex decoder: {name}"));
+        }
+        visit::visit_item_fn(self, item);
+    }
+}
+
+fn is_key_constructor_or_hex_decoder(name: &str) -> bool {
+    matches!(
+        name,
+        "from_digest" | "decode_admitted" | "from_bytes" | "from_hex"
+    ) || (name.contains("hex") && (name.contains("key") || name.contains("decode")))
+}
+
+fn has_text_to_digest_signature(signature: &syn::Signature) -> bool {
+    let takes_text = signature.inputs.iter().any(|input| match input {
+        syn::FnArg::Typed(argument) => match argument.ty.as_ref() {
+            syn::Type::Reference(reference) => matches!(reference.elem.as_ref(), syn::Type::Path(path) if path.path.is_ident("str")),
+            _ => false,
+        },
+        syn::FnArg::Receiver(_) => false,
+    });
+    takes_text
+        && matches!(&signature.output, syn::ReturnType::Type(_, output) if contains_digest(output))
+}
+
+fn contains_digest(ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Array(array) => {
+            matches!(array.elem.as_ref(), syn::Type::Path(path) if path.path.is_ident("u8"))
+                && matches!(&array.len, syn::Expr::Lit(expr) if matches!(&expr.lit, syn::Lit::Int(size) if size.base10_parse::<usize>().is_ok_and(|value| value == 32)))
+        }
+        syn::Type::Path(path) => path.path.segments.iter().any(|segment| {
+            if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                args.args.iter().any(|arg| {
+                    matches!(arg, syn::GenericArgument::Type(inner) if contains_digest(inner))
+                })
+            } else {
+                false
+            }
+        }),
+        _ => false,
+    }
+}
+
+#[derive(Default)]
+struct RetiredConstructorInspection {
+    findings: Vec<String>,
+}
+
+impl<'ast> Visit<'ast> for RetiredConstructorInspection {
+    fn visit_item_fn(&mut self, item: &'ast syn::ItemFn) {
+        let name = item.sig.ident.to_string();
+        if name.starts_with("tc_033_")
+            && (name.contains("parser")
+                || name.contains("roundtrip")
+                || name.contains("round_trip"))
+        {
+            self.findings.push(format!("retired TC-033 test: {name}"));
+        }
+        visit::visit_item_fn(self, item);
+    }
+
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        if path.segments.iter().any(|segment| {
+            matches!(
+                segment.ident.to_string().as_str(),
+                "from_bytes" | "from_hex"
+            )
+        }) {
+            self.findings.push("retired constructor in TC-033".into());
+        }
+        visit::visit_path(self, path);
+    }
+}
 
 #[trace("TC-033", "FR-012-AC-6")]
 #[test]
 fn tc_033_runtime_has_no_local_node_key_constructor() {
-    let node_source = include_str!("../src/exact/node.rs");
-    let exact_surface = include_str!("../src/exact/mod.rs");
-    assert!(!node_source.contains("pub struct NodeKey"));
-    assert!(!node_source.contains("fn from_bytes"));
-    assert!(!node_source.contains("fn from_hex"));
-    assert!(!exact_surface.contains("NodeKey"));
-    assert!(!exact_surface.contains("NODE_KEY_DOMAIN"));
-    for source in [
-        include_str!("../src/exact/boolean.rs"),
-        include_str!("../src/exact/collection.rs"),
-        include_str!("../src/exact/composite.rs"),
-        include_str!("../src/exact/containment.rs"),
-        include_str!("../src/exact/definition.rs"),
-        include_str!("../src/exact/division.rs"),
-        include_str!("../src/exact/enumeration.rs"),
-        include_str!("../src/exact/equality.rs"),
-        include_str!("../src/exact/expression.rs"),
-        include_str!("../src/exact/ieee.rs"),
-        include_str!("../src/exact/key.rs"),
-        include_str!("../src/exact/node.rs"),
-        include_str!("../src/exact/quantity.rs"),
-        include_str!("../src/exact/reference.rs"),
-        include_str!("../src/exact/stop.rs"),
-        include_str!("../src/exact/unit.rs"),
-    ] {
-        let source = source.split("#[cfg(test)]").next().unwrap_or(source);
-        assert!(!source.contains("NodeKey::from_digest("));
-        assert!(!source.contains("NodeKey::decode_admitted("));
-        assert!(!source.contains("NodeKey::from_hex("));
-        assert!(!source.contains("NodeKey::from_bytes("));
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut sources = Vec::new();
+    for directory in ["src", "verification", "examples", "measurement", "scripts"] {
+        rust_sources(&root.join(directory), &mut sources);
     }
+    assert!(!sources.is_empty());
+    let mut failures = Vec::new();
+    for path in sources {
+        let source = std::fs::read_to_string(&path).unwrap();
+        let parsed =
+            syn::parse_file(&source).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        let mut inspection = ProductionKeyInspection::default();
+        inspection.visit_file(&parsed);
+        failures.extend(
+            inspection
+                .findings
+                .into_iter()
+                .map(|finding| format!("{}: {finding}", path.display())),
+        );
+    }
+    let tc_033 = root.join("tests/exact_vocabulary.rs");
+    let source = std::fs::read_to_string(&tc_033).unwrap();
+    let parsed = syn::parse_file(&source).unwrap();
+    let mut retired = RetiredConstructorInspection::default();
+    retired.visit_file(&parsed);
+    failures.extend(retired.findings);
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 fn key(byte: u8) -> NodeKey {

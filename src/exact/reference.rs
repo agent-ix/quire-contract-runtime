@@ -16,12 +16,11 @@ use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::fmt;
 
-use quire_exact::UniverseId;
+use quire_exact::{NodeKey, UniverseId};
 
 use super::composite::{
     fill_slots, ConstructionRefusal, FieldValue, ObjectTypeDeclaration, TypeEnvironment, Value,
 };
-use quire_exact::NodeKey;
 
 /// A declared object identity in its canonical identity bytes.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

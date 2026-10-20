@@ -2,7 +2,6 @@
 //! FR-273), through the public `exact` surface.
 #![cfg(feature = "exact")]
 
-use quire_exact::NodeKey;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -21,7 +20,7 @@ use quire_contract_runtime::exact::{
 };
 use quire_exact::{
     ChargePoint, CheckedInvariantCause, IeeeOperationKind, IeeeWidth, Integer, LimitKind, Meter,
-    Outcome, Refusal, RoundingMode, ScalarLimits, UniverseId,
+    NodeKey, Outcome, Refusal, RoundingMode, ScalarLimits, UniverseId,
 };
 
 /// A `TypeEnvironment` declaring one model object type at `key(9)`, with no

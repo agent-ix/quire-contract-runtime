@@ -2,7 +2,6 @@
 //! through the public `exact` surface.
 #![cfg(feature = "exact")]
 
-use quire_exact::NodeKey;
 use std::cell::RefCell;
 use std::num::NonZeroU64;
 use std::rc::Rc;
@@ -20,8 +19,8 @@ use quire_contract_runtime::exact::{
 };
 use quire_exact::{
     CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, IeeeWidth, IllTyped,
-    IllTypedCause, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, Refusal,
-    ScalarLimits, Undefined,
+    IllTypedCause, Incomplete, InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome,
+    Refusal, ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {

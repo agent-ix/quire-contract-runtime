@@ -13,8 +13,7 @@ use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     CompoundUnit, EnumDeclaration, ObjectIdentity, ObjectReference,
 };
-use quire_exact::NodeKey;
-use quire_exact::UniverseId;
+use quire_exact::{NodeKey, UniverseId};
 
 /// Only the runtime-held `CompoundUnit` and `Dimension` rendering is pinned here; the kernel
 /// scalars' own renderings are `quire-exact`'s to pin.

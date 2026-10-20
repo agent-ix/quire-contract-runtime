@@ -24,8 +24,8 @@ use core::mem;
 
 use quire_exact::{
     Charge, ChargePoint, CheckedInvariantCause, CollectionKind, Decimal, DecimalType, IeeeValue,
-    IeeeWidth, IllTyped, IllTypedCause, Integer, IntegerInterval, LimitKind, Meter, Outcome,
-    Rational, RationalDomain, Refusal, Text, TextType,
+    IeeeWidth, IllTyped, IllTypedCause, Integer, IntegerInterval, LimitKind, Meter, NodeKey,
+    Outcome, Rational, RationalDomain, Refusal, Text, TextType,
 };
 
 use super::collection::{CollectionType, CollectionValue};
@@ -33,7 +33,6 @@ use super::enumeration::EnumValue;
 use super::quantity::{Quantity, QuantityUnit};
 use super::reference::ObjectReference;
 use super::stop::{OutcomeStop, Stop};
-use quire_exact::NodeKey;
 
 /// A declared complete-V1 value type. Two types are the same type exactly when
 /// they are equal, collection bounds included.

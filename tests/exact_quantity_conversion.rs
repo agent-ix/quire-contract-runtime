@@ -5,7 +5,6 @@
 //! criteria restate; no QSpec bytes are copied.
 #![cfg(feature = "exact")]
 
-use quire_exact::NodeKey;
 #[path = "support/charge_points.rs"]
 mod charge_points;
 use charge_points::ChargePoints;
@@ -16,8 +15,8 @@ use quire_contract_runtime::exact::{
     QuantityTarget, QuantityUnit, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
-    ChargePoint, IllTyped, IllTypedCause, Incomplete, Integer, LimitKind, Meter, Outcome, Rational,
-    ScalarLimits,
+    ChargePoint, IllTyped, IllTypedCause, Incomplete, Integer, LimitKind, Meter, NodeKey, Outcome,
+    Rational, ScalarLimits,
 };
 
 fn key(byte: u8) -> NodeKey {

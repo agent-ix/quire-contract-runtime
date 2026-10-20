@@ -8,7 +8,6 @@
 //! division counters, IEEE flag order) left with the kernel to `quire-exact` (FR-275).
 #![cfg(feature = "exact")]
 
-use quire_exact::NodeKey;
 use std::cell::Cell;
 
 #[path = "support/charge_points.rs"]
@@ -22,8 +21,8 @@ use quire_contract_runtime::exact::{
     SemanticGraphCause, ShortCircuitConnective, UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
-    ChargePoint, Incomplete, Integer, LimitKind, Meter, Outcome, Rational, Refusal, ScalarLimits,
-    Undefined,
+    ChargePoint, Incomplete, Integer, LimitKind, Meter, NodeKey, Outcome, Rational, Refusal,
+    ScalarLimits, Undefined,
 };
 
 const UNLIMITED: ScalarLimits = limits([u64::MAX; 10]);
