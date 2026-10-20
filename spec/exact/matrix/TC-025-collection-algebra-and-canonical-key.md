@@ -16,8 +16,11 @@ directly; no RT-local membership or pair walker is acceptable evidence.
 
 Check `construct_collection`/`form_collection` charge and refusal ordering, membership-comparison
 and bound charges, each of the four kinds' retained and visiting order, and the total canonical key
-that fixes set and bag order. Evidence:
-`tests/exact_collection.rs` (`--features exact`).
+that fixes set and bag order. IR-882 removed RT's duplicate implementation and its former
+`tests/exact_collection.rs` controls. `tests/ir882_kernel_pair_results.rs` checks
+the retained-member-first foreign-reference refusal at the kernel boundary.
+The other owner evidence and RT consumer controls need mapping before this
+procedure receives full acceptance credit.
 
 ## Test Procedure
 
@@ -63,3 +66,9 @@ before any charge; canonical order is total, stable and iterative at depth; both
 directions are typed and distinct; every injected denial fires with no partial collection, and
 `CheckedInvariant` is unreachable from every admitted vector in this test's corpus; the deliberately
 invalid deferred element carries `CollectionElementNotAdmitted`.
+
+## Status
+
+PARTIAL: retained under FR-275-AC-14 after removal of RT's duplicate implementation.
+The new membership foreign-reference control supplies one consumer case;
+the other procedures remain planned. No deleted RT test is counted as evidence.

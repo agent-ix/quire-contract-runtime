@@ -18,9 +18,10 @@ references, with values and outcome kinds equal to the quire-spec-language autho
 on every shared-corpus vector, and charges equal to the QSpec accounting
 schedule. As with FR-006 and FR-007, the runtime shall use `quire_exact`'s `Value`,
 `ValueType`, collection, membership, canonical-key and equality-plan operations
-directly and shall define no second value representation or walker after the IR-882
-value-bearing cutover. Until that cutover, the implemented controls below exercise
-RT's current `Value` and its local walkers.
+directly and shall define no second value representation or walker. RT's direct
+consumer controls exercise the shared checked equality path in TC-203. TC-024,
+TC-025 and the remaining TC-026 procedures retain their test-case identities
+while their evidence is reconciled with the QSV and kernel owners.
 
 ## Inputs
 
@@ -94,14 +95,13 @@ RT's current `Value` and its local walkers.
   refusing for different declarations; and membership passes the collection's retained member
   before the probed candidate to the kernel planner, reversing `ForeignReference`
   `required` and `supplied` relative to RT's current membership walker. The
-  cutover tests must assert each result on the real RT entry points.
+  owner and consumer tests must assert each result on the real entry points.
 - `TypeEnvironment::build` constructs the finite value rooted at one `GraphNodeId` of a `ValueGraph`
   bottom-up: a node reached through more than one slot becomes one shared immutable value, and a
   node that contains itself through value containment refuses as `ContainmentCycle` at the node that
   closes the cycle. Sharing a contained value never creates object identity.
-- A `Reference<T>` value is terminal: its current RT identity is the supplied
-  `(UniverseId, NodeKey, ObjectIdentity)` triple. The IR-882 cutover replaces it with
-  the kernel's `(UniverseId, EffectiveId, ObjectId)` triple. Equality never inspects referenced state, and no source form
+- A `Reference<T>` value is terminal: its kernel identity is the supplied
+  `(UniverseId, EffectiveId, ObjectId)` triple. Equality never inspects referenced state, and no source form
   constructs one from a component value.
 - The value carries no structural equality; the ix://agent-ix/quire-specification/FR-149 relation reached through `plan_equality` and
   `CheckedEquality::evaluate` is the only equality, because a structural comparison would be a second,
@@ -112,13 +112,13 @@ RT's current `Value` and its local walkers.
 - Every operation that walks a value's occurrence tree — canonical-key comparison, equality-plan
   formation and pairing, and containment-graph construction — is iterative over an explicit
   worklist, never host-stack recursive, so no admitted value depth can exhaust the call stack.
-- RT's current `Value` has hand-written, iterative `Debug` and nested-node `Drop` over an explicit worklist, not
+- The kernel `Value` has hand-written, iterative `Debug` and nested-node `Drop` over an explicit worklist, not
   derived: on the governed `thumbv7em-none-eabi` target a host-stack overflow is silent memory
   corruption, not a panic, so a value nested past a recursive walk's stack limit must still format
   and free without recursing, in time and allocation proportional to the value's size. The
-  current `Debug` output is checked against an exact literal string, in both compact and alternate
+  `Debug` output is checked against an exact literal string, in both compact and alternate
   form, on small fixed composite and collection values.
-- RT's current `ValueType` has `Clone`, `PartialEq`, `Debug` and `Drop` that traverse `Option` and `Collection`
+- The kernel `ValueType` has `Clone`, `PartialEq`, `Debug` and `Drop` that traverse `Option` and `Collection`
   nesting with heap worklists, never a recursive host-stack walk. The same rule applies when an
   enclosing declaration or collection type invokes those operations on its `ValueType` member.
   The declared type keeps its exact equality and debug representation at every depth.
@@ -176,17 +176,17 @@ RT's current `Value` and its local walkers.
 | FR-008-AC-6 | A `Reference<T>` value carries only its supplied `(universe, object-type, identity)` triple, is constructed from no source form, and compares equal only within one universe. | Test (TC-026) |
 | FR-008-AC-7 | The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both `CardinalityOutOfBound` directions are reachable and report their `code()` and `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared corpus. | Test (TC-024, TC-025, TC-026) |
 | FR-008-AC-8 | Every one of the twelve added charge points round-trips its QSpec spelling, `ChargePoint::ALL` has exactly 63 members including `temporal.visit`, and an injected denial at each of the twelve yields `Incomplete` on `work_units` naming that point with every counter left unchanged. | Test (TC-024, TC-025, TC-026) |
-| FR-008-AC-9 | RT's current `Value` has iterative `Debug` and nested-node `Drop`: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and its `Debug` output matches an exact literal string in both compact and alternate form on a small fixed value. | Test (TC-024, TC-025) |
+| FR-008-AC-9 | The consumed kernel `Value` has iterative `Debug` and nested-node `Drop`: formatting or dropping a value nested past a recursive walk's host-stack limit does not overflow the stack and completes in time and allocation proportional to the value's size, and its `Debug` output matches an exact literal string in both compact and alternate form on a small fixed value. | Test (TC-024, TC-025) |
 | FR-008-AC-13 | For an `Option`/`Collection`-nested `ValueType` whose depth exceeds a recursive host-stack walk under the admitted source-size cap, `Clone`, `PartialEq`, `Debug` and `Drop` complete on a small-stack thread and a default-stack child process without host-stack overflow; unequal leaf, collection kind and bound remain unequal, and the shallow compact and alternate `Debug` output matches the derived representation exactly. | Test (TC-024) |
 
 ## Kernel ownership
 
-The consumed kernel exposes 63 charge points, including its `temporal.visit` point. RT pins the
-count and selected spellings in TC-024; its retained TC-024/025/026 tests cover residue charge
-denials, not the full census. Quire-exact ([FR-368-AC-1](ix://agent-ix/quire-exact/FR-368) and [FR-368-AC-2](ix://agent-ix/quire-exact/FR-368)) tests the full
-63-member vocabulary and round trips. FR-008-AC-8 combines that owner evidence with
-retained RT tests of the twelve added charge-point denials. The owner tests do not
-establish RT/QSL agreement.
+The consumed kernel exposes 63 charge points, including its `temporal.visit` point.
+Quire-exact ([FR-368-AC-1](ix://agent-ix/quire-exact/FR-368) and
+[FR-368-AC-2](ix://agent-ix/quire-exact/FR-368)) tests the full vocabulary and
+round trips. RT's TC-031 now tests the charge points it still owns; TC-203 tests
+the consumed QSV equality schedule. The other owner denial evidence and RT/QSL
+agreement remain to be reconciled under TC-024 through TC-026.
 
 The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
 behaviour of that one kernel, which the runtime consumes and does not copy ([FR-275](./FR-275-single-exact-kernel.md)).

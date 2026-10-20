@@ -10,10 +10,8 @@
 #![cfg(feature = "exact")]
 
 use ix_trace_rs::trace;
-use quire_contract_runtime::exact::{
-    CompoundUnit, EnumDeclaration, ObjectIdentity, ObjectReference,
-};
-use quire_exact::{NodeKey, UniverseId};
+use quire_contract_runtime::exact::{CompoundUnit, EnumDeclaration};
+use quire_exact::NodeKey;
 
 /// Only the runtime-held `CompoundUnit` and `Dimension` rendering is pinned here; the kernel
 /// scalars' own renderings are `quire-exact`'s to pin.
@@ -29,7 +27,7 @@ fn tc_035_debug_parity_compound_unit() {
 
 #[trace("TC-035", "FR-007-AC-13")]
 #[test]
-fn tc_035_debug_parity_enum_value_and_object_reference() {
+fn tc_035_debug_parity_enum_value() {
     let declaration =
         EnumDeclaration::new(NodeKey::from_digest([1_u8; 32]), true, &["A", "B"]).unwrap();
     let member = declaration
@@ -40,17 +38,5 @@ fn tc_035_debug_parity_enum_value_and_object_reference() {
         "EnumValue { declaration: NodeKey(0101010101010101010101010101010101010101010101010101010101010101), \
          member: NodeKey(0202020202020202020202020202020202020202020202020202020202020202), ordered: true, \
          position: 0, case: \"A\" }"
-    );
-
-    let reference = ObjectReference::new(
-        UniverseId::from_digest([1_u8; 32]),
-        NodeKey::from_digest([3_u8; 32]),
-        ObjectIdentity::new(&[2_u8]).unwrap(),
-    );
-    assert_eq!(
-        format!("{reference:?}"),
-        "ObjectReference { universe: UniverseId(0101010101010101010101010101010101010101010101010101010101010101), object_type: \
-         NodeKey(0303030303030303030303030303030303030303030303030303030303030303), identity: \
-         ObjectIdentity([2]) }"
     );
 }

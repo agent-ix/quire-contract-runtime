@@ -2,9 +2,8 @@
 //! runtime still defines (the interim residue of FR-275), through the public `exact` surface.
 //!
 //! The kernel `Outcome`, `Refusal`, `Meter` and injected-denial tests left with the kernel to the
-//! `quire-exact` crate (FR-275; the matrix section "Evidence at the kernel move"). What stays is
-//! what only this crate defines: the charge schedules of `CheckedEquality`, `CheckedPackage`,
-//! collection and composite construction, enumeration comparison and quantity arithmetic.
+//! `quire-exact` crate (FR-275; the matrix section "Evidence at the kernel move"). What stays
+//! here is `CheckedPackage`, enumeration comparison and quantity arithmetic.
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
@@ -16,15 +15,13 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    compare_enum, construct_collection, evaluate_quantity, CheckMode, CheckingLimits,
-    CollectionType, CompositeDeclaration, CompositeShape, Deferred, EnumDeclaration,
-    EqualityOperand, EqualityOperator, FunctionDeclaration, PackageDeclarations, Quantity,
-    QuantityOperation, QuantityUnit, TypeEnvironment, UnitDeclaration, UnitGraph, Value, ValueType,
+    compare_enum, evaluate_quantity, CheckMode, CheckingLimits, EnumDeclaration,
+    FunctionDeclaration, PackageDeclarations, Quantity, QuantityOperation, QuantityUnit,
+    UnitDeclaration, UnitGraph,
 };
 use quire_exact::{
-    CardinalityBound, ChargePoint, CollectionKind, ComparisonOperator, Incomplete, InjectedDenial,
-    Integer, LimitKind, Meter, NodeKey, Outcome, Rational, ScalarLimits, Value as ExactValue,
-    ValueType as ExactValueType,
+    ChargePoint, ComparisonOperator, Incomplete, InjectedDenial, Integer, LimitKind, Meter,
+    NodeKey, Outcome, Rational, ScalarLimits, Value, ValueType,
 };
 use quire_semantic_value::declaration::TypeEnvironment as SharedTypeEnvironment;
 use quire_semantic_value::object_closure::ObjectClosure;
@@ -66,52 +63,6 @@ fn expect_incomplete<T>(outcome: Outcome<T>) -> Incomplete {
 // so every charge before the point under test is genuinely admitted. Each returns the
 // `Incomplete` an injected denial at that call's first matching point produces.
 
-/// A same-type equality between two `Integer` operands selects the
-/// occurrence-pair plan schedule, reaching `equality.plan-form`,
-/// `equality.plan`, `equality.pair` and `equality.result-retain` in order.
-fn drive_equality_plan(meter: &mut Meter) -> Incomplete {
-    let env = TypeEnvironment::new(Vec::new(), Vec::new()).unwrap();
-    let checked = env
-        .check_equality(
-            EqualityOperator::Equal,
-            EqualityOperand::typed(ValueType::Integer),
-            EqualityOperand::typed(ValueType::Integer),
-        )
-        .unwrap();
-    expect_incomplete(checked.evaluate(&Value::Integer(int(3)), &Value::Integer(int(3)), meter))
-}
-
-/// A one-element `Sequence[Integer]` construction: `collection.element` for
-/// the element, then (a sequence never coalesces) `collection.bound` and
-/// `collection.result-retain`.
-fn drive_collection_basic(meter: &mut Meter) -> Incomplete {
-    let collection_type = CollectionType::new(
-        CollectionKind::Sequence,
-        ValueType::Integer,
-        CardinalityBound::new(0, 10).unwrap(),
-    );
-    let elements: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
-        Outcome::Completed(Value::Integer(int(1)))
-    })];
-    expect_incomplete(construct_collection(&collection_type, elements, meter))
-}
-
-/// A two-element `Set[Integer]` construction: the second occurrence is
-/// compared against the first retained member, charging
-/// `collection.member-walk` then `collection.member-test`.
-fn drive_collection_membership(meter: &mut Meter) -> Incomplete {
-    let collection_type = CollectionType::new(
-        CollectionKind::Set,
-        ValueType::Integer,
-        CardinalityBound::new(0, 10).unwrap(),
-    );
-    let elements: Vec<Deferred<'_>> = vec![
-        Box::new(|_meter: &mut Meter| Outcome::Completed(Value::Integer(int(1)))),
-        Box::new(|_meter: &mut Meter| Outcome::Completed(Value::Integer(int(2)))),
-    ];
-    expect_incomplete(construct_collection(&collection_type, elements, meter))
-}
-
 /// A checked package of one nullary function, called through
 /// `CheckedPackage::call`: the injected denial fires on the `function.call`
 /// charge itself, strictly before the body (which would complete instead of
@@ -122,11 +73,11 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
         functions: vec![FunctionDeclaration {
             name: "f".to_string(),
             parameters: Vec::new(),
-            result: ExactValueType::Boolean,
+            result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(ExactValue::Boolean(true))),
+            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -135,24 +86,6 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
         .call("f", Vec::new(), &ObjectClosure::default(), meter)
         .unwrap();
     expect_incomplete(evaluation.outcome)
-}
-
-/// A one-position tuple construction reaches `composite.result-retain` once
-/// its sole position completes.
-fn drive_composite(meter: &mut Meter) -> Incomplete {
-    let declaration = CompositeDeclaration::new(
-        NodeKey::from_digest([7; 32]),
-        "Pair",
-        CompositeShape::Tuple(vec![ValueType::Integer]),
-    );
-    let env = TypeEnvironment::new([declaration], Vec::new()).unwrap();
-    let positions: Vec<Deferred<'_>> = vec![Box::new(|_meter: &mut Meter| {
-        Outcome::Completed(Value::Integer(int(1)))
-    })];
-    expect_incomplete(
-        env.evaluate_tuple(NodeKey::from_digest([7; 32]), positions, meter)
-            .unwrap(),
-    )
 }
 
 fn drive_enum(meter: &mut Meter) -> Incomplete {
@@ -212,11 +145,7 @@ fn drive_quantity(meter: &mut Meter) -> Incomplete {
 /// One `(point, driver)` entry of the AC-1 sweep below.
 type Driver = fn(&mut Meter) -> Incomplete;
 
-/// An injected denial at occurrence one of every charge point the runtime's own operations
-/// charge names exactly that point: `function.call` (through `CheckedPackage::call`/
-/// `Frame::call`, FR-273), the `equality.*` occurrence-pair plan schedule, the `collection.*`
-/// and `composite.result-retain` family, the enumeration `enum.*` points and the quantity
-/// `unit.*` points. The kernel's own scalar points are the kernel's evidence, not this crate's.
+/// An injected denial at occurrence one of every charge point the runtime still owns.
 #[trace("TC-031", "FR-010-AC-1")]
 #[test]
 fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
@@ -229,22 +158,6 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
         (ChargePoint::UnitRationalArithmetic, drive_quantity),
         (ChargePoint::UnitTargetDomain, drive_quantity),
         (ChargePoint::UnitResultRetain, drive_quantity),
-        (ChargePoint::EqualityPlanForm, drive_equality_plan),
-        (ChargePoint::EqualityPlan, drive_equality_plan),
-        (ChargePoint::EqualityPair, drive_equality_plan),
-        (ChargePoint::EqualityResultRetain, drive_equality_plan),
-        (ChargePoint::CollectionElement, drive_collection_basic),
-        (ChargePoint::CollectionBound, drive_collection_basic),
-        (ChargePoint::CollectionResultRetain, drive_collection_basic),
-        (
-            ChargePoint::CollectionMemberWalk,
-            drive_collection_membership,
-        ),
-        (
-            ChargePoint::CollectionMemberTest,
-            drive_collection_membership,
-        ),
-        (ChargePoint::CompositeResultRetain, drive_composite),
     ];
 
     let covered: BTreeSet<ChargePoint> = drivers.iter().map(|(point, _)| *point).collect();
@@ -263,42 +176,15 @@ fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
         assert_eq!(record.limit_kind, LimitKind::WorkUnits, "{point:?}");
         assert_eq!(record.charge_point, point);
         assert_eq!(record.limit, record.consumed, "{point:?}");
-        // FR-010's `equality.plan` bullet states the rule these per-point amounts follow:
-        // `next_charge` is the amount each point's availability check was made against, which is
-        // the charge's own work amount everywhere except `equality.plan` (`pairs + 2`,
-        // reservation, not commit) and the two occurrence-derived points below (`occ(left) +
-        // occ(right)`, at the drivers' minimal one-occurrence-per-side operands).
-        let expected_next_charge = match point {
-            ChargePoint::EqualityPlanForm | ChargePoint::CollectionMemberWalk => int(2),
-            ChargePoint::EqualityPlan => int(3),
-            _ => int(1),
-        };
-        assert_eq!(record.next_charge, expected_next_charge, "{point:?}");
-        // The denied charge itself changed nothing: `work_units` after the call is exactly the
-        // charges admitted before it (one work unit each), no result unit was retained, and the
-        // point was not logged. The occurrence-derived-work points break this 1:1
-        // correspondence for whatever comes after them in a driver's own chain:
-        // `equality.plan-form` and `collection.member-walk` each admit for 2 work units instead
-        // of 1 (`occ(left) + occ(right)` at 2 scalar operands), so a point immediately
-        // downstream of one of them has consumed exactly one more work unit than it has prior
-        // admitted charges. `equality.plan` (`Meter::charge_plan`) only *reserves* `pairs + 2`
-        // to decide availability; on success it still commits a single work unit like any other
-        // charge, so it adds no further drift once past `equality.plan-form`.
+        assert_eq!(record.next_charge, int(1), "{point:?}");
         assert_eq!(
             meter.consumed(LimitKind::WorkUnits),
             record.consumed,
             "{point:?}"
         );
         assert_eq!(meter.consumed(LimitKind::ResultUnits), 0, "{point:?}");
-        let extra_prior_work = match point {
-            ChargePoint::EqualityPlan
-            | ChargePoint::EqualityPair
-            | ChargePoint::EqualityResultRetain
-            | ChargePoint::CollectionMemberTest => 1,
-            _ => 0,
-        };
         assert_eq!(
-            meter.admitted_charges().len() + extra_prior_work,
+            meter.admitted_charges().len(),
             usize::try_from(record.consumed).unwrap(),
             "{point:?}"
         );
