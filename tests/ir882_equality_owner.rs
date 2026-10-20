@@ -11,6 +11,7 @@ use quire_semantic_value::declaration::{
     FieldDeclaration, TypeEnvironment,
 };
 use quire_semantic_value::enumeration::EnumMemberIndex;
+use std::fs;
 use std::num::NonZeroU64;
 
 const LIMITS: ScalarLimits = ScalarLimits {
@@ -130,6 +131,29 @@ fn runtime_defines_no_local_equality_or_value_owner() {
     assert!(!module.contains("mod composite;"));
     assert!(!module.contains("pub use equality::"));
     assert!(!module.contains("pub use composite::"));
+    let source = format!("{}/src/exact", env!("CARGO_MANIFEST_DIR"));
+    for entry in fs::read_dir(source).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|extension| extension != "rs") {
+            continue;
+        }
+        let source = fs::read_to_string(&path).unwrap();
+        for duplicate in [
+            "pub enum Value {",
+            "pub struct CheckedEquality {",
+            "fn plan_pairs(",
+            "fn planned_equality(",
+            "pub type Value =",
+            "pub use quire_exact::Value",
+            "pub use quire_semantic_value::declaration::CheckedEquality",
+        ] {
+            assert!(
+                !source.contains(duplicate),
+                "{} defines {duplicate}",
+                path.display()
+            );
+        }
+    }
 }
 
 #[trace("TC-203", "FR-277-AC-1", "FR-277-AC-2")]
@@ -192,7 +216,7 @@ fn distinct_static_composite_types_refuse_before_evaluation() {
         [],
     )
     .unwrap();
-    let meter = Meter::new(LIMITS);
+    // The checker takes no meter; construction cannot admit an equality charge.
     let refusal = types
         .check_equality(
             EqualityOperator::Equal,
@@ -202,8 +226,6 @@ fn distinct_static_composite_types_refuse_before_evaluation() {
         )
         .unwrap_err();
     assert_eq!(refusal.cause, IllTypedCause::TypeMismatch);
-    assert!(admitted_points(&meter).is_empty());
-    assert_eq!(meter.admission_count(), 0);
 }
 
 #[trace("TC-203", "FR-277-AC-5")]
