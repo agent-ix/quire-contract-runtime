@@ -15,7 +15,8 @@ use quire_exact::{
     Rational, RationalArithmetic, Refusal, RoundingMode, Undefined,
 };
 
-use super::stop::{OutcomeStop, Stop};
+use quire_semantic_value::stop::{outcome_from_stop, Stop};
+
 use super::unit::{CompoundUnit, Dimension, Unit, UnitEdge};
 
 /// The unit of a quantity: an admitted declared unit or a compound unit
@@ -210,7 +211,7 @@ pub fn evaluate_quantity(
     meter: &mut Meter,
 ) -> Result<Outcome<Quantity>, IllTyped> {
     type_check(operation)?;
-    Ok(Outcome::from_stop(evaluate(operation, meter)))
+    Ok(outcome_from_stop(evaluate(operation, meter)))
 }
 
 /// Explicitly convert `source` into `unit` with the `target` representation.
@@ -238,7 +239,7 @@ pub fn convert_quantity(
             domain,
         },
     };
-    Ok(Outcome::from_stop(convert(source, unit, &target, meter)))
+    Ok(outcome_from_stop(convert(source, unit, &target, meter)))
 }
 
 /// Compare two quantities of the identical unit under
@@ -258,7 +259,7 @@ pub fn compare_quantity(
     if left.0.unit != right.0.unit {
         return Err(ill_typed(IllTypedCause::DistinctUnits));
     }
-    Ok(Outcome::from_stop(
+    Ok(outcome_from_stop(
         compare(left, right, meter).map(|ordering| operator.holds(ordering)),
     ))
 }

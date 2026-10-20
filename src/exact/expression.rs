@@ -48,10 +48,10 @@ use quire_exact::{
 };
 use quire_semantic_value::declaration::TypeEnvironment;
 use quire_semantic_value::object_closure::ObjectClosure;
+use quire_semantic_value::stop::{outcome_from_stop, Stop};
 
 use super::division::IntegerDivisionConsumer;
 use super::ieee::IeeeItemRequirement;
-use super::stop::{OutcomeStop, Stop};
 
 /// The authority's two checking modes, moved rather than added: the
 /// authority threads a `CheckMode` through its own per-expression checking
@@ -806,7 +806,7 @@ impl CheckedPackage {
             });
         };
         if let Err(stop) = charge_call(meter) {
-            return Outcome::from_stop(Err(stop));
+            return outcome_from_stop(Err(stop));
         }
         let Some(declaration) = self.function(function) else {
             return Outcome::Refused(Refusal::CheckedInvariant {
@@ -948,7 +948,7 @@ impl<'a> Frame<'a> {
                 });
             };
             if let Err(stop) = charge_call(&mut meter) {
-                return Outcome::from_stop(Err(stop));
+                return outcome_from_stop(Err(stop));
             }
         }
         let Ok(mut meter) = self.meter.try_borrow_mut() else {
