@@ -5,10 +5,12 @@
 use ix_trace_rs::trace;
 use proc_macro2::{TokenStream, TokenTree};
 use quire_contract_runtime::exact::{
-    CompoundUnit, Dimension, PackageRefusalCode, SelectionRefusalCode, UnitDeclaration, UnitGraph,
-    COMPOUND_UNIT_DOMAIN,
+    CompoundUnit, Dimension, UnitDeclaration, UnitGraph, COMPOUND_UNIT_DOMAIN,
 };
 use quire_exact::{Integer, NodeKey, Rational, NODE_KEY_DOMAIN};
+use quire_semantic_value::definition::{
+    PackageCause, PackageRefusal, PackageRefusalCode, SelectionRefusalCode,
+};
 use quire_semantic_value::enumeration::{EnumDeclaration, EnumValue};
 use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 use std::path::{Path, PathBuf};
@@ -760,6 +762,32 @@ fn tc_033_package_refusal_code_as_str_is_invalid_package() {
         PackageRefusalCode::InvalidPackage.as_str(),
         "invalid_package"
     );
+}
+
+#[trace("TC-033", "FR-012-AC-7")]
+#[test]
+fn tc_033_definition_refusals_have_only_the_qsv_owner() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    assert!(
+        !root.join("src/exact/definition.rs").exists(),
+        "RT still defines a local definition refusal vocabulary"
+    );
+    let exact_module = std::fs::read_to_string(root.join("src/exact/mod.rs")).unwrap();
+    assert!(!exact_module.contains("mod definition;"));
+    assert!(!exact_module.contains("pub use definition::"));
+
+    let causes = [
+        (PackageCause::MissingMember, "missing-member"),
+        (PackageCause::ConflictingDefinition, "conflicting-definition"),
+        (PackageCause::IncompatibleDefinition, "incompatible-definition"),
+    ];
+    for (cause, spelling) in causes {
+        assert_eq!(cause.as_str(), spelling);
+        assert_eq!(
+            PackageRefusal::invalid_package(cause).to_string(),
+            format!("invalid_package: {spelling}")
+        );
+    }
 }
 
 #[trace("TC-033", "FR-012-AC-5")]
