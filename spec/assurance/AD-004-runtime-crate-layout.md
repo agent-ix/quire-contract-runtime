@@ -34,6 +34,8 @@ relationships:
     type: references
   - target: ix://agent-ix/quire-contract-runtime/FR-275
     type: references
+  - target: ix://agent-ix/quire-semantic-value/FR-124
+    type: references
   - target: ix://agent-ix/quire-contract-runtime/NFR-001
     type: references
 ---
@@ -420,24 +422,18 @@ refusal without a quantity or an unresolvable ID. RT deletes its boxed
 this cutover; it does not compute a digest, mint a second ID, maintain a
 parallel unit table, or translate between old and shared unit types.
 
-Step-4 acceptance uses FR-275-AC-23 and TC-201. QSV currently returns a
-`Conversion`, not a kernel `Quantity`, from `convert_quantity`; its public
-`Conversion` accessors alone do not retain the target under a `UnitId`.
-Before RT's value-bearing cutover, QSV must provide an owner-side exact-result
-construction operation, proposed as
-`Conversion::exact_quantity(&self) -> Result<Option<(quire_exact::Quantity, IdentifiedUnit)>, IdentityRefusal>`.
-For `ConvertedValue::Exact`, it clones the exact magnitude and the conversion's
-target `QuantityUnit`, constructs `IdentifiedUnit::new(target)` once, and returns
-`Quantity::new(magnitude, identified.id())` paired with that identified unit.
-For a non-exact result it returns `Ok(None)`; if target identity construction
-refuses, it returns that typed refusal and no quantity or identified unit.
-It performs no meter charge: the completed conversion already charged target
-admission and result retention. QSV's `src/declaration.rs` already pairs an
-exact converted magnitude with a target ID when forming `Value::Quantity`,
-but has no public operation for this handoff today. The QSV owner must settle
-the proposed public name and signature before the step-4 implementation;
-the semantics above are the required boundary, with no RT helper or adapter.
-For TC-187 U25, `UnitScope::form` retains the returned `IdentifiedUnit`,
+Step-4 acceptance uses FR-275-AC-23 and TC-201. QSV's FR-124 settles the
+owner-side handoff from `convert_quantity`'s `Conversion`:
+`Conversion::identified_quantity(&self) -> Result<(quire_exact::Quantity, IdentifiedUnit), HandoffRefusal>`.
+For `ConvertedValue::Exact`, the method pairs the exact magnitude under the
+target's `UnitId` with the `IdentifiedUnit` for that same target. A non-exact
+result returns `HandoffRefusal::NotExact`; target identity failure returns
+`HandoffRefusal::Identity(IdentityRefusal)`. Neither refusal returns a
+quantity or identified unit. The handoff charges no meter: the completed
+conversion already charged target admission and result retention. QSV owns
+the method and its implementation under FR-124/TC-923; RT consumes the pair
+without a helper, adapter, second unit table or identity calculation.
+For QSpec TC-187 U25, `UnitScope::form` retains the returned `IdentifiedUnit`,
 `UnitScope::resolve(&quantity)` supplies the next conversion's source, and
 the second conversion returns exact `1 J`. FR-007-AC-21 and AC-23 already cover
 compound-side dimension refusal, the first conversion's empty target path,
