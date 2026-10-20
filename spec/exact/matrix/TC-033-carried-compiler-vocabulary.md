@@ -49,5 +49,5 @@ RT has no local `NodeKey` type, alias, constructor, hex decoder or public re-exp
 source contains no `NodeKey` construction. The retired parser and round-trip tests are absent.
 The remaining vocabulary spellings are byte-exact, every structural cause is reachable, no
 compiler-admission cause is, and normalized unit values are order-independent.
-The R-3 step is planned until its owner contract and RT code cutover land; then RT has no local
-definition refusal vocabulary and the three retired causes cannot be paired with `invalid_package`.
+The R-3 step is implemented: RT has no local definition refusal vocabulary, its tests import QSV
+directly, and the three retired causes cannot be paired with `invalid_package`.

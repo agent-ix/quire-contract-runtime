@@ -21,8 +21,8 @@ definition-selection refusal, a package refusal, or the topology of a unit graph
 carry the compiler's exact spellings so the oracle reports what it was handed, and shall not
 recompute, re-derive or invent any of them.
 
-`src/exact/mod.rs` exports the remaining runtime definition and unit vocabulary until their
-owner cutovers. The R-3 definition cutover consumes `quire_semantic_value::definition` directly.
+`src/exact/mod.rs` exports the remaining runtime unit vocabulary until its owner cutover. The
+R-3 definition cutover consumes `quire_semantic_value::definition` directly.
 `NodeKey` and `NODE_KEY_DOMAIN` are consumed directly from `quire_exact`;
 `InvalidSemanticGraph` and `SemanticGraphCause` are consumed directly from
 `quire_semantic_value::semantic_node`.
@@ -38,8 +38,7 @@ owner cutovers. The R-3 definition cutover consumes `quire_semantic_value::defin
 
 - The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
 - QSV's definition vocabulary supplies `SelectionRefusalCode`, `PackageRefusalCode`,
-  `PackageCause` and `PackageRefusal` with their normative spellings after the R-3 cutover.
-  Until that cutover, RT's local definition vocabulary is residue under FR-275.
+  `PackageCause` and `PackageRefusal` with their normative spellings.
 - An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
   path to its canonical root, or a QSV `InvalidSemanticGraph` carrying one typed
   `SemanticGraphCause`.
@@ -60,12 +59,12 @@ owner cutovers. The R-3 definition cutover consumes `quire_semantic_value::defin
   spelling for each, and `from_code` is its exact inverse: it resolves every listed spelling and
   resolves nothing else. `PackageRefusalCode::as_str` is `invalid_package`. A generated oracle
   reports a compiler refusal by carrying one of these; it never spells a code itself.
-- **R-3 retires three RT-only package causes.** RT's local `PackageCause` currently includes
+- **R-3 retires three RT-only package causes.** RT's former local `PackageCause` included
   `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` without a producer,
   consumer or test outside the local definition. Those causes are not members of the
   `invalid_package` definition-admission subset: QSpec FR-272 assigns digest mismatches to
   `stale_dependency`, while QSV's definition vocabulary carries only `MissingMember`,
-  `ConflictingDefinition` and `IncompatibleDefinition`. The R-3 cutover deletes RT's local
+  `ConflictingDefinition` and `IncompatibleDefinition`. The R-3 cutover deleted RT's local
   `PackageCause`, `PackageRefusal` and `PackageRefusalCode` definitions, imports QSV's three-cause
   vocabulary at use sites, and adds no alias, re-export or compatibility adapter. QSV owns the
   valid code/cause pairing and its tests; RT keeps the existing selection and package-code

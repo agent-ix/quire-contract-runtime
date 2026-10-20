@@ -778,8 +778,14 @@ fn tc_033_definition_refusals_have_only_the_qsv_owner() {
 
     let causes = [
         (PackageCause::MissingMember, "missing-member"),
-        (PackageCause::ConflictingDefinition, "conflicting-definition"),
-        (PackageCause::IncompatibleDefinition, "incompatible-definition"),
+        (
+            PackageCause::ConflictingDefinition,
+            "conflicting-definition",
+        ),
+        (
+            PackageCause::IncompatibleDefinition,
+            "incompatible-definition",
+        ),
     ];
     for (cause, spelling) in causes {
         assert_eq!(cause.as_str(), spelling);
