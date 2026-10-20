@@ -485,16 +485,18 @@ tests that still exercise enum declaration admission import QSV directly. The qu
 unit residue and evaluation-leaf dependency remain. The following independent slice removes
 RT's private `src/exact/stop.rs` carrier and conversion trait; Boolean, quantity and function
 application code use QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The
-definition code cutover follows the R-3 decision below.
+definition code cutover can follow the R-3 decision below because QSV's owner FR has landed.
 
 R-3 is decided from an RT source/test/spec use audit: `RevisionMismatch`,
-`DigestDomainMismatch` and `ByteDigestMismatch` occur only in `src/exact/definition.rs` and this
-AD, with no RT producer, consumer or test. QSpec FR-272 assigns digest mismatch causes to
-`stale_dependency`, so the RT `invalid_package` pairing is invalid. The three extras retire;
+`DigestDomainMismatch` and `ByteDigestMismatch` had no RT producer, consumer or test in the
+source audit. They appeared in `src/exact/definition.rs` and this AD before this amendment;
+FR-012 and FR-275 now name them to specify their retirement. QSpec FR-272 assigns digest
+mismatch causes to `stale_dependency`, so the RT `invalid_package` pairing is invalid. The
+three extras retire;
 QSV's `PackageCause` keeps `MissingMember`, `ConflictingDefinition` and
-`IncompatibleDefinition`. Once QSV's owner FR establishes their spellings, valid pairing and
-tests, RT deletes its local `PackageCause`, `PackageRefusal` and `PackageRefusalCode` with
-`definition.rs` and consumes QSV's types directly. QSV already exports
+`IncompatibleDefinition`. QSV FR-125 and TC-924 now establish their spellings, valid pairing and
+tests. RT's next code cutover deletes its local `PackageCause`, `PackageRefusal` and
+`PackageRefusalCode` with `definition.rs` and consumes QSV's types directly. QSV already exports
 `SelectionRefusalCode::ALL`, `from_code` and `as_str`, and `PackageRefusalCode::as_str`, the only
 helpers RT's remaining vocabulary tests use. FR-012-AC-7 inspects the cutover; no adapter or
 compatibility path is planned.
@@ -534,7 +536,7 @@ CG and RT value-bearing cutover (IR-882).
 To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldDeclaration` per name across
 `quire-exact` and `quire-semantic-value`; R-2 superseded by QSL FR-262's work-fuel-only call rule,
 with RT FR-273 correction owned by IR-512; R-3 decided above (retire RT's three extra
-`PackageCause` variants, then consume QSV directly after its owner FR); R-4 the injected denial
+`PackageCause` variants, then consume QSV directly); R-4 the injected denial
 single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
 behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and QSL ADR-012's contrary RT rows requiring QSL draft PR #1070 to land with or before this PR; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
 
