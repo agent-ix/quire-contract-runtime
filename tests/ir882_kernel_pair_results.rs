@@ -21,7 +21,7 @@ const LIMITS: ScalarLimits = ScalarLimits {
     result_units: 100,
 };
 
-#[trace("TC-026", "FR-008-AC-5")]
+#[trace("TC-026")]
 #[test]
 fn kernel_distinguishes_composite_declarations_and_compares_enum_variants() {
     let fields = || Box::new([FieldValue::Present(Value::Integer(Integer::from(3_u64)))]);
@@ -43,7 +43,7 @@ fn kernel_distinguishes_composite_declarations_and_compares_enum_variants() {
     ));
 }
 
-#[trace("TC-025", "TC-026", "FR-008-AC-5")]
+#[trace("TC-025", "TC-026")]
 #[test]
 fn membership_foreign_reference_names_retained_member_first() {
     let object_type = EffectiveId::from_digest([4; 32]);
