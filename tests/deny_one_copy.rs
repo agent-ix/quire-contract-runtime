@@ -119,7 +119,7 @@ fn deny_checks_the_unchanged_committed_lock_with_the_owned_command() {
     assert_eq!(fs::read(scratch.root.join("Cargo.lock")).unwrap(), before);
 }
 
-#[trace("FR-275-AC-6", "FR-275-AC-25")]
+#[trace("TC-202", "FR-275-AC-6", "FR-275-AC-25")]
 #[test]
 fn deny_rejects_duplicate_first_party_package_names_with_valid_sources() {
     let scratch = ScratchRepo::new();
