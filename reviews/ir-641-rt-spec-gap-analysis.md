@@ -217,3 +217,58 @@ Round 1, unchanged candidate 3da82cf8197064a01232fb0a4cb343b79c5ab853. Spec soun
 | --- | --- | --- |
 | FND-001 | deferred | 68 inherited untagged criteria remain open strict-coverage debt with existing IR-878 owner luna:IR:plan, actual 68-row handoff comment 6a87b61b; root spec-stage scope decision IR-641 comment 7817ca97. No coverage waiver, closure or green matrix. |
 | FND-002 | deferred | Four honestly PLANNED new Test criteria FR-275-AC-24/25/26/28 remain required implementation work in the same IR-641 after this contract merges; root decision IR-641 comment 7817ca97. Real installed command and normal consumer Make controls still required. No implementation completion or test credit. |
+
+## Narrow Verification (round 2)
+
+Narrow verification of final custody head58758d8e: candidate differs from reviewed3da82cf8 only in14review-custody files; original spec, source, Makefile and locks are byte-identical. Real strict coverage baseline107 -> candidate112 unbacked rows; zero removed identities and zero contradicted statuses. Exact additions are FR-275-AC-24/25/26/27/28. AC27 is legitimately Inspection/no-symbol; this strict metric differs from the computed matrix72untagged/41method-without-symbol and creates no new missing-test finding. All107 inherited strict rows handed to IR-878 commentfad2588d. New five planned obligations remain IR-641 implementation; no waiver, qualification or green claim. Full gap FAIL and scoped spec PASS remain unchanged.
+
+
+```yaml
+baseline: a60c508f3a2af230aeb51af97bdf549cd5fffa01
+candidate: 58758d8eba8685c58e8b715cacb5a1db3c8fdb19
+identity_fields:
+- reference
+- document
+- row_id
+- target_ids
+baseline_unbacked: 107
+candidate_unbacked: 112
+added:
+- reference: verification
+  document: spec/exact/functional/FR-275-single-exact-kernel.md
+  row_id: FR-275-AC-24
+  target_ids:
+  - FR-275-AC-24
+- reference: verification
+  document: spec/exact/functional/FR-275-single-exact-kernel.md
+  row_id: FR-275-AC-25
+  target_ids:
+  - FR-275-AC-25
+- reference: verification
+  document: spec/exact/functional/FR-275-single-exact-kernel.md
+  row_id: FR-275-AC-26
+  target_ids:
+  - FR-275-AC-26
+- reference: verification
+  document: spec/exact/functional/FR-275-single-exact-kernel.md
+  row_id: FR-275-AC-27
+  target_ids:
+  - FR-275-AC-27
+- reference: verification
+  document: spec/exact/functional/FR-275-single-exact-kernel.md
+  row_id: FR-275-AC-28
+  target_ids:
+  - FR-275-AC-28
+removed: []
+status_lies_baseline: 0
+status_lies_candidate: 0
+baseline_no_symbol: 22
+candidate_no_symbol: 23
+inherited_owner: IR-878
+new_owner: IR-641
+inspection_explanation: AC27 is a no-symbol Inspection obligation, included in strict
+  coverage unbacked rows but not an additional missing compiled-test defect.
+inherited_owner_comment: IR-878 fad2588d
+scope: Spec soundness PASS; full gap FAIL unchanged. Round1 deferrals remain current;
+  no new findings, no fixed claims.
+```

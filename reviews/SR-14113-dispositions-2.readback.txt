@@ -1,0 +1,60 @@
+<!-- reviewer-dispositions repo=agent-ix/quire-contract-runtime visibility=public quoin=0.28.4 module=spec-artifacts-process@b82e42e893612b4b4ee94127714b4577ee893502 id=SR-14113 round=2 model=gpt-6 run=ba1ded1f-388d-4246-a32e-d737dd69f8c7 -->
+
+Narrow verification of final custody head58758d8e: candidate differs from reviewed3da82cf8 only in14review-custody files; original spec, source, Makefile and locks are byte-identical. Real strict coverage baseline107 -> candidate112 unbacked rows; zero removed identities and zero contradicted statuses. Exact additions are FR-275-AC-24/25/26/27/28. AC27 is legitimately Inspection/no-symbol; this strict metric differs from the computed matrix72untagged/41method-without-symbol and creates no new missing-test finding. All107 inherited strict rows handed to IR-878 commentfad2588d. New five planned obligations remain IR-641 implementation; no waiver, qualification or green claim. Full gap FAIL and scoped spec PASS remain unchanged.
+
++++ [reviewer data]
+
+```yaml
+dispositions: []
+new_findings: []
+narrow_verification:
+  baseline: a60c508f3a2af230aeb51af97bdf549cd5fffa01
+  candidate: 58758d8eba8685c58e8b715cacb5a1db3c8fdb19
+  identity_fields:
+  - reference
+  - document
+  - row_id
+  - target_ids
+  baseline_unbacked: 107
+  candidate_unbacked: 112
+  added:
+  - reference: verification
+    document: spec/exact/functional/FR-275-single-exact-kernel.md
+    row_id: FR-275-AC-24
+    target_ids:
+    - FR-275-AC-24
+  - reference: verification
+    document: spec/exact/functional/FR-275-single-exact-kernel.md
+    row_id: FR-275-AC-25
+    target_ids:
+    - FR-275-AC-25
+  - reference: verification
+    document: spec/exact/functional/FR-275-single-exact-kernel.md
+    row_id: FR-275-AC-26
+    target_ids:
+    - FR-275-AC-26
+  - reference: verification
+    document: spec/exact/functional/FR-275-single-exact-kernel.md
+    row_id: FR-275-AC-27
+    target_ids:
+    - FR-275-AC-27
+  - reference: verification
+    document: spec/exact/functional/FR-275-single-exact-kernel.md
+    row_id: FR-275-AC-28
+    target_ids:
+    - FR-275-AC-28
+  removed: []
+  status_lies_baseline: 0
+  status_lies_candidate: 0
+  baseline_no_symbol: 22
+  candidate_no_symbol: 23
+  inherited_owner: IR-878
+  new_owner: IR-641
+  inspection_explanation: AC27 is a no-symbol Inspection obligation, included in strict
+    coverage unbacked rows but not an additional missing compiled-test defect.
+  inherited_owner_comment: IR-878 fad2588d
+  scope: Spec soundness PASS; full gap FAIL unchanged. Round1 deferrals remain current;
+    no new findings, no fixed claims.
+```
+
++++
