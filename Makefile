@@ -89,7 +89,7 @@ msrv:
 size:
 	$(CARGO) +$(MSRV) build $(LOCKED) --release --manifest-path measurement/footprint/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(FOOTPRINT_TARGET_DIR)
-	bash scripts/check_linked_footprint.sh
+	$(CARGO) run $(LOCKED) --quiet --bin check_linked_footprint --
 	@# FR-275-AC-10: the footprint graph must not resolve a shared exact dependency. The size band alone
 	@# would not catch a regression that enabled `exact` there, so the graph is checked directly.
 	@set -e; graph=$$($(CARGO) tree $(LOCKED) -p quire-contract-runtime-footprint \
