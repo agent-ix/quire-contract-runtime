@@ -1,0 +1,602 @@
+<!-- reviewer repo=agent-ix/quire-contract-runtime visibility=public quoin=0.28.4 module=spec-artifacts-process@b82e42e893612b4b4ee94127714b4577ee893502 id=SR-14113 method=gap-analysis lang=spec pr=quire-contract-runtime#152 model=gpt-6 run=7344a92f-baf9-437d-bff9-87710b2444ee -->
+
+Full computed repository matrix contains 176 criteria: 63 tagged, 72 untagged, 41 method-without-symbol. Four new Test criteria are honestly planned IR641 implementation work; 68 inherited untagged criteria require IR878 triage. Method-without-symbol is not automatically a defect. No repository completion claim.
+
+| FND | Severity | Check | Summary |
+| --- | --- | --- | --- |
+| FND-001 | high | coverage | 68 inherited criteria have no computed test binding; existing runtime strict-coverage debt needs per-criterion owner triage |
+| FND-002 | high | coverage | Four newly planned consumer Test criteria have no implementation or actual test binding yet |
+
++++ [reviewer data]
+
+```yaml
+clean: false
+scope:
+- id: interface-001-AC-13
+  path: spec/core/functional/interface-001-runtime-api.md
+  role: examined
+  excerpt: While the `exact` feature is enabled and the `std` feature is disabled,
+    the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv`
+    declares.
+- id: NFR-001-AC-1
+  path: spec/core/non-functional/NFR-001-no-std-footprint.md
+  role: examined
+  excerpt: The default feature profile compiles without `std` or an allocator.
+- id: NFR-001-AC-2
+  path: spec/core/non-functional/NFR-001-no-std-footprint.md
+  role: examined
+  excerpt: The library compiles with no `unsafe` code.
+- id: NFR-001-M-1
+  path: spec/core/non-functional/NFR-001-no-std-footprint.md
+  role: examined
+  excerpt: Unsafe blocks
+- id: NFR-001-M-2
+  path: spec/core/non-functional/NFR-001-no-std-footprint.md
+  role: examined
+  excerpt: Linked `.text` + `.rodata`
+- id: NFR-002-AC-3
+  path: spec/core/non-functional/NFR-002-panic-compatibility-license.md
+  role: examined
+  excerpt: Public data enums whose evolution affects downstream matching remain non-exhaustive,
+    as the `compile_fail` doctests in `src/observation.rs` and `src/verdict.rs` show.
+- id: NFR-002-AC-7
+  path: spec/core/non-functional/NFR-002-panic-compatibility-license.md
+  role: examined
+  excerpt: '`make deny` passes its license-policy check for the resolved dependency
+    set.'
+- id: NFR-002-M-1
+  path: spec/core/non-functional/NFR-002-panic-compatibility-license.md
+  role: examined
+  excerpt: Intentional panic sites in library code
+- id: NFR-002-M-2
+  path: spec/core/non-functional/NFR-002-panic-compatibility-license.md
+  role: examined
+  excerpt: License policy violations
+- id: FR-006-AC-1
+  path: spec/exact/functional/FR-006-exact-outcomes-and-accounting.md
+  role: examined
+  excerpt: The four outcome dispositions are distinct; completed `false` is a value.
+    `Refusal` and `Undefined` are closed enums; `Incomplete` is a typed record whose
+    reason uses the closed `LimitKind` and `ChargePoint` enums. The runtime consumes
+    these kernel types directly under FR-275.
+- id: FR-006-AC-2
+  path: spec/exact/functional/FR-006-exact-outcomes-and-accounting.md
+  role: examined
+  excerpt: Ill-typed operand combinations are reported before evaluation with zero
+    charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity)
+    are typed.
+- id: FR-006-AC-3
+  path: spec/exact/functional/FR-006-exact-outcomes-and-accounting.md
+  role: examined
+  excerpt: Every charge point and limit kind round-trips its QSpec spelling; charges
+    precede work; size counters are high-water, work/result cumulative; the first
+    short counter in field order is reported with the exact denied amount.
+- id: FR-006-AC-4
+  path: spec/exact/functional/FR-006-exact-outcomes-and-accounting.md
+  role: examined
+  excerpt: An injected denial at any admitted charge point yields `Incomplete` on
+    `work_units` naming that point, with no result units and no partial value.
+- id: FR-006-AC-8
+  path: spec/exact/functional/FR-006-exact-outcomes-and-accounting.md
+  role: examined
+  excerpt: With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`
+    on the supported MSRV through the `build-exact-no-std-msrv` row of `make test-features`.
+- id: FR-006-AC-9
+  path: spec/exact/functional/FR-006-exact-outcomes-and-accounting.md
+  role: examined
+  excerpt: Every public item exposed through `quire_contract_runtime::exact` is re-exported
+    by `src/exact/mod.rs` from a private child module; child module paths are inaccessible
+    to consumers.
+- id: FR-007-AC-1
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: Integer division and modulus agree with QSpec ix://agent-ix/quire-specification/TC-192
+    in value, outcome kind and charges; the arithmetic amount `max(bits(a), bits(b))`
+    is charged before the quotient exists.
+- id: FR-007-AC-2
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: "Decimal arithmetic, rounding and ordering agree with QSpec ix://agent-ix/quire-specification/TC-185,\
+    \ including D20\u2013D21 ordering charges and D22\u2013D23 result-retain upscale\
+    \ charges; every operand-derived amount is exact at its limit and denied one under\
+    \ before allocation."
+- id: FR-007-AC-3
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: IEEE profile operations agree with QSpec `ix://agent-ix/quire-specification/TC-193`.
+- id: FR-007-AC-4
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: Text and enum operations agree with QSpec `ix://agent-ix/quire-specification/TC-186`.
+- id: FR-007-AC-5
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: Quantity and unit-graph operations agree with QSpec `ix://agent-ix/quire-specification/TC-187`.
+- id: FR-007-AC-6
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: Every evaluated shared-corpus vector is executed on both the runtime and
+    the quire-spec-language authority with equal Debug renderings; admission-only
+    vectors and charges not yet metered by the authority are listed by name.
+- id: FR-007-AC-7
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: Integer arithmetic, rational arithmetic, ordering and Boolean connectives
+    match an independent `i128` oracle and the QSpec ix://agent-ix/quire-specification/TC-191
+    P11 and ix://agent-ix/quire-specification/TC-190 Q11 atom charges, with denial
+    behavior at every kernel point; operand-derived arithmetic and normalize amounts
+    are charged before any intermediate or result is allocated.
+- id: FR-007-AC-9
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: IEEE NaN propagation is leftmost-wins with sign and payload preserved and
+    the result quieted; `invalid` is raised when any operand is signaling; an unrepresentable
+    NaN payload is refused, never truncated; `-0.0` and `+0.0` convert to the same
+    exact value with `discarded_negative_zero` reported; `total_order_key` totally
+    orders every bit pattern including both zeros and NaNs.
+- id: FR-007-AC-10
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: "`Rational` membership admits exactly the reduced pairs inside both intervals\
+    \ \u2014 including refusing a value whose numeric magnitude is inside the numerator\
+    \ interval but whose reduced denominator is outside the denominator interval \u2014\
+    \ an absent domain decides no membership and retains, and every exposed rational\
+    \ is in canonical form with zero as `0/1`."
+- id: FR-007-AC-11
+  path: spec/exact/functional/FR-007-exact-scalar-families.md
+  role: examined
+  excerpt: Retained decimals `(110, 2)` and `(11, 1)` compare equal in value and both
+    normalize to `(11, 1)` without changing their retained representations. On separate
+    fresh meters, `(110, 2) < (11, 1)` and `(11, 1) < (11, 1)` both return false;
+    their ordering size counters (`integer_bits`, `decimal_digits`, `scale_expansion`)
+    are respectively `8/3/1` and `4/2/0`, while both comparisons consume `value_occurrences/work_units/result_units
+    = 2/3/1`, including one Boolean `ordering.result-retain` result unit.
+- id: FR-008-AC-1
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: 'A `TypeEnvironment` admits a closed set of record, tuple and object-type
+    declarations only after member-type and both recursion-rule checks succeed, and
+    refuses at the originating declaration with a typed `DeclarationCause` otherwise;
+    `record`, `tuple`, `evaluate_record` and `evaluate_tuple` construct in declaration
+    order under the first-stopped rule and charge `composite.result-retain` with the
+    exact retained `occ`; a deferred result outside its declared type carries `CheckedInvariant
+    { cause: DeferredResultNotAdmitted }`.'
+- id: FR-008-AC-2
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: '`TypeEnvironment::build` constructs a finite value bottom-up from a `ValueGraph`,
+    sharing a node reached from more than one slot as one immutable value with no
+    object identity created, and refuses the first containment cycle as `ContainmentCycle`
+    at the node that closes it.'
+- id: FR-008-AC-3
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: '`construct_collection` charges `collection.element` before running each
+    deferred element and stops at the first non-completing element with no later element
+    run; a completed element outside its declared type returns `CheckedInvariant {
+    cause: CollectionElementNotAdmitted }`; `form_collection` refuses a type-mismatched
+    occurrence before any charge; formation charges membership comparisons, `collection.bound`
+    and `collection.result-retain` in that order, and a set or bag is stored in ascending
+    canonical-key order.'
+- id: FR-008-AC-10
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: When formation coalesces occurrences, the runtime charges one `collection.member-walk`
+    and one `collection.member-test` per membership comparison for a set, bag or ordered
+    set, and charges neither point for a sequence.
+- id: FR-008-AC-11
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: 'When a collection is retained, the runtime stores a sequence in supplied
+    occurrence order, an ordered set as the first occurrence of each distinct member
+    in first-occurrence order, a set as one occurrence of each distinct member in
+    ascending canonical-key order, and a bag as every occurrence in ascending canonical-key
+    order by multiplicity: equal occurrences are one member whose multiplicity is
+    their number, and each is represented by that member''s first-supplied value,
+    as in ix://agent-ix/quire-specification/FR-144 and FR-144-AC-21.'
+- id: FR-008-AC-12
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: When a retained collection is visited by equality planning or by a further
+    formation, the runtime visits its elements in the order it stored them, for every
+    one of the four kinds.
+- id: FR-008-AC-4
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: The type-owned canonical key totally orders every keyed type, ranks `Absent
+    < Null < Present`, fixes set and bag canonical and visiting order, and is evaluated
+    iteratively at a depth that would overflow a recursive host-stack walk.
+- id: FR-008-AC-5
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: '`plan_equality` forms the occurrence-pair plan with no charge, refuses
+    a cross-universe reference pair as `ForeignReference`, and distinguishes unlike
+    collection kinds (`CollectionKindMismatch`) from unlike value kinds (`ValueKindMismatch`);
+    `check_equality` refuses before any charge, including `operator-ineligible` when
+    either operand type bears an IEEE value at any depth; `CheckedEquality::evaluate`
+    charges the selected schedule and its conversions in operand order, and each of
+    the six checked operand failures carries its ix://agent-ix/quire-exact/FR-369
+    cause, retaining `IllTypedCause` for '
+- id: FR-008-AC-6
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: A `Reference<T>` value carries only its supplied `(universe, object-type,
+    identity)` triple, is constructed from no source form, and compares equal only
+    within one universe.
+- id: FR-008-AC-7
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: The extended `Undefined` and `Refusal` vocabularies, `BoundViolation` and
+    `Refusal::cause()` are closed, typed and distinct from every FR-006 variant; both
+    `CardinalityOutOfBound` directions are reachable and report their `code()` and
+    `cause()`; `CheckedInvariant` is unreachable from any admitted vector in the shared
+    corpus.
+- id: FR-008-AC-8
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: Every one of the twelve added charge points round-trips its QSpec spelling,
+    `ChargePoint::ALL` has exactly 63 members including `temporal.visit`, and an injected
+    denial at each of the twelve yields `Incomplete` on `work_units` naming that point
+    with every counter left unchanged.
+- id: FR-008-AC-9
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: 'The consumed kernel `Value` has iterative `Debug` and nested-node `Drop`:
+    formatting or dropping a value nested past a recursive walk''s host-stack limit
+    does not overflow the stack and completes in time and allocation proportional
+    to the value''s size, and its `Debug` output matches an exact literal string in
+    both compact and alternate form on a small fixed value.'
+- id: FR-008-AC-13
+  path: spec/exact/functional/FR-008-composite-collection-and-equality.md
+  role: examined
+  excerpt: For an `Option`/`Collection`-nested `ValueType` whose depth exceeds a recursive
+    host-stack walk under the admitted source-size cap, `Clone`, `PartialEq`, `Debug`
+    and `Drop` complete on a small-stack thread and a default-stack child process
+    without host-stack overflow; unequal leaf, collection kind and bound remain unequal,
+    and the shallow compact and alternate `Debug` output matches the derived representation
+    exactly.
+- id: FR-009-AC-5
+  path: spec/exact/functional/FR-009-i13-backend-negotiation.md
+  role: examined
+  excerpt: No `IeeeDisposition` is convertible into an `Outcome` variant, as the `compile_fail`
+    doctest on `IeeeDisposition` (`src/exact/ieee.rs`) shows.
+- id: FR-010-AC-2
+  path: spec/exact/functional/FR-010-injected-charge-denial-seam.md
+  role: examined
+  excerpt: A denial reached through an RT exact-feature charge-point driver returns
+    the `quire-exact` record specified and directly tested by [quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358);
+    RT adds no second record definition.
+- id: FR-010-AC-3
+  path: spec/exact/functional/FR-010-injected-charge-denial-seam.md
+  role: examined
+  excerpt: An RT exact-feature charge-point driver uses the `quire-exact` injection-versus-ordinary-limit
+    precedence specified and directly tested by [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358);
+    RT adds no second precedence rule.
+- id: FR-010-AC-4
+  path: spec/exact/functional/FR-010-injected-charge-denial-seam.md
+  role: examined
+  excerpt: An injection at occurrence `n` fires on the `n`th admitted charge at that
+    point, counting no charge at any other point and no charge at that point that
+    a short counter denied.
+- id: FR-010-AC-5
+  path: spec/exact/functional/FR-010-injected-charge-denial-seam.md
+  role: examined
+  excerpt: After the injected denial fires, further charges are metered against the
+    configured limits and no second charge is injected-denied.
+- id: FR-010-AC-6
+  path: spec/exact/functional/FR-010-injected-charge-denial-seam.md
+  role: examined
+  excerpt: A 0-based `occurrence` cannot be constructed, so an injected denial can
+    never silently match no charge and degrade into "no fault injected".
+- id: FR-011-AC-1
+  path: spec/exact/functional/FR-011-meter-state-at-a-stop.md
+  role: examined
+  excerpt: 'For each of `Undefined`, `Refused` and `Incomplete`, the meter after the
+    stop holds exactly the charges admitted before it: an `Undefined` division by
+    zero retains the operands charge and no arithmetic charge; a refused result retains
+    the arithmetic charge and no result unit; a denied charge retains neither.'
+- id: FR-011-AC-5
+  path: spec/exact/functional/FR-011-meter-state-at-a-stop.md
+  role: examined
+  excerpt: Past `CHARGE_LOG_CAPACITY` admitted charges the log holds exactly the first
+    4096 points in admission order, `charge_log_truncated()` is true, and the counters
+    are still exact and still enforced.
+- id: FR-012-AC-1
+  path: spec/exact/functional/FR-012-carried-compiler-vocabulary.md
+  role: examined
+  excerpt: '`NodeKey::from_hex` accepts exactly the 64-lowercase-hex-digit inputs
+    and returns `None` for every wrong length, uppercase digit and non-hexadecimal
+    byte; `from_bytes`/`as_bytes`/`from_hex`/`Display` round-trip every digest unchanged.
+    Retired at IR-882 step 4; this ID remains reserved with its original criterion
+    text.'
+- id: FR-273-AC-7
+  path: spec/exact/functional/FR-273-exact-function-application.md
+  role: examined
+  excerpt: A checked, decreasing function completes 4,096 runtime-managed calls on
+    a 64 KiB native stack when `work_units` suffices; across depths 1, 128 and 4,096,
+    no two generated-body transitions are simultaneously active, and inspection shows
+    the scheduler returns to one loop before invoking the next transition. No depth-specific
+    refusal or incomplete outcome exists.
+- id: FR-273-AC-9
+  path: spec/exact/functional/FR-273-exact-function-application.md
+  role: examined
+  excerpt: For an admitted chain of `N` calls whose bodies only request the next call
+    or return a literal, the expected charge vector is `function.call` repeated `N`
+    times and the expected `work_units` spend is `N`. A limit of `N` completes; a
+    limit of `N - 1` returns `Incomplete` at the Nth `function.call`, naming `work_units`,
+    with exactly `N - 1` calls in both the counter and log, and without changing the
+    checked package's static totality verdict.
+- id: FR-273-AC-10
+  path: spec/exact/functional/FR-273-exact-function-application.md
+  role: examined
+  excerpt: 'In a nested call with two argument applications and an enclosing application,
+    the charge vector is exactly three `function.call` entries in left argument, right
+    argument, enclosing call order; the enclosing charge precedes parameter binding
+    and body work. With `work_units: 2`, the enclosing charge is denied, the log and
+    counter retain exactly the first two calls, and no enclosing body work occurs.'
+- id: FR-273-AC-11
+  path: spec/exact/functional/FR-273-exact-function-application.md
+  role: examined
+  excerpt: A resumable body transition returns a child-call request while its owned
+    parent state retains live locals and the child-result destination; after the child
+    completes, the runtime resumes that parent with the child's value and does not
+    invoke a second body transition from within the first. A stopped child propagates
+    without resuming the parent.
+- id: FR-275-AC-5
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: '`Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`,
+    `quire-canonical` and `quire-canonical-derive`.'
+- id: FR-275-AC-8
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: '`make deny` reports cargo-deny''s `source-not-allowed` error for the QSL
+    Git repository, and exits non-zero, when a normal, build or dev dependency resolves
+    from it; a licence failure alone does not satisfy this.'
+- id: FR-275-AC-9
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`.
+    The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor.
+- id: FR-275-AC-10
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi`
+    contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`.
+- id: FR-275-AC-11
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: '`make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3''s
+    500 byte to 4 KiB band.'
+- id: FR-275-AC-21
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: '`make msrv` and `make size` build with Rust 1.98.1.'
+- id: FR-275-AC-24
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: The normal `make deny` recipe invokes the released `quire check-lock Cargo.lock`
+    command on this repository's committed lock. On a coherent scratch lock the real
+    command succeeds and the recipe completes when its other policy checks pass; an
+    invocation record identifies the executable and argument without substituting
+    checker logic.
+- id: FR-275-AC-25
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: Through the same normal `make deny` recipe, a scratch lock with duplicate
+    first-party Git package names and a scratch lock with distinct crate names at
+    split resolved revisions of one repository each cause a non-zero Make exit and
+    the real command's coherence diagnostic. The aligned multi-crate control passes
+    the command. Every agent-ix Git source in these coherence controls has a valid
+    full resolved fragment admitted by CLI FR-027; a malformed-input diagnostic cannot
+    satisfy a duplicate or split-revision control. These controls exercise CLI FR-027;
+    they do not define a second normalization al
+- id: FR-275-AC-26
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: A missing checker executable, malformed scratch lock, or checker refusal
+    cannot produce successful `make deny`. The recipe propagates failure without an
+    ignored exit, success fallback, or skipped check.
+- id: FR-275-AC-28
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: Adoption leaves the committed Cargo manifests and lock byte-for-byte unchanged
+    and adds no runtime dependency on developer tooling. Qualification runs the real
+    command on the committed lock and reports any existing incoherence as a failing
+    gate with an owning blocker; a scratch passing control or an unrelated gate failure
+    cannot qualify that lock.
+- id: FR-277-AC-7
+  path: spec/exact/functional/FR-277-checked-equality-evaluation.md
+  role: examined
+  excerpt: The IR-241 Kani claim remains `plan_equality(left, right).pair_events()
+    == count_of_EqualityPair_charges_from_the_same_real_CheckedEquality::evaluate(left,
+    right, meter)` for both equal and first-head-unequal bounded operands, with the
+    existing exact operand bound and proof ceiling. A plan-only equality or duplicated
+    QSL walker does not satisfy this criterion.
+- id: FR-278-AC-1
+  path: spec/exact/functional/FR-278-runtime-checked-invariant-causes.md
+  role: examined
+  excerpt: 'Every RT checked-package/function invariant producer returns its table
+    cause: unknown name is `UnknownCheckedFunction`, a foreign expression is `ForeignCheckedExpression`,
+    and each meter reborrow is `MeterBorrowConflict`. Runtime-managed calls use explicit
+    frames and `work_units` fuel under RT FR-273; the final carrier has no `CallDepthExceeded`
+    variant, and fuel exhaustion is `Incomplete` with `limit_kind: work_units`, never
+    `CheckedInvariant`.'
+- id: FR-278-AC-2
+  path: spec/exact/functional/FR-278-runtime-checked-invariant-causes.md
+  role: examined
+  excerpt: Every collection or composite producer still owned by RT returns its assigned
+    typed cause without flattening a nested cause to a message. Once those producers
+    move to their owning crates, RT retains no duplicate producer and records the
+    owner evidence. Checked equality and quantity producer controls belong to quire-semantic-value
+    FR-122-AC-1 and AC-4; their six former `operand_value` assertions are not RT collection
+    or composite evidence.
+- id: FR-276-AC-1
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: "With a 20-bit 1 MHz counter and zero uncertainty, request at tick 0 and\
+    \ first acknowledgement at 2998, 3000, or 3001 yield respectively definite true,\
+    \ indeterminate, and definite false for the 3 ms obligation; with 2 \xB5s uncertainty\
+    \ the 2998 case remains indeterminate. No boundary case is decided from a point\
+    \ estimate."
+- id: FR-276-AC-2
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: The QSL plan's 21-slot buffer for `once[0 ms, 10 ms] holds(p)` at 2 events/ms
+    admits 21 in-window events; the 22nd yields `Incomplete(LimitReached)` naming
+    2 events/ms, without dropping that event or changing an unrelated obligation.
+    The runtime uses the capacity supplied by QSL rather than deriving a second formula.
+- id: FR-276-AC-3
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: 'Under a 16-bit counter with maximum gap 100, readings 65530 then 4 advance
+    by 10; readings 65530 then 65500 settle `Failed(ReadingGapExceeded{gap: 65506,
+    max_reading_gap: 100})` with no temporal verdict. A plan whose maximum gap is
+    65536 is refused before construction.'
+- id: FR-276-AC-4
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: Changing the counter identity, unit, width, profile or admitted order never
+    reuses the first plan's monitor state or settles its obligation; equal timestamps
+    without admitted order never acquire causality from arrival order.
+- id: FR-276-AC-5
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: The step API carries distinct definite, pending, indeterminate, incomplete
+    and failed outcomes with the affected obligation identities; a limit or fault
+    on one obligation does not turn a sibling's state into a verdict or erase its
+    identity.
+- id: FR-276-AC-6
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: The complete admitted plan alone builds a monitor after driver preparation
+    objects are dropped. Its checked subject, activation/captures, atom bodies, ordered
+    topology, typed state initializers and executable event/watermark entries remain
+    available. Build consumes no event and emits no verdict; a second build has independent
+    state, and neither monitor can be rebound to another plan. No source parse, second
+    clause, callback or RT operator translation completes it.
+- id: FR-276-AC-7
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: For each of a foreign atom/operand, missing transition body, changed initializer,
+    interval/buffer owner, activation binding, uncertainty and maximum gap under the
+    original selection, driver/IR admission refuses without RT initialization; equal
+    numeric subformula IDs under different subjects do not alias. An unsupported executable
+    operation yields `Unsupported`, and RT allocation or initialization failure returns
+    typed build failure with no monitor.
+- id: FR-276-AC-8
+  path: spec/monitor/functional/FR-276-consume-timed-monitor-plan.md
+  role: examined
+  excerpt: Invalid event/progress inputs, including a missing required admitted value,
+    leave monitor state unchanged with no verdict. An admitted progress assertion
+    can settle a deadline, while a mere counter poll cannot. Executing the admitted
+    program agrees with QSL's reference evaluator on boundary, reversed-operand, false-activation
+    and open/closed-endpoint cases; an RT executor invariant failure returns `Failed`,
+    terminates the monitor and rejects later input.
+findings:
+- fnd: FND-001
+  severity: high
+  confidence: high
+  method: gap-analysis
+  check: coverage
+  artifact_id: interface-001-AC-13
+  related_ids:
+  - NFR-001-AC-1
+  - NFR-001-AC-2
+  - NFR-001-M-1
+  - NFR-001-M-2
+  - NFR-002-AC-3
+  - NFR-002-AC-7
+  - NFR-002-M-1
+  - NFR-002-M-2
+  - FR-006-AC-1
+  - FR-006-AC-2
+  - FR-006-AC-3
+  - FR-006-AC-4
+  - FR-006-AC-8
+  - FR-006-AC-9
+  - FR-007-AC-1
+  - FR-007-AC-2
+  - FR-007-AC-3
+  - FR-007-AC-4
+  - FR-007-AC-5
+  - FR-007-AC-6
+  - FR-007-AC-7
+  - FR-007-AC-9
+  - FR-007-AC-10
+  - FR-007-AC-11
+  - FR-008-AC-1
+  - FR-008-AC-2
+  - FR-008-AC-3
+  - FR-008-AC-10
+  - FR-008-AC-11
+  - FR-008-AC-12
+  - FR-008-AC-4
+  - FR-008-AC-5
+  - FR-008-AC-6
+  - FR-008-AC-7
+  - FR-008-AC-8
+  - FR-008-AC-9
+  - FR-008-AC-13
+  - FR-009-AC-5
+  - FR-010-AC-2
+  - FR-010-AC-3
+  - FR-010-AC-4
+  - FR-010-AC-5
+  - FR-010-AC-6
+  - FR-011-AC-1
+  - FR-011-AC-5
+  - FR-012-AC-1
+  - FR-273-AC-7
+  - FR-273-AC-9
+  - FR-273-AC-10
+  - FR-273-AC-11
+  - FR-275-AC-5
+  - FR-275-AC-8
+  - FR-275-AC-9
+  - FR-275-AC-10
+  - FR-275-AC-11
+  - FR-275-AC-21
+  - FR-277-AC-7
+  - FR-278-AC-1
+  - FR-278-AC-2
+  - FR-276-AC-1
+  - FR-276-AC-2
+  - FR-276-AC-3
+  - FR-276-AC-4
+  - FR-276-AC-5
+  - FR-276-AC-6
+  - FR-276-AC-7
+  - FR-276-AC-8
+  path: spec/core/functional/interface-001-runtime-api.md
+  lines: Acceptance Criteria
+  excerpt: While the `exact` feature is enabled and the `std` feature is disabled,
+    the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv`
+    declares.
+  finding: 68 inherited criteria have no computed test binding; existing runtime strict-coverage
+    debt needs per-criterion owner triage
+  owner: IR-878
+- fnd: FND-002
+  severity: high
+  confidence: high
+  method: gap-analysis
+  check: coverage
+  artifact_id: FR-275-AC-24
+  related_ids:
+  - FR-275-AC-25
+  - FR-275-AC-26
+  - FR-275-AC-28
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  lines: Acceptance Criteria
+  excerpt: The normal `make deny` recipe invokes the released `quire check-lock Cargo.lock`
+    command on this repository's committed lock. On a coherent scratch lock the real
+    command succeeds and the recipe completes when its other policy checks pass; an
+    invocation record identifies the executable and argument without substituting
+    checker logic.
+  finding: Four newly planned consumer Test criteria have no implementation or actual
+    test binding yet
+  owner: IR-641
+bindings: []
+```
+
++++
