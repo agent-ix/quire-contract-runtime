@@ -105,7 +105,7 @@ fn deny_checks_the_unchanged_committed_lock_with_the_owned_command() {
     assert!(output.status.success(), "committed lock failed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("check-lock $(git ls-files"),
+        stdout.contains("check-lock "),
         "missing invocation: {output:?}"
     );
     assert!(
@@ -182,7 +182,7 @@ fn deny_checks_every_tracked_lock_in_one_owned_invocation() {
     require_policy_refusal(&output, &["nested-first", "nested-second"]);
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert_eq!(
-        stdout.matches("check-lock $(git ls-files").count(),
+        stdout.matches("check-lock ").count(),
         1,
         "wrong invocation: {output:?}"
     );
@@ -214,4 +214,36 @@ fn owned_gate_has_no_local_checker_copy_or_fallback() {
     let makefile = include_str!("../Makefile");
     assert!(!makefile.contains("check_one_copy.awk"));
     assert!(makefile.contains("$(QUIRE) check-lock"));
+}
+
+#[trace("FR-275-AC-24", "FR-275-AC-25", "FR-275-AC-26")]
+#[test]
+fn deny_preserves_tracked_filename_boundaries_for_the_real_checker() {
+    let scratch = ScratchRepo::new();
+    let original = fs::read_to_string(scratch.root.join("Cargo.lock")).unwrap();
+    let directories = ["space dir", "café", "line\nbreak", "literal[ab]*?"];
+    for directory in directories {
+        let path = scratch.root.join(directory).join("Cargo.lock");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, &original).unwrap();
+        scratch.git(&["add", &format!("{directory}/Cargo.lock")]);
+    }
+    let aligned = scratch.make_deny();
+    assert!(aligned.status.success(), "filename boundaries corrupted: {aligned:?}");
+    assert!(aligned.stderr.is_empty(), "aligned filename diagnostic: {aligned:?}");
+    let stdout = String::from_utf8_lossy(&aligned.stdout);
+    assert_eq!(stdout.matches("check-lock ").count(), 1);
+    for directory in directories {
+        assert!(stdout.contains(&format!("{directory}/Cargo.lock")), "missing path: {aligned:?}");
+    }
+    for directory in directories {
+        let path = scratch.root.join(directory).join("Cargo.lock");
+        fs::write(&path, package("boundary-first", 'a') + &package("boundary-second", 'b')).unwrap();
+        let split = scratch.make_deny();
+        require_policy_refusal(&split, &["boundary-first", "boundary-second"]);
+        let stderr = String::from_utf8_lossy(&split.stderr);
+        assert!(stderr.contains(&format!("{directory}/Cargo.lock")), "wrong path: {split:?}");
+        assert!(stderr.contains(&"a".repeat(40)) && stderr.contains(&"b".repeat(40)));
+        fs::write(path, &original).unwrap();
+    }
 }
