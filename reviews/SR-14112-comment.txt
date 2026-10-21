@@ -1,0 +1,189 @@
+<!-- reviewer repo=agent-ix/quire-contract-runtime visibility=public quoin=0.28.4 module=spec-artifacts-process@b82e42e893612b4b4ee94127714b4577ee893502 id=SR-14112 method=spec-review/dependency lang=spec pr=quire-contract-runtime#152 model=gpt-6 run=7344a92f-baf9-437d-bff9-87710b2444ee -->
+
+CLI FR027 is the authoritative developer-tool algorithm prerequisite; runtime adoption follows installation and consumer qualification. No runtime edge, second implementation, permanent exception or new cycle is introduced.
+
++++ [reviewer data]
+
+```yaml
+clean: true
+scope:
+- id: FR-275-AC-1
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: With `exact` enabled, no public item the runtime defines (in `scalar` or
+    any other module) has the name of an item that `quire-exact` or `quire-semantic-value`
+    exports.
+- id: FR-275-AC-2
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: No module, alias or feature of the runtime keeps a removed kernel definition
+    reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined
+    second `Value`, `CheckedEquality` evaluator, pair walker or membership walker,
+    `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, copy of `UnitTable`,
+    `TypeEnvironment`, `EnumMemberIndex` or `EnumDeclaration`, conversion layer, adapter
+    or old-`Value` re-export. Quantity, enum, reference and checked-equality paths
+    use the QSV owners directly.
+- id: FR-275-AC-3
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`quire-exact` is an optional dependency of the runtime, enabled only by
+    the `exact` feature.'
+- id: FR-275-AC-4
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The optional `quire-exact` and `quire-semantic-value` dependencies use
+    their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`,
+    `path` or committed `[patch]`.
+- id: FR-275-AC-5
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`,
+    `quire-canonical` and `quire-canonical-derive`.'
+- id: FR-275-AC-6
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`make deny` exits non-zero when `Cargo.lock` holds a second entry for
+    any first-party Git crate.'
+- id: FR-275-AC-7
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`deny.toml` admits only the `quire-exact`, `quire-semantic-value` and
+    `quire-canonical` own-repository Git sources and the dev-only `ix-trace-rs` first-party
+    tooling source, and keeps `unknown-git = "deny"`; it does not admit the QSL Git
+    repository.'
+- id: FR-275-AC-8
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`make deny` reports cargo-deny''s `source-not-allowed` error for the QSL
+    Git repository, and exits non-zero, when a normal, build or dev dependency resolves
+    from it; a licence failure alone does not satisfy this.'
+- id: FR-275-AC-9
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`.
+    The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor.
+- id: FR-275-AC-10
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi`
+    contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`.
+- id: FR-275-AC-11
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3''s
+    500 byte to 4 KiB band.'
+- id: FR-275-AC-12
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The runtime has no test that compares its output with a second implementation
+    of the kernel or that depends on a crate from the QSL Git repository.
+- id: FR-275-AC-13
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: 'The runtime contains no file copied from the QSL repository and no port
+    of QSL code, where a port is code that keeps the QSL authority''s item names and
+    order. The residue list is not an allowance: every item on it is a violation of
+    this criterion, which stays unmet while the list is non-empty. The runtime-owned
+    negotiators are not ports.'
+- id: FR-275-AC-14
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The kernel move deletes no requirement, acceptance criterion or test case.
+- id: FR-275-AC-15
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: Every matrix row whose evidence leaves the runtime in the kernel move carries
+    a planned status with a stated reason, because the status vocabulary has no "verified
+    upstream" status (a planner question, no status is invented).
+- id: FR-275-AC-16
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The runtime has no `quire_contract_runtime::exact` module and no `pub use`
+    of `quire-exact`, `quire-semantic-value` or the evaluation leaf crate; the only
+    items it defines under the `exact` feature are the `scalar` items (the backend
+    negotiators and their types, `evaluate_boolean_short_circuit` and `ShortCircuitConnective`),
+    and no file under `src/exact` exists.
+- id: FR-275-AC-17
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: Every item the runtime defines under the `exact` feature, other than the
+    `scalar` items, is named in the residue list, and the list records no exception,
+    expiry or approval.
+- id: FR-275-AC-18
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The residue list is empty.
+- id: FR-275-AC-19
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The runtime defines `negotiate_integer_division`, `negotiate_ieee` and
+    their types in its own source and depends on no QSL crate for them.
+- id: FR-275-AC-20
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: The runtime's declared `rust-version` is 1.98.1.
+- id: FR-275-AC-21
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: context_only
+  excerpt: '`make msrv` and `make size` build with Rust 1.98.1.'
+- id: FR-275-AC-22
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: Inspection of runtime source finds no local definition or alias of QSV's
+    `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including
+    definitions emitted by macros.
+- id: FR-275-AC-23
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: 'After the step-4 value-bearing cutover, QSV''s `Conversion::identified_quantity`
+    returns a `quire_exact::Quantity` with the exact magnitude and the target''s compound-arm
+    `UnitId`, paired with QSV''s `IdentifiedUnit` for that same target; a non-exact
+    conversion returns `HandoffRefusal::NotExact`, and target identity refusal returns
+    `HandoffRefusal::Identity` with neither value nor identified unit. Retaining the
+    identified unit with `UnitScope::form` permits `UnitScope::resolve(&quantity)`
+    to supply the same normalized `QuantityUnit::Compound` to the next conversion.
+    Declared and compound ID arms '
+- id: FR-275-AC-24
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: The normal `make deny` recipe invokes the released `quire check-lock Cargo.lock`
+    command on this repository's committed lock. On a coherent scratch lock the real
+    command succeeds and the recipe completes when its other policy checks pass; an
+    invocation record identifies the executable and argument without substituting
+    checker logic.
+- id: FR-275-AC-25
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: Through the same normal `make deny` recipe, a scratch lock with duplicate
+    first-party Git package names and a scratch lock with distinct crate names at
+    split resolved revisions of one repository each cause a non-zero Make exit and
+    the real command's coherence diagnostic. The aligned multi-crate control passes
+    the command. Every agent-ix Git source in these coherence controls has a valid
+    full resolved fragment admitted by CLI FR-027; a malformed-input diagnostic cannot
+    satisfy a duplicate or split-revision control. These controls exercise CLI FR-027;
+    they do not define a second normalization al
+- id: FR-275-AC-26
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: A missing checker executable, malformed scratch lock, or checker refusal
+    cannot produce successful `make deny`. The recipe propagates failure without an
+    ignored exit, success fallback, or skipped check.
+- id: FR-275-AC-27
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: The committed `scripts/check_one_copy.awk` file is absent, the normal recipe
+    contains no reference to it, and no replacement local implementation, executable
+    copy, compatibility shim, or revision allowance bypasses the owned command.
+- id: FR-275-AC-28
+  path: spec/exact/functional/FR-275-single-exact-kernel.md
+  role: examined
+  excerpt: Adoption leaves the committed Cargo manifests and lock byte-for-byte unchanged
+    and adds no runtime dependency on developer tooling. Qualification runs the real
+    command on the committed lock and reports any existing incoherence as a failing
+    gate with an owning blocker; a scratch passing control or an unrelated gate failure
+    cannot qualify that lock.
+findings: []
+bindings: []
+```
+
++++

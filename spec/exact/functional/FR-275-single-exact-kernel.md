@@ -9,6 +9,8 @@ relationships:
     type: depends_on
   - target: ix://agent-ix/quire-contract-runtime/AD-003
     type: references
+  - target: ix://agent-ix/quire-cli/FR-027
+    type: depends_on
   - target: ix://agent-ix/quire-semantic-value/FR-124
     type: depends_on
 ---
@@ -126,8 +128,11 @@ crates that the runtime consumes.
   untracked `make use-local` patch. The runtime records no version, commit or digest of
   either shared crate in its sources or specification.
 - **One copy.** `Cargo.lock` holds one entry each for `quire-exact` and `quire-semantic-value`;
-  `quire-canonical` and `quire-canonical-derive` enter transitively. `scripts/check_one_copy.awk`,
-  run by `make deny`, checks every first-party Git crate. `deny.toml` admits their three
+  `quire-canonical` and `quire-canonical-derive` enter transitively. The planned IR-641 adoption
+  replaces the current copied
+  `scripts/check_one_copy.awk` with the released `quire check-lock Cargo.lock` command
+  in `make deny`. [CLI FR-027](ix://agent-ix/quire-cli/FR-027) owns that algorithm;
+  AC-24 through AC-28 govern this repository's adoption, which is not yet implemented. `deny.toml` admits their three
   own-repository Git sources plus the dev-only `ix-trace-rs` tooling source, and carries scoped
   licence exceptions for the four shared crates.
 - **Guarded edges.** No normal, build or dev dependency may resolve from the QSL repository.
@@ -190,6 +195,18 @@ crates that the runtime consumes.
 | FR-275-AC-21 | `make msrv` and `make size` build with Rust 1.98.1. | Test (TC-199) |
 | FR-275-AC-22 | Inspection of runtime source finds no local definition or alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including definitions emitted by macros. | Inspection (TC-205) |
 | FR-275-AC-23 | After the step-4 value-bearing cutover, QSV's `Conversion::identified_quantity` returns a `quire_exact::Quantity` with the exact magnitude and the target's compound-arm `UnitId`, paired with QSV's `IdentifiedUnit` for that same target; a non-exact conversion returns `HandoffRefusal::NotExact`, and target identity refusal returns `HandoffRefusal::Identity` with neither value nor identified unit. Retaining the identified unit with `UnitScope::form` permits `UnitScope::resolve(&quantity)` to supply the same normalized `QuantityUnit::Compound` to the next conversion. Declared and compound ID arms remain distinct even for equal bytes. QSpec TC-187 U25's first compound-target conversion feeds its result into the conversion to `J` with exact value `1` and FR-007-AC-23's charges, without a new charge for the handoff. RT defines no `CompoundUnit` identity, `UnitId` resolver, parallel unit table or conversion adapter. | Test |
+| FR-275-AC-24 | The normal `make deny` recipe invokes the released `quire check-lock Cargo.lock` command on this repository's committed lock. On a coherent scratch lock the real command succeeds and the recipe completes when its other policy checks pass; an invocation record identifies the executable and argument without substituting checker logic. | Test |
+| FR-275-AC-25 | Through the same normal `make deny` recipe, a scratch lock with duplicate first-party Git package names and a scratch lock with distinct crate names at split resolved revisions of one repository each cause a non-zero Make exit and the real command's coherence diagnostic. The aligned multi-crate control passes the command. Every agent-ix Git source in these coherence controls has a valid full resolved fragment admitted by CLI FR-027; a malformed-input diagnostic cannot satisfy a duplicate or split-revision control. These controls exercise CLI FR-027; they do not define a second normalization algorithm. | Test |
+| FR-275-AC-26 | A missing checker executable, malformed scratch lock, or checker refusal cannot produce successful `make deny`. The recipe propagates failure without an ignored exit, success fallback, or skipped check. | Test |
+| FR-275-AC-27 | The committed `scripts/check_one_copy.awk` file is absent, the normal recipe contains no reference to it, and no replacement local implementation, executable copy, compatibility shim, or revision allowance bypasses the owned command. | Inspection |
+| FR-275-AC-28 | Adoption leaves the committed Cargo manifests and lock byte-for-byte unchanged and adds no runtime dependency on developer tooling. Qualification runs the real command on the committed lock and reports any existing incoherence as a failing gate with an owning blocker; a scratch passing control or an unrelated gate failure cannot qualify that lock. | Test |
+
+## Lock Gate Adoption Status
+
+PLANNED: IR-641 has not yet removed the copied checker or qualified the released
+command through this repository's normal Make recipe. AC-5 and AC-6 remain
+required; AC-24 through AC-28 extend their consumer acceptance without redefining
+CLI FR-027 or replacing existing runtime dependency-policy checks.
 
 ## Residue list (not authorized; to be deleted)
 
@@ -245,3 +262,17 @@ and is deleted in step 1.
   read-only at the IR repository's main: it declares no dependency on `quire-exact` and holds no
   copy of the exact kernel (no `Meter`, `ScalarLimits` or kernel `Outcome` definition), so IR needs
   no requirement from this ticket.
+
+## Consumer Verification Plan
+
+PLANNED: repository-owned integration tests bind each new criterion on actual
+`#[test]` functions. The tests run the normal `make deny` recipe in a scratch
+consumer tree with the actual released Quire executable. They may isolate the
+unrelated Cargo policy stage to make the checker observation decisive, but may
+not substitute the checker, copy its algorithm, or treat a malformed-input refusal
+as coherence evidence. Final qualification separately runs the repository's
+normal unchanged gates on its committed lock.
+
+The runtime consumer controls extend `tests/deny_one_copy.rs` and the dependency
+policy qualification of TC-197 and TC-202. Their current copied AWK-based controls
+do not yet satisfy these new real-command criteria.

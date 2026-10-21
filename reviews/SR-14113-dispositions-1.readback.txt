@@ -1,0 +1,27 @@
+<!-- reviewer-dispositions repo=agent-ix/quire-contract-runtime visibility=public quoin=0.28.4 module=spec-artifacts-process@b82e42e893612b4b4ee94127714b4577ee893502 id=SR-14113 round=1 model=gpt-6 run=49a88495-a1b6-4b4b-ab9d-629d4a1d2efb -->
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | deferred | 68 inherited untagged criteria remain open strict-coverage debt with existing IR-878 owner luna:IR:plan, actual 68-row handoff comment 6a87b61b; root spec-stage scope decision IR-641 comment 7817ca97. No coverage waiver, closure or green matrix. |
+| FND-002 | deferred | Four honestly PLANNED new Test criteria FR-275-AC-24/25/26/28 remain required implementation work in the same IR-641 after this contract merges; root decision IR-641 comment 7817ca97. Real installed command and normal consumer Make controls still required. No implementation completion or test credit. |
+
+Full gap verdict remains FAIL. Candidate remains unchanged; this disposition permits only the reviewed spec-stage scope and grants no implementation or qualification credit.
+
++++ [reviewer data]
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: deferred
+  reason: 68 inherited untagged criteria remain open strict-coverage debt with existing
+    IR-878 owner luna:IR:plan, actual 68-row handoff comment 6a87b61b; root spec-stage
+    scope decision IR-641 comment 7817ca97. No coverage waiver, closure or green matrix.
+- fnd: FND-002
+  outcome: deferred
+  reason: Four honestly PLANNED new Test criteria FR-275-AC-24/25/26/28 remain required
+    implementation work in the same IR-641 after this contract merges; root decision
+    IR-641 comment 7817ca97. Real installed command and normal consumer Make controls
+    still required. No implementation completion or test credit.
+```
+
++++
