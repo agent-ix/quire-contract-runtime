@@ -21,8 +21,9 @@ definition-selection refusal, a package refusal, or the topology of a unit graph
 carry the compiler's exact spellings so the oracle reports what it was handed, and shall not
 recompute, re-derive or invent any of them.
 
-`src/exact/mod.rs` exports the remaining runtime unit vocabulary until its owner cutover. The
-R-3 definition cutover consumes `quire_semantic_value::definition` directly.
+`src/exact/mod.rs` no longer exports a runtime unit vocabulary; the quantity and unit cutover
+consumes QSV's checked graph and units directly. The R-3 definition cutover consumes
+`quire_semantic_value::definition` directly.
 `NodeKey` and `NODE_KEY_DOMAIN` are consumed directly from `quire_exact`;
 `InvalidSemanticGraph` and `SemanticGraphCause` are consumed directly from
 `quire_semantic_value::semantic_node`.
@@ -36,10 +37,10 @@ R-3 definition cutover consumes `quire_semantic_value::definition` directly.
 
 ## Outputs
 
-- The runtime-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string.
+- The kernel-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string, consumed without an RT copy.
 - QSV's definition vocabulary supplies `SelectionRefusalCode`, `PackageRefusalCode`,
   `PackageCause` and `PackageRefusal` with their normative spellings.
-- An admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
+- A QSV-admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
   path to its canonical root, or a QSV `InvalidSemanticGraph` carrying one typed
   `SemanticGraphCause`.
 - An `InvalidCompoundUnit` carrying one typed `CompoundUnitCause`, where a compound unit is refused
@@ -70,32 +71,31 @@ R-3 definition cutover consumes `quire_semantic_value::definition` directly.
   valid code/cause pairing and its tests; RT keeps the existing selection and package-code
   spelling obligations in FR-012-AC-3.
 - **`SemanticGraphCause` is one closed vocabulary shared with the compiler, split by who raises
-  each cause.** Three groups, and the split is a fact about this runtime's API shape, not a
-  preference:
-  - *Raised by the runtime over a graph it is handed*: zero exponent, duplicate term, unsorted
-    terms, zero scale, non-identity root, duplicate node, unknown dimension, non-base dimension
-    term, unknown target, cross-dimension target, missing root, duplicate root, target cycle.
+  each cause.** QSV owns the graph and enum checks; RT consumes their typed results directly:
+  - *Raised by QSV's checked-node and graph boundaries*: zero exponent, duplicate term, unsorted
+    terms, zero scale, non-identity root, unknown dimension, non-base dimension term, unknown
+    target, cross-dimension target, missing root, duplicate root and target cycle. `DuplicateNode`
+    is carried in the shared vocabulary but is unrepresentable at QSV's keyed-map graph boundary.
     QSV raises `UndeclaredCase` when `EnumDeclaration::member` reads a case outside its admitted
     declaration; RT tests consume that owner path directly.
   - *Raised by the QSV declaration-admission point consumed by the runtime*: `EnumDeclaration::new` admits a
     declaration node from caller-supplied member strings, so it
     raises `NonCanonicalPreimage` for an empty, repeated or non-identifier member list and
     `UnsortedUnorderedMembers` for an unordered declaration whose cases are not sorted. Those two
-    causes are raised there and nowhere else; no graph handed to the runtime raises either.
+    causes are raised there and nowhere else; no QSV graph input raises either.
   - *Carried only, never raised here*: `OwnerNotSelected` and `StaleKey`, which only a compiler that
     computes keys and resolves a lock selection can decide; and `ForeignDeclaration` and
     `UnreducedRational`, which this API cannot present — a member node never carries a declaration
     key of its own for the runtime to compare, and `Rational`'s only public constructor reduces, so
-    no unreduced scale or offset can reach `UnitDeclaration::check_semantics`. The runtime carries
+    no unreduced scale or offset can reach `UnitNode::checked`. The runtime carries
     all four so a generated oracle can report a compiler refusal it was handed.
-- **Every unit-graph refusal is `invalid_semantic_graph` with one typed cause naming the first
-  failed check**, in the order fixed by FR-011: per-node semantics, then duplicate keys, then graph
-  topology. The runtime admits a graph or refuses it; it never repairs one and never admits a graph
-  with a repaired node.
-- **A `UnitEdge` is one exact affine edge `target = scale × source + offset`.** `UnitDeclaration`
-  admits it, as `check_semantics`'s `Ok` result, after refusing a zero scale or a non-identity
-  root; each `Unit`'s path to its canonical root and its own canonical edge are `UnitEdge` values,
-  carried unchanged.
+- **Every QSV unit-graph refusal is `invalid_semantic_graph` with one typed cause naming the first
+  failed check**, after per-node checks by `DimensionNode::checked` and `UnitNode::checked` and the
+  topology order of `UnitGraph::from_checked_nodes`. The keyed maps admit no duplicate key.
+  RT consumes the result without repairing or rebuilding the graph.
+- **A `UnitEdge` is one exact affine edge `target = scale × source + offset`.** QSV's
+  `UnitNode::checked` admits it after refusing a zero scale or a non-identity root; each `Unit`'s
+  path to its canonical root and its own canonical edge are `UnitEdge` values, carried unchanged.
 - **A `CompoundUnit` construction that fails is refused as `InvalidCompoundUnit`, carrying one
   typed `CompoundUnitCause`.** The five causes are `NonCanonicalPreimage` (compiler-reader
   preimage only), `ZeroExponent`, `DuplicateTerm`, `UnsortedTerms` and `NotRootUnit`.
@@ -112,8 +112,8 @@ R-3 definition cutover consumes `quire_semantic_value::definition` directly.
 | FR-012-AC-1 | `NodeKey::from_hex` accepts exactly the 64-lowercase-hex-digit inputs and returns `None` for every wrong length, uppercase digit and non-hexadecimal byte; `from_bytes`/`as_bytes`/`from_hex`/`Display` round-trip every digest unchanged. Retired at IR-882 step 4; this ID remains reserved with its original criterion text. | Test (TC-033; pre-cutover only) |
 | FR-012-AC-2 | `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` equal their normative strings, and no code path constructs either from parts. | Test (TC-033) |
 | FR-012-AC-3 | `SelectionRefusalCode::ALL` is the eight codes in normative check order, `as_str` yields the lock spelling for each, `from_code` resolves exactly those eight spellings and nothing else, and `PackageRefusalCode::as_str` is `invalid_package`. | Test (TC-033) |
-| FR-012-AC-4 | Each of the thirteen graph causes is raised by an admissible input to `UnitGraph::admit`, and `UndeclaredCase` by reading a case against its declaration; no graph input raises any of the four compiler-admission causes; `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for exactly the malformed member lists named above; and `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no raise site in the crate. | Test (TC-033) |
-| FR-012-AC-5 | `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every construction order of the same terms. | Test (TC-033) |
+| FR-012-AC-4 | Each of the twelve graph causes reachable through QSV's `DimensionNode::checked`, `UnitNode::checked` or `UnitGraph::from_checked_nodes` is raised by a malformed input; `DuplicateNode` is unrepresentable because the graph accepts key-unique `BTreeMap`s, rather than a list with repeated keys. `UndeclaredCase` arises by reading a case against its declaration; no graph input raises any of the four compiler-admission causes. `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for the malformed member lists named above; `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no RT raise site. | Test (TC-033) |
+| FR-012-AC-5 | QSV's `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every insertion order of the same admitted graph nodes; compound term input is ascending, and an unsorted term input is refused. | Test (TC-033) |
 | FR-012-AC-6 | At the IR-882 step-4 cutover, inspection finds no RT-local `NodeKey`, no RT `from_bytes` or `from_hex` constructor, and no TC-033 parser or round-trip test of those local constructors. RT library code has no `NodeKey` construction or hex decoder. | Inspection |
 | FR-012-AC-7 | After the R-3 cutover, inspection finds no RT-local `PackageCause`, `PackageRefusal` or `PackageRefusalCode` definition, type alias, public re-export or adapter. The RT consumers of selection and package refusals use QSV's definition types directly; `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` are absent from RT's `invalid_package` surface, while FR-012-AC-3's eight selection spellings and `invalid_package` code remain available from QSV. | Inspection (TC-033) |
 

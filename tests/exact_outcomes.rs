@@ -1,9 +1,8 @@
-//! FR-006 typed exact outcomes and `quire.value.accounting/v1` metering of the operations the
-//! runtime still defines (the interim residue of FR-275), through the public `exact` surface.
+//! FR-006 typed outcomes and metering of the function call and lazy connective RT still defines.
 //!
 //! The kernel `Outcome`, `Refusal`, `Meter` and injected-denial tests left with the kernel to the
 //! `quire-exact` crate (FR-275; the matrix section "Evidence at the kernel move"). What stays
-//! here is `CheckedPackage` and quantity arithmetic.
+//! here is `CheckedPackage` and the lazy Boolean connective.
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
@@ -15,12 +14,12 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    evaluate_quantity, CheckMode, CheckingLimits, FunctionDeclaration, PackageDeclarations,
-    Quantity, QuantityOperation, QuantityUnit, UnitDeclaration, UnitGraph,
+    evaluate_boolean_short_circuit, CheckMode, CheckingLimits, FunctionDeclaration,
+    PackageDeclarations, ShortCircuitConnective,
 };
 use quire_exact::{
-    ChargePoint, Incomplete, InjectedDenial, Integer, LimitKind, Meter, NodeKey, Outcome, Rational,
-    ScalarLimits, Value, ValueType,
+    ChargePoint, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, ScalarLimits,
+    Value, ValueType,
 };
 use quire_semantic_value::declaration::TypeEnvironment as SharedTypeEnvironment;
 use quire_semantic_value::object_closure::ObjectClosure;
@@ -87,62 +86,25 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
     expect_incomplete(evaluation.outcome)
 }
 
-/// `a ^ 2` of a quantity in a non-canonical (one-edge) unit: charges
-/// `unit.identity-read`, `unit.edge`, `unit.rational-arithmetic` (from the
-/// edge traversal and the power itself), `unit.target-domain` and
-/// `unit.result-retain`, in that order.
-fn drive_quantity(meter: &mut Meter) -> Incomplete {
-    let dimension = NodeKey::from_digest([1; 32]);
-    let root = NodeKey::from_digest([2; 32]);
-    let derived = NodeKey::from_digest([3; 32]);
-    let graph = UnitGraph::admit(
-        [(dimension, Vec::new())],
-        [
-            (
-                root,
-                UnitDeclaration {
-                    dimension,
-                    target: None,
-                    scale: Rational::from_integer(int(1)),
-                    offset: Rational::from_integer(int(0)),
-                },
-            ),
-            (
-                derived,
-                UnitDeclaration {
-                    dimension,
-                    target: Some(root),
-                    scale: Rational::new(int(1000), int(1)).unwrap(),
-                    offset: Rational::from_integer(int(0)),
-                },
-            ),
-        ],
-    )
-    .unwrap();
-    let unit = graph.unit(derived).unwrap().clone();
-    let quantity = Quantity::new(
-        Rational::from_integer(int(5)),
-        QuantityUnit::Declared(Box::new(unit)),
-    );
-    expect_incomplete(
-        evaluate_quantity(QuantityOperation::Power(&quantity, &int(2)), meter).unwrap(),
-    )
+fn drive_boolean_result(meter: &mut Meter) -> Incomplete {
+    expect_incomplete(evaluate_boolean_short_circuit(
+        ShortCircuitConnective::And,
+        false,
+        || Outcome::Completed(true),
+        meter,
+    ))
 }
 
 /// One `(point, driver)` entry of the AC-1 sweep below.
 type Driver = fn(&mut Meter) -> Incomplete;
 
-/// An injected denial at occurrence one of every charge point the runtime still owns.
+/// An injected denial at occurrence one of the charge point the runtime still owns.
 #[trace("TC-031", "FR-010-AC-1")]
 #[test]
 fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
     let drivers: Vec<(ChargePoint, Driver)> = vec![
         (ChargePoint::FunctionCall, drive_function_call),
-        (ChargePoint::UnitIdentityRead, drive_quantity),
-        (ChargePoint::UnitEdge, drive_quantity),
-        (ChargePoint::UnitRationalArithmetic, drive_quantity),
-        (ChargePoint::UnitTargetDomain, drive_quantity),
-        (ChargePoint::UnitResultRetain, drive_quantity),
+        (ChargePoint::BooleanResultRetain, drive_boolean_result),
     ];
 
     let covered: BTreeSet<ChargePoint> = drivers.iter().map(|(point, _)| *point).collect();

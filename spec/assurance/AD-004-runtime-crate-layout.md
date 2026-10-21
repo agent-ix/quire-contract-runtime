@@ -423,7 +423,7 @@ refusal without a quantity or an unresolvable ID. RT deletes its boxed
 this cutover; it does not compute a digest, mint a second ID, maintain a
 parallel unit table, or translate between old and shared unit types.
 
-Step-4 acceptance uses FR-275-AC-23 and TC-201. QSV's FR-124 settles the
+Step-4 acceptance uses FR-275-AC-23 and TC-201. Implemented QSV FR-124 settles the
 owner-side handoff from `convert_quantity`'s `Conversion`:
 `Conversion::identified_quantity(&self) -> Result<(quire_exact::Quantity, IdentifiedUnit), HandoffRefusal>`.
 For `ConvertedValue::Exact`, the method pairs the exact magnitude under the
@@ -480,12 +480,19 @@ Draft PR #95 (slice 1) against this layout, re-measured from its diff (47 files,
 
 ### Owner answers and open questions
 
-IR-882's subsequent enum-owner slice removes `src/exact/enumeration.rs` and its RT re-export;
-tests that still exercise enum declaration admission import QSV directly. The quantity and
-unit residue and evaluation-leaf dependency remain. The following independent slice removes
-RT's private `src/exact/stop.rs` carrier and conversion trait; Boolean, quantity and function
-application code use QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The
-definition code cutover follows the R-3 decision below and has now landed.
+IR-882's enum-owner slice removed `src/exact/enumeration.rs` and its RT re-export;
+tests that still exercise enum declaration admission import QSV directly. The quantity/unit
+cutover removes `src/exact/quantity.rs` and `unit.rs` and consumes QSV's FR-124 handoff directly.
+The evaluation-leaf dependency remains. The independent stop slice removed RT's private
+`src/exact/stop.rs` carrier and conversion trait; Boolean and function application code use
+QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The definition code cutover
+follows the R-3 decision below and has now landed.
+
+CG remains pinned to an earlier RT revision while its scalar oracle still emits quantity and
+unit calls against RT. The RT quantity/unit owner cutover can merge independently because that
+pin keeps CG compiling. CG's quantity source is allocated to IR-853: the evaluation leaf and
+T12-A facade amendment must settle it before CG advances its RT pin. This is the remaining
+cross-repository step-4 dependency, not a reason to retain RT's duplicate quantity code.
 
 R-3 is decided from an RT source/test/spec use audit: `RevisionMismatch`,
 `DigestDomainMismatch` and `ByteDigestMismatch` had no RT producer, consumer or test in the

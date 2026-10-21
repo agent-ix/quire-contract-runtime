@@ -87,7 +87,7 @@ and what the meter holds at all is what this requirement fixes.
 | FR-011-AC-4 | A charge whose second-scanned counter is short writes no counter, appends no log entry and advances no occurrence counter; and a charge presented with its size vector in either order reports the same first short counter in `ScalarLimitsV1` field order. | Test (TC-032) |
 | FR-011-AC-5 | Past `CHARGE_LOG_CAPACITY` admitted charges the log holds exactly the first 4096 points in admission order, `charge_log_truncated()` is true, and the counters are still exact and still enforced. | Test (TC-032) |
 | FR-011-AC-6 | With a cumulative limit of `u64::MAX`, a counter at `u64::MAX - 1` admits one unit to reach the limit and denies the next unit without wrapping or changing any meter state. A quantity power whose `unit.rational-arithmetic` request exceeds `u64::MAX` returns `Incomplete` before computing the power; `next_charge` equals the exact request, and the denied charge changes no counter, admission count or admitted-charge log. | Test (TC-032) |
-| FR-011-AC-7 | `Meter::consumed` answers without panic for every member of `LimitKind::ALL`, returning zero for untouched counters, admitted high-water values for semantic sizes and admitted cumulative totals for work/results; IEEE flag iteration, dimension and compound-unit term iteration, and the `UnitGraph::admit` and `check_terms` refusal orders are the stated ones for every input permutation. | Test (TC-032) |
+| FR-011-AC-7 | `Meter::consumed` answers without panic for every member of `LimitKind::ALL`, returning zero for untouched counters, admitted high-water values for semantic sizes and admitted cumulative totals for work/results; IEEE flag iteration and QSV dimension and compound-unit term iteration are stable for every accepted graph-node insertion order, while QSV's checked-node and `UnitGraph::from_checked_nodes` boundaries refuse malformed order with the stated first cause. | Test (TC-032) |
 | FR-011-AC-8 | A connective whose right operand stops returns that stop unchanged, admits no `boolean.result-retain` charge and consumes no result unit. | Test (TC-032) |
 
 ## Kernel ownership
@@ -103,15 +103,15 @@ acceptance criterion.
 `FR-358-AC-8` through `FR-358-AC-11` cover the bounded test-support log after its cap;
 `FR-359-AC-1` through `FR-359-AC-5` cover cumulative boundaries, exact over-`u64` charge
 requests and atomicity; and
-`FR-364-AC-1` covers IEEE flag order. These do not cover the RT quantity stop in AC-2,
-the lazy invocation and stop propagation in AC-3/AC-8, or RT dimension, compound-unit and
-graph orders in AC-7. The RT portions remain required and retain their own evidence in TC-032.
+`FR-364-AC-1` covers IEEE flag order. QSV quantity evaluation supplies AC-2 and the
+dimension, compound-unit and graph behavior in AC-7; RT exercises the consumed AC-2 stop in
+`tests/exact_quantity_conversion.rs`. The lazy invocation and stop propagation in AC-3/AC-8
+remain runtime-owned and retain their evidence in TC-032.
 In particular, kernel `FR-359-AC-3`/`FR-359-AC-4` require exact over-`u64` `next_charge`
 values and `FR-359-AC-7` covers `consumed` over `LimitKind::ALL`. QSpec
 `ix://agent-ix/quire-specification/TC-187` vector U13 requires the exact
-`next_charge = 36893488147419103232` for quantity power before computation. RT's retained
-`tests/exact_meter_state.rs` over-`u64` case checks the quantity stop, a non-`u64` amount and the
-admitted-charge prefix; `src/exact/quantity.rs` constructs the exact request.
+`next_charge = 36893488147419103232` for quantity power before computation. QSV now owns
+the quantity request; RT retains no duplicate implementation of that charge.
 
 ## Dependencies
 

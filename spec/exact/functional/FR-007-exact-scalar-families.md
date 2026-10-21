@@ -81,10 +81,9 @@ accounting schedule.
   units, first failure wins. `Multiply`, `Divide` and `Power` check affine-unit arithmetic only:
   their dimensions combine rather than having to match, so a dimension difference is not a fault
   there. Every one of these is `IllTyped`, reported beside the outcome with zero charges.
-- Exact quantity-to-quantity conversion (IR-818) is the existing `convert_quantity` with
-  `QuantityTarget::Exact`: RT's `src/exact/quantity.rs` today, and `quire-semantic-value`'s
-  `convert_quantity` over `UnitQuantity` at the revision in RT's `Cargo.lock`, which has the same
-  `Exact` target. There is no new RT symbol and no wrapper (FR-275-AC-18). The converted magnitude
+- Exact quantity-to-quantity conversion (IR-818) uses `quire-semantic-value`'s
+  `convert_quantity` over `UnitQuantity` with `QuantityTarget::Exact` at the revision in RT's
+  `Cargo.lock`. There is no RT symbol or wrapper (FR-275-AC-18). The converted magnitude
   is the `ConvertedValue::Exact` rational in the `Conversion` and its unit is the target unit.
   There is no rounding parameter because [quire-contract-ir FR-038-AC-213](ix://agent-ix/quire-contract-ir/FR-038) admits
   only the `exact` mode for `quire.op.quantity.convert`; `Decimal` and `Integer` targets are out
@@ -99,8 +98,7 @@ accounting schedule.
   root-to-target path, all before the first rational event and with no common-ancestor shortcut;
   two `unit.rational-arithmetic` events per edge (multiply then add forward, subtract then divide
   in reverse); then `unit.target-domain` with no size amount; then `unit.result-retain`. AD-004
-  step 4 deletes RT's `convert_quantity` with the rest of `quantity`, and consumers switch to the
-  shared crate's `convert_quantity` with `Exact`; no RT-local API remains.
+  step 4 removed RT's `convert_quantity` with the rest of `quantity`; consumers use QSV directly.
 - `Rational[lo..hi; dmin..dmax]` membership is componentwise on the **reduced** form: the reduced
   numerator must lie in the numerator interval and the reduced denominator in the denominator
   interval. It is therefore not a numeric interval — a domain whose numeric span plainly contains
@@ -151,7 +149,7 @@ accounting schedule.
 
 ## Verification notes
 
-FR-007-AC-20 through FR-007-AC-25 are backed by RT-local tests of the existing
+FR-007-AC-20 through FR-007-AC-25 are checked by RT integration tests of QSV's public
 `convert_quantity` and `evaluate_quantity` (TC-201, `tests/exact_quantity_conversion.rs`) under
 `--features exact` (IR-818). They cite QSpec [quire-specification FR-142-AC-1](ix://agent-ix/quire-specification/FR-142), `FR-142-AC-2`,
 `FR-142-AC-4`, `FR-142-AC-5`, `FR-142-AC-7` (exact-bound accounting; denial is incomplete with no
@@ -164,8 +162,9 @@ finding against the criterion or the code, never a reason to change the test to 
 
 The six literal rounding spellings, their mapping to the consumed `RoundingMode` variants,
 the consumed enum's `Exact` default, directed-mode ties and explicit `Exact` refusal in
-FR-007-AC-8, and all of FR-007-AC-15 through FR-007-AC-19, are backed by RT-local
-`tests/exact_semantics.rs` tests under `--features exact` (TC-034). A compiler package
+FR-007-AC-8, AC-15, AC-18 and AC-19 are backed by RT-local
+`tests/exact_semantics.rs` tests; AC-16 and AC-17 use QSV directly in
+`tests/exact_quantity_conversion.rs` under `--features exact` (TC-034). A compiler package
 that omits the rounding spelling must still be tested to select `Exact`; the RT test
 asserts only the consumed enum's default, not package compilation.
 
