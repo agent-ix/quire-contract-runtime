@@ -179,7 +179,7 @@ use-remote:
 .PHONY: deny
 deny:
 	$(CARGO) deny --workspace check licenses bans sources
-	@set -e; for f in $$(git ls-files -- 'Cargo.lock' '*/Cargo.lock'); do awk -f scripts/check_one_copy.awk $$f; done
+	$(QUIRE) check-lock $$(git ls-files -- 'Cargo.lock' '*/Cargo.lock')
 
 # Mutation check of the QSL Git source policy (FR-275-AC-8, TC-198): each scratch dependency
 # must fail `cargo deny` with the QSL source rejection diagnostic.

@@ -173,8 +173,9 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   `make msrv` and `make size` (linked band, panic relocations and the footprint-graph check that
   `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive` are absent).
   Neither has a Rust test. TC-202: `tests/deny_one_copy.rs`, which copies the working-tree
-  `Makefile`, `scripts/check_one_copy.awk` and `Cargo.lock` into a scratch repository and runs
-  `make deny` against duplicate first-party Git lock entries.
+  `Makefile` and `Cargo.lock` into a scratch repository and runs `make deny` with the
+  real installed `quire check-lock` against aligned, duplicate-name and split-revision
+  controls, including nested tracked locks and failure propagation.
 - TC-194, TC-195: `tests/exact_function_application.rs` (`--features exact`), landed under
   agent-ix/quire-contract-runtime#34. FR-273-AC-4's evidence is a `compile_fail` doctest on
   `IeeeDisposition` (`src/exact/ieee.rs`), mirroring `InjectedDenial`'s.

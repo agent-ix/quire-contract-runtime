@@ -31,7 +31,7 @@ IR-349; it is planned until then.
 2. Read `Cargo.toml`; expect `quire-exact` and `quire-semantic-value` optional, enabled only by `exact`,
    each using its own Git repository, `branch = "main"`, and no `rev`, `tag`, `path` or `[patch]`
    (FR-275-AC-3, FR-275-AC-4).
-3. Run `make deny`; expect success, and `awk -f scripts/check_one_copy.awk Cargo.lock` to report one
+3. Run `make deny`; expect success, and `quire check-lock Cargo.lock` to report coherence with one
    entry each for `quire-exact` and `quire-semantic-value`, plus one each for transitive
    `quire-canonical` and `quire-canonical-derive` (FR-275-AC-5). TC-202 separately
    checks that the gate rejects a duplicate first-party Git crate entry.
