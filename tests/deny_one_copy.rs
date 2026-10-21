@@ -25,8 +25,11 @@ impl ScratchRepo {
             .expect("a unique temporary directory is available");
         let scratch = Self { root };
         for file in ["Makefile", "Cargo.lock"] {
-            fs::copy(Path::new(env!("CARGO_MANIFEST_DIR")).join(file), scratch.root.join(file))
-                .unwrap();
+            fs::copy(
+                Path::new(env!("CARGO_MANIFEST_DIR")).join(file),
+                scratch.root.join(file),
+            )
+            .unwrap();
         }
         scratch.git(&["init", "--quiet"]);
         scratch.git(&["add", "Cargo.lock"]);
@@ -81,9 +84,15 @@ fn package(name: &str, revision: char) -> String {
 fn require_policy_refusal(output: &Output, names: &[&str]) {
     assert!(!output.status.success(), "incoherent lock was accepted");
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("agent-ix Git coherence refused"), "wrong refusal: {output:?}");
+    assert!(
+        stderr.contains("agent-ix Git coherence refused"),
+        "wrong refusal: {output:?}"
+    );
     for name in names {
-        assert!(stderr.contains(name), "missing affected package {name}: {output:?}");
+        assert!(
+            stderr.contains(name),
+            "missing affected package {name}: {output:?}"
+        );
     }
 }
 
@@ -95,9 +104,18 @@ fn deny_checks_the_unchanged_committed_lock_with_the_owned_command() {
     let output = scratch.make_deny();
     assert!(output.status.success(), "committed lock failed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("check-lock Cargo.lock"), "missing invocation: {output:?}");
-    assert!(stdout.contains("Git lock coherence checked: Cargo.lock"), "missing result: {output:?}");
-    assert!(output.stderr.is_empty(), "unexpected diagnostics: {output:?}");
+    assert!(
+        stdout.contains("check-lock Cargo.lock"),
+        "missing invocation: {output:?}"
+    );
+    assert!(
+        stdout.contains("Git lock coherence checked: Cargo.lock"),
+        "missing result: {output:?}"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "unexpected diagnostics: {output:?}"
+    );
     assert_eq!(fs::read(scratch.root.join("Cargo.lock")).unwrap(), before);
 }
 
@@ -109,9 +127,15 @@ fn deny_rejects_duplicate_first_party_package_names_with_valid_sources() {
     let first_party: BTreeMap<&str, &str> = original
         .split("[[package]]")
         .filter_map(|record| {
-            let name = record.lines().find_map(|line| line.strip_prefix("name = \"")?.strip_suffix('"'))?;
-            let source = record.lines().find_map(|line| line.strip_prefix("source = \"")?.strip_suffix('"'))?;
-            source.starts_with("git+https://github.com/agent-ix/").then_some((name, source))
+            let name = record
+                .lines()
+                .find_map(|line| line.strip_prefix("name = \"")?.strip_suffix('"'))?;
+            let source = record
+                .lines()
+                .find_map(|line| line.strip_prefix("source = \"")?.strip_suffix('"'))?;
+            source
+                .starts_with("git+https://github.com/agent-ix/")
+                .then_some((name, source))
         })
         .collect();
     assert!(!first_party.is_empty(), "no first-party packages found");
@@ -119,7 +143,9 @@ fn deny_rejects_duplicate_first_party_package_names_with_valid_sources() {
         scratch.write_lock(&format!("{original}\n[[package]]\nname = \"{name}\"\nversion = \"0.0.0\"\nsource = \"{source}\"\n"));
         require_policy_refusal(&scratch.make_deny(), &[name]);
     }
-    scratch.write_lock(&(package("synthetic-first-party", 'a') + &package("synthetic-first-party", 'a')));
+    scratch.write_lock(
+        &(package("synthetic-first-party", 'a') + &package("synthetic-first-party", 'a')),
+    );
     require_policy_refusal(&scratch.make_deny(), &["synthetic-first-party"]);
 }
 
@@ -129,7 +155,10 @@ fn deny_accepts_aligned_crates_and_refuses_distinct_name_repository_splits() {
     let scratch = ScratchRepo::new();
     scratch.write_lock(&(package("control-first", 'a') + &package("control-second", 'a')));
     let aligned = scratch.make_deny();
-    assert!(aligned.status.success(), "aligned multi-crate lock failed: {aligned:?}");
+    assert!(
+        aligned.status.success(),
+        "aligned multi-crate lock failed: {aligned:?}"
+    );
     scratch.write_lock(&(package("control-first", 'a') + &package("control-second", 'b')));
     let split = scratch.make_deny();
     require_policy_refusal(&split, &["control-first", "control-second"]);
@@ -143,12 +172,22 @@ fn deny_accepts_aligned_crates_and_refuses_distinct_name_repository_splits() {
 fn deny_checks_every_tracked_lock_in_one_owned_invocation() {
     let scratch = ScratchRepo::new();
     fs::create_dir(scratch.root.join("nested")).unwrap();
-    fs::write(scratch.root.join("nested/Cargo.lock"), package("nested-first", 'a') + &package("nested-second", 'b')).unwrap();
+    fs::write(
+        scratch.root.join("nested/Cargo.lock"),
+        package("nested-first", 'a') + &package("nested-second", 'b'),
+    )
+    .unwrap();
     scratch.git(&["add", "nested/Cargo.lock"]);
     let output = scratch.make_deny();
     require_policy_refusal(&output, &["nested-first", "nested-second"]);
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert_eq!(stdout.matches("check-lock Cargo.lock nested/Cargo.lock").count(), 1, "wrong invocation: {output:?}");
+    assert_eq!(
+        stdout
+            .matches("check-lock Cargo.lock nested/Cargo.lock")
+            .count(),
+        1,
+        "wrong invocation: {output:?}"
+    );
 }
 
 #[trace("FR-275-AC-26")]
@@ -159,7 +198,10 @@ fn deny_propagates_malformed_input_and_missing_checker_failures() {
     let malformed = scratch.make_deny();
     assert!(!malformed.status.success(), "malformed input was accepted");
     let stderr = String::from_utf8_lossy(&malformed.stderr);
-    assert!(stderr.contains("Cargo.lock") && !stderr.contains("agent-ix Git coherence refused"), "wrong input refusal: {malformed:?}");
+    assert!(
+        stderr.contains("Cargo.lock") && !stderr.contains("agent-ix Git coherence refused"),
+        "wrong input refusal: {malformed:?}"
+    );
     let missing = scratch.make_deny_with(scratch.root.join("absent-quire").into_os_string());
     assert!(!missing.status.success(), "missing checker was accepted");
     assert!(!String::from_utf8_lossy(&missing.stdout).contains("Git lock coherence checked"));
