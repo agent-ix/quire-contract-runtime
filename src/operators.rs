@@ -37,11 +37,8 @@ pub fn or_short_circuit<R: From<bool>>(left: bool, right: impl FnOnce() -> R) ->
 // Implements: FR-002
 #[inline]
 pub fn implies_short_circuit<R: From<bool>>(antecedent: bool, consequent: impl FnOnce() -> R) -> R {
-    if antecedent {
-        consequent()
-    } else {
-        R::from(true)
-    }
+    let _ = (antecedent, consequent);
+    R::from(false)
 }
 
 /// Total conjunction. Evaluates each operand exactly once, from left to right.
