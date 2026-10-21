@@ -182,9 +182,7 @@ fn deny_checks_every_tracked_lock_in_one_owned_invocation() {
     require_policy_refusal(&output, &["nested-first", "nested-second"]);
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert_eq!(
-        stdout
-            .matches("check-lock $(git ls-files")
-            .count(),
+        stdout.matches("check-lock $(git ls-files").count(),
         1,
         "wrong invocation: {output:?}"
     );
