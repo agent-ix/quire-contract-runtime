@@ -105,7 +105,7 @@ fn deny_checks_the_unchanged_committed_lock_with_the_owned_command() {
     assert!(output.status.success(), "committed lock failed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("check-lock Cargo.lock"),
+        stdout.contains("check-lock $(git ls-files"),
         "missing invocation: {output:?}"
     );
     assert!(
@@ -183,11 +183,12 @@ fn deny_checks_every_tracked_lock_in_one_owned_invocation() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert_eq!(
         stdout
-            .matches("check-lock Cargo.lock nested/Cargo.lock")
+            .matches("check-lock $(git ls-files")
             .count(),
         1,
         "wrong invocation: {output:?}"
     );
+    assert!(String::from_utf8_lossy(&output.stderr).contains("nested/Cargo.lock"));
 }
 
 #[trace("FR-275-AC-26")]
