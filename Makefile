@@ -185,7 +185,7 @@ deny:
 # must fail `cargo deny` with the QSL source rejection diagnostic.
 .PHONY: deny-mutations
 deny-mutations:
-	bash scripts/check_deny_bans.sh
+	$(CARGO) run $(LOCKED) --quiet --bin check_deny_source --
 
 .PHONY: cargo-audit
 cargo-audit:
