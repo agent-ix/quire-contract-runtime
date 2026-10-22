@@ -14,7 +14,7 @@ name = "quire_contract_runtime"
 path = "src/lib.rs"
 
 [workspace]
-members = ["measurement/footprint"]
+members = ["measurement/footprint", "tools/runtime-gates"]
 resolver = "2"
 
 [features]
