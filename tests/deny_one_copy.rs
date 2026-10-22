@@ -229,20 +229,36 @@ fn deny_preserves_tracked_filename_boundaries_for_the_real_checker() {
         scratch.git(&["add", &format!("{directory}/Cargo.lock")]);
     }
     let aligned = scratch.make_deny();
-    assert!(aligned.status.success(), "filename boundaries corrupted: {aligned:?}");
-    assert!(aligned.stderr.is_empty(), "aligned filename diagnostic: {aligned:?}");
+    assert!(
+        aligned.status.success(),
+        "filename boundaries corrupted: {aligned:?}"
+    );
+    assert!(
+        aligned.stderr.is_empty(),
+        "aligned filename diagnostic: {aligned:?}"
+    );
     let stdout = String::from_utf8_lossy(&aligned.stdout);
     assert_eq!(stdout.matches("check-lock ").count(), 1);
     for directory in directories {
-        assert!(stdout.contains(&format!("{directory}/Cargo.lock")), "missing path: {aligned:?}");
+        assert!(
+            stdout.contains(&format!("{directory}/Cargo.lock")),
+            "missing path: {aligned:?}"
+        );
     }
     for directory in directories {
         let path = scratch.root.join(directory).join("Cargo.lock");
-        fs::write(&path, package("boundary-first", 'a') + &package("boundary-second", 'b')).unwrap();
+        fs::write(
+            &path,
+            package("boundary-first", 'a') + &package("boundary-second", 'b'),
+        )
+        .unwrap();
         let split = scratch.make_deny();
         require_policy_refusal(&split, &["boundary-first", "boundary-second"]);
         let stderr = String::from_utf8_lossy(&split.stderr);
-        assert!(stderr.contains(&format!("{directory}/Cargo.lock")), "wrong path: {split:?}");
+        assert!(
+            stderr.contains(&format!("{directory}/Cargo.lock")),
+            "wrong path: {split:?}"
+        );
         assert!(stderr.contains(&"a".repeat(40)) && stderr.contains(&"b".repeat(40)));
         fs::write(path, &original).unwrap();
     }
