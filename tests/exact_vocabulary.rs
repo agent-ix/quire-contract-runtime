@@ -467,7 +467,7 @@ impl<'ast> Visit<'ast> for RetiredConstructorInspection {
 fn tc_033_runtime_has_no_local_node_key_constructor() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut sources = Vec::new();
-    for directory in ["src", "verification", "examples", "measurement", "scripts"] {
+    for directory in ["src", "verification", "examples", "measurement", "tools"] {
         rust_sources(&root.join(directory), &mut sources);
     }
     assert!(!sources.is_empty());
