@@ -152,3 +152,5 @@ and review as every other contribution.
 
 Licensed under the GNU Affero General Public License, version 3 or (at your option) any later
 version (`AGPL-3.0-or-later`). See [LICENSE](LICENSE).
+
+<!-- STD-30 language-boundary canary: inert README change. -->
