@@ -37,3 +37,9 @@ Checked changed requirement and matrix links against AD-004 step 5 and the plann
 ## Verdict
 
 The ACs and TC procedures otherwise preserve the prerequisite ordering and do not claim implementation evidence.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed at 3edbd37: the TC-194 inventory row explicitly assigns new shared-leaf AC-12/13 cases to IR-590 while keeping earlier resumable-body and fuel work under IR-512. |

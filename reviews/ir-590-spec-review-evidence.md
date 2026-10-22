@@ -37,3 +37,9 @@ Ran the Quoin method advisor for the changed obligations and compared TC-194/TC-
 ## Verdict
 
 The advisor reports Test matches AC-12, AC-13, AC-29 and AC-30. Its generic Inspection mismatch for AC-7 is not a defect: TC-198 inspects deny.toml and separately exercises the source-rejection gate.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed at 3edbd37: FR-275-AC-30 and TC-199 step 4 name the planned linked measurement/evaluator ELF, llvm-size -A section sum, solitary native deep-test executable, and /usr/bin/time -v Maximum resident set size converted from KiB to bytes. No exact-profile ceiling is added. |
