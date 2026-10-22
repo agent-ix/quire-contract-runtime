@@ -250,6 +250,7 @@ Round1, Original FND-001 fixed. Newly discovered FND-002 remains open; code/Rust
 | FND | outcome | reason |
 | --- | --- | --- |
 | FND-001 | fixed | NUL-delimited Bash array and quoted argv preserve filenames; verified genuine RED-to-seven-PASS evidence. |
+| FND-002 | fixed | Completed Git enumeration is checked before the same single owner checker invocation; genuine old-recipe RED101 and fixed eight-control PASS0 establish the failure scenario and its correction. |
 
 ## Narrow Verification (round 1)
 
@@ -262,3 +263,32 @@ Exact published candidate c8609adbba0ddfa000d11f310fe1be7d88153bd8; original sam
 | FND-002 | medium | Git producer failure after partial filename output is lost, allowing successful coherence validation of an incomplete tracked-lock set | Makefile:182 |
 
 The `git ls-files` status belongs to a process-substitution child and is neither waited nor checked before exec. `mapfile` can succeed on a prefix followed by EOF even when Git exits nonzero (for example, Git receives SIGTERM after writing the root lock path). The checker then sees a nonempty proper subset and can report success while a later tracked lock was never supplied. Empty/no-output producer failures do fail because CLI requires at least one path; that does not establish fail-closed behavior for partial output. This is source-traced, not a newly executed reproduction. Require successful Git enumeration before invoking the checker, preserve NUL filename boundaries, and add a producer-failure-after-output control against the genuine checker. Normal filename and seven existing successful/error-path controls remain required. FND002 has no disposition yet and blocks acceptance.
+
+## Narrow Verification (round 2)
+
+Scoped code/Rust PASS at the reviewed head: FND001 remains fixed from round1; FND002 is fixed in round2; no new findings. Original finding rows, round1 wording and previous outcomes remain unchanged as history.
+
+Original reviewer/run ae2ff59d-21b1-4119-a583-3a8435154c50, published exact head 0c37ad083f2254b0588942920ad7ee194785e0c2, RT PR153 still OPEN. Relative c8609adb production delta only changes Makefile enumeration/completion handling; test delta adds one external Git-boundary fault control and passes PATH explicitly, with the genuine owner checker unchanged. All six prior round1 custody files match reviewer source bytes. No Cargo manifest/lock, runtime/kernel source or CI change. Reviewer ran only source/readback/Quire operations, no new Cargo/native/full gate/Kani/lock/rebase/merge. Raw producer-red.log independently shows the old recipe returned Make success after valid root Cargo.lock NUL prefix plus Git exit42, causing the new test RED101. The actual fixed recipe is exercised by all8controls PASS0, no ignored tests; producer-fmt and producer-clippy exit0. OwnerCLI2005 is the same real installed CLI; the only test double is the external Git producer, not the checker or lock algorithm. The test first demonstrates actual refusal of the incoherent tracked sibling without injection, then injects prefix/failure and requires nonzero Make, producer diagnostic, and no checker success report. Previous filename spaces/Unicode/newlines/globs and all real aligned/duplicate/split/malformed/missing-executable controls remain. Author-reported16GiB/swap0/jobs2 scope settings are not independently remeasured here; raw logs show actual scope invocation IDs and root owns cap/final-gate verification. RT154 remains OPEN at this readback; RT154 merge SHA and required lane ordering, followed by final rebase/gates/review, still hold RT153. No final mergeable claim is made on unrebased main.
+
+`mktemp` failure, Git failure and mapfile failure each exit before the checker. NUL-delimited data survives through the checked temporary file and quoted Bash array. Empty lock enumeration reaches the CLI required-argument refusal rather than succeeding. The checker remains the final command; EXIT cleanup removes the temporary file while preserving the command failure status. No ignored exit, policy fallback or additional checker copy was introduced. Linux/Bash matches the existing Ubuntu workflow scope; no additional platform acceptance is claimed.
+
+## Narrow Test Bindings (round 2)
+
+```yaml
+bindings:
+- test_id: deny_preserves_tracked_filename_boundaries_for_the_real_checker
+  ac_id: FR-275-AC-24
+  trace: correct
+- test_id: deny_preserves_tracked_filename_boundaries_for_the_real_checker
+  ac_id: FR-275-AC-25
+  trace: correct
+- test_id: deny_preserves_tracked_filename_boundaries_for_the_real_checker
+  ac_id: FR-275-AC-26
+  trace: correct
+- test_id: deny_rejects_a_git_producer_failure_after_a_nonempty_prefix
+  ac_id: FR-275-AC-24
+  trace: correct
+- test_id: deny_rejects_a_git_producer_failure_after_a_nonempty_prefix
+  ac_id: FR-275-AC-26
+  trace: correct
+```
