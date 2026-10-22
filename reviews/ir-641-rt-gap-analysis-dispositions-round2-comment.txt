@@ -1,0 +1,26 @@
+<!-- reviewer-dispositions repo=agent-ix/quire-contract-runtime visibility=public quoin=0.28.4 module=spec-artifacts-process@b82e42e893612b4b4ee94127714b4577ee893502 id=SR-14115 round=2 model=gpt-6.1-sol run=ae2ff59d-21b1-4119-a583-3a8435154c50 -->
+
+Full-gap FAIL retained, all three inherited latest DEFERRED outcomes unchanged; no new findings or green coverage claim. Scoped base SR14116 PASS retained.
+
+Original reviewer/run ae2ff59d-21b1-4119-a583-3a8435154c50, published exact head 0c37ad083f2254b0588942920ad7ee194785e0c2, RT PR153 still OPEN. Relative c8609adb production delta only changes Makefile enumeration/completion handling; test delta adds one external Git-boundary fault control and passes PATH explicitly, with the genuine owner checker unchanged. All six prior round1 custody files match reviewer source bytes. No Cargo manifest/lock, runtime/kernel source or CI change. Reviewer ran only source/readback/Quire operations, no new Cargo/native/full gate/Kani/lock/rebase/merge. Raw producer-red.log independently shows the old recipe returned Make success after valid root Cargo.lock NUL prefix plus Git exit42, causing the new test RED101. The actual fixed recipe is exercised by all8controls PASS0, no ignored tests; producer-fmt and producer-clippy exit0. OwnerCLI2005 is the same real installed CLI; the only test double is the external Git producer, not the checker or lock algorithm. The test first demonstrates actual refusal of the incoherent tracked sibling without injection, then injects prefix/failure and requires nonzero Make, producer diagnostic, and no checker success report. Previous filename spaces/Unicode/newlines/globs and all real aligned/duplicate/split/malformed/missing-executable controls remain. Author-reported16GiB/swap0/jobs2 scope settings are not independently remeasured here; raw logs show actual scope invocation IDs and root owns cap/final-gate verification. RT154 remains OPEN at this readback; RT154 merge SHA and required lane ordering, followed by final rebase/gates/review, still hold RT153. No final mergeable claim is made on unrebased main.
+
++++ [reviewer data]
+
+```yaml
+dispositions: []
+narrow_head: 0c37ad083f2254b0588942920ad7ee194785e0c2
+new_findings: []
+code_findings:
+  FND-001: fixed round1
+  FND-002: fixed round2
+full_gap_verdict: FAIL
+full_gap_current_outcomes:
+  FND-001: deferred IR-878
+  FND-002: deferred IR-878
+  FND-003: deferred IR-349/IR-590; no exception
+base_conformance: PASS
+final_acceptance: HELD for RT154 merge SHA, required lane order, rebase and exact-head
+  final gates
+```
+
++++

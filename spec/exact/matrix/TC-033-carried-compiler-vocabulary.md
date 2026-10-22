@@ -19,7 +19,7 @@ preserved below as historical FR-012-AC-1 text.
 ## Test Procedure
 
 1. Run `tc_033_runtime_has_no_local_node_key_constructor`. Walk every Rust source recursively
-   under `src/`, `verification/`, `examples/`, `measurement/` and `scripts/`, excluding only
+   under `src/`, `verification/`, `examples/`, `measurement/` and `tools/`, excluding only
    `#[cfg(test)]` items. Inspect for a local `NodeKey` type or alias, a public re-export, any
    constructor reference or call (including function pointers, qualified paths and macro token
    streams), and local `NodeKey` definitions inside macros. Flag named hex decoding paths and

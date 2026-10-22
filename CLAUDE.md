@@ -39,7 +39,7 @@ make ci               # all mandatory local gates; never dispatches hosted CI
 ## Safety scaffolding
 
 - `clippy.toml` caps cognitive complexity / arg count
-- `deny.toml` allow-lists licenses, the three shared Git repositories and the dev-only first-party `ix-trace-rs` tooling source; it denies unknown registries/git sources (including the QSL repository), and `make deny` fails if any agent-ix git crate resolves more than once in a Cargo.lock (`scripts/check_one_copy.awk`) (FR-275)
+- `deny.toml` allow-lists licenses, the three shared Git repositories and the dev-only first-party `ix-trace-rs` tooling source; it denies unknown registries/git sources (including the QSL repository), and `make deny` fails if any agent-ix git crate resolves more than once in a Cargo.lock (`quire check-lock`) (FR-275)
 - `rustfmt.toml` uses stable rustfmt settings with a 100-char width. CI fails on drift.
 - `verification/kani.rs` is compiled under `cfg(kani)`. Stable Clippy does not type-check that
   configuration; rustfmt and `make kani` are the controls for this boundary.
@@ -56,3 +56,10 @@ plan/                  # implementation plans
 tools/runtime-gates/   # feature matrix and Kani mutation gate binary
 scripts/               # footprint and supply-chain checks
 ```
+
+The dependency gate requires the distributed `quire` executable with `check-lock`
+(quire-cli FR-027). Install or update `@agent-ix/quire-cli` through its ordinary npm
+installation route; a source installation uses `cargo install --git
+https://github.com/agent-ix/quire-cli --locked quire-cli`. `QUIRE` may select the
+installed executable for Make targets and the lock-gate integration tests. An
+older or missing executable fails the gate; no local checker fallback exists.
