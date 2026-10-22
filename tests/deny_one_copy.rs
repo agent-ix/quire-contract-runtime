@@ -55,6 +55,10 @@ impl ScratchRepo {
     }
 
     fn make_deny_with(&self, checker: OsString) -> Output {
+        self.make_deny_with_path(checker, std::env::var_os("PATH").unwrap())
+    }
+
+    fn make_deny_with_path(&self, checker: OsString, path: OsString) -> Output {
         // Isolate cargo-deny's unrelated policy; the checker itself is never replaced.
         let mut assignment = OsString::from("QUIRE=");
         assignment.push(checker);
@@ -62,6 +66,7 @@ impl ScratchRepo {
             .current_dir(&self.root)
             .args(["deny", "CARGO=true"])
             .arg(assignment)
+            .env("PATH", path)
             .output()
             .expect("make deny can run in the scratch repository")
     }
@@ -262,4 +267,49 @@ fn deny_preserves_tracked_filename_boundaries_for_the_real_checker() {
         assert!(stderr.contains(&"a".repeat(40)) && stderr.contains(&"b".repeat(40)));
         fs::write(path, &original).unwrap();
     }
+}
+
+#[trace("TC-202", "FR-275-AC-24", "FR-275-AC-26")]
+#[test]
+fn deny_rejects_a_git_producer_failure_after_a_nonempty_prefix() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let scratch = ScratchRepo::new();
+    fs::create_dir(scratch.root.join("nested")).unwrap();
+    fs::write(
+        scratch.root.join("nested/Cargo.lock"),
+        package("omitted-first", 'a') + &package("omitted-second", 'b'),
+    )
+    .unwrap();
+    scratch.git(&["add", "nested/Cargo.lock"]);
+    require_policy_refusal(&scratch.make_deny(), &["omitted-first", "omitted-second"]);
+
+    // Fault only the producer: emit a valid prefix, then fail before the second lock.
+    // The consumer remains the genuine owner CLI used by the other controls.
+    let bin = scratch.root.join("bin");
+    fs::create_dir(&bin).unwrap();
+    let git = bin.join("git");
+    fs::write(
+        &git,
+        "#!/bin/sh\nprintf 'Cargo.lock\\0'\nprintf 'lock enumeration failed after prefix\\n' >&2\nexit 42\n",
+    )
+    .unwrap();
+    fs::set_permissions(&git, fs::Permissions::from_mode(0o755)).unwrap();
+    let path = std::env::join_paths(
+        std::iter::once(bin).chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
+    )
+    .unwrap();
+    let checker = std::env::var_os("QUIRE").unwrap_or_else(|| OsString::from("quire"));
+    let output = scratch.make_deny_with_path(checker, path);
+    assert!(
+        !output.status.success(),
+        "a failed producer's incomplete lock prefix was accepted: {output:?}"
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("lock enumeration failed after prefix")
+    );
+    assert!(
+        !String::from_utf8_lossy(&output.stdout).contains("Git lock coherence checked"),
+        "the checker ran before enumeration succeeded: {output:?}"
+    );
 }
