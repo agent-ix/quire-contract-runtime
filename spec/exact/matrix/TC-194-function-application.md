@@ -71,6 +71,19 @@ agent-ix/quire-contract-runtime#34.
 14. Trigger a missing function from within an admitted checked body and both re-entrant meter
     borrow paths; assert `UnknownCheckedFunction` and `MeterBorrowConflict` respectively. Check a
     foreign expression carries `ForeignCheckedExpression` (FR-273-AC-8).
+15. After AD-004 step 5, invoke one admitted checked input and one CG-generated
+    resumable body through the QSL-owned leaf with `std` disabled. Run the same
+    inputs through QSL's std reference. Compare the complete outcome or typed
+    refusal, location and losses, consumed work, and ordered charge log; use
+    one negative input whose first denied charge preserves the admitted prefix
+    (FR-273-AC-12).
+16. On a native thread limited to a 512 KiB stack, run the checked decreasing
+    `count(100000)` and the corresponding generated-body case. Record the
+    sufficient run's measured work spend `w` separately for each path. Run each
+    at `w`, `w-1`, then `w` again: assert result `100000`, `Incomplete` naming
+    `work_units` at the denied charge with no denied log entry, and result
+    `100000`. Compare the ordered log for every run to QSL's std reference;
+    assert no depth refusal or stack overflow (FR-273-AC-13).
 
 ## Expected Results
 

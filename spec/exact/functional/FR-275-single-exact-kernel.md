@@ -133,9 +133,10 @@ crates that the runtime consumes.
   AC-24 through AC-28 govern this repository's adoption. `deny.toml` admits their three
   own-repository Git sources plus the dev-only `ix-trace-rs` tooling source, and carries scoped
   licence exceptions for the four shared crates.
-- **Guarded edges.** No normal, build or dev dependency may resolve from the QSL repository.
+- **Guarded edges.** No normal, build or dev dependency may resolve from the QSL workspace repository.
   `unknown-git = "deny"` rejects that repository because `allow-git` admits only those three
-  own-repository sources and the dev-only `ix-trace-rs` tooling source. `make deny-mutations`
+  own-repository sources and the dev-only `ix-trace-rs` tooling source before AD-004 step 5;
+  the evaluation leaf's own repository may be admitted after that step. `make deny-mutations`
   adds QSL Git dependencies in scratch copies and
   requires cargo-deny's source-rejection diagnostic for normal, build and dev dependencies. A licence
   error alone does not prove the source guard.
@@ -157,6 +158,13 @@ crates that the runtime consumes.
   measurement crate depends on the runtime with `default-features = false`, so NFR-001's 500 byte
   floor, 4 KiB ceiling and panic-path check measure the same code as before and `make size` is the
   check. The kernel's size is outside that budget, as the `exact` feature always was.
+  After AD-004 step 5 the default graph also resolves no evaluation leaf. The
+  governed default linked `.text` plus `.rodata` band remains 500 bytes to
+  4 KiB on `thumbv7em-none-eabi` at Rust 1.98.1; the deep exact-profile
+  acceptance instead caps the native thread stack at 512 KiB. No linked-size
+  or peak-heap ceiling for the `exact` profile has been approved. Its linked
+  bytes and native peak memory are reported by the acceptance run, separately from
+  the default footprint, without claiming the 4 KiB ceiling for them.
 - **Toolchain.** The runtime takes one floor, Rust 1.98.1, for all features and for the footprint
   measurement: the owner's decision (Peter, 2026-10-01: "we are on rust 1.98.1"), the toolchain in
   use everywhere the runtime spells one. It replaces the 1.75 floor in interface-001 and
@@ -174,12 +182,12 @@ crates that the runtime consumes.
 | FR-275-AC-2 | No module, alias or feature of the runtime keeps a removed kernel definition reachable; after the IR-882 value-bearing cutover, inspection finds no RT-defined second `Value`, `CheckedEquality` evaluator, pair walker or membership walker, `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, copy of `UnitTable`, `TypeEnvironment`, `EnumMemberIndex` or `EnumDeclaration`, conversion layer, adapter or old-`Value` re-export. Quantity, enum, reference and checked-equality paths use the QSV owners directly. | Inspection (TC-197) |
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
-| FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`. | Test (TC-197, `make deny`) |
+| FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`, and, after AD-004 step 5, the QSL-owned evaluation leaf. | Test (TC-197, `make deny`) |
 | FR-275-AC-6 | `make deny` exits non-zero when `Cargo.lock` holds a second entry for any first-party Git crate. | Test (TC-202) |
-| FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and the dev-only `ix-trace-rs` first-party tooling source, and keeps `unknown-git = "deny"`; it does not admit the QSL Git repository. | Inspection (TC-198) |
+| FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and the dev-only `ix-trace-rs` first-party tooling source before AD-004 step 5, then also the QSL-owned evaluation leaf's own-repository Git source; it keeps `unknown-git = "deny"` and never admits the QSL Git repository. | Inspection (TC-198) |
 | FR-275-AC-8 | `make deny` reports cargo-deny's `source-not-allowed` error for the QSL Git repository, and exits non-zero, when a normal, build or dev dependency resolves from it; a licence failure alone does not satisfy this. | Test (TC-198) |
 | FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. The row `build-exact-no-std-msrv` builds it on the 1.98.1 floor. | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
-| FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`. | Test (TC-199) |
+| FR-275-AC-10 | The dependency graph of `quire-contract-runtime-footprint` for `thumbv7em-none-eabi` contains no `quire-exact`, `quire-semantic-value`, `quire-canonical` or `quire-canonical-derive`, and after AD-004 step 5 contains no evaluation leaf. | Test (TC-199) |
 | FR-275-AC-11 | `make size` measures linked `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band. | Test (TC-199, `make size`) |
 | FR-275-AC-12 | The runtime has no test that compares its output with a second implementation of the kernel or that depends on a crate from the QSL Git repository. | Inspection (TC-197) |
 | FR-275-AC-13 | The runtime contains no file copied from the QSL repository and no port of QSL code, where a port is code that keeps the QSL authority's item names and order. The residue list is not an allowance: every item on it is a violation of this criterion, which stays unmet while the list is non-empty. The runtime-owned negotiators are not ports. | Inspection (TC-197) |
@@ -198,6 +206,8 @@ crates that the runtime consumes.
 | FR-275-AC-26 | A missing checker executable, malformed scratch lock, or checker refusal cannot produce successful `make deny`. The recipe propagates failure without an ignored exit, success fallback, or skipped check. | Test |
 | FR-275-AC-27 | The committed `scripts/check_one_copy.awk` file is absent, the normal recipe contains no reference to it, and no replacement local implementation, executable copy, compatibility shim, or revision allowance bypasses the owned command. | Inspection |
 | FR-275-AC-28 | Adoption leaves the committed Cargo manifests and lock byte-for-byte unchanged and adds no runtime dependency on developer tooling. Qualification runs the real command on the committed lock and reports any existing incoherence as a failing gate with an owning blocker; a scratch passing control or an unrelated gate failure cannot qualify that lock. | Test |
+| FR-275-AC-29 | After AD-004 step 5, with `exact` enabled and `std` disabled on Rust 1.98.1, the RT consumer and a generated-body consumer of the QSL-owned evaluation leaf compile for `thumbv7em-none-eabi` using one lock entry for that leaf; neither consumer resolves the QSL workspace Git source, an RT-local evaluator copy, or a compatibility alias. A host build of the same no_std profile executes the checked-input and generated-body cases of FR-273-AC-12 and AC-13. | Test (TC-199, TC-194) |
+| FR-275-AC-30 | After AD-004 step 5, `make size` still measures the default fixed population at 500 bytes through 4 KiB linked `.text` plus `.rodata` with no evaluation leaf in its graph and no panic relocation. A separate `measurement/evaluator` no_std executable that links RT, the QSL evaluation leaf and one generated-body consumer for `thumbv7em-none-eabi` has its linked ELF path and `.text` plus `.rodata` byte sum reported from `llvm-size -A`. A solitary native FR-273-AC-13 deep-test executable has its peak resident set size reported in bytes from `/usr/bin/time -v`'s `Maximum resident set size` field, with the reported KiB multiplied by 1024. The receipt names both artifact paths and measurements separately from the default footprint; neither is compared with the default 4 KiB ceiling, and no exact-profile memory limit is inferred from this default measurement. | Test (TC-199) |
 
 ## Lock Gate Adoption Status
 

@@ -28,6 +28,22 @@ do not resolve either shared crate or transitive `quire-canonical` crates.
    footprint dependency in a scratch copy makes that listing contain those crates.
 3. Run `make size`; expect `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band and no
    panic relocation (FR-275-AC-11).
+4. After AD-004 step 5, repeat the no-std MSRV target build with the shared
+   evaluation leaf and one generated-body consumer. Check the lock has one
+   evaluation-leaf entry, and neither target graph resolves the QSL workspace
+   source, an RT-local evaluator, or a compatibility alias. Run TC-194's
+   checked-input and generated-body host cases with `std` disabled. Record the
+   linked `measurement/evaluator` no_std executable for that target. Record
+   the resulting ELF path and its `.text` plus `.rodata` sum from `llvm-size
+   -A`. Run the FR-273-AC-13 deep case as a solitary native executable under
+   `/usr/bin/time -v`; record the executable path and its `Maximum resident
+   set size` in bytes after multiplying the reported KiB by 1024. Name both
+   measurements and their commands in the receipt (FR-275-AC-29, AC-30).
+5. Repeat `make size` after the leaf adoption; assert the default graph has no
+   evaluation leaf, linked `.text` plus `.rodata` stays in its own 500-byte to
+   4-KiB band, and the panic-relocation check passes. Report the exact-profile
+   measurements separately without applying the default 4-KiB ceiling to
+   them (FR-275-AC-30).
 
 ## Expected Results
 
