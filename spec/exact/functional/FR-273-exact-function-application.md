@@ -131,6 +131,14 @@ calls the ported surface.
   `function.call`, then bind parameters and run the body. Nested calls use the same meter in
   execution order.
 
+The existing `quire_contract_runtime::exact` names above describe the current
+ported surface. At AD-004 step 5 the accepted consumer calls the QSL-owned
+evaluation leaf through IR-583's shared interface with IR-590's usable
+`no_std + alloc` implementation; RT does not retain an evaluator copy or
+compatibility path. RT acceptance covers both an admitted checked input and a
+CG-generated resumable body. The native execution check uses a 512 KiB thread
+stack and `work_units` fuel; it does not set a call-depth ceiling.
+
 ## Acceptance Criteria
 
 | ID | Criteria | Verification |
@@ -146,6 +154,8 @@ calls the ported surface.
 | FR-273-AC-9 | For an admitted chain of `N` calls whose bodies only request the next call or return a literal, the expected charge vector is `function.call` repeated `N` times and the expected `work_units` spend is `N`. A limit of `N` completes; a limit of `N - 1` returns `Incomplete` at the Nth `function.call`, naming `work_units`, with exactly `N - 1` calls in both the counter and log, and without changing the checked package's static totality verdict. | Test (TC-194) |
 | FR-273-AC-10 | In a nested call with two argument applications and an enclosing application, the charge vector is exactly three `function.call` entries in left argument, right argument, enclosing call order; the enclosing charge precedes parameter binding and body work. With `work_units: 2`, the enclosing charge is denied, the log and counter retain exactly the first two calls, and no enclosing body work occurs. | Test (TC-194) |
 | FR-273-AC-11 | A resumable body transition returns a child-call request while its owned parent state retains live locals and the child-result destination; after the child completes, the runtime resumes that parent with the child's value and does not invoke a second body transition from within the first. A stopped child propagates without resuming the parent. | Test (TC-194) |
+| FR-273-AC-12 | After AD-004 step 5, the RT consumer invokes both an admitted checked input and a CG-generated resumable body through the same QSL-owned evaluation-leaf interface with `std` disabled; for each shared input the outcome or typed refusal, source location and loss, consumed work and ordered charge log equal QSL's std reference. No RT-local evaluator body or compatibility route supplies either result. | Test (TC-194) |
+| FR-273-AC-13 | On a native thread with a 512 KiB stack, the checked decreasing `count(100000)` call through the consumed no_std evaluator and a generated-body call for the same checked input each return `100000` with work limit `w`, where `w` is that run's measured spend; each returns `Incomplete` naming `work_units` at `w-1` with no denied charge in the counter or log, then returns `100000` again at `w`. The ordered charge sequence at all three limits matches the QSL std reference, and no depth refusal or native stack overflow occurs. | Test (TC-194) |
 
 ## Kernel ownership
 
