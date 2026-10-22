@@ -31,6 +31,6 @@ declared target and measures it.
 
 ## Expected Results
 
-The footprint semantic test passes and `scripts/check_linked_footprint.sh` exits successfully only when the fixed-target
+The footprint semantic test passes and the Rust `check_linked_footprint` binary exits successfully only when the fixed-target
 runtime/harness sections are at least 500 and no larger than 4,096 bytes and no runtime/harness
 panic-path reference is linked.
