@@ -33,8 +33,12 @@ do not resolve either shared crate or transitive `quire-canonical` crates.
    evaluation-leaf entry, and neither target graph resolves the QSL workspace
    source, an RT-local evaluator, or a compatibility alias. Run TC-194's
    checked-input and generated-body host cases with `std` disabled. Record the
-   exact-profile target's linked `.text` plus `.rodata` bytes and the native
-   deep-test peak memory in the receipt (FR-275-AC-29, AC-30).
+   linked `measurement/evaluator` no_std executable for that target. Record
+   the resulting ELF path and its `.text` plus `.rodata` sum from `llvm-size
+   -A`. Run the FR-273-AC-13 deep case as a solitary native executable under
+   `/usr/bin/time -v`; record the executable path and its `Maximum resident
+   set size` in bytes after multiplying the reported KiB by 1024. Name both
+   measurements and their commands in the receipt (FR-275-AC-29, AC-30).
 5. Repeat `make size` after the leaf adoption; assert the default graph has no
    evaluation leaf, linked `.text` plus `.rodata` stays in its own 500-byte to
    4-KiB band, and the panic-relocation check passes. Report the exact-profile
