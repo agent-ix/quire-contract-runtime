@@ -169,7 +169,7 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   `[graph] all-features = true`) and the Rust `check_deny_source` binary, run by
   `make deny-mutations`, which adds QSL Git dependencies in normal, build and dev tables in scratch
   copies and requires cargo-deny's `source-not-allowed` error for that repository. TC-199:
-  `scripts/run_feature_matrix.py` (row `build-exact-no-std-msrv`, `make test-features`),
+  `tools/runtime-gates/` (row `build-exact-no-std-msrv`, `make test-features`),
   `make msrv` and `make size` (linked band, panic relocations and the footprint-graph check that
   `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive` are absent).
   Neither has a Rust test. TC-202: `tests/deny_one_copy.rs`, which copies the working-tree

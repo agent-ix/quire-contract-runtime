@@ -9,7 +9,6 @@
 CARGO ?= cargo
 # --locked only when no local patch is active: a patch rewrites the resolution.
 LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
-PYTHON ?= python3
 QUIRE ?= quire
 
 MSRV := 1.98.1
@@ -62,7 +61,7 @@ test:
 
 .PHONY: test-features
 test-features:
-	$(PYTHON) scripts/run_feature_matrix.py
+	$(CARGO) run $(LOCKED) -p quire-contract-runtime-gates -- feature-matrix
 
 # `#[ignore]`d tests are evidence blocked on an open defect, not dropped
 # coverage: this is the only target that runs them, so a fix that clears the
@@ -211,7 +210,7 @@ kani:
 
 .PHONY: kani-mutations
 kani-mutations:
-	$(KANI_STACK) $(PYTHON) scripts/check_kani_mutations.py
+	$(KANI_STACK) $(CARGO) run $(LOCKED) -p quire-contract-runtime-gates -- kani-mutations
 
 # =============================================================================
 # Composite
