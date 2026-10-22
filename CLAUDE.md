@@ -53,7 +53,8 @@ measurement/footprint/ # the linked-footprint population
 tests/                 # integration, operator, proptest and exact-oracle tests
 spec/                  # spec.md (subsystem registry), tests.md, <subsystem>/{functional,matrix,...}
 plan/                  # implementation plans
-scripts/               # feature matrix, footprint and Kani mutation scripts
+tools/runtime-gates/   # feature matrix and Kani mutation gate binary
+scripts/               # footprint and supply-chain checks
 ```
 
 The dependency gate requires the distributed `quire` executable with `check-lock`
