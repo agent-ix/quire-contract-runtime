@@ -179,7 +179,12 @@ use-remote:
 .PHONY: deny
 deny:
 	$(CARGO) deny --workspace check licenses bans sources
-	bash -c 'mapfile -d "" -t locks < <(git ls-files -z -- "Cargo.lock" "*/Cargo.lock"); exec $(QUIRE) check-lock -- "$${locks[@]}"'
+	# Complete enumeration successfully before validating its NUL-delimited result.
+	bash -c 'locks_file=$$(mktemp) || exit; \
+	  cleanup() { rm -f -- "$$locks_file"; }; trap cleanup EXIT; \
+	  git ls-files -z -- "Cargo.lock" "*/Cargo.lock" > "$$locks_file" || exit; \
+	  mapfile -d "" -t locks < "$$locks_file" || exit; \
+	  $(QUIRE) check-lock -- "$${locks[@]}"'
 
 # Mutation check of the QSL Git source policy (FR-275-AC-8, TC-198): each scratch dependency
 # must fail `cargo deny` with the QSL source rejection diagnostic.

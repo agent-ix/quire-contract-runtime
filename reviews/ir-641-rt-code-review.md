@@ -242,3 +242,23 @@ bindings:
   ac_id: FR-275-AC-28
   trace: correct
 ```
+
+## Dispositions
+
+Round1, Original FND-001 fixed. Newly discovered FND-002 remains open; code/Rust remains FAIL until same-PR correction and disposition.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | NUL-delimited Bash array and quoted argv preserve filenames; verified genuine RED-to-seven-PASS evidence. |
+
+## Narrow Verification (round 1)
+
+Exact published candidate c8609adbba0ddfa000d11f310fe1be7d88153bd8; original same reviewer/run ae2ff59d-21b1-4119-a583-3a8435154c50. Read-only git/Linear/GitHub and preserved raw logs only; no new Cargo/native/Kani/full gate, lock change, rebase, branch write or merge. All six original typed/raw review files in candidate are byte-exact to the original reviewer custody. Relative to test-first75ed338b, production change is only the Make recipe and Rust change is regression-test formatting. The seventh real process control had actual RED101 on75ed338b (Git-quoted café path, verification retained) and all7 controls PASS0 after the fix using actual ownerCLI2005; no ignored tests or checker substitute. Four filename families are space, Unicode, newline and glob characters; the real incoherent lock is placed at each path independently. Existing duplicate/split/malformed/missing-checker cases remain. Raw fmt/lint exit files are0. The author reports16GiB/swap0/jobs2 scopes; focused log names its actual scope, but new-scope memory peak/caps are not independently remeasured by this source-only disposition. Root owns caps/final-gate verification. RT154 and RT155 are still OPEN at readback; RT153 final rebase/aggregate/acceptance/merge remain HELD pending RT154 thenRT155 ordering. No final mergeable claim is made against unrebased main.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-002 | medium | Git producer failure after partial filename output is lost, allowing successful coherence validation of an incomplete tracked-lock set | Makefile:182 |
+
+The `git ls-files` status belongs to a process-substitution child and is neither waited nor checked before exec. `mapfile` can succeed on a prefix followed by EOF even when Git exits nonzero (for example, Git receives SIGTERM after writing the root lock path). The checker then sees a nonempty proper subset and can report success while a later tracked lock was never supplied. Empty/no-output producer failures do fail because CLI requires at least one path; that does not establish fail-closed behavior for partial output. This is source-traced, not a newly executed reproduction. Require successful Git enumeration before invoking the checker, preserve NUL filename boundaries, and add a producer-failure-after-output control against the genuine checker. Normal filename and seven existing successful/error-path controls remain required. FND002 has no disposition yet and blocks acceptance.

@@ -1172,3 +1172,17 @@ scope:
     failure naming both identities and leaves the report''s counters unchanged.'
 bindings: []
 ```
+
+## Dispositions
+
+Round1, Full gap remains FAIL; all three inherited findings explicitly deferred to their existing owners without exception or a green claim.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | deferred | Inherited 67-unbound-criterion/107-strict-row debt remains in IR-878 (live In Progress), with actual prior owner handoffs fad2588d and6a87b61b. User/root narrow Make/CLI adoption scope leaves this debt outside PR153; no new full matrix measurement or green coverage claim. |
+| FND-002 | deferred | Three unchanged IR-512 ticket-only tags remain coverage-lane triage in IR-878, alongside the inherited runtime trace debt. No test or binding is weakened by this PR; this disposition does not assert that the tags are correct. |
+| FND-003 | deferred | Inherited forbidden exact residue remains required removal under live IR-349 (In Progress), with usable evaluator dependency IR-590 (Backlog). User/root narrow Make/CLI adoption scope does not authorize changing that API or grant a copy/compatibility exception; the finding remains real and repository gap FAIL. |
+
+## Narrow Verification (round 1)
+
+Exact published candidate c8609adbba0ddfa000d11f310fe1be7d88153bd8; original same reviewer/run ae2ff59d-21b1-4119-a583-3a8435154c50. Read-only git/Linear/GitHub and preserved raw logs only; no new Cargo/native/Kani/full gate, lock change, rebase, branch write or merge. All six original typed/raw review files in candidate are byte-exact to the original reviewer custody. Relative to test-first75ed338b, production change is only the Make recipe and Rust change is regression-test formatting. The seventh real process control had actual RED101 on75ed338b (Git-quoted café path, verification retained) and all7 controls PASS0 after the fix using actual ownerCLI2005; no ignored tests or checker substitute. Four filename families are space, Unicode, newline and glob characters; the real incoherent lock is placed at each path independently. Existing duplicate/split/malformed/missing-checker cases remain. Raw fmt/lint exit files are0. The author reports16GiB/swap0/jobs2 scopes; focused log names its actual scope, but new-scope memory peak/caps are not independently remeasured by this source-only disposition. Root owns caps/final-gate verification. RT154 and RT155 are still OPEN at readback; RT153 final rebase/aggregate/acceptance/merge remain HELD pending RT154 thenRT155 ordering. No final mergeable claim is made against unrebased main.

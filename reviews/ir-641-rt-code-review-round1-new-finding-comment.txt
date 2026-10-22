@@ -1,0 +1,35 @@
+<!-- reviewer-new-findings repo=agent-ix/quire-contract-runtime visibility=public quoin=0.28.4 module=spec-artifacts-process@b82e42e893612b4b4ee94127714b4577ee893502 id=SR-14114 round=1 method=code-review lang=rust pr=quire-contract-runtime#153 model=gpt-6.1-sol run=ae2ff59d-21b1-4119-a583-3a8435154c50 -->
+
+| FND | Severity | Check | Summary |
+| --- | --- | --- | --- |
+| FND-002 | medium | code-bug | Git producer failure after partial filename output is lost, allowing successful coherence validation of an incomplete tracked-lock set |
+
+At exact head c8609adbba0ddfa000d11f310fe1be7d88153bd8, Bash process substitution discards the Git producer status. If Git writes a valid prefix and exits nonzero/is terminated, mapfile can succeed and exec validates only that nonempty prefix. An incoherent later tracked lock is omitted. This is a source-traced failure condition, not a newly run test. Empty-output errors fail because check-lock requires at least one argument. Require successful enumeration before checker invocation, keeping NUL boundaries and one genuine checker call, plus a failure-after-output control. Original FND001 is fixed; FND002 is newly open. RT153 remains held.
+
++++ [reviewer data]
+
+```yaml
+narrow_head: c8609adbba0ddfa000d11f310fe1be7d88153bd8
+new_findings:
+- fnd: FND-002
+  severity: medium
+  confidence: high
+  method: code-review
+  check: code-bug
+  artifact_id: FR-275-AC-24
+  related_ids:
+  - FR-275-AC-26
+  path: Makefile
+  lines: '182'
+  excerpt: The normal `make deny` recipe invokes the released `quire check-lock Cargo.lock`
+    command on this repository's committed lock. On a coherent scratch lock the real
+    command succeeds and the recipe completes when its other policy checks pass; an
+    invocation record identifies the executable and argument without substituting
+    checker logic.
+  finding: Git producer failure after partial filename output is lost, allowing successful
+    coherence validation of an incomplete tracked-lock set
+bindings: []
+dispositions: []
+```
+
++++

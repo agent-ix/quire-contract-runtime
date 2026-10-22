@@ -206,3 +206,9 @@ scope:
     cannot qualify that lock.
 bindings: []
 ```
+
+## Narrow Verification (round 1)
+
+Exact published candidate c8609adbba0ddfa000d11f310fe1be7d88153bd8; original same reviewer/run ae2ff59d-21b1-4119-a583-3a8435154c50. Read-only git/Linear/GitHub and preserved raw logs only; no new Cargo/native/Kani/full gate, lock change, rebase, branch write or merge. All six original typed/raw review files in candidate are byte-exact to the original reviewer custody. Relative to test-first75ed338b, production change is only the Make recipe and Rust change is regression-test formatting. The seventh real process control had actual RED101 on75ed338b (Git-quoted café path, verification retained) and all7 controls PASS0 after the fix using actual ownerCLI2005; no ignored tests or checker substitute. Four filename families are space, Unicode, newline and glob characters; the real incoherent lock is placed at each path independently. Existing duplicate/split/malformed/missing-checker cases remain. Raw fmt/lint exit files are0. The author reports16GiB/swap0/jobs2 scopes; focused log names its actual scope, but new-scope memory peak/caps are not independently remeasured by this source-only disposition. Root owns caps/final-gate verification. RT154 and RT155 are still OPEN at readback; RT153 final rebase/aggregate/acceptance/merge remain HELD pending RT154 thenRT155 ordering. No final mergeable claim is made against unrebased main.
+
+No changed normative specification artifact since the original review; scoped base PASS stands, while consumer code and overall merge acceptance remain held. New code finding SR14114FND002 is not recast as a specification defect.
