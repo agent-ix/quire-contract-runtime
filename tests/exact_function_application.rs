@@ -11,9 +11,9 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    plan_call, plan_evaluation, CheckCause, CheckMode, CheckRefusal, CheckedPackage,
-    CheckingLimits, DepthAboveMaximum, EvaluationRefusal, FunctionDeclaration, InputRefusal,
-    Location, Origin, PackageDeclarations, MAX_CALL_DEPTH,
+    plan_call, plan_evaluation, Body, BodyStep, CheckCause, CheckMode, CheckRefusal,
+    CheckedPackage, CheckingLimits, EvaluationRefusal, Frame, FunctionDeclaration, InputRefusal,
+    Location, Origin, PackageDeclarations,
 };
 use quire_contract_runtime::scalar::{
     negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,
@@ -55,6 +55,20 @@ fn expect_check_refusals(result: Result<CheckedPackage, Vec<CheckRefusal>>) -> V
     }
 }
 
+/// Adapt a single-transition test body to the generated body contract.
+fn one_step<F>(run: F) -> Body
+where
+    F: for<'a, 'm> Fn(&Frame<'a, 'm>, &[Value]) -> Outcome<Value> + 'static,
+{
+    let run = Rc::new(run);
+    Box::new(move |arguments| {
+        let run = Rc::clone(&run);
+        Box::new(move |frame: &Frame<'_, '_>, _completed: Option<Value>| {
+            BodyStep::Return(run(frame, &arguments))
+        })
+    })
+}
+
 const UNLIMITED: ScalarLimits = ScalarLimits {
     integer_bits: u64::MAX,
     decimal_digits: u64::MAX,
@@ -93,7 +107,7 @@ fn identity_package() -> PackageDeclarations {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            body: one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         }],
     }
 }
@@ -188,7 +202,7 @@ fn tc_194_dangling_reference_refuses_before_any_charge() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            body: one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -243,7 +257,7 @@ fn tc_194_dangling_reference_inside_union_refuses_before_any_charge() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -303,7 +317,7 @@ fn tc_194_plan_call_refuses_identically_with_no_meter_in_scope() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            body: one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -368,7 +382,7 @@ fn tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            body: one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -416,7 +430,7 @@ fn tc_194_arity_is_decided_before_any_per_argument_check() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            body: one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -457,7 +471,7 @@ fn tc_194_function_call_precedes_the_body() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|frame, _arguments| {
+            body: one_step(|frame, _arguments| {
                 // `Frame::meter` returns `Result<R, Refusal>`, not
                 // `Option<R>`: a refusal here (the shared `Meter` already
                 // mutably borrowed on this re-entrant chain) must propagate
@@ -487,10 +501,9 @@ fn tc_194_function_call_precedes_the_body() {
     ));
 }
 
-/// `evaluate` charges nothing for its own root, but each re-entrant
-/// application the root reaches through `Frame::call` charges exactly one
-/// `function.call`. A root with zero applications leaves the meter
-/// untouched; a root with two charges exactly two.
+/// `evaluate` charges nothing for its own root, while each requested child
+/// application charges exactly one `function.call`. A root with zero
+/// applications leaves the meter untouched; two children charge twice.
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
@@ -503,7 +516,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -515,7 +528,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
         .check_expression(
             Vec::new(),
             ValueType::Boolean,
-            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         )
         .unwrap();
     let mut meter = Meter::new(UNLIMITED);
@@ -535,16 +548,29 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
         .check_expression(
             Vec::new(),
             ValueType::Boolean,
-            Box::new(|frame, _arguments| {
-                let first = match frame.call("leaf", &[]).completed() {
-                    Some(Value::Boolean(value)) => value,
-                    other => panic!("checked leaf must return Boolean: {other:?}"),
-                };
-                let second = match frame.call("leaf", &[]).completed() {
-                    Some(Value::Boolean(value)) => value,
-                    other => panic!("checked leaf must return Boolean: {other:?}"),
-                };
-                Outcome::Completed(Value::Boolean(first && second))
+            Box::new(|_| {
+                let mut phase = 0;
+                let mut first_value = false;
+                Box::new(move |_, completed: Option<Value>| match phase {
+                    0 => {
+                        phase = 1;
+                        BodyStep::Call {
+                            function: "leaf".to_string(),
+                            arguments: Vec::new(),
+                        }
+                    }
+                    1 => {
+                        first_value = matches!(completed, Some(Value::Boolean(true)));
+                        phase = 2;
+                        BodyStep::Call {
+                            function: "leaf".to_string(),
+                            arguments: Vec::new(),
+                        }
+                    }
+                    _ => BodyStep::Return(Outcome::Completed(Value::Boolean(
+                        first_value && matches!(completed, Some(Value::Boolean(true))),
+                    ))),
+                })
             }),
         )
         .unwrap();
@@ -580,7 +606,7 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(move |_frame, _arguments| {
+            body: one_step(move |_frame, _arguments| {
                 ran_in_body.set(true);
                 Outcome::Completed(Value::Boolean(true))
             }),
@@ -628,7 +654,7 @@ fn tc_194_call_plan_predicts_the_admitted_function_call_charge_count() {
         .check_expression(
             Vec::new(),
             ValueType::Boolean,
-            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         )
         .unwrap();
     let plan = plan_evaluation(&package, &expression, &[], &objects).unwrap();
@@ -675,7 +701,7 @@ fn tc_194_plan_evaluation_refuses_every_variant_with_no_meter_in_scope() {
                 ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             ValueType::Boolean,
-            Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         )
         .unwrap();
 
@@ -779,7 +805,7 @@ fn tc_194_evaluate_shares_plan_call_argument_validation() {
                 ("b".to_string(), ValueType::Reference(effective(9))),
             ],
             ValueType::Boolean,
-            Box::new(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
+            one_step(|_frame, arguments| Outcome::Completed(arguments[0].clone())),
         )
         .unwrap();
 
@@ -899,7 +925,7 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
         .check_expression(
             Vec::new(),
             ValueType::Boolean,
-            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         )
         .unwrap();
     let package = Rc::new(package);
@@ -924,7 +950,7 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
         .check_expression(
             Vec::new(),
             ValueType::Boolean,
-            Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         )
         .unwrap();
     let package = Box::new(package);
@@ -969,7 +995,7 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
             .check_expression(
                 Vec::new(),
                 ValueType::Boolean,
-                Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+                one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
             )
             .unwrap()
         // `package` (the `Box`) is dropped here, freeing its allocation.
@@ -1013,45 +1039,51 @@ fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
     assert!(meter.admitted_charges().is_empty());
 }
 
-/// A body reached through `Frame::call` (not `CheckedPackage::call` itself)
-/// counts how many `function.call` charges were already admitted at the
-/// instant it started running, proving `Frame::call` also charges before
-/// invoking the callee's body.
+/// A child body requested by a generated transition
+/// counts how many `function.call` charges were admitted before it starts.
 ///
 /// The count, not a `contains` check, is what discriminates here: `observe`
-/// is reached from `root`, and `root`'s own `function.call` charge is already
-/// admitted by the time `root`'s body runs and calls `observe` — so a mere
-/// `contains(&ChargePoint::FunctionCall)` would read `true` at `observe`'s
-/// first instruction regardless of whether `Frame::call` charges before or
-/// after invoking `observe`'s body, since one prior charge (`root`'s) is
-/// already on the meter either way. Requiring the count to be exactly `2`
-/// (root's charge plus `Frame::call`'s own, for `observe`) is a witness of
-/// *this* charge's ordering relative to *this* body: an implementation that
-/// ran `observe`'s body before charging for it would leave the count at `1`
-/// when the body observed it.
+/// is reached from `root`, whose charge is already admitted. Requiring the
+/// count to be exactly two witnesses that the child charge preceded the
+/// child's body.
 #[trace("TC-194", "FR-273-AC-2")]
 #[test]
-fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
+fn tc_194_child_call_charges_before_callee_body() {
     let package = PackageDeclarations {
         types: Default::default(),
         functions: vec![
             FunctionDeclaration {
                 name: "root".to_string(),
                 parameters: Vec::new(),
-                result: ValueType::Boolean,
+                result: ValueType::Integer,
                 ieee_requirements: Vec::new(),
                 integer_division_consumers: Vec::new(),
                 measure_discharged: true,
-                body: Box::new(|frame, _arguments| frame.call("observe", &[])),
+                body: Box::new(|_| {
+                    let mut requested = false;
+                    Box::new(move |_, completed: Option<Value>| {
+                        if requested {
+                            BodyStep::Return(Outcome::Completed(
+                                completed.expect("observe returned a value"),
+                            ))
+                        } else {
+                            requested = true;
+                            BodyStep::Call {
+                                function: "observe".to_string(),
+                                arguments: Vec::new(),
+                            }
+                        }
+                    })
+                }),
             },
             FunctionDeclaration {
                 name: "observe".to_string(),
                 parameters: Vec::new(),
-                result: ValueType::Boolean,
+                result: ValueType::Integer,
                 ieee_requirements: Vec::new(),
                 integer_division_consumers: Vec::new(),
                 measure_discharged: true,
-                body: Box::new(|frame, _arguments| {
+                body: one_step(|frame, _arguments| {
                     // `Frame::meter` returns `Result<R, Refusal>`; propagate
                     // a refusal instead of collapsing it into a bogus count.
                     let attempt: Result<Value, Refusal> = frame
@@ -1090,227 +1122,409 @@ fn tc_194_frame_call_charges_function_call_before_the_body_it_invokes() {
     }
 }
 
-/// `CheckingLimits::new` refuses a depth above `MAX_CALL_DEPTH`.
-///
-/// Historical depth-limit behavior; replace during IR-512 implementation.
+/// The generated body returns a request, then receives the child's value in
+/// a later transition. The runtime owns every suspended state on its heap.
+#[trace("TC-194", "FR-273-AC-7", "FR-273-AC-9", "FR-273-AC-11")]
 #[test]
-fn tc_194_checking_limits_refuses_a_depth_above_the_maximum() {
-    assert_eq!(
-        CheckingLimits::new(0, MAX_CALL_DEPTH + 1),
-        Err(DepthAboveMaximum {
-            depth: MAX_CALL_DEPTH + 1
+fn tc_194_explicit_frames_reach_4096_calls_on_64_kib_stack_with_exact_fuel() {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024)
+        .spawn(|| {
+            for depth in [1usize, 64, 128, 4096] {
+                let active = Rc::new(Cell::new(0usize));
+                let active_body = Rc::clone(&active);
+                let package = PackageDeclarations {
+                    types: Default::default(),
+                    functions: vec![FunctionDeclaration {
+                        name: "count".to_string(),
+                        parameters: vec![("remaining".to_string(), ValueType::Integer)],
+                        result: ValueType::Integer,
+                        ieee_requirements: Vec::new(),
+                        integer_division_consumers: Vec::new(),
+                        measure_discharged: true,
+                        body: Box::new(move |arguments| {
+                            let remaining = match &arguments[0] {
+                                Value::Integer(value) => value.to_u64().unwrap(),
+                                other => panic!("expected checked integer argument: {other:?}"),
+                            };
+                            let active = Rc::clone(&active_body);
+                            let mut waiting = false;
+                            Box::new(move |_, completed: Option<Value>| {
+                                assert_eq!(active.get(), 0, "only one body transition is active");
+                                active.set(1);
+                                let next = if waiting {
+                                    assert!(matches!(completed, Some(Value::Integer(_))));
+                                    BodyStep::Return(Outcome::Completed(Value::Integer(
+                                        Integer::from(remaining as i64),
+                                    )))
+                                } else if remaining > 1 {
+                                    waiting = true;
+                                    BodyStep::Call {
+                                        function: "count".to_string(),
+                                        arguments: vec![Value::Integer(Integer::from(
+                                            (remaining - 1) as i64,
+                                        ))],
+                                    }
+                                } else {
+                                    BodyStep::Return(Outcome::Completed(Value::Integer(
+                                        Integer::from(1i64),
+                                    )))
+                                };
+                                active.set(0);
+                                next
+                            })
+                        }),
+                    }],
+                }
+                .check(CheckMode::Linked, CheckingLimits::default())
+                .unwrap();
+                let input = vec![Value::Integer(Integer::from(depth as i64))];
+                let objects = ObjectClosure::default();
+                let mut exact_meter = Meter::new(ScalarLimits {
+                    work_units: depth as u64,
+                    ..UNLIMITED
+                });
+                let exact = package
+                    .call("count", input.clone(), &objects, &mut exact_meter)
+                    .unwrap();
+                assert!(matches!(
+                    exact.outcome,
+                    Outcome::Completed(Value::Integer(ref value))
+                        if *value == Integer::from(depth as i64)
+                ));
+                assert_eq!(exact_meter.consumed(LimitKind::WorkUnits), depth as u64);
+                assert_eq!(
+                    exact_meter.admitted_charge_points(),
+                    vec![ChargePoint::FunctionCall; depth]
+                );
+
+                let mut short_meter = Meter::new(ScalarLimits {
+                    work_units: (depth - 1) as u64,
+                    ..UNLIMITED
+                });
+                let short = package
+                    .call("count", input.clone(), &objects, &mut short_meter)
+                    .unwrap();
+                match short.outcome {
+                    Outcome::Incomplete(record) => {
+                        assert_eq!(record.limit_kind, LimitKind::WorkUnits);
+                        assert_eq!(record.charge_point, ChargePoint::FunctionCall);
+                        assert_eq!(record.consumed, (depth - 1) as u64);
+                        assert_eq!(record.next_charge, Integer::one());
+                    }
+                    other => panic!("expected work fuel stop: {other:?}"),
+                }
+                assert_eq!(
+                    short_meter.consumed(LimitKind::WorkUnits),
+                    (depth - 1) as u64
+                );
+                assert_eq!(
+                    short_meter.admitted_charge_points(),
+                    vec![ChargePoint::FunctionCall; depth - 1]
+                );
+                if depth == 64 {
+                    let mut retry_meter = Meter::new(ScalarLimits {
+                        work_units: 64,
+                        ..UNLIMITED
+                    });
+                    let retry = package
+                        .call("count", input, &objects, &mut retry_meter)
+                        .unwrap();
+                    assert!(matches!(
+                        retry.outcome,
+                        Outcome::Completed(Value::Integer(ref value))
+                            if *value == Integer::from(64i64)
+                    ));
+                }
+            }
         })
-    );
-    assert!(CheckingLimits::new(0, MAX_CALL_DEPTH).is_ok());
+        .unwrap()
+        .join()
+        .unwrap();
 }
 
-/// Recursion through `Frame::call` beyond `CheckingLimits::depth` refuses
-/// with `Refusal::CheckedInvariant` rather than recursing without bound.
-///
-/// Historical depth-limit behavior; replace during IR-512 implementation.
+/// Argument applications are requested left to right. The enclosing charge
+/// occurs after both have returned and before its body is entered.
+#[trace("TC-194", "FR-273-AC-10", "FR-273-AC-11")]
 #[test]
-fn tc_194_recursion_beyond_the_depth_limit_is_a_checked_invariant_refusal() {
-    let limits = CheckingLimits::new(u64::MAX, 3).unwrap();
-    fn recurse(
-        frame: &quire_contract_runtime::exact::Frame<'_>,
-        _arguments: &[Value],
-    ) -> Outcome<Value> {
-        frame.call("loop", &[])
-    }
+fn tc_194_nested_arguments_charge_before_enclosing_body_and_stop_at_one_less() {
+    let entered_join = Rc::new(Cell::new(false));
+    let entered_join_body = Rc::clone(&entered_join);
+    let resumed_root = Rc::new(Cell::new(false));
+    let resumed_root_body = Rc::clone(&resumed_root);
+    let body_order = Rc::new(RefCell::new(Vec::new()));
+    let left_order = Rc::clone(&body_order);
+    let right_order = Rc::clone(&body_order);
+    let join_order = Rc::clone(&body_order);
     let package = PackageDeclarations {
         types: Default::default(),
-        functions: vec![FunctionDeclaration {
-            name: "loop".to_string(),
-            parameters: Vec::new(),
-            result: ValueType::Boolean,
-            ieee_requirements: Vec::new(),
-            integer_division_consumers: Vec::new(),
-            measure_discharged: true,
-            body: Box::new(recurse),
-        }],
+        functions: vec![
+            FunctionDeclaration {
+                name: "left".to_string(),
+                parameters: Vec::new(),
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: one_step(move |_, _| {
+                    left_order.borrow_mut().push("left");
+                    Outcome::Completed(Value::Boolean(true))
+                }),
+            },
+            FunctionDeclaration {
+                name: "right".to_string(),
+                parameters: Vec::new(),
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: one_step(move |_, _| {
+                    right_order.borrow_mut().push("right");
+                    Outcome::Completed(Value::Boolean(true))
+                }),
+            },
+            FunctionDeclaration {
+                name: "join".to_string(),
+                parameters: vec![("input".to_string(), ValueType::Boolean)],
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: one_step(move |frame, arguments| {
+                    entered_join_body.set(true);
+                    join_order.borrow_mut().push("join");
+                    assert_eq!(
+                        frame.meter(|meter| meter.admitted_charge_points().len()),
+                        Ok(3)
+                    );
+                    Outcome::Completed(arguments[0].clone())
+                }),
+            },
+        ],
     }
-    .check(CheckMode::Linked, limits)
+    .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
+    let expression = package
+        .check_expression(
+            Vec::new(),
+            ValueType::Boolean,
+            Box::new(move |_| {
+                let resumed_root = Rc::clone(&resumed_root_body);
+                let mut phase = 0;
+                let mut left = false;
+                Box::new(move |_, child: Option<Value>| {
+                    let next = match phase {
+                        0 => BodyStep::Call {
+                            function: "left".to_string(),
+                            arguments: Vec::new(),
+                        },
+                        1 => {
+                            left = matches!(child, Some(Value::Boolean(true)));
+                            BodyStep::Call {
+                                function: "right".to_string(),
+                                arguments: Vec::new(),
+                            }
+                        }
+                        2 => BodyStep::Call {
+                            function: "join".to_string(),
+                            arguments: vec![Value::Boolean(
+                                left && matches!(child, Some(Value::Boolean(true))),
+                            )],
+                        },
+                        _ => {
+                            resumed_root.set(true);
+                            BodyStep::Return(Outcome::Completed(
+                                child.expect("join returned a value"),
+                            ))
+                        }
+                    };
+                    phase += 1;
+                    next
+                })
+            }),
+        )
+        .unwrap();
     let objects = ObjectClosure::default();
-    let mut meter = Meter::new(UNLIMITED);
-    let evaluation = package
-        .call("loop", Vec::new(), &objects, &mut meter)
+    let mut exact_meter = Meter::new(UNLIMITED);
+    let exact = package
+        .evaluate(&expression, Vec::new(), &objects, &mut exact_meter)
         .unwrap();
     assert!(matches!(
-        evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant {
-            cause: CheckedInvariantCause::CallDepthExceeded
-        })
+        exact.outcome,
+        Outcome::Completed(Value::Boolean(true))
     ));
+    assert!(entered_join.get());
+    assert!(resumed_root.get());
+    assert_eq!(*body_order.borrow(), ["left", "right", "join"]);
+    assert_eq!(exact_meter.consumed(LimitKind::WorkUnits), 3);
+    assert_eq!(
+        exact_meter.admitted_charge_points(),
+        &[ChargePoint::FunctionCall; 3]
+    );
+
+    entered_join.set(false);
+    resumed_root.set(false);
+    body_order.borrow_mut().clear();
+    let mut short_meter = Meter::new(ScalarLimits {
+        work_units: 2,
+        ..UNLIMITED
+    });
+    let short = package
+        .evaluate(&expression, Vec::new(), &objects, &mut short_meter)
+        .unwrap();
+    assert!(matches!(
+        short.outcome,
+        Outcome::Incomplete(ref record)
+            if record.limit_kind == LimitKind::WorkUnits
+                && record.charge_point == ChargePoint::FunctionCall
+                && record.consumed == 2
+    ));
+    assert!(!entered_join.get());
+    assert!(!resumed_root.get());
+    assert_eq!(*body_order.borrow(), ["left", "right"]);
+    assert_eq!(
+        short_meter.admitted_charge_points(),
+        &[ChargePoint::FunctionCall; 2]
+    );
 }
 
-/// A body that re-enters its own [`Frame::meter`] from inside the closure
-/// [`Frame::meter`] already handed it refuses the inner access with
-/// `Err(Refusal::CheckedInvariant { cause: MeterBorrowConflict })` instead of panicking on the double
-/// `RefCell` borrow.
-#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-8")]
+/// Re-entering the same mutable meter borrow is a typed checked invariant.
+#[trace("TC-194", "FR-273-AC-8")]
 #[test]
-fn tc_194_reentrant_frame_meter_refuses_instead_of_panicking() {
+fn tc_194_reentrant_meter_borrow_has_typed_cause() {
     let package = PackageDeclarations {
         types: Default::default(),
         functions: vec![FunctionDeclaration {
-            name: "reentrant_meter".to_string(),
+            name: "borrow".to_string(),
             parameters: Vec::new(),
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|frame, _arguments| {
-                let outer = frame.meter(|_outer_meter| frame.meter(|_inner_meter| true));
-                let inner_refused = matches!(
-                    outer,
+            body: one_step(|frame, _| {
+                let inner = frame.meter(|_| frame.meter(|_| true));
+                Outcome::Completed(Value::Boolean(matches!(
+                    inner,
                     Ok(Err(Refusal::CheckedInvariant {
                         cause: CheckedInvariantCause::MeterBorrowConflict
                     }))
-                );
-                Outcome::Completed(Value::Boolean(inner_refused))
+                )))
             }),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
-    let evaluation = package
-        .call("reentrant_meter", Vec::new(), &objects, &mut meter)
+    let result = package
+        .call("borrow", Vec::new(), &ObjectClosure::default(), &mut meter)
         .unwrap();
     assert!(matches!(
-        evaluation.outcome,
+        result.outcome,
         Outcome::Completed(Value::Boolean(true))
     ));
-    assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
-#[trace("TC-194", "FR-273-AC-8")]
+/// A generated child request for a missing checked function preserves its
+/// distinct invariant cause and the already admitted parent's charge.
+#[trace("TC-194", "FR-273-AC-8", "FR-273-AC-11")]
 #[test]
-fn checked_body_missing_function_has_distinct_invariant_cause() {
+fn tc_194_missing_child_has_typed_cause_and_does_not_resume_parent() {
+    let resumed = Rc::new(Cell::new(false));
+    let resumed_body = Rc::clone(&resumed);
     let package = PackageDeclarations {
         types: Default::default(),
         functions: vec![FunctionDeclaration {
-            name: "caller".to_string(),
+            name: "parent".to_string(),
             parameters: Vec::new(),
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|frame, _arguments| frame.call("absent", &[])),
-        }],
-    }
-    .check(CheckMode::Linked, CheckingLimits::default())
-    .unwrap();
-    let mut meter = Meter::new(UNLIMITED);
-    let evaluation = package
-        .call("caller", Vec::new(), &ObjectClosure::default(), &mut meter)
-        .unwrap();
-    assert!(matches!(
-        evaluation.outcome,
-        Outcome::Refused(Refusal::CheckedInvariant {
-            cause: CheckedInvariantCause::UnknownCheckedFunction,
-        })
-    ));
-    assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
-    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
-}
-
-/// A body that calls [`Frame::call`] from inside a [`Frame::meter`] closure
-/// re-enters the same frame's `Meter` `RefCell`: `Frame::run` refuses with
-/// [`Refusal::CheckedInvariant`] instead of panicking on the double borrow.
-#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-8")]
-#[test]
-fn tc_194_reentrant_frame_call_during_meter_access_refuses_instead_of_panicking() {
-    let package = PackageDeclarations {
-        types: Default::default(),
-        functions: vec![FunctionDeclaration {
-            name: "reentrant_call".to_string(),
-            parameters: Vec::new(),
-            result: ValueType::Boolean,
-            ieee_requirements: Vec::new(),
-            integer_division_consumers: Vec::new(),
-            measure_discharged: true,
-            body: Box::new(|frame, _arguments| {
-                frame
-                    .meter(|_meter| frame.call("reentrant_call", &[]))
-                    .expect("outer meter borrow remains available")
+            body: Box::new(move |_| {
+                let resumed = Rc::clone(&resumed_body);
+                let mut first = true;
+                Box::new(move |_, _| {
+                    if first {
+                        first = false;
+                        BodyStep::Call {
+                            function: "absent".to_string(),
+                            arguments: Vec::new(),
+                        }
+                    } else {
+                        resumed.set(true);
+                        BodyStep::Return(Outcome::Completed(Value::Boolean(true)))
+                    }
+                })
             }),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
-    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
-    let evaluation = package
-        .call("reentrant_call", Vec::new(), &objects, &mut meter)
+    let result = package
+        .call("parent", Vec::new(), &ObjectClosure::default(), &mut meter)
         .unwrap();
     assert!(matches!(
-        evaluation.outcome,
+        result.outcome,
         Outcome::Refused(Refusal::CheckedInvariant {
-            cause: CheckedInvariantCause::MeterBorrowConflict
+            cause: CheckedInvariantCause::UnknownCheckedFunction
         })
     ));
-    assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
+    assert!(!resumed.get());
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
-/// The original attack this bounds: a running [`Body`](quire_contract_runtime::exact::Body)
-/// that holds its own `Rc<CheckedPackage>` (obtainable in safe Rust) and
-/// re-enters [`CheckedPackage::call`] directly, bypassing [`Frame::call`]'s
-/// depth check entirely — every fresh root `Frame` it builds looks identical
-/// to a program's first call, since depth was once threaded only by value.
-/// The shared `Cell<u64>` counter on `CheckedPackage` itself bounds this
-/// path exactly as it bounds `Frame::call`, refusing rather than recursing
-/// the host stack without limit.
-///
-/// Historical depth-limit behavior; replace during IR-512 implementation.
+/// A generated transition cannot open another scheduler on the same checked
+/// package while it is active, even if host code captures the package.
+#[trace("TC-194", "FR-273-AC-7")]
 #[test]
-fn tc_194_direct_reentrant_package_call_is_bounded_like_frame_call() {
-    let limits = CheckingLimits::new(u64::MAX, 3).unwrap();
+fn tc_194_direct_host_reentry_is_refused_before_nested_charge() {
     let holder: Rc<RefCell<Option<Rc<CheckedPackage>>>> = Rc::new(RefCell::new(None));
     let body_holder = Rc::clone(&holder);
     let package = PackageDeclarations {
         types: Default::default(),
         functions: vec![FunctionDeclaration {
-            name: "loop".to_string(),
+            name: "reenter".to_string(),
             parameters: Vec::new(),
             result: ValueType::Boolean,
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(move |_frame, _arguments| {
-                let package = body_holder
-                    .borrow()
-                    .as_ref()
-                    .expect("holder populated before first call")
-                    .clone();
-                let objects = ObjectClosure::default();
-                let mut meter = Meter::new(UNLIMITED);
-                match package.call("loop", Vec::new(), &objects, &mut meter) {
-                    Ok(evaluation) => evaluation.outcome,
-                    Err(refusal) => panic!("unexpected InputRefusal: {refusal:?}"),
-                }
+            body: Box::new(move |_| {
+                let holder = Rc::clone(&body_holder);
+                Box::new(move |_, _| {
+                    let package = holder.borrow().as_ref().unwrap().clone();
+                    let mut nested_meter = Meter::new(UNLIMITED);
+                    let nested = package
+                        .call(
+                            "reenter",
+                            Vec::new(),
+                            &ObjectClosure::default(),
+                            &mut nested_meter,
+                        )
+                        .unwrap();
+                    assert_eq!(nested_meter.consumed(LimitKind::WorkUnits), 0);
+                    BodyStep::Return(nested.outcome)
+                })
             }),
         }],
     }
-    .check(CheckMode::Linked, limits)
+    .check(CheckMode::Linked, CheckingLimits::default())
     .unwrap();
     let package = Rc::new(package);
     *holder.borrow_mut() = Some(Rc::clone(&package));
-    let objects = ObjectClosure::default();
     let mut meter = Meter::new(UNLIMITED);
-    let evaluation = package
-        .call("loop", Vec::new(), &objects, &mut meter)
+    let result = package
+        .call("reenter", Vec::new(), &ObjectClosure::default(), &mut meter)
         .unwrap();
     assert!(matches!(
-        evaluation.outcome,
+        result.outcome,
         Outcome::Refused(Refusal::CheckedInvariant {
-            cause: CheckedInvariantCause::CallDepthExceeded
+            cause: CheckedInvariantCause::GeneratedUnexpectedOutcome
         })
     ));
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
 }
 
 // ---- TC-195: FR-009 negotiation is not an evaluator outcome ---------------
@@ -1334,7 +1548,7 @@ fn tc_195_undischargeable_function_capability_negotiates_unsupported() {
             ieee_requirements: vec![requirement],
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -1440,7 +1654,7 @@ fn tc_195_supported_function_applies_normally_and_produces_no_disposition() {
             ieee_requirements: vec![requirement],
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
@@ -1475,7 +1689,7 @@ fn tc_194_ambiguous_function_names_refuse_admission() {
                 ieee_requirements: Vec::new(),
                 integer_division_consumers: Vec::new(),
                 measure_discharged: true,
-                body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+                body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
             },
             FunctionDeclaration {
                 name: "dup".to_string(),
@@ -1484,7 +1698,7 @@ fn tc_194_ambiguous_function_names_refuse_admission() {
                 ieee_requirements: Vec::new(),
                 integer_division_consumers: Vec::new(),
                 measure_discharged: true,
-                body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(false))),
+                body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(false))),
             },
         ],
     };
@@ -1530,7 +1744,7 @@ fn tc_194_undischarged_measure_refuses_admission() {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: false,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: one_step(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
         }],
     };
     let refusals =

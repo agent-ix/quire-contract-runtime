@@ -56,7 +56,7 @@ fn tc_032_ac3_ac8_short_circuit_propagates_a_stop_and_retains_exactly_once() {
     let stops = [
         Outcome::Undefined(Undefined::DivisionByZero),
         Outcome::Refused(Refusal::CheckedInvariant {
-            cause: quire_exact::CheckedInvariantCause::CallDepthExceeded,
+            cause: quire_exact::CheckedInvariantCause::MeterBorrowConflict,
         }),
         Outcome::Incomplete(Incomplete {
             limit_kind: LimitKind::WorkUnits,

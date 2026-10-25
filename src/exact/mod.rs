@@ -33,8 +33,8 @@
 mod expression;
 
 pub use expression::{
-    plan_call, plan_evaluation, Body, CallPlan, CheckCause, CheckMode, CheckRefusal,
-    CheckedExpression, CheckedPackage, CheckingLimits, DepthAboveMaximum, Evaluation,
-    EvaluationRefusal, Frame, FunctionDeclaration, InputRefusal, LocatedLoss, Location, Origin,
-    PackageDeclarations, ValueLoss, MAX_CALL_DEPTH,
+    plan_call, plan_evaluation, Body, BodyState, BodyStep, CallPlan, CheckCause, CheckMode,
+    CheckRefusal, CheckedExpression, CheckedPackage, CheckingLimits, Evaluation, EvaluationRefusal,
+    Frame, FunctionDeclaration, InputRefusal, LocatedLoss, Location, Origin, PackageDeclarations,
+    ValueLoss,
 };

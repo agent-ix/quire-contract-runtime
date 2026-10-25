@@ -3,7 +3,7 @@
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    CheckMode, CheckedPackage, CheckingLimits, FunctionDeclaration, PackageDeclarations,
+    BodyStep, CheckMode, CheckedPackage, CheckingLimits, FunctionDeclaration, PackageDeclarations,
 };
 use quire_exact::{Meter, Outcome, ScalarLimits, Value, ValueType};
 use quire_semantic_value::declaration::TypeEnvironment;
@@ -32,7 +32,9 @@ fn identity_package() -> CheckedPackage {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_, values| Outcome::Completed(values[0].clone())),
+            body: Box::new(|values| {
+                Box::new(move |_, _| BodyStep::Return(Outcome::Completed(values[0].clone())))
+            }),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
