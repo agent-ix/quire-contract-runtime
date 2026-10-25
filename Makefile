@@ -7,6 +7,7 @@
 # for specification validation.
 
 CARGO ?= cargo
+PYTHON ?= python3
 # --locked only when no local patch is active: a patch rewrites the resolution.
 LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 QUIRE ?= quire
