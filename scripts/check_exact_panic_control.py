@@ -51,7 +51,8 @@ def main() -> None:
         if check.returncode == 0 or "RT-owned panic relocations:" not in check.stderr:
             raise SystemExit(
                 "exact panic control: injected panic did not trigger the RT relocation verdict:\n"
-                + check.stderr[-4000:]
+                + f"build: {build.stderr[-2000:]}\ncheck status: {check.returncode}\n"
+                + check.stderr[-2000:]
             )
         print("exact panic control: reachable RT-owned panic relocation detected")
 
