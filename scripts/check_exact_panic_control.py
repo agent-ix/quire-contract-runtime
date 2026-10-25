@@ -30,7 +30,7 @@ def check_malformed_report(archive: Path, scratch: Path) -> None:
     else:
         raise SystemExit("exact panic control: no RT-owned relocation table to mutate")
 
-    tools = scratch / "tools"
+    tools = scratch / ".exact-panic-control-tools"
     tools.mkdir()
     malformed = scratch / "malformed-relocations.txt"
     malformed.write_text("".join(lines))
