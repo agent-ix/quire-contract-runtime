@@ -255,9 +255,6 @@ name = "quire-contract-runtime"
 version = "0.1.0"
 dependencies = [
  "ix-trace-rs",
- "num-bigint",
- "num-integer",
- "num-traits",
  "proc-macro2",
  "proptest",
  "quire-exact",
@@ -265,7 +262,6 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.119",
- "unicode-normalization",
 ]
 
 [[package]]
