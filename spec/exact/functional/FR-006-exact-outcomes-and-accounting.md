@@ -104,15 +104,15 @@ The criteria above remain obligations on that consumed behavior. They do not req
 kernel tests. [The exact matrix](../matrix/tests.md) records current local evidence separately
 from its disposition after the implementation removes the copy.
 
-FR-006-AC-1 remains open in RT. [quire-exact FR-362-AC-11](ix://agent-ix/quire-exact/FR-362) and
-`quire-exact/tests/ir673_scalar.rs::scalar_outcomes_keep_only_admitted_prefixes`
-establish the four scalar stop dispositions, including completed `false`, but do
-not census every closed reason type. The owner declarations are
+FR-006-AC-1 is checked by `tests/exact_outcome_consumer.rs` through the runtime's
+`evaluate_boolean_short_circuit` path. It distinguishes both completed Boolean values from
+`Undefined`, `Refused`, and `Incomplete`, and exhaustively matches the consumed kernel reason
+types so a new variant requires an RT consumer decision. The owner declarations are
 `quire_exact::Outcome`, `Undefined`, `Refusal`, and `Incomplete` in
 `quire-exact/src/outcome.rs`, with `LimitKind` and `ChargePoint` in
 `quire-exact/src/accounting.rs`. `Incomplete` is a struct, not an enum; its
 typed reason fields use those closed enums. TC-016 retains the RT consumer
-check of the whole criterion, which has no local binder yet.
+check of this criterion; its vocabulary and accounting procedure under AC-3 remains open.
 
 Owner evidence covers only matching subsets: [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096) owns
 kernel refusal codes and causes; `FR-362-AC-11` covers public scalar outcome stops;
