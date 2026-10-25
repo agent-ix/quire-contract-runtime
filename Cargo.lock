@@ -265,6 +265,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quire-contract-runtime-exact-panic"
+version = "0.0.0"
+dependencies = [
+ "quire-contract-runtime",
+ "quire-exact",
+ "quire-semantic-value",
+]
+
+[[package]]
 name = "quire-contract-runtime-footprint"
 version = "0.0.0"
 dependencies = [
@@ -280,6 +289,13 @@ dependencies = [
  "serde_json",
  "tempfile",
  "users",
+]
+
+[[package]]
+name = "quire-contract-runtime-kernel-api-check"
+version = "0.0.0"
+dependencies = [
+ "quire-exact",
 ]
 
 [[package]]

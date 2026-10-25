@@ -14,6 +14,7 @@ QUIRE ?= quire
 MSRV := 1.98.1
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
+EXACT_PANIC_TARGET_DIR := target
 
 .PHONY: help
 help:
@@ -28,6 +29,7 @@ help:
 	@echo "  make build            - Release build"
 	@echo "  make msrv             - Check all targets and features with Rust $(MSRV)"
 	@echo "  make size             - Measure the linked $(FOOTPRINT_TARGET) footprint"
+	@echo "  make exact-panic      - Inspect retained exact-profile RT panic relocations"
 	@echo "  make spec             - Validate and cover the specification with Quire"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo-deny licenses, bans and sources; one-copy lockfile check"
@@ -104,6 +106,15 @@ spec:
 	$(QUIRE) validate --scope . 'spec/**/*.md' 'plan/**/*.md' \
 		'reviews/**/*.md' --summary
 	$(QUIRE) coverage --scope . --strict
+
+.PHONY: exact-panic
+exact-panic:
+	$(CARGO) +$(MSRV) build $(LOCKED) --profile exact-panic --manifest-path measurement/exact-panic/Cargo.toml \
+		--target $(FOOTPRINT_TARGET) --target-dir $(EXACT_PANIC_TARGET_DIR)
+	$(PYTHON) scripts/check_exact_panic.py $(EXACT_PANIC_TARGET_DIR)/$(FOOTPRINT_TARGET)/exact-panic/libquire_contract_runtime_exact_panic.a
+	$(PYTHON) scripts/check_exact_panic_control.py $(EXACT_PANIC_TARGET_DIR)
+	$(CARGO) +$(MSRV) test $(LOCKED) -p quire-contract-runtime-kernel-api-check --lib
+	$(CARGO) +$(MSRV) test $(LOCKED) -p quire-contract-runtime-kernel-api-check --doc
 
 .PHONY: clean
 clean:
@@ -223,4 +234,4 @@ kani-mutations:
 
 .NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny deny-mutations kani kani-mutations test
+ci: fmt-check spec lint test-features doc msrv size exact-panic deny deny-mutations kani kani-mutations test
