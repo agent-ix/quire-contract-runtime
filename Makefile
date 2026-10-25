@@ -55,6 +55,7 @@ fmt-check:
 lint:
 	$(CARGO) clippy -p quire-contract-runtime --all-targets --all-features -- -D warnings
 	$(CARGO) clippy -p quire-contract-runtime-footprint --lib --release --target $(FOOTPRINT_TARGET) -- -D warnings
+	$(CARGO) clippy -p quire-contract-runtime-exact-panic --lib --release --target $(FOOTPRINT_TARGET) -- -D warnings
 
 .PHONY: test
 test:
