@@ -13,7 +13,7 @@ mod charge_points;
 use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
-use quire_contract_runtime::exact::{evaluate_boolean_short_circuit, ShortCircuitConnective};
+use quire_contract_runtime::scalar::{evaluate_boolean_short_circuit, ShortCircuitConnective};
 use quire_exact::{
     ChargePoint, Incomplete, Integer, LimitKind, Meter, Outcome, Refusal, ScalarLimits, Undefined,
 };

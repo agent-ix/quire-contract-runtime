@@ -1,12 +1,12 @@
 //! FR-009 I13 backend negotiation: one disposition per item, in input order,
 //! from the item's declared requirement and the backend's declared
-//! capabilities alone, through the public `exact` surface.
+//! capabilities alone, through the public `scalar` surface.
 #![cfg(feature = "exact")]
 
 use std::collections::BTreeSet;
 
 use ix_trace_rs::trace;
-use quire_contract_runtime::exact::{
+use quire_contract_runtime::scalar::{
     negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,
     IeeeItemRequirement, IeeeUnsupportedCause, IntegerDivisionBounds, IntegerDivisionConsumer,
     IntegerDivisionDisposition,
@@ -407,42 +407,24 @@ fn tc_030_missing_capability_and_undischarged_proof_reports_the_capability_cause
 #[trace("TC-030")]
 #[test]
 fn tc_030_every_disposition_is_a_known_variant() {
-    // Both negotiators also stay checked against the closed set of dispositions
-    // this test knows about. `IntegerDivisionDisposition` and `IeeeDisposition`
-    // are `#[non_exhaustive]` (NFR-002: downstream generated oracles must
-    // not exhaustively match them), so this crate's own `tests/` — a separate,
-    // downstream-compiled crate — can no longer enforce coverage with a plain
-    // exhaustive `match` and a compile error. `matches!` plus an explicit assertion is a
-    // weaker guard, not the same one moved to test-run time: it only catches a variant these
-    // fixtures actually cause `negotiate_integer_division`/`negotiate_ieee` to produce, where
-    // the old compile-time match caught a new variant unconditionally, whether or not any
-    // fixture here happened to reach it. That gap is inherent to matching a
-    // `#[non_exhaustive]` type from a downstream crate; this assertion still fails loudly for
-    // every disposition these fixtures do produce, rather than silently passing one through.
+    // Exhaustive matches in this downstream-compiled test catch newly added
+    // dispositions at compile time, including variants these fixtures do not reach.
     let integer_items = [
         IntegerDivisionConsumer::Mathematical,
         IntegerDivisionConsumer::Finite(IntegerDivisionBounds::default()),
     ];
     for disposition in negotiate_integer_division(&integer_items) {
-        assert!(
-            matches!(
-                disposition,
-                IntegerDivisionDisposition::Supported | IntegerDivisionDisposition::RequiresBound
-            ),
-            "unexpected integer division disposition: {disposition:?}"
-        );
+        match disposition {
+            IntegerDivisionDisposition::Supported | IntegerDivisionDisposition::RequiresBound => {}
+        }
     }
 
     let ieee_items = [baseline_item()];
     for disposition in negotiate_ieee(&ieee_items, &capable_backend()) {
-        assert!(
-            matches!(
-                disposition,
-                IeeeDisposition::Supported
-                    | IeeeDisposition::Unsupported(_)
-                    | IeeeDisposition::RequiresBound
-            ),
-            "unexpected IEEE disposition: {disposition:?}"
-        );
+        match disposition {
+            IeeeDisposition::Supported
+            | IeeeDisposition::Unsupported(_)
+            | IeeeDisposition::RequiresBound => {}
+        }
     }
 }

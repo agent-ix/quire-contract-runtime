@@ -14,9 +14,9 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    evaluate_boolean_short_circuit, CheckMode, CheckingLimits, FunctionDeclaration,
-    PackageDeclarations, ShortCircuitConnective,
+    CheckMode, CheckingLimits, FunctionDeclaration, PackageDeclarations,
 };
+use quire_contract_runtime::scalar::{evaluate_boolean_short_circuit, ShortCircuitConnective};
 use quire_exact::{
     ChargePoint, Incomplete, InjectedDenial, Integer, LimitKind, Meter, Outcome, ScalarLimits,
     Value, ValueType,

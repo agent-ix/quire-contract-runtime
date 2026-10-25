@@ -5,7 +5,7 @@
 /// `R` carries whatever `right` returns: plain `bool` for an ordinary generated expression, or any
 /// stop-carrying type that is `From<bool>`. The kernel's `exact::Outcome<bool>` is not one (the
 /// runtime does not own it and cannot add the impl); a right operand that may itself be undefined,
-/// refused or incomplete uses `exact::evaluate_boolean_short_circuit`. When `left` alone decides
+/// refused or incomplete uses `scalar::evaluate_boolean_short_circuit`. When `left` alone decides
 /// the result, `right` is never called, so a stop it could have produced can never arise.
 // Implements: FR-002
 #[inline]

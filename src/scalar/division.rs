@@ -30,9 +30,8 @@ impl IntegerDivisionBounds {
 /// The consumer of one integer-division item at I13 negotiation.
 #[expect(
     clippy::large_enum_variant,
-    reason = "the kernel's larger IntegerInterval makes the Finite variant 288 bytes; boxing it would change public consumer construction in this lock-only slice"
+    reason = "the kernel's larger IntegerInterval makes the Finite variant 288 bytes; boxing it would change public consumer construction"
 )]
-#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IntegerDivisionConsumer {
     /// Unbounded mathematical integers; no bound is needed.
@@ -43,7 +42,6 @@ pub enum IntegerDivisionConsumer {
 
 /// The per-item I13 negotiation disposition. It is not an evaluator outcome:
 /// negotiation never evaluates and never narrows mathematical integers.
-#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IntegerDivisionDisposition {
     /// The consumer can execute the item.

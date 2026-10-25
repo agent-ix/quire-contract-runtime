@@ -39,7 +39,6 @@ pub struct IeeeItemRequirement {
 }
 
 /// What the backend lacks for an `unsupported` item.
-#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeUnsupportedCause {
     /// The selected width.
@@ -62,14 +61,11 @@ pub enum IeeeUnsupportedCause {
 /// compile error, not a runtime one.
 ///
 /// ```compile_fail
-/// use quire_contract_runtime::exact::{
-///     IeeeDisposition, IeeeUnsupportedCause, Value,
-/// };
-/// use quire_exact::{IeeeWidth, Outcome};
+/// use quire_contract_runtime::scalar::{IeeeDisposition, IeeeUnsupportedCause};
+/// use quire_exact::{IeeeWidth, Outcome, Value};
 /// let disposition = IeeeDisposition::Unsupported(IeeeUnsupportedCause::Width(IeeeWidth::Binary64));
 /// let _: Outcome<Value> = disposition.into();
 /// ```
-#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IeeeDisposition {
     /// The backend implements the item exactly.

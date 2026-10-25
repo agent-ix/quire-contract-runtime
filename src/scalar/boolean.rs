@@ -3,8 +3,7 @@
 //!
 //! `quire-exact` exports the eager connectives (`evaluate_boolean`) and `retain_boolean`, but no
 //! connective whose right operand is lazy and may itself stop. Generated oracles call this one
-//! (FR-014-AC-35 of the code generator), so it is a runtime-owned `exact` item that stays under
-//! FR-275's `scalar` surface after the ported residue is removed.
+//! (FR-014-AC-35 of the code generator), so it stays on the runtime-owned `scalar` surface.
 
 use quire_exact::{retain_boolean, Meter, Outcome};
 
@@ -14,7 +13,6 @@ use quire_semantic_value::stop::{outcome_from_stop, outcome_into_stop, Stop};
 ///
 /// Unlike `quire_exact::BooleanConnective`, the right operand is evaluated lazily and may
 /// itself stop; see [`evaluate_boolean_short_circuit`].
-#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ShortCircuitConnective {
     /// `a and b`.

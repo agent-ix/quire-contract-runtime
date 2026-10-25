@@ -84,7 +84,8 @@ returns an error.
 | `operators` | Separately named short-circuit and total `and`, `or` and `implies`; checked option, slice-index, add, sub, mul, div and rem helpers that return `None` when undefined. |
 | `accounting` | `CampaignReport` and `CampaignCounts`: accepted, rejected, failed and discarded counts that saturate and do not panic. |
 | `proptest_adapter` | Optional: maps a verdict onto proptest's success, failure and rejection. |
-| `exact` | Optional: runtime-owned negotiation and the remaining exact-value helpers, built on `quire-exact` and `quire-semantic-value`. |
+| `scalar` | Under `exact`: runtime-owned backend negotiation and the lazy Boolean connective. |
+| `exact` | Optional: remaining function-application residue, built on `quire-exact` and `quire-semantic-value`. |
 
 ## Features
 
