@@ -32,3 +32,10 @@ Reviewed PR #165 at cee7730f8cb43231d17a0beff19f818c77def9a5 against NFR-002-AC-
 - NFR-002-AC-10 examined: one positive kernel unit test and three compile-fail doctests passed.
 - `cargo fmt --check` passed; `cargo clippy --workspace --all-targets --all-features -- -D warnings` failed at `IntegerDivisionConsumer`; `make deny` failed on the two new crates.
 - No CI workflow, `src/exact/expression.rs`, or `clippy.toml` changed. PR #161 touches `src/exact/expression.rs`; #162 touches Cargo.toml, Cargo.lock and clippy.toml, so the latter may need rebase reconciliation.
+
+## Dispositions
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | A reasoned local `clippy::large_enum_variant` allowance restores workspace Clippy on the public by-value enum; checked at 39cf1a1aa17acb0de88dc299adb279128a3462f7. |
+| FND-002 | fixed | `deny.toml` now lists only the two new first-party crates as AGPL exceptions; `cargo deny --workspace check licenses bans sources` passes. The installed Quire v0.36.2 lacks the separate `check-lock` subcommand, so the composite `make deny` remains externally blocked. |

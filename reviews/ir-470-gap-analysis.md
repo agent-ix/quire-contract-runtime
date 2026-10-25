@@ -32,3 +32,10 @@ Plan completion: not assessed.
 Reconciliation: `quoin matrix --repo . --json` (quoin 0.29.1) on the PR head. NFR-002-AC-8: untagged, zero binders; AC-9: untagged, zero binders; AC-10: tagged to `tools/kernel-api-check/src/lib.rs::tests::admitted_divisor_is_required_by_all_three_helpers`. No run evidence is bound in the evidence store. `quire coverage --scope . --json` reported no untracked symbols for these three criteria. Its unrelated module diagnostics concern missing `Inspections`/`SuiteRegistry` documents, one FR-009 production tag, and criterion-shape analysis.
 
 The Python commands are wired into `make ci`, but the declared Test evidence model does not bind them as tests. A trace tag on an unrelated Rust test would not close the evidence gap. Reverse inspection found no new production API outside the NFR-002/TC-206 scope, and the gate is not a stub.
+
+## Dispositions
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | `tests/exact_panic_gate.rs::exact_probe_retains_required_rt_calls_without_panic_relocations` invokes the actual `make exact-panic-probe`, asserts its successful result and RT population, required-call and zero-panic reports; Quoin now binds AC-8 to this test. |
+| FND-002 | fixed | `tests/exact_panic_gate.rs::injected_rt_panic_is_rejected_by_the_same_gate` invokes the same real probe, which runs the scratch injected control, and asserts its success marker; Quoin now binds AC-9 to this test. |
