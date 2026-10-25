@@ -239,9 +239,10 @@ records the gap.
   (the residue list is empty), AD-003 decision F, and interface-001-AC-7 (the runtime defines none
   of the call-surface items), which option (a) already satisfies and which needs no change unless the
   leaf's surface turns out to reuse one of its names.
-- Direct dependencies `num-bigint`, `num-integer`, `num-traits` and `unicode-normalization` are
-  named today only by `integer.rs`, `rational.rs`, `ieee.rs` and `text.rs`, none of which keeps code that
-  names them (the negotiators do not); they are removed in the step that deletes those files.
+- The scalar source cutover left no runtime use of the direct dependencies `num-bigint`,
+  `num-integer`, `num-traits` and `unicode-normalization`. IR-349 step 3 removed their direct
+  `Cargo.toml` and root `Cargo.lock` edges in follow-up PR #162. The owning crates may still
+  depend on them transitively.
 
 ### CG paths that change in the same step
 
