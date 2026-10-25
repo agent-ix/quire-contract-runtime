@@ -10,7 +10,7 @@ review_set: base
 
 ## Summary
 
-At PR #168 head a4ee42f01d717cad6b53c02503b54b5d1efba62e, examined TC-016 step 3 and the FR-006-AC-3 matrix row against QSpec `quire.value.accounting/v1`, the RT lockfile's quire-exact revision, and unchanged FR-006-AC-3. The correction admits `equality.plan-form` distinctly from `equality.plan` and preserves the complete criterion. Quire validation and Quoin analysis passed. No applicable AssuranceProfile with a required review operation was found in this RT scope.
+At PR #168 head a4ee42f01d717cad6b53c02503b54b5d1efba62e, examined TC-016 step 3 and the FR-006-AC-3 matrix row against QSpec `quire.value.accounting/v1`, the standalone quire-exact revision selected by this PR base's RT `Cargo.lock`, the separately inspected QSL monorepo kernel, and unchanged FR-006-AC-3. Both kernels include `equality.plan-form`. The correction admits it distinctly from `equality.plan` and preserves the complete criterion. Quire validation and Quoin analysis passed. No applicable AssuranceProfile with a required review operation was found in this RT scope.
 
 The PR only corrects the procedure and matrix description. FR-006-AC-3 remains untagged on the PR base and head after the local kernel tests were removed; IR-1011's full evidence work remains open.
 
