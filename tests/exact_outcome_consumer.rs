@@ -156,7 +156,7 @@ fn consumed_exact_outcomes_keep_false_distinct_from_all_stops() {
         &mut Meter::new(limits),
     );
     let refusal_reason = Refusal::CheckedInvariant {
-        cause: CheckedInvariantCause::CallDepthExceeded,
+        cause: CheckedInvariantCause::ForeignCheckedExpression,
     };
     let refused = evaluate_boolean_short_circuit(
         ShortCircuitConnective::And,
