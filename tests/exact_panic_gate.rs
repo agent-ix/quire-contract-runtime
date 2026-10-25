@@ -11,6 +11,7 @@ fn probe() -> &'static Output {
     PROBE.get_or_init(|| {
         Command::new("make")
             .arg("exact-panic-probe")
+            .arg("CARGO=cargo")
             .current_dir(env!("CARGO_MANIFEST_DIR"))
             .output()
             .expect("make exact-panic-probe must start")
