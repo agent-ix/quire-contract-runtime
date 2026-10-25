@@ -51,3 +51,14 @@ Examined against head:
 AC coverage is preserved and no criterion or gate is narrowed. Every examined AC still holds at
 head under its executing gate. One stale AD-004 statement about the now-removed dependencies is
 left; it is low severity and does not block merge.
+
+## Dispositions
+
+Round 1, checked at head 94dc772cc2dd3418163a33ada1130db93531b23e. The delta from 7da6e849 is one
+commit touching `spec/assurance/AD-004-runtime-crate-layout.md` (prose bullet only) and adding the
+two `reviews/` files; no Cargo.toml, Cargo.lock, clippy.toml, source, test or verification file
+changed, and no acceptance criterion changed.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | spec/assurance/AD-004-runtime-crate-layout.md:242-245 now reads "The scalar source cutover left no runtime use of the direct dependencies `num-bigint`, `num-integer`, `num-traits` and `unicode-normalization`. IR-349 step 3 removed their direct `Cargo.toml` and root `Cargo.lock` edges in follow-up PR #162. The owning crates may still depend on them transitively." This matches the repo at head. |
