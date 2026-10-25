@@ -4,7 +4,7 @@ title: "Runtime crate layout: modules of this crate and the shared exact kernel 
 type: ArchitectureDescription
 status: proposed
 owner: runtime-maintainers
-system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the exact feature's 23 files), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps IR-349 executes
+system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the exact feature's 23 files), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps assigned to IR-349 and IR-1009
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AD-001
     type: references
@@ -373,6 +373,33 @@ What is measured today, the migration that removes it, what is open and with who
 
 ### Migration
 
+#### Delivery scope after the no_std evaluator deferral
+
+IR-349 owns independent steps 1 through 4, including the 11 runtime-owned `scalar` items,
+their Kani proofs, and paired CG consumer changes. Step 4 is complete only when its RT and CG
+consumers and its gate pass. The dependency on the usable QSL `no_std` evaluation leaf is not a
+precondition for those steps. IR-1009 receives step 5 in full: the RT `expression` port deletion,
+QSL evaluation-leaf dependency and target acceptance, the paired CG emitters and manifest,
+and the Group 3 amendments. IR-1009 is blocked by IR-590. The part of step 6 that requires an
+empty `src/exact`, removal of the `exact` module and evaluation residue, and end-state
+inspection follows step 5 in IR-1009. IR-349 still performs any cleanup and matrix disposition
+for the source and tests it changes in steps 1 through 4. This assignment changes no end-state
+criterion or test procedure: FR-273-AC-12/13, FR-275-AC-1/13/16/18/29/30, TC-194,
+TC-197 and TC-199 remain planned where their full end-state evidence depends on step 5.
+There is no interim copy approval, fallback, alias or compatibility layer.
+
+The depth redesign tracked by IR-497 can be specified and verified in the existing `std`
+system: explicit scheduler frames, one active generated-body transition, exact work-unit
+fuel, and iterative `ValueType`/`CollectionType` handling can be exercised by 100,000-deep
+calls and type values on a small native thread stack using `std`. This std exercise does
+not stand in for the distinct QSL-leaf acceptance in FR-273-AC-13. FR-273-AC-7/9/10/11 and their TC-194
+procedures remain intact for that work. The existing exact-profile
+`thumbv7em-none-eabi` build in FR-275-AC-9 and TC-199 steps 1 through 3 remains an
+independent requirement. Only the QSL evaluation-leaf consumers and measurements in
+FR-273-AC-12/13 and FR-275-AC-29/30, with their TC-194/TC-199 procedures, await
+IR-1009. The distinction is about evidence and ownership, not a reduced depth or
+`no_std` acceptance criterion.
+
 Each step is one coherent PR with its gate. Gate G for a step: `make fmt-check lint test-features doc
 msrv size deny deny-mutations test kani kani-mutations` (`make ci` stops at `spec`, so run them as the
 foundation slice did), plus `make spec` with no more than 56 unbacked and 5 contradicted. CG gate: CG's tests
@@ -391,8 +418,8 @@ CG PR that adopts the new paths.
 | 2 | IR-582 delivered the repositories and `quire-exact` already uses its own repository. Add optional `quire-semantic-value` under `exact` (`Cargo.toml`, lock); admit the three own-repository Git sources and their scoped licences in `deny.toml`; remove the QSL-repository `allow-git` and the 14 name bans; amend Group 2, TC-197 through TC-199 and `CLAUDE.md`; require the QSL source rejection in `make deny-mutations` and keep the footprint graph free of the shared crates. No runtime source deletion or semantic behavior claim | none | G, with `deny-mutations` green; the Rust gate proves the QSL Git source is rejected |
 | 3 | Scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; connective to `scalar`; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `tools/runtime-gates/` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4), and interface-001's `compatibility.enums: non-exhaustive` statement is amended in this step to match | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
 | 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration`; use QSV's compound-unit identity path described below; retire the original FR-012-AC-1 at this step and remove TC-033's local parser/round-trip tests; inspect the deletion under FR-012-AC-6 | the different-declaration use sites, the three serializable mirrors and paired CG changes: generated `WireNodeId` literals are converted only by QSL's admitted-node-table lookup through ADR-011 E4 and its `replay` facade. RT holds shared `NodeKey`s in `quire_exact::Value` but constructs none in library code; CG constructs none. Test-only RT fixtures may use `NodeKey::from_digest([u8; 32])`, preferably with an admitted-package key when lookup must succeed | G; Q-5 answered |
-| 5 | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
-| 6 | Close: `exact` module removed, `verification/kani.rs` imports, docs and `README`, matrix dispositions | none | G; L-1 to L-4 |
+| 5 (IR-1009) | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
+| 6 (IR-349 cleanup; IR-1009 end state) | IR-349 closes imports, docs, `README` and matrix dispositions for steps 1 through 4. After step 5, IR-1009 removes the `exact` module and remaining `verification/kani.rs` imports, completes the final docs and matrix disposition, and verifies the empty residue list | none | IR-349 checks its changed scope with G; IR-1009 checks the full end state with G and L-1 to L-4 |
 
 IR-882 specifies step 4; its first code slice requires Q-5 to be answered. At this boundary the value owner is
 `quire_exact::Value`, including its `Arc`-backed option, composite and collection
