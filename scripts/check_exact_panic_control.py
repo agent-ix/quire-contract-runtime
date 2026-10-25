@@ -26,15 +26,15 @@ def main() -> None:
         scratch = Path(temp)
         with tarfile.open(fileobj=io.BytesIO(archive.stdout), mode="r:") as source:
             source.extractall(scratch, filter="data")
-        scalar = scratch / "src/scalar/boolean.rs"
+        scalar = scratch / "src/scalar/division.rs"
         content = scalar.read_text()
-        anchor = "    let decided = match connective {"
+        anchor = "    items\n        .iter()"
         if content.count(anchor) != 1:
             raise SystemExit("exact panic control: scalar insertion point absent or ambiguous")
         scalar.write_text(
             content.replace(
                 anchor,
-                '    if core::hint::black_box(left) { panic!("TC-206 injected panic"); }\n' + anchor,
+                '    if core::hint::black_box(!items.is_empty()) { panic!("TC-206 injected panic"); }\n' + anchor,
             )
         )
         env = os.environ.copy()
