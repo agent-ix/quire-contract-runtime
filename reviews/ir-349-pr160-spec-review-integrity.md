@@ -28,3 +28,12 @@ Examined: interface-001 "Exact kernel surface" prose (lines 113-125), interface-
 ## Verdict
 
 Changes requested: one sentence in interface-001 to fix, and optionally restore the "not authorized" qualifier in spec.md. No AC or matrix AC/TC list changed.
+
+## Dispositions
+
+Round 1, checked at head e3f2a07889fd3dbe0a536ac69fec989e7d66c387.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | interface-001:118 now reads "from those crates. Its own kept items now live in `scalar`." No other "does not exist yet" scalar text remains under spec/. |
+| FND-002 | fixed | The spec.md:73 Exact row now reads "`exact` retains unauthorized ported function-application residue for IR-1009 to replace or delete under AD-004 Q-1". |

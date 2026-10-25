@@ -31,3 +31,11 @@ Out of diff, for the lead: AD-004 step 3 also says "drop the four direct depende
 ## Verdict
 
 AC coverage is preserved and no criterion is narrowed. Every examined AC keeps its tagged evidence and passes. One stale matrix disposition is left.
+
+## Dispositions
+
+Round 1, checked at head e3f2a07889fd3dbe0a536ac69fec989e7d66c387. The delta from 3f6ef45d touches only spec files and reviews/; no Rust, test or manifest file changed.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | spec/core/matrix/tests.md:24 now reads "The runtime-owned negotiators and lazy Boolean connective now live in `scalar`, satisfying AC-8's current named items. IR-349 still owns cleanup and matrix disposition for its remaining steps". The row stays 🚧 and its AC list is unchanged. |

@@ -29,3 +29,11 @@ Examined: interface-001 `compatibility.enums`, interface-001-AC-8, FR-009-AC-5, 
 ## Verdict
 
 Changes requested: one medium consistency amendment. No AC is narrowed or deleted. The FR-009-AC-5 edit changes only the evidence path.
+
+## Dispositions
+
+Round 1, checked at head e3f2a07889fd3dbe0a536ac69fec989e7d66c387.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The NFR-002 statement adds "The five runtime-owned scalar enums are closed under AD-004 Q-4 and exhaustive; core and remaining expression-residue data enums retain their non-exhaustive compatibility contract." NFR-002-AC-3 is now scoped to "Public core and remaining expression-residue data enums" and states the scalar exception. The scope reduction is exactly the AD-004 Q-4 owner exception, and the observation.rs/verdict.rs doctest evidence is unchanged, so no AC is narrowed beyond what Q-4 directs. |
