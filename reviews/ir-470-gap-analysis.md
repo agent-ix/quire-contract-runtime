@@ -43,3 +43,5 @@ The Python commands are wired into `make ci`, but the declared Test evidence mod
 ## Follow-up verification
 
 At d6d27b8e5f357a664a37b70bfbdcd2c9c98a5c76, the probe gate also requires `CheckedPackage>::check_expression`, closing the retained exact expression call list under NFR-002-AC-8 and TC-206. The tagged AC-8 test invokes that same gate, and focused `make exact-panic-probe` passed with the new required call reported. The prior dispositions remain fixed; no new trace gap arose from this delta.
+
+At 075929af662d7767857080283fee39a388195b42, the AC-8 tagged gate test asserts that the malformed-report control ran. The control modifies a legitimate positive `objdump` report by inserting a malformed RT-owned relocation row and requires the scanner's specific rejection under AC-9. Focused `make exact-panic-probe` passed both the positive and negative cases. The prior dispositions remain fixed; no new gap arose from this delta.

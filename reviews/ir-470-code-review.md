@@ -43,3 +43,5 @@ Reviewed PR #165 at cee7730f8cb43231d17a0beff19f818c77def9a5 against NFR-002-AC-
 ## Follow-up verification
 
 At d6d27b8e5f357a664a37b70bfbdcd2c9c98a5c76, `scripts/check_exact_panic.py` adds `CheckedPackage>::check_expression` to the required probe relocations. The consumer already calls `check_expression` before `evaluate`. A focused `make exact-panic-probe` passed and reported that relocation among the required calls, zero recognized RT panic relocations, and detection of the scratch injected panic. No new code finding arose from this delta.
+
+At 075929af662d7767857080283fee39a388195b42, the parser requires relocation column headers and rejects malformed lines in RT-owned relocation tables. Focused `make exact-panic-probe` parsed the legitimate `objdump -rC` output and passed. Its same-archive control injected a malformed RT row into the positive report and observed the scanner's specific malformed-relocation rejection; the reachable panic control still failed as intended. No new code finding arose from this delta.
