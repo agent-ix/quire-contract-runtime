@@ -25,7 +25,7 @@
 mod tests {
     use quire_exact::{Integer, NonZeroInteger, ZeroDivisor};
 
-    /// Trace: NFR-002-AC-10, TC-206
+    /// Trace: NFR-002-AC-10
     #[test]
     fn admitted_divisor_is_required_by_all_three_helpers() {
         let zero = Integer::zero();

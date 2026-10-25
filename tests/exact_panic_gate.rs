@@ -26,7 +26,7 @@ fn gate_output() -> String {
     stdout.into_owned()
 }
 
-#[trace("NFR-002-AC-8", "TC-206")]
+#[trace("NFR-002-AC-8")]
 #[test]
 fn exact_probe_retains_required_rt_calls_without_panic_relocations() {
     let output = gate_output();
@@ -44,7 +44,7 @@ fn exact_probe_retains_required_rt_calls_without_panic_relocations() {
     );
 }
 
-#[trace("NFR-002-AC-9", "TC-206")]
+#[trace("NFR-002-AC-9")]
 #[test]
 fn injected_rt_panic_is_rejected_by_the_same_gate() {
     let output = gate_output();
