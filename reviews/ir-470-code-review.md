@@ -1,0 +1,34 @@
+---
+id: SR-35025
+title: "Code review of IR-470 exact panic gate"
+type: SpecReview
+analysis: code-review
+scope: "agent-ix/quire-contract-runtime; Cargo.toml, Cargo.lock, Makefile, deny.toml, measurement/exact-panic/, scripts/check_exact_panic*.py, src/scalar/division.rs, tools/kernel-api-check/"
+review_set: subset
+relationships:
+  - target: ix://agent-ix/quire-contract-runtime/NFR-002
+    type: reviews
+---
+
+## Summary
+
+Reviewed PR #165 at cee7730f8cb43231d17a0beff19f818c77def9a5 against NFR-002-AC-8, AC-9, AC-10 and TC-206. The exact probe and its injected control passed, but two existing aggregate gates fail on this head.
+
+## Verdict
+
+**FAIL** — workspace Clippy and license checks reject the change.
+
+## Findings
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-001 | high | Removing the large-enum expectation makes workspace Clippy fail with `-D warnings` | src/scalar/division.rs:31 |
+| FND-002 | high | Both new AGPL workspace crates lack scoped license exceptions, so `make deny` fails | deny.toml:21 |
+
+## Coverage
+
+- NFR-002-AC-8 examined: `make exact-panic` built a no-std exact archive, reported fourteen RT objects and required calls, and found zero recognized RT panic relocations.
+- NFR-002-AC-9 examined: the scratch injected panic was detected; the unmodified probe passed on a subsequent build.
+- NFR-002-AC-10 examined: one positive kernel unit test and three compile-fail doctests passed.
+- `cargo fmt --check` passed; `cargo clippy --workspace --all-targets --all-features -- -D warnings` failed at `IntegerDivisionConsumer`; `make deny` failed on the two new crates.
+- No CI workflow, `src/exact/expression.rs`, or `clippy.toml` changed. PR #161 touches `src/exact/expression.rs`; #162 touches Cargo.toml, Cargo.lock and clippy.toml, so the latter may need rebase reconciliation.

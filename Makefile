@@ -15,7 +15,7 @@ QUIRE ?= quire
 MSRV := 1.98.1
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
-EXACT_PANIC_TARGET_DIR := target
+EXACT_PANIC_TARGET_DIR := $(FOOTPRINT_TARGET_DIR)
 
 .PHONY: help
 help:
@@ -108,12 +108,16 @@ spec:
 		'reviews/**/*.md' --summary
 	$(QUIRE) coverage --scope . --strict
 
-.PHONY: exact-panic
-exact-panic:
+.PHONY: exact-panic-probe
+exact-panic-probe:
 	$(CARGO) +$(MSRV) build $(LOCKED) --profile exact-panic --manifest-path measurement/exact-panic/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(EXACT_PANIC_TARGET_DIR)
 	$(PYTHON) scripts/check_exact_panic.py $(EXACT_PANIC_TARGET_DIR)/$(FOOTPRINT_TARGET)/exact-panic/libquire_contract_runtime_exact_panic.a
 	$(PYTHON) scripts/check_exact_panic_control.py $(EXACT_PANIC_TARGET_DIR) $(MSRV) $(FOOTPRINT_TARGET) $(CARGO)
+
+.PHONY: exact-panic
+exact-panic:
+	$(CARGO) test $(LOCKED) --test exact_panic_gate
 	$(CARGO) +$(MSRV) test $(LOCKED) -p quire-contract-runtime-kernel-api-check --lib
 	$(CARGO) +$(MSRV) test $(LOCKED) -p quire-contract-runtime-kernel-api-check --doc
 
