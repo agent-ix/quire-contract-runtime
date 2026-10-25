@@ -76,7 +76,9 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
             body: Box::new(|_| {
-                Box::new(|_, _| BodyStep::Return(Outcome::Completed(Value::Boolean(true))))
+                Box::new(|_: &Frame<'_, '_>, _: Option<Value>| {
+                    BodyStep::Return(Outcome::Completed(Value::Boolean(true)))
+                })
             }),
         }],
     }

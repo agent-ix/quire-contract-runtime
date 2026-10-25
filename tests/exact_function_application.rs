@@ -551,26 +551,28 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
             Box::new(|_| {
                 let mut phase = 0;
                 let mut first_value = false;
-                Box::new(move |_, completed: Option<Value>| match phase {
-                    0 => {
-                        phase = 1;
-                        BodyStep::Call {
-                            function: "leaf".to_string(),
-                            arguments: Vec::new(),
+                Box::new(
+                    move |_: &Frame<'_, '_>, completed: Option<Value>| match phase {
+                        0 => {
+                            phase = 1;
+                            BodyStep::Call {
+                                function: "leaf".to_string(),
+                                arguments: Vec::new(),
+                            }
                         }
-                    }
-                    1 => {
-                        first_value = matches!(completed, Some(Value::Boolean(true)));
-                        phase = 2;
-                        BodyStep::Call {
-                            function: "leaf".to_string(),
-                            arguments: Vec::new(),
+                        1 => {
+                            first_value = matches!(completed, Some(Value::Boolean(true)));
+                            phase = 2;
+                            BodyStep::Call {
+                                function: "leaf".to_string(),
+                                arguments: Vec::new(),
+                            }
                         }
-                    }
-                    _ => BodyStep::Return(Outcome::Completed(Value::Boolean(
-                        first_value && matches!(completed, Some(Value::Boolean(true))),
-                    ))),
-                })
+                        _ => BodyStep::Return(Outcome::Completed(Value::Boolean(
+                            first_value && matches!(completed, Some(Value::Boolean(true))),
+                        ))),
+                    },
+                )
             }),
         )
         .unwrap();
@@ -1061,7 +1063,7 @@ fn tc_194_child_call_charges_before_callee_body() {
                 measure_discharged: true,
                 body: Box::new(|_| {
                     let mut requested = false;
-                    Box::new(move |_, completed: Option<Value>| {
+                    Box::new(move |_: &Frame<'_, '_>, completed: Option<Value>| {
                         if requested {
                             BodyStep::Return(Outcome::Completed(
                                 completed.expect("observe returned a value"),
@@ -1149,7 +1151,7 @@ fn tc_194_explicit_frames_reach_4096_calls_on_64_kib_stack_with_exact_fuel() {
                             };
                             let active = Rc::clone(&active_body);
                             let mut waiting = false;
-                            Box::new(move |_, completed: Option<Value>| {
+                            Box::new(move |_: &Frame<'_, '_>, completed: Option<Value>| {
                                 assert_eq!(active.get(), 0, "only one body transition is active");
                                 active.set(1);
                                 let next = if waiting {
@@ -1312,7 +1314,7 @@ fn tc_194_nested_arguments_charge_before_enclosing_body_and_stop_at_one_less() {
                 let resumed_root = Rc::clone(&resumed_root_body);
                 let mut phase = 0;
                 let mut left = false;
-                Box::new(move |_, child: Option<Value>| {
+                Box::new(move |_: &Frame<'_, '_>, child: Option<Value>| {
                     let next = match phase {
                         0 => BodyStep::Call {
                             function: "left".to_string(),
@@ -1444,7 +1446,7 @@ fn tc_194_missing_child_has_typed_cause_and_does_not_resume_parent() {
             body: Box::new(move |_| {
                 let resumed = Rc::clone(&resumed_body);
                 let mut first = true;
-                Box::new(move |_, _| {
+                Box::new(move |_: &Frame<'_, '_>, _: Option<Value>| {
                     if first {
                         first = false;
                         BodyStep::Call {
@@ -1493,7 +1495,7 @@ fn tc_194_direct_host_reentry_is_refused_before_nested_charge() {
             measure_discharged: true,
             body: Box::new(move |_| {
                 let holder = Rc::clone(&body_holder);
-                Box::new(move |_, _| {
+                Box::new(move |_: &Frame<'_, '_>, _: Option<Value>| {
                     let package = holder.borrow().as_ref().unwrap().clone();
                     let mut nested_meter = Meter::new(UNLIMITED);
                     let nested = package
