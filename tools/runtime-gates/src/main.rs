@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+mod exact_panic;
 mod gates;
 
 use gates::{collect_features, collect_mutations, trusted_home, Outcome, SystemRunner};
@@ -18,6 +19,19 @@ fn main() {
             std::process::exit(2);
         }
     };
+    if gate == "exact-panic-probe" {
+        let args: Vec<_> = std::env::args().skip(2).collect();
+        match exact_panic::run(&root, &args) {
+            Ok(report) => {
+                println!("{report}");
+                return;
+            }
+            Err(error) => {
+                eprintln!("exact panic gate: {error}");
+                std::process::exit(1);
+            }
+        }
+    }
     let home = match trusted_home() {
         Ok(home) => home,
         Err(error) => {

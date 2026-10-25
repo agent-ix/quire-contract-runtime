@@ -7,7 +7,6 @@
 # for specification validation.
 
 CARGO ?= cargo
-PYTHON ?= python3
 # --locked only when no local patch is active: a patch rewrites the resolution.
 LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 QUIRE ?= quire
@@ -112,8 +111,9 @@ spec:
 exact-panic-probe:
 	$(CARGO) +$(MSRV) build $(LOCKED) --profile exact-panic --manifest-path measurement/exact-panic/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(EXACT_PANIC_TARGET_DIR)
-	$(PYTHON) scripts/check_exact_panic.py $(EXACT_PANIC_TARGET_DIR)/$(FOOTPRINT_TARGET)/exact-panic/libquire_contract_runtime_exact_panic.a
-	$(PYTHON) scripts/check_exact_panic_control.py $(EXACT_PANIC_TARGET_DIR) $(MSRV) $(FOOTPRINT_TARGET) $(CARGO)
+	$(CARGO) run $(LOCKED) --quiet -p quire-contract-runtime-gates -- exact-panic-probe \
+		$(EXACT_PANIC_TARGET_DIR)/$(FOOTPRINT_TARGET)/exact-panic/libquire_contract_runtime_exact_panic.a \
+		$(EXACT_PANIC_TARGET_DIR) $(MSRV) $(FOOTPRINT_TARGET) $(CARGO)
 
 .PHONY: exact-panic
 exact-panic:
