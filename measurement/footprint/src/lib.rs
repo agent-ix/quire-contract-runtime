@@ -6,7 +6,7 @@
 #![deny(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
 use core::hint::black_box;
-#[cfg(not(test))]
+#[cfg(all(not(test), target_os = "none"))]
 use core::panic::PanicInfo;
 
 use quire_contract_runtime::{
@@ -15,7 +15,7 @@ use quire_contract_runtime::{
     RevisionId, Verdict, VerdictContext,
 };
 
-#[cfg(not(test))]
+#[cfg(all(not(test), target_os = "none"))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
