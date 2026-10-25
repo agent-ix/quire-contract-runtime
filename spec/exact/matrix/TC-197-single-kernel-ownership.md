@@ -11,8 +11,9 @@ relationships:
 ## Description
 
 Check the end state of the kernel move: `quire-exact` resolves once, the runtime defines no item the
-kernel exports, and no substitute for the removed copy exists. Evidence is produced by the code step
-IR-349; it is planned until then.
+kernel exports, and no substitute for the removed copy exists. IR-349 supplies independent
+AD-004 steps 1 through 4; IR-1009 supplies step 5 and the dependent empty-`exact` end state.
+Every procedure below remains required and planned until its full end-state evidence exists.
 
 ## Test Procedure
 

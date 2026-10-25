@@ -34,7 +34,7 @@ generated oracles and the code generator name the owning crates' own paths. Unde
 the runtime's own code is only the `scalar` module: the backend negotiators and the lazy Boolean
 connective, which are runtime-owned (below; AD-004). The rest of its `src/exact` source copy (23 files,
 about 12,000 lines) is deleted. This is the end state; the criteria below that assert it are planned
-until the IR-349 code steps land.
+until the owning IR-349 and IR-1009 code steps land.
 
 The end state is delivered in two steps:
 
@@ -50,7 +50,8 @@ The end state is delivered in two steps:
    relayed); about 7,670 further lines already exist in `quire-exact` in a different shape (`Rc`
    against `Arc`, `EffectiveId` against `NodeKey`, `Quantity`), which IR-349 adapts to. The residue
    is not runtime-owned: the runtime deletes it and consumes the QSL-owned crates. The order and
-   mechanism are tracked by QSL-358, IR-583, IR-590 and IR-349. IR-583 alone does not authorize
+   mechanism are tracked by QSL-358, IR-583, IR-590, IR-349 (independent AD-004 steps 1 through 4)
+   and IR-1009 (AD-004 step 5 and dependent end-state closure). IR-583 alone does not authorize
    deletion of the function-application copy; IR-590's checked-input and generated-body implementation
    must pass RT's governed `no_std` target acceptance first.
 3. **The negotiators are runtime-owned, not residue.** QSL deleted its negotiators on purpose
@@ -67,7 +68,7 @@ usable IR-590 `no_std` evaluator passes RT target acceptance is an open decision
 (see Open questions); this requirement states no interim policy.
 
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
-steps IR-349 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
+steps IR-349 and IR-1009 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
 kernel owns stays specified by FR-006 to FR-008 and FR-010 to FR-012, now as behaviour of QSL's
 crates that the runtime consumes.
 
@@ -222,7 +223,7 @@ CLI FR-027 or replacing existing runtime dependency-policy checks.
 
 Every item below is vendored QSL code that violates the no-vendoring rule. There is no exception,
 no expiry and no approval. The order and mechanism of deletion are tracked by QSL-358 and IR-349;
-function-application deletion also needs IR-583, IR-590 and RT target acceptance.
+function-application deletion is assigned to IR-1009 and needs IR-583, IR-590 and RT target acceptance.
 Classified against what `quire-exact` exports; IR-349 part 1 re-measures it. Where a source file holds both an exported item and a residue item, only the
 residue item is listed: the exported item is deleted in step 1. The negotiators are not on this list: they are runtime-owned.
 
@@ -262,9 +263,14 @@ and is deleted in step 1.
   [interface-001](../../core/functional/interface-001-runtime-api.md);
   [AD-003](../../assurance/AD-003-codegen-runtime-seam.md) decision F; QSL-357 (merged);
   [NFR-001](../../core/non-functional/NFR-001-no-std-footprint.md).
-- **Downstream**: the code steps IR-349: the foundation slice (floor, dependency, bans, one copy;
-  no deletion; it adds the `deny.toml` entries) comes first; part 1 deletes the `quire-exact`
-  exports; part 2 deletes the residue, with function-application deletion gated by the IR-583 interface, IR-590 implementation and RT target acceptance (QSL FR-262).
+- **Downstream**: IR-349 keeps the independent AD-004 steps 1 through 4, including the
+  runtime-owned `scalar` items and paired CG consumers. The foundation slice (floor,
+  dependency, bans, one copy; no deletion) preceded those steps. IR-1009 receives AD-004
+  step 5, the ported function-application deletion and paired CG consumption, gated by
+  the IR-583 interface, IR-590 implementation and RT target acceptance (QSL FR-262),
+  together with the dependent empty-`exact` end-state closure in step 6. FR-275-AC-1,
+  AC-13, AC-16, AC-18, AC-29 and AC-30 remain unchanged and planned until their full
+  end-state evidence exists; this delivery split waives none of them.
 - **Routed**: the codegen repository's lock resolves two `quire-exact` copies and three
   `quire-contract-model` revisions; that is codegen's one-copy work (its layout AD, step 1d, the
   codegen owner) and is not a runtime requirement. This requirement covers the runtime only, so

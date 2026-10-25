@@ -112,7 +112,7 @@ The interface's features in declaration order: every operation the contract abov
 ## Exact kernel surface
 
 Today generated oracles and `quire-contract-codegen` reach exact semantic values through
-`quire_contract_runtime::exact`. The target end state (FR-275; planned, IR-349) is that they reach them
+`quire_contract_runtime::exact`. The target end state (FR-275; IR-349 steps 1–4 and IR-1009 closure) is that they reach them
 through the owning crates' own paths (`quire_exact::`, `quire_semantic_value::`), which generated source
 names directly; the runtime then defines no `quire_contract_runtime::exact` module and re-exports nothing
 from those crates, and its own kept items are in a `scalar` module, which does not exist yet.
@@ -165,7 +165,7 @@ against what the upstream `quire-exact` crate exports; they illustrate the rule 
 
 ```yaml
 exact:
-  module: none  # target end state (FR-275; planned, IR-349): no exact module; the kept items are in a scalar module that does not exist yet
+  module: none  # target end state (FR-275; IR-1009 closure): no exact module; IR-349 step 3 moves the kept items to scalar
   feature: exact
   consumers: [generated oracle source, quire-contract-codegen host code]
   kernel:
