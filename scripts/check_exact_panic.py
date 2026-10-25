@@ -10,15 +10,16 @@ from pathlib import Path
 EXPECTED_CALLS = (
     "negotiate_integer_division",
     "negotiate_ieee",
-    "evaluate_boolean_short_circuit",
     "PackageDeclarations>::check",
     "CheckedPackage>::evaluate",
 )
+GENERIC_CALL = "evaluate_boolean_short_circuit::<quire_contract_runtime_exact_panic::quire_runtime_exact_panic"
 PANIC_TARGET = re.compile(
     r"rust_begin_unwind|panic_bounds_check|core::panicking|core.*panicking|"
     r"slice::index::fail|slice.*index.*fail"
 )
 OBJECT_HEADER = re.compile(r"^(\S+):\s+file format\s+\S+")
+SECTION_HEADER = re.compile(r"^RELOCATION RECORDS FOR \[(.+)\]:$")
 RELOCATION = re.compile(r"^\s*[0-9a-fA-F]+\s+\S+\s+(.+?)\s*$")
 
 
@@ -54,6 +55,7 @@ def main() -> None:
 
     report = tool("objdump", "-rC", str(archive))
     current = None
+    section = None
     found_rt = set()
     found_probe = set()
     expected = set()
@@ -63,24 +65,36 @@ def main() -> None:
         header = OBJECT_HEADER.match(line)
         if header:
             current = header.group(1)
+            section = None
             if current in runtime_members:
                 found_rt.add(current)
             if current in probe_members:
                 found_probe.add(current)
             continue
+        section_header = SECTION_HEADER.match(line)
+        if section_header:
+            section = section_header.group(1)
+            continue
         relocation = RELOCATION.match(line)
-        if relocation is None or current is None:
+        if relocation is None or current is None or section is None:
             continue
         if current in runtime_members or current in probe_members:
             relocations += 1
         if current in runtime_members and PANIC_TARGET.search(relocation.group(1)):
             panic.append(f"{current}: {line.strip()}")
-        if current in probe_members:
+        if current in probe_members and section.startswith(".text"):
             expected.update(call for call in EXPECTED_CALLS if call in relocation.group(1))
 
     if found_rt != runtime_members or found_probe != probe_members or relocations == 0:
         fail("unparseable or incomplete object relocation report")
     missing = set(EXPECTED_CALLS) - expected
+    symbols = tool("nm", "-A", "-C", "--defined-only", str(archive))
+    if not any(
+        f":{member}:" in line and GENERIC_CALL in line
+        for member in probe_members
+        for line in symbols.splitlines()
+    ):
+        missing.add("evaluate_boolean_short_circuit")
     if missing:
         fail(f"probe omits required RT calls: {', '.join(sorted(missing))}")
     if panic:
@@ -89,7 +103,8 @@ def main() -> None:
         f"artifact={archive} command=objdump -rC "
         f"runtime_objects={','.join(sorted(runtime_members))} "
         f"probe_objects={','.join(sorted(probe_members))} "
-        f"required_calls={','.join(EXPECTED_CALLS)} panic_references=0"
+        f"required_calls={','.join((*EXPECTED_CALLS, 'evaluate_boolean_short_circuit'))} "
+        "panic_references=0"
     )
 
 

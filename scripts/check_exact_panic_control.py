@@ -15,10 +15,11 @@ def run(*argv: str, cwd: Path, env: dict[str, str] | None = None) -> subprocess.
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: check_exact_panic_control.py TARGET_DIR")
+    if len(sys.argv) != 5:
+        raise SystemExit("usage: check_exact_panic_control.py TARGET_DIR MSRV TARGET CARGO")
     root = Path(__file__).resolve().parent.parent
     target = (root / sys.argv[1]).resolve()
+    msrv, target_triple, cargo = sys.argv[2:]
     target.mkdir(parents=True, exist_ok=True)
     archive = subprocess.run(["git", "archive", "HEAD"], cwd=root, capture_output=True, check=True)
 
@@ -40,14 +41,14 @@ def main() -> None:
         env = os.environ.copy()
         env["CARGO_TARGET_DIR"] = str(target)
         build = run(
-            "cargo", "+1.98.1", "build", "--locked", "--profile", "exact-panic",
+            cargo, f"+{msrv}", "build", "--locked", "--profile", "exact-panic",
             "--manifest-path", "measurement/exact-panic/Cargo.toml", "--target",
-            "thumbv7em-none-eabi", cwd=scratch, env=env,
+            target_triple, cwd=scratch, env=env,
         )
         if build.returncode:
             raise SystemExit(f"exact panic control: scratch build failed:\n{build.stderr[-4000:]}")
-        artifact = target / "thumbv7em-none-eabi/exact-panic/libquire_contract_runtime_exact_panic.a"
-        check = run("python3", "scripts/check_exact_panic.py", str(artifact), cwd=scratch)
+        artifact = target / target_triple / "exact-panic/libquire_contract_runtime_exact_panic.a"
+        check = run(sys.executable, "scripts/check_exact_panic.py", str(artifact), cwd=scratch)
         if check.returncode == 0 or "RT-owned panic relocations:" not in check.stderr:
             raise SystemExit(
                 "exact panic control: injected panic did not trigger the RT relocation verdict:\n"
