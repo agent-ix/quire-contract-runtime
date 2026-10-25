@@ -42,6 +42,7 @@ fn inspect(report: &str) -> Result<(BTreeSet<String>, usize), String> {
     let mut runtime_objects = BTreeSet::new();
     let mut seen_calls = BTreeSet::new();
     let mut relocations = 0;
+    let mut runtime_relocations = 0;
     let mut headers = 0;
     for line in report.lines() {
         if let Some(name) = line.strip_suffix(":     file format elf32-little") {
@@ -62,19 +63,25 @@ fn inspect(report: &str) -> Result<(BTreeSet<String>, usize), String> {
         if section.is_empty() || !section.starts_with("RELOCATION RECORDS FOR [.text") {
             continue;
         }
+        if line.trim().is_empty() || line.starts_with("OFFSET") {
+            continue;
+        }
         let mut fields = line.split_whitespace();
         let (Some(offset), Some(kind), Some(symbol)) =
             (fields.next(), fields.next(), fields.next())
         else {
-            continue;
+            return Err(format!("unparseable relocation: {line}"));
         };
-        if !offset.bytes().all(|byte| byte.is_ascii_hexdigit()) || kind == "TYPE" {
-            continue;
-        }
-        if fields.next().is_some() {
+        if !offset.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || kind == "TYPE"
+            || fields.next().is_some()
+        {
             return Err(format!("unparseable relocation: {line}"));
         }
         relocations += 1;
+        if runtime_objects.contains(&object) {
+            runtime_relocations += 1;
+        }
         if object.contains(".quire_contract_runtime_exact_panic.") {
             for call in CALLS {
                 if symbol.contains(call) {
@@ -86,7 +93,7 @@ fn inspect(report: &str) -> Result<(BTreeSet<String>, usize), String> {
             return Err(format!("runtime panic relocation in {object}: {line}"));
         }
     }
-    if headers == 0 || relocations == 0 || runtime_objects.is_empty() {
+    if headers == 0 || relocations == 0 || runtime_relocations == 0 || runtime_objects.is_empty() {
         return Err("missing or unparseable runtime object relocation population".into());
     }
     for call in CALLS {
@@ -96,7 +103,7 @@ fn inspect(report: &str) -> Result<(BTreeSet<String>, usize), String> {
             ));
         }
     }
-    Ok((runtime_objects, relocations))
+    Ok((runtime_objects, runtime_relocations))
 }
 
 fn main() -> ExitCode {
@@ -129,7 +136,7 @@ fn main() -> ExitCode {
     };
     match inspect(report) {
         Ok((objects, relocations)) => {
-            println!("artifact={} command=objdump -r {} runtime_objects={} text_relocations={} panic_relocations=0", artifact.display(), artifact.display(), objects.len(), relocations);
+            println!("artifact={} command=objdump -r {} runtime_objects={} runtime_text_relocations={} panic_relocations=0", artifact.display(), artifact.display(), objects.len(), relocations);
             for object in objects {
                 println!("runtime_object={object}");
             }
@@ -164,5 +171,6 @@ mod tests {
         ))
         .is_err());
         assert!(inspect("garbage").is_err());
+        assert!(inspect(&REPORT.replace("0000 UNKNOWN malloc", "malformed")).is_err());
     }
 }
