@@ -61,3 +61,9 @@ changed).
 FR-006-AC-1 is genuinely backed. Not mergeable as is: FND-001 (medium) is a coverage
 overstatement for FR-006-AC-3 introduced by this diff, which the brief's "strict coverage must
 not move to a false pass" rules out. Mergeable once FND-001 is resolved and re-measured.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Repair head 86275e32 (one commit over ce96ab30): the tag is `#[trace("FR-006-AC-1")]` and the tests.md line 13 status is 🚧. Re-measured `quire coverage` at base 4e639dc (101/215 backed, 96 unbacked, 0 status lies) and head (102/215, 94 unbacked, 0 status lies; `--strict` reports 0 contradicted statuses). Only the FR-006-AC-1 verification row and the TC-016 traces-to row become backed; the FR-006-AC-3 verification row (FR-006 line 69) and the tests.md AC-3 rows stay unbacked; FR-006-AC-3 stays untagged. |

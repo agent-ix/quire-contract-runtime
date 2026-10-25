@@ -45,3 +45,9 @@ Examined:
 The spec edits are truthful and narrow no criterion. TC-016 stays open for AC-3. One low
 finding: the ✅ for AC-1 should say how its "consumes directly / no separate reason carrier"
 clause was confirmed beyond the single entry point the test drives. Not blocking on its own.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Repair head 86275e32 adds to spec/exact/matrix/tests.md (Evidence notes) an inspection sentence: the Boolean evaluator, `Body` and `Evaluation.outcome` use `quire_exact::Outcome` and its `Refusal` reasons directly, and `CheckRefusal`, `InputRefusal` and `EvaluationRefusal` report checking or pre-evaluation input rejection. Verified against `src/scalar/boolean.rs` and `src/exact/expression.rs` (`CheckRefusal` is returned only by `PackageDeclarations::check`). The line 13 status is now 🚧, so it no longer reads as complete. |
