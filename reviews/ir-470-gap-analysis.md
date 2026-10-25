@@ -39,3 +39,7 @@ The Python commands are wired into `make ci`, but the declared Test evidence mod
 | --- | --- | --- |
 | FND-001 | fixed | `tests/exact_panic_gate.rs::exact_probe_retains_required_rt_calls_without_panic_relocations` invokes the actual `make exact-panic-probe`, asserts its successful result and RT population, required-call and zero-panic reports; Quoin now binds AC-8 to this test. |
 | FND-002 | fixed | `tests/exact_panic_gate.rs::injected_rt_panic_is_rejected_by_the_same_gate` invokes the same real probe, which runs the scratch injected control, and asserts its success marker; Quoin now binds AC-9 to this test. |
+
+## Follow-up verification
+
+At d6d27b8e5f357a664a37b70bfbdcd2c9c98a5c76, the probe gate also requires `CheckedPackage>::check_expression`, closing the retained exact expression call list under NFR-002-AC-8 and TC-206. The tagged AC-8 test invokes that same gate, and focused `make exact-panic-probe` passed with the new required call reported. The prior dispositions remain fixed; no new trace gap arose from this delta.
