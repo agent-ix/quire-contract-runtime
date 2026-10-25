@@ -21,6 +21,8 @@ confidence-threshold = 0.9
 exceptions = [
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-footprint" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-exact-panic" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-kernel-api-check" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-contract-runtime-gates" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-exact" },
     { allow = ["AGPL-3.0-or-later"], crate = "quire-semantic-value" },

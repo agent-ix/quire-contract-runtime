@@ -14,7 +14,7 @@ name = "quire_contract_runtime"
 path = "src/lib.rs"
 
 [workspace]
-members = ["measurement/footprint", "tools/runtime-gates"]
+members = ["measurement/footprint", "measurement/exact-panic", "tools/kernel-api-check", "tools/runtime-gates"]
 resolver = "2"
 
 [features]
@@ -49,6 +49,11 @@ syn = { version = "2", features = ["full", "visit"] }
 lto = "thin"
 codegen-units = 1
 panic = "abort"
+
+[profile.exact-panic]
+inherits = "release"
+lto = false
+codegen-units = 16
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
