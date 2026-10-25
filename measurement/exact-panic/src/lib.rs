@@ -5,9 +5,10 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, vec};
+use core::hint::black_box;
+#[cfg(target_os = "none")]
 use core::{
     alloc::{GlobalAlloc, Layout},
-    hint::black_box,
     panic::PanicInfo,
     ptr,
 };
@@ -24,10 +25,12 @@ use quire_semantic_value::object_closure::ObjectClosure;
 
 // The archive is inspected, never executed. A refusing allocator satisfies
 // alloc's staticlib link requirement without supplying a target heap.
+#[cfg(target_os = "none")]
 struct NoAllocation;
 
 // SAFETY: both functions honor GlobalAlloc's contract: allocation returns null
 // and deallocation has no allocation to release.
+#[cfg(target_os = "none")]
 unsafe impl GlobalAlloc for NoAllocation {
     unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
         ptr::null_mut()
@@ -36,6 +39,7 @@ unsafe impl GlobalAlloc for NoAllocation {
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {}
 }
 
+#[cfg(target_os = "none")]
 #[global_allocator]
 static ALLOCATOR: NoAllocation = NoAllocation;
 
@@ -52,6 +56,7 @@ const LIMITS: ScalarLimits = ScalarLimits {
     result_units: u64::MAX,
 };
 
+#[cfg(target_os = "none")]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
