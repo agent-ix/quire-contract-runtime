@@ -30,6 +30,7 @@ pub enum ShortCircuitConnective {
 /// decided result charges `boolean.result-retain` exactly once. Otherwise `right()` runs: if it
 /// stops, that stop is returned unchanged and no `boolean.result-retain` charge is admitted; if it
 /// completes, the combined result charges `boolean.result-retain` exactly once.
+#[inline(never)]
 pub fn evaluate_boolean_short_circuit(
     connective: ShortCircuitConnective,
     left: bool,

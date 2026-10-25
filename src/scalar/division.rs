@@ -28,9 +28,9 @@ impl IntegerDivisionBounds {
 }
 
 /// The consumer of one integer-division item at I13 negotiation.
-#[expect(
+#[allow(
     clippy::large_enum_variant,
-    reason = "the kernel's larger IntegerInterval makes the Finite variant 288 bytes; boxing it would change public consumer construction"
+    reason = "boxing the finite bounds would change public consumer construction"
 )]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IntegerDivisionConsumer {
@@ -52,6 +52,7 @@ pub enum IntegerDivisionDisposition {
 }
 
 /// Negotiate each item independently, before and without evaluation.
+#[inline(never)]
 pub fn negotiate_integer_division(
     items: &[IntegerDivisionConsumer],
 ) -> Vec<IntegerDivisionDisposition> {

@@ -14,6 +14,7 @@ QUIRE ?= quire
 MSRV := 1.98.1
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
+EXACT_PANIC_TARGET_DIR := target/exact-panic-msrv
 
 .PHONY: help
 help:
@@ -98,6 +99,17 @@ size:
 			echo "footprint graph resolves $$crate (FR-275-AC-10)" >&2; exit 1; \
 		fi; \
 	done; echo "footprint graph holds no shared exact dependencies"
+
+.PHONY: exact-panic
+exact-panic:
+	$(CARGO) +$(MSRV) build $(LOCKED) --release --manifest-path measurement/exact-panic/Cargo.toml \
+		--target $(FOOTPRINT_TARGET) --target-dir $(EXACT_PANIC_TARGET_DIR)
+	$(CARGO) run $(LOCKED) --quiet --bin check_exact_panic -- \
+		$(EXACT_PANIC_TARGET_DIR)/$(FOOTPRINT_TARGET)/release/libquire_contract_runtime_exact_panic.a
+
+.PHONY: exact-panic-mutation
+exact-panic-mutation: exact-panic
+	bash tools/tc206-panic-mutation.sh
 
 .PHONY: spec
 spec:
@@ -223,4 +235,4 @@ kani-mutations:
 
 .NOTPARALLEL: ci
 .PHONY: ci
-ci: fmt-check spec lint test-features doc msrv size deny deny-mutations kani kani-mutations test
+ci: fmt-check spec lint test-features doc msrv size exact-panic-mutation deny deny-mutations kani kani-mutations test

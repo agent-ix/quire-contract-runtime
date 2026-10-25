@@ -10,6 +10,25 @@
 //!
 //! Trace: interface-001-AC-2, interface-001-AC-4
 //!
+//! TC-206 verifies that the resolved public kernel accepts only an admitted
+//! nonzero integer divisor at each direct helper boundary.
+//!
+//! ```compile_fail
+//! use quire_exact::Integer;
+//! let divisor = Integer::from(2_i64);
+//! let _ = Integer::from(6_i64).exact_div(&divisor);
+//! ```
+//! ```compile_fail
+//! use quire_exact::Integer;
+//! let divisor = Integer::from(2_i64);
+//! let _ = Integer::from(7_i64).div_rem_truncating(&divisor);
+//! ```
+//! ```compile_fail
+//! use quire_exact::Integer;
+//! let divisor = Integer::from(2_i64);
+//! let _ = Integer::from(7_i64).div_mod_floor(&divisor);
+//! ```
+//!
 //! ```compile_fail
 //! use quire_contract_runtime::exact::Integer;
 //! ```

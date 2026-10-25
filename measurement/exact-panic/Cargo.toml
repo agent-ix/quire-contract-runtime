@@ -1,0 +1,15 @@
+[package]
+name = "quire-contract-runtime-exact-panic"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.98.1"
+license = "AGPL-3.0-or-later"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+quire-contract-runtime = { path = "../..", default-features = false, features = ["exact"] }
+quire-exact = { git = "https://github.com/agent-ix/quire-exact", branch = "main", default-features = false }
+quire-semantic-value = { git = "https://github.com/agent-ix/quire-semantic-value", branch = "main", default-features = false }
