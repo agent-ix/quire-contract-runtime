@@ -3,6 +3,7 @@
 
 import io
 import os
+import shlex
 import subprocess
 import sys
 import tarfile
@@ -12,6 +13,39 @@ from pathlib import Path
 
 def run(*argv: str, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(argv, cwd=cwd, env=env, text=True, capture_output=True, check=False)
+
+
+def check_malformed_report(archive: Path, scratch: Path) -> None:
+    report = run("objdump", "-rC", str(archive), cwd=scratch)
+    if report.returncode:
+        raise SystemExit(f"exact panic control: objdump failed:\n{report.stderr[-2000:]}")
+    lines = report.stdout.splitlines(keepends=True)
+    in_runtime = False
+    for index, line in enumerate(lines):
+        if "file format" in line:
+            in_runtime = line.startswith("quire_contract_runtime-")
+        if in_runtime and line.startswith("OFFSET"):
+            lines.insert(index + 1, "00000000 core::panicking::panic\n")
+            break
+    else:
+        raise SystemExit("exact panic control: no RT-owned relocation table to mutate")
+
+    tools = scratch / "tools"
+    tools.mkdir()
+    malformed = scratch / "malformed-relocations.txt"
+    malformed.write_text("".join(lines))
+    wrapper = tools / "objdump"
+    wrapper.write_text(f"#!/bin/sh\ncat {shlex.quote(str(malformed))}\n")
+    wrapper.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = f"{tools}:{env['PATH']}"
+    check = run(sys.executable, "scripts/check_exact_panic.py", str(archive), cwd=scratch, env=env)
+    if check.returncode == 0 or "malformed RT-owned relocation" not in check.stderr:
+        raise SystemExit(
+            "exact panic control: malformed RT relocation report was not rejected:\n"
+            + f"check status: {check.returncode}\n{check.stderr[-2000:]}"
+        )
+    print("exact panic control: malformed RT relocation report rejected")
 
 
 def main() -> None:
@@ -27,6 +61,8 @@ def main() -> None:
         scratch = Path(temp)
         with tarfile.open(fileobj=io.BytesIO(archive.stdout), mode="r:") as source:
             source.extractall(scratch, filter="data")
+        artifact = target / target_triple / "exact-panic/libquire_contract_runtime_exact_panic.a"
+        check_malformed_report(artifact, scratch)
         scalar = scratch / "src/scalar/division.rs"
         content = scalar.read_text()
         anchor = "    items\n        .iter()"
@@ -47,7 +83,6 @@ def main() -> None:
         )
         if build.returncode:
             raise SystemExit(f"exact panic control: scratch build failed:\n{build.stderr[-4000:]}")
-        artifact = target / target_triple / "exact-panic/libquire_contract_runtime_exact_panic.a"
         check = run(sys.executable, "scripts/check_exact_panic.py", str(artifact), cwd=scratch)
         if check.returncode == 0 or "RT-owned panic relocations:" not in check.stderr:
             raise SystemExit(

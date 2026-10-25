@@ -21,6 +21,7 @@ PANIC_TARGET = re.compile(
 )
 OBJECT_HEADER = re.compile(r"^(\S+):\s+file format\s+\S+")
 SECTION_HEADER = re.compile(r"^RELOCATION RECORDS FOR \[(.+)\]:$")
+COLUMN_HEADER = re.compile(r"^OFFSET\s+TYPE\s+VALUE$")
 RELOCATION = re.compile(r"^\s*[0-9a-fA-F]+\s+\S+\s+(.+?)\s*$")
 
 
@@ -57,6 +58,7 @@ def main() -> None:
     report = tool("objdump", "-rC", str(archive))
     current = None
     section = None
+    awaiting_columns = False
     found_rt = set()
     found_probe = set()
     expected = set()
@@ -65,8 +67,11 @@ def main() -> None:
     for line in report.splitlines():
         header = OBJECT_HEADER.match(line)
         if header:
+            if awaiting_columns and current in runtime_members:
+                fail(f"missing relocation columns in RT-owned object {current}")
             current = header.group(1)
             section = None
+            awaiting_columns = False
             if current in runtime_members:
                 found_rt.add(current)
             if current in probe_members:
@@ -74,10 +79,22 @@ def main() -> None:
             continue
         section_header = SECTION_HEADER.match(line)
         if section_header:
+            if awaiting_columns and current in runtime_members:
+                fail(f"missing relocation columns in RT-owned object {current}")
             section = section_header.group(1)
+            awaiting_columns = True
+            continue
+        if current is None or section is None or not line.strip():
+            continue
+        if awaiting_columns:
+            if current in runtime_members and not COLUMN_HEADER.fullmatch(line):
+                fail(f"malformed RT-owned relocation columns in {current}: {line}")
+            awaiting_columns = False
             continue
         relocation = RELOCATION.match(line)
-        if relocation is None or current is None or section is None:
+        if relocation is None:
+            if current in runtime_members:
+                fail(f"malformed RT-owned relocation in {current}: {line}")
             continue
         if current in runtime_members or current in probe_members:
             relocations += 1
@@ -86,6 +103,8 @@ def main() -> None:
         if current in probe_members and section.startswith(".text"):
             expected.update(call for call in EXPECTED_CALLS if call in relocation.group(1))
 
+    if awaiting_columns and current in runtime_members:
+        fail(f"missing relocation columns in RT-owned object {current}")
     if found_rt != runtime_members or found_probe != probe_members or relocations == 0:
         fail("unparseable or incomplete object relocation report")
     missing = set(EXPECTED_CALLS) - expected

@@ -42,6 +42,10 @@ fn exact_probe_retains_required_rt_calls_without_panic_relocations() {
         output.contains("panic_references=0"),
         "panic verdict absent: {output}"
     );
+    assert!(
+        output.contains("exact panic control: malformed RT relocation report rejected"),
+        "malformed relocation negative control did not run: {output}"
+    );
 }
 
 #[trace("NFR-002-AC-9")]
