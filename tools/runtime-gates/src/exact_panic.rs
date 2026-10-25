@@ -255,13 +255,7 @@ fn malformed_control(
     }
 }
 
-fn panic_control(
-    root: &Path,
-    target: &Path,
-    msrv: &str,
-    triple: &str,
-    cargo: &str,
-) -> Result<(), String> {
+fn panic_control(root: &Path, target: &Path, msrv: &str, triple: &str) -> Result<(), String> {
     let scratch = tempfile::tempdir_in(target).map_err(|error| error.to_string())?;
     let archive = scratch.path().join("candidate.tar");
     output(
@@ -297,7 +291,7 @@ fn panic_control(
     )
     .map_err(|error| error.to_string())?;
     output(
-        Command::new(cargo)
+        Command::new("cargo")
             .current_dir(&candidate)
             .arg(format!("+{msrv}"))
             .args([
@@ -324,17 +318,15 @@ fn panic_control(
 }
 
 pub fn run(root: &Path, args: &[String]) -> Result<String, String> {
-    let [archive, target, msrv, triple, cargo] = args else {
-        return Err(
-            "usage: runtime-gates exact-panic-probe ARCHIVE TARGET_DIR MSRV TARGET CARGO".into(),
-        );
+    let [archive, target, msrv, triple] = args else {
+        return Err("usage: runtime-gates exact-panic-probe ARCHIVE TARGET_DIR MSRV TARGET".into());
     };
     let archive = root.join(archive);
     let target = root.join(target);
     fs::create_dir_all(&target).map_err(|error| error.to_string())?;
     let (summary, report, runtime, probe) = inspect(&archive)?;
     malformed_control(&report, &runtime, &probe)?;
-    panic_control(root, &target, msrv, triple, cargo)?;
+    panic_control(root, &target, msrv, triple)?;
     Ok(format!(
         "{summary}\nexact panic control: malformed RT relocation report rejected\nexact panic control: reachable RT-owned panic relocation detected"
     ))

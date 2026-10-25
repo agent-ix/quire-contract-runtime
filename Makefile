@@ -113,7 +113,7 @@ exact-panic-probe:
 		--target $(FOOTPRINT_TARGET) --target-dir $(EXACT_PANIC_TARGET_DIR)
 	$(CARGO) run $(LOCKED) --quiet -p quire-contract-runtime-gates -- exact-panic-probe \
 		$(EXACT_PANIC_TARGET_DIR)/$(FOOTPRINT_TARGET)/exact-panic/libquire_contract_runtime_exact_panic.a \
-		$(EXACT_PANIC_TARGET_DIR) $(MSRV) $(FOOTPRINT_TARGET) $(CARGO)
+		$(EXACT_PANIC_TARGET_DIR) $(MSRV) $(FOOTPRINT_TARGET)
 
 .PHONY: exact-panic
 exact-panic:
