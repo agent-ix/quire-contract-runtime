@@ -42,3 +42,12 @@ did not update them.
 Changes requested. Two small consistency edits outside the lines already
 touched. AC preservation passes: no criterion is reworded, narrowed or
 deleted, and the planned status of every affected row is kept.
+
+## Dispositions
+
+Round 1, checked at head 4a2f998bab9f45e3c0fd5e76ff114f70372710f1.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | spec/core/matrix/tests.md:24 now reads "IR-349 owns their scalar move; IR-1009 owns the separate end-state inspection after removing the `exact` module". The status stays 🚧 and the AC list is unchanged. |
+| FND-002 | fixed | interface-001:115 reads "(FR-275; IR-349 steps 1–4 and IR-1009 closure)", and :168 reads "(FR-275; IR-1009 closure): no exact module; IR-349 step 3 moves the kept items to scalar". |

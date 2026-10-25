@@ -79,3 +79,20 @@ wording. FND-001 is the one issue that leaves work without an owner: the
 `scalar` relocation has no open ticket now that IR-349 is Done. FND-002 and
 FND-003 are mostly tracker fixes for the planner, plus one cross-reference
 sentence in AD-004. FND-004 is wording.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-005 | low | The rewritten IR-1009 description calls the expression-port deletion "step 6 of RT AD-004". At 4a2f998, AD-004 assigns that deletion to step 5 (row "5 (IR-1009)"); step 6 is the end-state closure that follows it. This is tracker text, not spec, so no PR change is needed: the planner should correct the step number in IR-1009. | spec/assurance/AD-004-runtime-crate-layout.md:425-426 |
+
+## Dispositions
+
+Round 1, checked at head 4a2f998bab9f45e3c0fd5e76ff114f70372710f1 (fix commit 4a2f998 over 56fd812) and against Linear state at review time.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | AD-004 now states "Its step 3 creates the `scalar` module, moves all 11 runtime-owned items out of `src/exact`", and the step-3 row is labelled "3 (IR-349)". IR-349 is back to In Progress in Linear. |
+| FND-002 | still-open | The spec half is fixed: AD-004:382 says "IR-590 is not a precondition for IR-349 or IR-497", and :398-400 give IR-497 the std `CallDepthExceeded` removal for FR-278-AC-1 and quire-exact FR-369-AC-1. The tracker half is not: Linear still records IR-590 blocks IR-349 and IR-590 blocks IR-497, which contradicts that new sentence. Only a planner edit in Linear is missing (remove both edges); no further PR change is needed. |
+| FND-003 | fixed | The IR-1009 description now lists "the end-state closure that follows, plus the criteria waiting on it: FR-273-AC-12/13, FR-275-AC-1/13/16/18/29/30, TC-194/197/199". (Its step number is off; see FND-005.) |
+| FND-004 | fixed | AD-004 now cites "FR-273-AC-7's required std call test is 4,096 calls on a 64 KiB native stack" and puts the 100,000-call, 512 KiB test under FR-273-AC-13. |
