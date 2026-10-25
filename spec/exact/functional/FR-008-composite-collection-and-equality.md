@@ -52,8 +52,15 @@ while their evidence is reconciled with the QSV and kernel owners.
 - A `TypeEnvironment` admits its composites and object types only after `check_member_types` and two
   `check_recursion` passes both succeed; it refuses a `Reference<T>` whose target is not a model
   object type, and a set, bag or ordered-set element type that bears an IEEE value at any depth
-  (`OperatorIneligible`), through `check_type` and `contains_ieee`. `record` and `tuple` construct
-  from already-completed fields or positions; `evaluate_record` and `evaluate_tuple` run deferred
+  (`OperatorIneligible`), through `check_type` and `contains_ieee`. Its named-declaration check
+  covers composite and object-reference declarations admitted by that environment, not enum
+  declarations. The quire-spec-language checker owns enum declaration admission against its
+  package scope: an authored enum type name absent from that scope is refused as a typed
+  `MissingName` during type-form resolution, while `Typer::check_declared_type` refuses an enum
+  shape absent from the admitted enum bindings as `IllTyped(TypeMismatch)`. The runtime consumes
+  the resulting checked type and does not maintain a second enum-declaration registry. `record`
+  and `tuple` construct from already-completed fields or positions; `evaluate_record` and
+  `evaluate_tuple` run deferred
   field and position expressions in declaration order under the first-stopped rule, then charge
   `composite.result-retain` with the exact `occ` of the completed value before exposing it.
 - `construct_collection` charges `collection.element` and then runs the deferred element; the first

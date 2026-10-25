@@ -15,7 +15,9 @@ Check QSV `TypeEnvironment` admission, shared composite construction,
 vocabulary. IR-882 removed RT's duplicate implementation and its former
 `tests/exact_composite.rs` controls. Quire-exact FR-368-AC-1/2 owns the full
 vocabulary census. The remaining procedures below require owner evidence and
-RT consumer controls to be mapped before they receive acceptance credit.
+RT consumer controls to be mapped before they receive acceptance credit. Enum
+declaration admission belongs to the quire-spec-language checker and needs a
+direct missing-enum type-form control there, not an RT `TypeEnvironment::check_type` test.
 
 ## Test Procedure
 
@@ -31,7 +33,11 @@ RT consumer controls to be mapped before they receive acceptance credit.
 3. Check `check_type` refuses a `Reference<T>` to a non-object-type declaration as `type-mismatch`
    and a set/bag/ordered-set element type bearing an IEEE value as `operator-ineligible`, and
    `contains_ieee` finds a `Float32`/`Float64` at any depth through nested record and tuple
-   declarations.
+   declarations. Inspect the shared value environment's `check_type` to confirm its named-key
+   lookup covers composite and object-reference declarations. At the quire-spec-language checker,
+   resolve an authored enum type name absent from the admitted scope and assert a typed
+   `MissingName`; inspect `Typer::check_declared_type` for the separate typed
+   `IllTyped(TypeMismatch)` guard on an enum shape absent from its admitted bindings.
 4. Build records and tuples with a missing required field, a `null` for a required field, an
    undeclared or duplicated field, and a wrong tuple arity; check each `ConstructionRefusal` names
    its `Component` and `ConstructionCause`. Run `evaluate_record`/`evaluate_tuple` with deferred
