@@ -50,8 +50,7 @@ use quire_semantic_value::declaration::TypeEnvironment;
 use quire_semantic_value::object_closure::ObjectClosure;
 use quire_semantic_value::stop::{outcome_from_stop, Stop};
 
-use super::division::IntegerDivisionConsumer;
-use super::ieee::IeeeItemRequirement;
+use crate::scalar::{IeeeItemRequirement, IntegerDivisionConsumer};
 
 /// The authority's two checking modes, moved rather than added: the
 /// authority threads a `CheckMode` through its own per-expression checking

@@ -11,8 +11,8 @@
 //!   undefined partial operation returns `None`, and counters saturate.
 //! - **Size:** core values contain only fixed-size enums, integers, and borrowed slices/strings.
 //!   Their exact byte size is target-dependent and is measured for each release candidate.
-//! - **Compatibility:** public data enums are non-exhaustive. Consumers must retain unknown future
-//!   states rather than converting them to success.
+//! - **Compatibility:** the runtime-owned `scalar` enums are exhaustive. Remaining expression
+//!   residue and core data enums are non-exhaustive; consumers retain unknown future states.
 //! - **Safety:** the crate forbids unsafe code.
 
 #![no_std]
@@ -64,6 +64,9 @@ pub mod operators;
 #[cfg(feature = "proptest")]
 // Implements: FR-003
 pub mod proptest_adapter;
+// Implements: FR-006, FR-009
+#[cfg(feature = "exact")]
+pub mod scalar;
 // Implements: FR-001
 pub mod verdict;
 

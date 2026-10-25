@@ -11,11 +11,13 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    negotiate_ieee, negotiate_integer_division, plan_call, plan_evaluation, CheckCause, CheckMode,
-    CheckRefusal, CheckedPackage, CheckingLimits, DepthAboveMaximum, EvaluationRefusal,
-    FunctionDeclaration, IeeeBackendCapabilities, IeeeDisposition, IeeeItemRequirement,
-    IeeeUnsupportedCause, InputRefusal, IntegerDivisionConsumer, IntegerDivisionDisposition,
+    plan_call, plan_evaluation, CheckCause, CheckMode, CheckRefusal, CheckedPackage,
+    CheckingLimits, DepthAboveMaximum, EvaluationRefusal, FunctionDeclaration, InputRefusal,
     Location, Origin, PackageDeclarations, MAX_CALL_DEPTH,
+};
+use quire_contract_runtime::scalar::{
+    negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,
+    IeeeItemRequirement, IeeeUnsupportedCause, IntegerDivisionConsumer, IntegerDivisionDisposition,
 };
 use quire_exact::{
     ChargePoint, CheckedInvariantCause, EffectiveId, Identifier, IeeeOperationKind, IeeeWidth,
@@ -1388,7 +1390,7 @@ fn tc_195_dischargeable_requirements_negotiate_supported_or_requires_bound() {
 /// itself proves, not one a runtime assertion on an unreachable local
 /// `Meter` could discriminate. Its result type having no path into
 /// `Outcome`/`InputRefusal` is proven separately, by the `compile_fail`
-/// doctest on `IeeeDisposition` (`src/exact/ieee.rs`).
+/// doctest on `IeeeDisposition` (`src/scalar/ieee.rs`).
 #[trace("TC-195", "FR-273-AC-4")]
 #[test]
 fn tc_195_negotiate_ieee_takes_no_meter_by_signature() {
@@ -1409,7 +1411,7 @@ fn tc_195_negotiate_ieee_takes_no_meter_by_signature() {
 // TC-195, FR-273-AC-4: `IeeeDisposition` has no conversion to `Outcome<Value>`
 // or `InputRefusal`. That is a static property, not a runtime one, so it is
 // enforced by a real `compile_fail` doctest on `IeeeDisposition` itself
-// (`src/exact/ieee.rs`, run under `cargo test --doc`) rather than by a
+// (`src/scalar/ieee.rs`, run under `cargo test --doc`) rather than by a
 // `#[test]` here — a doc comment on a `#[test]` fn in an integration test
 // file is never scanned as a doctest, so that placement would have been
 // silently vacuous.

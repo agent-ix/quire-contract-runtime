@@ -84,7 +84,7 @@ invariants:
   - imported snapshots cannot be converted to mutable CampaignReport values
   - snapshot-json uses alloc without std; allocator exhaustion is not universally recoverable
 compatibility:
-  enums: non-exhaustive; consumers must preserve future unknown states
+  enums: the five runtime-owned scalar enums are exhaustive; core and remaining expression-residue data enums are non-exhaustive, and consumers must preserve their future unknown states
   const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at the runtime's Rust floor
   msrv: Rust 1.98.1
   licensing: AGPL-3.0-or-later
@@ -198,7 +198,7 @@ exact:
       quantity: [QuantityOperation, QuantityTarget, QuantityUnit, Conversion, evaluate_quantity, convert_quantity]
   runtime_owned:
     owner: quire-contract-runtime
-    module: scalar  # target: the module does not exist yet; today these items are in the exact module
+    module: scalar  # implemented: the 11 runtime-owned items live here; the exact expression residue remains separate
     rule: only the negotiation items and the lazy Boolean connective below
     always_runtime: [negotiate_integer_division, negotiate_ieee]
     connective:
