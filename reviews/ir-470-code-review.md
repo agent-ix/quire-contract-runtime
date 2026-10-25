@@ -3,7 +3,7 @@ id: SR-35025
 title: "Code review of IR-470 exact panic gate"
 type: SpecReview
 analysis: code-review
-scope: "agent-ix/quire-contract-runtime; Cargo.toml, Cargo.lock, Makefile, deny.toml, measurement/exact-panic/, scripts/check_exact_panic*.py, src/scalar/division.rs, tools/kernel-api-check/"
+scope: "agent-ix/quire-contract-runtime; Cargo.toml, Cargo.lock, Makefile, deny.toml, measurement/exact-panic/, scripts/check_exact_panic*.py (removed), src/scalar/division.rs, tools/kernel-api-check/, tools/runtime-gates/src/exact_panic.rs"
 review_set: subset
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/NFR-002
@@ -45,3 +45,5 @@ Reviewed PR #165 at cee7730f8cb43231d17a0beff19f818c77def9a5 against NFR-002-AC-
 At d6d27b8e5f357a664a37b70bfbdcd2c9c98a5c76, `scripts/check_exact_panic.py` adds `CheckedPackage>::check_expression` to the required probe relocations. The consumer already calls `check_expression` before `evaluate`. A focused `make exact-panic-probe` passed and reported that relocation among the required calls, zero recognized RT panic relocations, and detection of the scratch injected panic. No new code finding arose from this delta.
 
 At 075929af662d7767857080283fee39a388195b42, the parser requires relocation column headers and rejects malformed lines in RT-owned relocation tables. Focused `make exact-panic-probe` parsed the legitimate `objdump -rC` output and passed. Its same-archive control injected a malformed RT row into the positive report and observed the scanner's specific malformed-relocation rejection; the reachable panic control still failed as intended. No new code finding arose from this delta.
+
+At b72013ca0b744e827fa9774c5bcf54923f08089f, the Python gate was replaced with `tools/runtime-gates/src/exact_panic.rs`. The Rust parser preserves the RT/probe object census, relocation and required-call checks, recognized panic targets, malformed-report rejection, and scratch reachable-panic control. The scratch build uses literal `cargo`; every process launch in the new module names a literal program. No Python or shell script is called by the exact-panic Make target. Focused `make exact-panic` passed two traced gate tests, one positive divisor test, and three compile-fail doctests; `cargo fmt --all -- --check` and gate-crate Clippy with `-D warnings` passed. The current correction review verdict is **PASS**, with no new finding. The historical findings and their fixed dispositions remain above.

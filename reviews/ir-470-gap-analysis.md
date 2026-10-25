@@ -3,7 +3,7 @@ id: SR-35026
 title: "Gap analysis of IR-470 exact panic gate"
 type: SpecReview
 analysis: gap-analysis
-scope: "agent-ix/quire-contract-runtime; NFR-002-AC-8..10, TC-206, Makefile, measurement/exact-panic/, scripts/check_exact_panic*.py, tools/kernel-api-check/"
+scope: "agent-ix/quire-contract-runtime; NFR-002-AC-8..10, TC-206, Makefile, measurement/exact-panic/, scripts/check_exact_panic*.py (removed), tools/kernel-api-check/, tools/runtime-gates/src/exact_panic.rs"
 review_set: subset
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/NFR-002
@@ -45,3 +45,5 @@ The Python commands are wired into `make ci`, but the declared Test evidence mod
 At d6d27b8e5f357a664a37b70bfbdcd2c9c98a5c76, the probe gate also requires `CheckedPackage>::check_expression`, closing the retained exact expression call list under NFR-002-AC-8 and TC-206. The tagged AC-8 test invokes that same gate, and focused `make exact-panic-probe` passed with the new required call reported. The prior dispositions remain fixed; no new trace gap arose from this delta.
 
 At 075929af662d7767857080283fee39a388195b42, the AC-8 tagged gate test asserts that the malformed-report control ran. The control modifies a legitimate positive `objdump` report by inserting a malformed RT-owned relocation row and requires the scanner's specific rejection under AC-9. Focused `make exact-panic-probe` passed both the positive and negative cases. The prior dispositions remain fixed; no new gap arose from this delta.
+
+At b72013ca0b744e827fa9774c5bcf54923f08089f, Quoin's computed matrix still binds AC-8 and AC-9 to the real `tests/exact_panic_gate.rs` tests and AC-10 to the direct kernel API test. The Rust gate's `inspect` runs the same archive census and required-call/panic-relocation verdict; `malformed_control` mutates a previously accepted report and requires a parser-specific rejection; `panic_control` compiles a scratch RT panic and requires the full `inspect` verdict to reject it. `make exact-panic` passed all three Test criteria's focused controls. Plan completion remains unassessed. The current correction gap verdict is **PASS**; no new unowned behavior or hollow trace was found.
