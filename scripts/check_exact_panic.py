@@ -11,6 +11,7 @@ EXPECTED_CALLS = (
     "negotiate_integer_division",
     "negotiate_ieee",
     "PackageDeclarations>::check",
+    "CheckedPackage>::check_expression",
     "CheckedPackage>::evaluate",
 )
 GENERIC_CALL = "evaluate_boolean_short_circuit::<quire_contract_runtime_exact_panic::quire_runtime_exact_panic"
