@@ -10,7 +10,7 @@ type: TestMatrix
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |---|---|---|---|
-| FR-006 | FR-006-AC-1 | TC-016 | ✅ RT `tests/exact_outcome_consumer.rs` exercises all four dispositions through the runtime Boolean evaluator, distinguishes completed `false`, and exhaustively matches the consumed kernel reason enums |
+| FR-006 | FR-006-AC-1 | TC-016 | 🚧 AC-1 has a tagged RT consumer test for all four dispositions, completed `false` and the closed kernel reason enums; TC-016's AC-3 vocabulary and accounting procedure remains open |
 | FR-006 | FR-006-AC-6 | — (Inspection) | 🚧 owner-backed by quire-exact FR-096-AC-8 for code/cause; RT consumes typed `Outcome::Refused(Refusal)` directly through `src/exact/mod.rs`, but no RT-local inspection binder remains after the stale four-code test was removed |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
 | FR-006 | FR-006-AC-3 | TC-016, TC-017 | 🚧 owner-backed by quire-exact FR-368-AC-1/2 for vocabulary and FR-359-AC-6/7 for meter ordering; local kernel tests removed |
@@ -120,6 +120,10 @@ FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and
 TC-199 use the gate targets named under Evidence Locations. The retired TC-016 four-code
 Rust tests and tags are absent. FR-006-AC-6 is an ownership inspection of the direct
 typed kernel outcome boundary; quire-exact FR-096-AC-8 owns the kernel code/cause census.
+Inspection of `src/scalar/boolean.rs` and `src/exact/expression.rs` confirms that the runtime's
+Boolean evaluator, `Body`, and `Evaluation.outcome` use `quire_exact::Outcome` and its
+`Refusal` reasons directly; `CheckRefusal`, `InputRefusal`, and `EvaluationRefusal` report
+checking or pre-evaluation input rejection rather than a second outcome-reason carrier.
 `quire matrix` reports trace presence, not semantic coverage across repositories. The
 retained RT charge-point driver binds FR-010-AC-1 and observes one-pair reservation
 behavior. The complete injected record and simultaneous ordinary-limit precedence

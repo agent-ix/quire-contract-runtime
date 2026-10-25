@@ -120,7 +120,7 @@ fn closed_charge_point(point: ChargePoint) {
     }
 }
 
-#[trace("TC-016", "FR-006-AC-1")]
+#[trace("FR-006-AC-1")]
 #[test]
 fn consumed_exact_outcomes_keep_false_distinct_from_all_stops() {
     let limits = ScalarLimits {
