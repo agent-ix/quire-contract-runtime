@@ -33,8 +33,10 @@ and accounting procedure remains open.
    reason enums and the `Incomplete` record with its `LimitKind` and `ChargePoint` fields.
    Confirm the runtime exposes no separate reason carrier. Do not infer the kernel
    code/cause census from the retired local four-code tests.
-3. Round-trip every `ChargePoint` and `LimitKind` through its spelling; check the eleven QSpec
-   families are present and `equality.plan-form` is absent.
+3. Compare every `ChargePoint` and `LimitKind` spelling with the complete QSpec
+   `quire.value.accounting/v1` vocabulary. Round-trip each declared spelling through its enum
+   value and back, reject undeclared spellings, and check that `equality.plan-form` round-trips as
+   its own charge point, distinct from `equality.plan`.
 
 ## Expected Results
 
