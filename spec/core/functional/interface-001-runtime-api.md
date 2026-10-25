@@ -115,7 +115,7 @@ Today generated oracles and `quire-contract-codegen` reach exact semantic values
 `quire_contract_runtime::exact`. The target end state (FR-275; IR-349 steps 1–4 and IR-1009 closure) is that they reach them
 through the owning crates' own paths (`quire_exact::`, `quire_semantic_value::`), which generated source
 names directly; the runtime then defines no `quire_contract_runtime::exact` module and re-exports nothing
-from those crates, and its own kept items are in a `scalar` module, which does not exist yet.
+from those crates. Its own kept items now live in `scalar`.
 `quire-contract-codegen` also depends on `quire-exact` directly (ADR-011 X-1). The runtime operators
 that generated code and the code generator call are the IR build-plan seam S4 (runtime operators). That
 name is unrelated to ADR-011's stage-DAG entry S4 (Linked checked package) or

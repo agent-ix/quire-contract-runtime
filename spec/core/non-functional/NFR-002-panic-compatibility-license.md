@@ -14,6 +14,8 @@ relationships:
 For all valid Rust values, public evaluation and accounting APIs shall avoid intentional panics; the
 crate shall remain `publish = false`, licensed `AGPL-3.0-or-later`, and forward-compatible by
 using non-exhaustive public data enums where downstream exhaustive matching would impede evolution.
+The five runtime-owned scalar enums are closed under AD-004 Q-4 and exhaustive; core and
+remaining expression-residue data enums retain their non-exhaustive compatibility contract.
 
 ## Scope
 
@@ -42,7 +44,7 @@ must be explicit to downstream users.
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | NFR-002-AC-1 | Valid public evaluation and accounting inputs encounter no intentional panic path. | property-based-testing (TC-003) |
-| NFR-002-AC-3 | Public data enums whose evolution affects downstream matching remain non-exhaustive, as the `compile_fail` doctests in `src/observation.rs` and `src/verdict.rs` show. | compile-time-check |
+| NFR-002-AC-3 | Public core and remaining expression-residue data enums whose evolution affects downstream matching remain non-exhaustive, as the `compile_fail` doctests in `src/observation.rs` and `src/verdict.rs` show. The five runtime-owned scalar enums are closed and exhaustive under AD-004 Q-4. | compile-time-check |
 | NFR-002-AC-5 | The crate manifest declares `license = "AGPL-3.0-or-later"`. | Inspection |
 | NFR-002-AC-6 | The crate manifest declares `publish = false`, disabling registry publication for this package. | Inspection |
 | NFR-002-AC-7 | `make deny` passes its license-policy check for the resolved dependency set. | sca-sbom (`make deny`) |
