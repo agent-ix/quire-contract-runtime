@@ -1,43 +1,34 @@
 ---
-id: SR-35038
-title: 'IR-497 code review of RT #161'
+id: SR-35043
+title: "Code review of IR-497 RT consumer control"
 type: SpecReview
 analysis: code-review
-scope: agent-ix/quire-contract-runtime; src/exact/expression.rs, measurement/exact-panic/src/lib.rs,
-  tests/exact_function_application.rs
+scope: "agent-ix/quire-contract-runtime; tests/exact_deep_value_type.rs; FR-008-AC-13; TC-024"
 review_set: subset
 ---
 
 ## Summary
 
-Ticket: IR-497. PR #161 at 48457f5be2963da589a60ecdada758546feb6bb8. Examined FR-273 acceptance criteria and the changed runtime and tests.
+Ticket IR-497, PR #171, frozen code head b08897598693c085a737c7d43788b2ad17b52d1b. Reviewed the new RT consumer test against FR-008-AC-13 and TC-024.
 
 ## Verdict
 
-**FAIL** — 2 actionable finding(s).
+**CONDITIONAL** — the default-stack child can report success without executing the test. The small-stack thread, deep positive and negative comparisons, and shallow Debug literals have real assertions.
+
+## Examined scope
+
+- FR-008-AC-13: For an `Option`/`Collection`-nested `ValueType` whose depth exceeds a recursive host-stack walk under the admitted source-size cap, `Clone`, `PartialEq`, `Debug` and `Drop` complete on a small-stack thread and a default-stack child process without host-stack overflow; unequal leaf, collection kind and bound remain unequal, and the shallow compact and alternate `Debug` output matches the derived representation exactly.
+- TC-024 step 7: On a bounded small-stack thread and a default-stack child process, construct an under-source-cap
+- tests/exact_deep_value_type.rs, all 127 lines at the frozen head.
 
 ## Findings
 
 | ID | Severity | Summary | Refs |
 | --- | --- | --- | --- |
-| FND-001 | high | The exact-panic probe still constructs the removed two-argument Body closure, so its crate cannot compile | measurement/exact-panic/src/lib.rs:92 |
-| FND-002 | medium | Nested package entry reports GeneratedUnexpectedOutcome, which describes a different adapter fault | src/exact/expression.rs:704 |
+| FND-001 | medium | Child exit success can report zero tests, so the default-stack arm can pass without exercising deep type traits. | tests/exact_deep_value_type.rs:93-108 |
+| FND-002 | low | An inherited child-marker variable makes the parent skip both the 64 KiB thread and child process. | tests/exact_deep_value_type.rs:80-83 |
+| FND-003 | low | The child inherits RUST_MIN_STACK, so its libtest thread may use a configured stack rather than the default stack. | tests/exact_deep_value_type.rs:93-101 |
 
-## Coverage
+## Review evidence
 
-Scope examined: FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-4, FR-273-AC-5, FR-273-AC-6, FR-273-AC-7, FR-273-AC-8, FR-273-AC-9, FR-273-AC-10, FR-273-AC-11, FR-273-AC-12, FR-273-AC-13.
-Rust gates were not run by this reviewer because another process was running focused tests in the same worktree. Static inspection traced the exact-panic probe compile error.
-
-## New findings (disposition pass 1)
-
-| ID | Severity | Summary | Refs |
-| --- | --- | --- | --- |
-| FND-003 | low | The Kani census comment still names the removed Frame::call API | verification/kani.rs:20 |
-
-## Dispositions
-
-| Round | ID | Outcome | Evidence |
-| --- | --- | --- | --- |
-| 1 | FND-001 | fixed | measurement/exact-panic/src/lib.rs:92-96 now builds a Body factory returning a state whose transition returns BodyStep::Return(Outcome::Completed(Value::Boolean(true))); the exact-panic probe builds with panic_references=0. |
-| 1 | FND-002 | fixed | src/exact/expression.rs:712,745 now return CheckedInvariantCause::PackageReentry on failed begin(); tests/exact_function_application.rs:1657-1663 asserts this cause and zero nested work units. |
-| 2 | FND-003 | fixed | verification/kani.rs:19-21 now describes checked package application through CheckedPackage::call; no live Kani comment names removed Frame::call. |
+Independent semantic review used claude-opus-5-5 on the frozen test, FR-008-AC-13, TC-024 and the pinned quire-exact ValueType trait implementation. The pinned source shows iterative Clone, PartialEq, Debug and Drop. No Cargo gate was run by this reviewer; focused checks in the PR body are claims pending the code lead's final gate. No applicable AssuranceProfile was found under RT spec/.

@@ -5,7 +5,8 @@ use ix_trace_rs::trace;
 use quire_exact::{CardinalityBound, CollectionKind, CollectionType, ValueType};
 
 const DEPTH: usize = 16_384;
-const CHILD_MARKER: &str = "QUIRE_RT_DEEP_VALUE_TYPE_CHILD";
+const CHILD_TEST: &str = "default_stack_child_entry_for_deep_value_type_traits";
+const CHILD_COMPLETED: &str = "deep-value-type-child-completed";
 
 fn nested_type(
     leaf: ValueType,
@@ -77,11 +78,6 @@ fn exercise_deep_type() {
 #[test]
 #[trace("TC-024", "FR-008-AC-13")]
 fn deep_value_type_traits_complete_on_small_and_default_stacks() {
-    if std::env::var_os(CHILD_MARKER).is_some() {
-        exercise_deep_type();
-        return;
-    }
-
     std::thread::Builder::new()
         .stack_size(64 * 1024)
         .spawn(exercise_deep_type)
@@ -91,21 +87,38 @@ fn deep_value_type_traits_complete_on_small_and_default_stacks() {
 
     let executable = std::env::current_exe().expect("test executable");
     let child = std::process::Command::new(executable)
-        .args([
-            "--exact",
-            "deep_value_type_traits_complete_on_small_and_default_stacks",
-            "--nocapture",
-        ])
-        .env(CHILD_MARKER, "1")
+        .args(["--ignored", "--exact", CHILD_TEST, "--nocapture"])
+        .env_remove("RUST_MIN_STACK")
         .output()
         .expect("spawn the default-stack child process");
+    let stdout = String::from_utf8_lossy(&child.stdout);
     assert!(
         child.status.success(),
         "deep type traits complete in child: status={:?}, stdout={}, stderr={}",
         child.status,
-        String::from_utf8_lossy(&child.stdout),
+        stdout,
         String::from_utf8_lossy(&child.stderr)
     );
+    assert!(
+        stdout.contains("running 1 test"),
+        "child ran no test: {stdout}"
+    );
+    assert!(
+        stdout.contains(CHILD_COMPLETED),
+        "child did not finish the deep type exercise: {stdout}"
+    );
+    assert!(
+        stdout.contains(&format!("test {CHILD_TEST} ... ok")),
+        "child did not pass the selected test: {stdout}"
+    );
+}
+
+#[test]
+#[ignore = "run by deep_value_type_traits_complete_on_small_and_default_stacks in a child process"]
+#[trace("TC-024", "FR-008-AC-13")]
+fn default_stack_child_entry_for_deep_value_type_traits() {
+    exercise_deep_type();
+    println!("{CHILD_COMPLETED}");
 }
 
 #[test]
