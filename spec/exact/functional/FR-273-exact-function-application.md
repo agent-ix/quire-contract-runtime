@@ -88,7 +88,8 @@ calls the ported surface.
   `check_expression` checks parameter and result types only.
 - A checked body that requests a function absent from its own package returns
   `CheckedInvariant { cause: UnknownCheckedFunction }`; a re-entrant mutable meter borrow returns
-  `CheckedInvariant { cause: MeterBorrowConflict }`. These checked-program failures retain their
+  `CheckedInvariant { cause: MeterBorrowConflict }`. Direct host re-entry into an active checked
+  package returns `CheckedInvariant { cause: PackageReentry }` before any nested charge. These checked-program failures retain their
   distinct causes and remain internal faults.
 - A function whose declared operator requirements no registered backend can discharge settles
   `unsupported` with a warning naming the required capability. FR-009's negotiators decide that
@@ -99,8 +100,8 @@ calls the ported surface.
   name, an argument count or kind mismatch against the checked signature, or an argument
   `Value::Reference` the supplied `ObjectEnvironment` cannot resolve, each refuse call input with no
   `Meter` participation, exactly as `plan_equality`'s pre-charge refusals do for equality.
-- The current synchronous `Body` closure and `Frame::call` contract cannot suspend a caller. The
-  runtime SHALL replace that contract with a resumable body interface. For each invocation the
+- The runtime SHALL use `Body` as a factory for resumable state in place of a synchronous
+  evaluator closure and `Frame::call`. For each invocation the
   generated producer creates owned state containing its next instruction, bound values and the
   destination for a child's result. The runtime invokes one transition at a time with either the
   initial arguments or a completed child value; a transition returns either a request to
@@ -150,7 +151,7 @@ stack and `work_units` fuel; it does not set a call-depth ceiling.
 | FR-273-AC-5 | Outcome, refusal and charge sequence agree with the quire-spec-language authority on every shared-corpus function-application vector. | Test (TC-194) |
 | FR-273-AC-6 | `CheckMode::Kernel` application is out of scope: no test in this requirement's corpus applies a package checked only under `CheckMode::Kernel`. | Inspection (TC-194) |
 | FR-273-AC-7 | A checked, decreasing function completes 4,096 runtime-managed calls on a 64 KiB native stack when `work_units` suffices; across depths 1, 128 and 4,096, no two generated-body transitions are simultaneously active, and inspection shows the scheduler returns to one loop before invoking the next transition. No depth-specific refusal or incomplete outcome exists. | Test (TC-194) |
-| FR-273-AC-8 | A foreign checked expression, an absent function requested within a checked body, and a re-entrant meter borrow carry `ForeignCheckedExpression`, `UnknownCheckedFunction`, and `MeterBorrowConflict` respectively, without changing their charge behavior or treating them as ordinary input refusals. | Test (TC-194) |
+| FR-273-AC-8 | A foreign checked expression, an absent function requested within a checked body, a re-entrant meter borrow, and direct host re-entry into an active checked package carry `ForeignCheckedExpression`, `UnknownCheckedFunction`, `MeterBorrowConflict`, and `PackageReentry` respectively; host re-entry is refused before nested charge, and none is treated as an ordinary input refusal. | Test (TC-194) |
 | FR-273-AC-9 | For an admitted chain of `N` calls whose bodies only request the next call or return a literal, the expected charge vector is `function.call` repeated `N` times and the expected `work_units` spend is `N`. A limit of `N` completes; a limit of `N - 1` returns `Incomplete` at the Nth `function.call`, naming `work_units`, with exactly `N - 1` calls in both the counter and log, and without changing the checked package's static totality verdict. | Test (TC-194) |
 | FR-273-AC-10 | In a nested call with two argument applications and an enclosing application, the charge vector is exactly three `function.call` entries in left argument, right argument, enclosing call order; the enclosing charge precedes parameter binding and body work. With `work_units: 2`, the enclosing charge is denied, the log and counter retain exactly the first two calls, and no enclosing body work occurs. | Test (TC-194) |
 | FR-273-AC-11 | A resumable body transition returns a child-call request while its owned parent state retains live locals and the child-result destination; after the child completes, the runtime resumes that parent with the child's value and does not invoke a second body transition from within the first. A stopped child propagates without resuming the parent. | Test (TC-194) |

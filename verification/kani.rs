@@ -17,8 +17,9 @@ use quire_exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, Scala
 // `i64` and promotes to a boxed `BigInt` only when it does not fit, so a symbolic operand narrowed
 // to a small integer type never reaches `BigInt` on its own. What this census still excludes is a
 // harness that builds an `Integer` behind a symbolic `exact::Value` and drives it through the
-// generic call path (`Frame::call`): `Value`'s container arms (`Collection`, `Composite`,
-// `Option`) read a pointer out of a merged, not-fully-constant payload when the prover cannot
+// checked package application (`CheckedPackage::call`): `Value`'s container arms
+// (`Collection`, `Composite`, `Option`) read a pointer out of a merged,
+// not-fully-constant payload when the prover cannot
 // determine which variant it holds, which does not discharge, independent of `Integer`'s own
 // representation. `compare_ieee` is `quire-exact`'s (FR-275) and reaches its `ieee` module
 // (`decode`, `Class`, `total_order_key`) without ever constructing a `BigInt` or a `Value`:

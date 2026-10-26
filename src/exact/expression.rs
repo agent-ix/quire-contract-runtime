@@ -2,39 +2,17 @@
 //! Function application under exact semantics (quire-specification/FR-146,
 //! FR-273).
 //!
-//! AD-002 controls the boundary this module ports: the runtime carries the
-//! *call surface* of `quire_spec_language::value::expression` only. A
-//! function's body is a host callable ([`Body`]) supplied by generated code;
-//! this crate never derives purity, termination or definedness itself, and
-//! is not a second semantic authority for them. [`PackageDeclarations::check`]
-//! therefore checks only what a generated package can carry as its own
-//! admitted facts (declared types, name uniqueness, an upstream-discharged
-//! termination measure) before any package becomes callable and before any
-//! charge, mirroring the authority's own admit-before-call ordering.
+//! AD-002 controls this runtime function boundary. Generated code supplies
+//! resumable body states; this crate does not derive purity, termination or
+//! definedness. Admission checks the declarations and upstream-discharge
+//! marker before any package becomes callable or any meter is charged.
 //!
-//! The plan/execute split mirrors the shared equality planner: [`plan_call`] and
-//! [`plan_evaluation`] validate a call's arguments and take no [`Meter`] at
-//! all, so every [`InputRefusal`] is reachable with no charge in scope,
-//! before [`CheckedPackage::call`]/[`CheckedPackage::evaluate`] charge
-//! `function.call` and run the body. Unbounded host recursion is silent stack
-//! corruption on the governed `thumbv7em-none-eabi` target, so every
-//! re-entrant path into a checked program is bounded by
-//! [`CheckingLimits::depth`] (`MAX_CALL_DEPTH`) — not only [`Frame::call`],
-//! but also a direct, bypassing re-entry into [`CheckedPackage::call`] or
-//! [`CheckedPackage::evaluate`] from within a running [`Body`] that holds its
-//! own `Rc<CheckedPackage>` (obtainable in safe Rust: a `Frame`'s depth
-//! threaded purely by value cannot see that path at all, since a fresh root
-//! `Frame` built at `depth: 0` looks identical to a program's first call).
-//! The bound is therefore a [`core::cell::Cell`] counter carried on
-//! [`CheckedPackage`] itself and shared by every entry path, incremented on
-//! the way in and decremented on the way out of `call`, `evaluate` and
-//! `Frame::call` alike, rather than threaded per-`Frame`. The shared
-//! [`Meter`] is reached through a [`core::cell::RefCell`] (never `unsafe`,
-//! never atomics, consistent with this crate's single-threaded, `Rc`-not-
-//! `Arc` stance); every access goes through `try_borrow_mut` rather than
-//! `borrow_mut`, so a body that re-enters its own frame's [`Meter`] (through
-//! [`Frame::meter`] or [`Frame::call`]) is refused a typed, non-panicking
-//! result instead of aborting the process.
+//! [`plan_call`] and [`plan_evaluation`] validate inputs without a [`Meter`].
+//! An admitted `function.call` consumes one work unit before its body starts.
+//! The scheduler owns suspended body states in a heap vector and invokes one
+//! transition at a time. A transition can request a child call or return;
+//! it cannot synchronously invoke another checked function. The shared meter
+//! uses a [`RefCell`] and a conflicting mutable borrow yields a typed refusal.
 
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
@@ -74,19 +52,6 @@ pub enum CheckMode {
     Kernel,
 }
 
-/// Reuses the authority's `MAX_CHECKING_DEPTH` value, but not its invariant:
-/// upstream, that constant bounds expression *nesting* during *checking*, and
-/// the authority runs application itself on an explicit task stack, so
-/// neither checking nesting nor call depth ever consumes a host call-stack
-/// frame there. This crate has no such indirection — [`Frame::call`],
-/// [`CheckedPackage::call`] and [`CheckedPackage::evaluate`] recurse on the
-/// real host stack — so here `MAX_CALL_DEPTH` is the greatest re-entrant call
-/// depth [`CheckingLimits::new`] admits before every one of those entry
-/// points refuses rather than risk the silent stack corruption an unbounded
-/// `thumbv7em-none-eabi` recursion would cause. Same number, different
-/// invariant.
-pub const MAX_CALL_DEPTH: u64 = 128;
-
 /// The source of [`CheckedPackage::id`]: a monotonic counter stamped once per
 /// [`PackageDeclarations::check`] call. `thumbv7em-none-eabi` has
 /// compare-and-swap, so `AtomicUsize` is available at this crate's MSRV
@@ -103,59 +68,61 @@ pub const MAX_CALL_DEPTH: u64 = 128;
 /// realistic package count," not "never repeats."
 static NEXT_PACKAGE_ID: AtomicUsize = AtomicUsize::new(0);
 
-/// A checking budget: a node-count ceiling and a call-depth bound of at most
-/// [`MAX_CALL_DEPTH`].
+/// A checking node budget. Calls are bounded by work fuel, not depth.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct CheckingLimits {
     nodes: u64,
-    depth: u64,
-}
-
-/// `depth` exceeds [`MAX_CALL_DEPTH`].
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct DepthAboveMaximum {
-    /// The refused depth.
-    pub depth: u64,
 }
 
 impl CheckingLimits {
-    /// A checking budget, refusing a `depth` above [`MAX_CALL_DEPTH`].
-    pub fn new(nodes: u64, depth: u64) -> Result<Self, DepthAboveMaximum> {
-        if depth > MAX_CALL_DEPTH {
-            return Err(DepthAboveMaximum { depth });
-        }
-        Ok(Self { nodes, depth })
+    /// Construct a checking node budget.
+    pub fn new(nodes: u64) -> Self {
+        Self { nodes }
     }
 
-    /// The node-count ceiling. Carried for parity with the authority's
-    /// checking budget shape, but not enforced anywhere in this crate: a
-    /// [`Body`] is an opaque host callable with no AST this crate can walk to
-    /// count nodes against, so no admission or evaluation path here ever
-    /// reads this value.
+    /// The node-count ceiling, carried for the checker contract. A generated
+    /// body has no AST this runtime can count, so it is not enforced here.
     pub fn nodes(self) -> u64 {
         self.nodes
-    }
-
-    /// The call-depth bound.
-    pub fn depth(self) -> u64 {
-        self.depth
     }
 }
 
 impl Default for CheckingLimits {
     fn default() -> Self {
-        Self {
-            nodes: u64::MAX,
-            depth: MAX_CALL_DEPTH,
-        }
+        Self { nodes: u64::MAX }
     }
 }
 
-/// A host-supplied function body: given the [`Frame`] it runs in and its
-/// bound arguments, produces the applied [`Outcome`]. `for<'f>` lets each
-/// re-entrant call bind a fresh, shorter-lived frame rather than reusing one
-/// lifetime for an entire call tree.
-pub type Body = Box<dyn for<'f> Fn(&Frame<'f>, &[Value]) -> Outcome<Value>>;
+/// A generated factory for one owned, resumable invocation state.
+pub type Body = Box<dyn Fn(Vec<Value>) -> Box<dyn BodyState>>;
+
+/// One transition from a generated function body.
+pub enum BodyStep {
+    /// Suspend the current body and call a checked function.
+    Call {
+        /// Declared checked function name.
+        function: String,
+        /// Completed arguments in parameter order.
+        arguments: Vec<Value>,
+    },
+    /// Finish this body with an outcome.
+    Return(Outcome<Value>),
+}
+
+/// One owned function invocation, resumed after a child call completes.
+pub trait BodyState {
+    /// Run one transition; `completed` contains the returned child value.
+    fn step(&mut self, frame: &Frame<'_, '_>, completed: Option<Value>) -> BodyStep;
+}
+
+impl<F> BodyState for F
+where
+    F: for<'a, 'm> FnMut(&Frame<'a, 'm>, Option<Value>) -> BodyStep,
+{
+    fn step(&mut self, frame: &Frame<'_, '_>, completed: Option<Value>) -> BodyStep {
+        self(frame, completed)
+    }
+}
 
 /// One function of a [`PackageDeclarations`], declared before checking.
 pub struct FunctionDeclaration {
@@ -174,7 +141,7 @@ pub struct FunctionDeclaration {
     /// discharged upstream. `check` refuses a function for which this is
     /// `false`: AD-002 keeps this crate from re-deriving that proof itself.
     pub measure_discharged: bool,
-    /// The host callable this function applies.
+    /// The factory for this function's resumable body state.
     pub body: Body,
 }
 
@@ -294,7 +261,7 @@ impl PackageDeclarations {
     pub fn check(
         self,
         mode: CheckMode,
-        limits: CheckingLimits,
+        _limits: CheckingLimits,
     ) -> Result<CheckedPackage, Vec<CheckRefusal>> {
         if matches!(mode, CheckMode::Kernel) {
             return Err(alloc::vec![CheckRefusal {
@@ -369,8 +336,7 @@ impl PackageDeclarations {
         Ok(CheckedPackage(Box::new(CheckedPackageFields {
             types: self.types,
             functions: self.functions,
-            limits,
-            depth: Cell::new(0),
+            active: Cell::new(false),
             id: NEXT_PACKAGE_ID.fetch_add(1, Ordering::Relaxed),
         })))
     }
@@ -387,12 +353,7 @@ pub struct CheckedPackage(Box<CheckedPackageFields>);
 struct CheckedPackageFields {
     types: TypeEnvironment,
     functions: Vec<FunctionDeclaration>,
-    limits: CheckingLimits,
-    /// The re-entrant call depth currently active anywhere in this package's
-    /// call tree, shared by every entry path (`call`, `evaluate`,
-    /// `Frame::call`): see this module's own documentation for why the bound
-    /// lives here rather than threaded per-`Frame`.
-    depth: Cell<u64>,
+    active: Cell<bool>,
     /// This package's identity, stamped once from [`NEXT_PACKAGE_ID`] at
     /// [`PackageDeclarations::check`] time and carried by value from then on.
     /// Not derived from the package's address: `check` returns `CheckedPackage`
@@ -407,7 +368,7 @@ struct CheckedPackageFields {
 }
 
 /// A standalone expression checked against an already-checked package's
-/// [`TypeEnvironment`], with its own parameters and host body.
+/// [`TypeEnvironment`], with its own parameters and resumable body.
 pub struct CheckedExpression {
     parameters: Vec<(String, ValueType)>,
     root: Body,
@@ -667,33 +628,27 @@ fn charge_call(meter: &mut Meter) -> Result<(), Stop> {
     Ok(())
 }
 
-/// A held claim on [`CheckedPackage`]'s shared re-entrant call depth,
-/// released on drop: [`CheckedPackage::enter`] increments the counter and
-/// returns this guard; every early return (`?`, a refusal, an unwinding
-/// panic elsewhere in the call tree — never here, this crate has none) still
-/// runs [`Drop::drop`], so the counter is decremented exactly once per
-/// successful `enter`, without `unsafe` or manual bookkeeping at each call
-/// site.
-struct DepthGuard<'p> {
-    depth: &'p Cell<u64>,
-    own_depth: u64,
+fn checked_invariant(cause: CheckedInvariantCause) -> Outcome<Value> {
+    Outcome::Refused(Refusal::CheckedInvariant { cause })
 }
 
-impl DepthGuard<'_> {
-    /// The re-entrant call depth this guard's holder is running at (`0` at
-    /// the root).
-    fn own_depth(&self) -> u64 {
-        self.own_depth
-    }
-}
+struct ExecutionGuard<'a>(&'a Cell<bool>);
 
-impl Drop for DepthGuard<'_> {
+impl Drop for ExecutionGuard<'_> {
     fn drop(&mut self) {
-        self.depth.set(self.depth.get().saturating_sub(1));
+        self.0.set(false);
     }
 }
 
 impl CheckedPackage {
+    fn begin(&self) -> Option<ExecutionGuard<'_>> {
+        if self.0.active.replace(true) {
+            None
+        } else {
+            Some(ExecutionGuard(&self.0.active))
+        }
+    }
+
     fn function(&self, name: &str) -> Option<&FunctionDeclaration> {
         self.0
             .functions
@@ -708,38 +663,6 @@ impl CheckedPackage {
     /// for why this is not derived from the package's address.
     fn identity(&self) -> usize {
         self.0.id
-    }
-
-    /// Claim one more level of this package's shared re-entrant call depth,
-    /// shared by every entry path (`call`, `evaluate`, [`Frame::call`]):
-    /// see this module's own documentation for why the bound lives here
-    /// rather than threaded per-[`Frame`]. Refuses with
-    /// [`Refusal::CheckedInvariant`] at [`CheckingLimits::depth`] before any
-    /// charge: `check` admits no recursion without a discharged termination
-    /// measure, so reaching the bound means a checked-program invariant was
-    /// violated. `None` is that refusal: an `Option` (a null-pointer niche)
-    /// rather than `Result<_, Stop>`, whose niche sits in `Stop`'s own tag
-    /// where CBMC cannot fold it back.
-    fn enter(&self) -> Option<DepthGuard<'_>> {
-        let own_depth = self.0.depth.get();
-        if own_depth >= self.0.limits.depth() {
-            return None;
-        }
-        self.0.depth.set(own_depth.saturating_add(1));
-        Some(DepthGuard {
-            depth: &self.0.depth,
-            own_depth,
-        })
-    }
-
-    // Pins enter's exact return type: this compiles only when it is
-    // Option<DepthGuard<'_>>, the shape CBMC folds, and not
-    // Result<DepthGuard<'_>, Stop>, whose niche it cannot fold back. Never
-    // called: it exists only for the compiler to check the signature, so
-    // dead_code is allowed deliberately rather than satisfied by a caller.
-    #[allow(dead_code)]
-    fn enter_signature_is_option(package: &Self) -> Option<DepthGuard<'_>> {
-        Self::enter(package)
     }
 
     /// Check a standalone expression's parameters and result type against
@@ -769,10 +692,7 @@ impl CheckedPackage {
         })
     }
 
-    /// Apply the named function: validate (no charge), charge one
-    /// `function.call` for its own body, then run it in a fresh root
-    /// [`Frame`]. `evaluate` does not charge for its own root; every
-    /// application it reaches charges through [`Frame::call`].
+    /// Validate a named call, charge `function.call`, then drive its body.
     pub fn call(
         &self,
         function: &str,
@@ -781,7 +701,16 @@ impl CheckedPackage {
         meter: &mut Meter,
     ) -> Result<Evaluation, InputRefusal> {
         plan_call(self, function, &arguments, objects)?;
-        let outcome = self.run_call(function, &arguments, objects, meter);
+        let outcome = match self.begin() {
+            Some(_execution) => match charge_call(meter) {
+                Ok(()) => match self.function(function) {
+                    Some(declaration) => self.run((declaration.body)(arguments), objects, meter),
+                    None => checked_invariant(CheckedInvariantCause::UnknownCheckedFunction),
+                },
+                Err(stop) => outcome_from_stop(Err(stop)),
+            },
+            None => checked_invariant(CheckedInvariantCause::PackageReentry),
+        };
         Ok(Evaluation {
             outcome,
             location: None,
@@ -789,43 +718,8 @@ impl CheckedPackage {
         })
     }
 
-    /// Returns the body's own [`Outcome`] as is, never round-tripping it
-    /// through `Result<Value, Stop>`: each wrap of a `Value` in another enum
-    /// is a byte-level union update CBMC cannot afford.
-    fn run_call(
-        &self,
-        function: &str,
-        arguments: &[Value],
-        objects: &ObjectClosure,
-        meter: &mut Meter,
-    ) -> Outcome<Value> {
-        let Some(guard) = self.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant {
-                cause: CheckedInvariantCause::CallDepthExceeded,
-            });
-        };
-        if let Err(stop) = charge_call(meter) {
-            return outcome_from_stop(Err(stop));
-        }
-        let Some(declaration) = self.function(function) else {
-            return Outcome::Refused(Refusal::CheckedInvariant {
-                cause: CheckedInvariantCause::UnknownCheckedFunction,
-            });
-        };
-        let cell = RefCell::new(meter);
-        let frame = Frame {
-            package: self,
-            objects,
-            meter: cell,
-            depth: guard.own_depth(),
-        };
-        (declaration.body)(&frame, arguments)
-    }
-
-    /// Evaluate a [`CheckedExpression`] against this package: validate (no
-    /// charge, including that `expression` was checked against this same
-    /// package), then run its root in a fresh root [`Frame`] with no charge
-    /// for the root itself.
+    /// Evaluate a standalone checked expression. Its root is not charged;
+    /// child calls requested by its body are charged in order.
     pub fn evaluate(
         &self,
         expression: &CheckedExpression,
@@ -846,7 +740,10 @@ impl CheckedPackage {
                 });
             }
         }
-        let outcome = self.run_evaluate(expression, &arguments, objects, meter);
+        let outcome = match self.begin() {
+            Some(_execution) => self.run((expression.root)(arguments), objects, meter),
+            None => checked_invariant(CheckedInvariantCause::PackageReentry),
+        };
         Ok(Evaluation {
             outcome,
             location: None,
@@ -854,26 +751,62 @@ impl CheckedPackage {
         })
     }
 
-    fn run_evaluate(
+    /// Drive one generated transition at a time with suspended parents owned
+    /// by an explicit heap stack. No transition invokes another transition.
+    fn run(
         &self,
-        expression: &CheckedExpression,
-        arguments: &[Value],
+        root: Box<dyn BodyState>,
         objects: &ObjectClosure,
         meter: &mut Meter,
     ) -> Outcome<Value> {
-        let Some(guard) = self.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant {
-                cause: CheckedInvariantCause::CallDepthExceeded,
-            });
-        };
-        let cell = RefCell::new(meter);
-        let frame = Frame {
-            package: self,
-            objects,
-            meter: cell,
-            depth: guard.own_depth(),
-        };
-        (expression.root)(&frame, arguments)
+        let shared_meter = RefCell::new(meter);
+        let mut states = alloc::vec![root];
+        let mut child_result = None;
+        loop {
+            let Some(current) = states.last_mut() else {
+                return checked_invariant(CheckedInvariantCause::GeneratedUnexpectedOutcome);
+            };
+            let context = Frame {
+                objects,
+                meter: &shared_meter,
+            };
+            let next = current.step(&context, child_result.take());
+            match next {
+                BodyStep::Call {
+                    function,
+                    arguments,
+                } => {
+                    let Some(callee) = self.function(&function) else {
+                        return checked_invariant(CheckedInvariantCause::UnknownCheckedFunction);
+                    };
+                    if validate_arguments(&callee.parameters, &arguments, objects).is_err() {
+                        return checked_invariant(
+                            CheckedInvariantCause::GeneratedArgumentShapeMismatch,
+                        );
+                    }
+                    let Ok(mut active_meter) = shared_meter.try_borrow_mut() else {
+                        return checked_invariant(CheckedInvariantCause::MeterBorrowConflict);
+                    };
+                    if let Err(stop) = charge_call(&mut active_meter) {
+                        return outcome_from_stop(Err(stop));
+                    }
+                    drop(active_meter);
+                    states.push((callee.body)(arguments));
+                }
+                BodyStep::Return(Outcome::Completed(value)) => {
+                    states.pop();
+                    if states.is_empty() {
+                        return Outcome::Completed(value);
+                    }
+                    child_result = Some(value);
+                }
+                BodyStep::Return(Outcome::Undefined(reason)) => return Outcome::Undefined(reason),
+                BodyStep::Return(Outcome::Refused(reason)) => return Outcome::Refused(reason),
+                BodyStep::Return(Outcome::Incomplete(record)) => {
+                    return Outcome::Incomplete(record)
+                }
+            }
+        }
     }
 
     /// The IEEE item requirements the named function's body discharges
@@ -891,87 +824,18 @@ impl CheckedPackage {
     }
 }
 
-/// The re-entrant call surface a running [`Body`] sees: the applications it
-/// makes, and the [`Meter`] and [`ObjectClosure`] it runs against.
-///
-/// `depth` is informational only — read it back through [`Frame::depth`],
-/// but the bound itself is not enforced here. A `Frame`'s own field is
-/// threaded purely by value, and a fresh root `Frame` built at `depth: 0`
-/// looks identical to a program's first call, so a running [`Body`] that
-/// holds its own `Rc<CheckedPackage>` and re-enters [`CheckedPackage::call`]
-/// or [`CheckedPackage::evaluate`] directly (obtainable in safe Rust) would
-/// bypass a per-`Frame` check entirely. The actual bound lives on
-/// [`CheckedPackage`] itself, as a [`Cell`] counter every entry path shares
-/// (see this module's own documentation and the private `enter`), so
-/// re-entry through a given checked package is bounded alike on every path.
-///
-/// The [`Meter`] is reached through a [`RefCell`] because many `Frame`s
-/// across one call tree share it; `RefCell`, never `unsafe` or atomics.
-/// Every access goes through `try_borrow_mut` rather than `borrow_mut`, so a
-/// body that re-enters its own frame's `Meter` (through [`Frame::meter`] or
-/// [`Frame::call`], both re-entrant from within the very closure holding the
-/// outer borrow) is refused a typed, non-panicking result instead of
-/// aborting the process.
-pub struct Frame<'a> {
-    package: &'a CheckedPackage,
+/// Shared context supplied to one generated body transition.
+pub struct Frame<'a, 'm> {
     objects: &'a ObjectClosure,
-    meter: RefCell<&'a mut Meter>,
-    depth: u64,
+    meter: &'a RefCell<&'m mut Meter>,
 }
 
-impl<'a> Frame<'a> {
-    /// Apply the named function from within a running body: charge one
-    /// `function.call`, then run it in a frame one deeper than this one.
-    /// Beyond [`CheckingLimits::depth`], refuses with
-    /// [`Refusal::CheckedInvariant`] before any charge: `check` admits no
-    /// recursion without a discharged termination measure, so reaching the
-    /// bound means a checked-program invariant was violated. Also refuses
-    /// with [`Refusal::CheckedInvariant`] — never panics — if this frame's
-    /// shared [`Meter`] is already mutably borrowed by an enclosing call on
-    /// the same re-entrant chain.
-    pub fn call(&self, function: &str, arguments: &[Value]) -> Outcome<Value> {
-        let Some(guard) = self.package.enter() else {
-            return Outcome::Refused(Refusal::CheckedInvariant {
-                cause: CheckedInvariantCause::CallDepthExceeded,
-            });
-        };
-        let Some(declaration) = self.package.function(function) else {
-            return Outcome::Refused(Refusal::CheckedInvariant {
-                cause: CheckedInvariantCause::UnknownCheckedFunction,
-            });
-        };
-        {
-            let Ok(mut meter) = self.meter.try_borrow_mut() else {
-                return Outcome::Refused(Refusal::CheckedInvariant {
-                    cause: CheckedInvariantCause::MeterBorrowConflict,
-                });
-            };
-            if let Err(stop) = charge_call(&mut meter) {
-                return outcome_from_stop(Err(stop));
-            }
-        }
-        let Ok(mut meter) = self.meter.try_borrow_mut() else {
-            return Outcome::Refused(Refusal::CheckedInvariant {
-                cause: CheckedInvariantCause::MeterBorrowConflict,
-            });
-        };
-        let child = Frame {
-            package: self.package,
-            objects: self.objects,
-            meter: RefCell::new(&mut meter),
-            depth: guard.own_depth(),
-        };
-        (declaration.body)(&child, arguments)
-    }
-
+impl Frame<'_, '_> {
     /// Run `run` against the shared [`Meter`] this frame's whole call tree
     /// charges through. `Err(Refusal::CheckedInvariant { cause: MeterBorrowConflict })` if this frame's
-    /// `Meter` is already mutably borrowed by an enclosing call on the same
-    /// re-entrant chain, rather than panicking on the double borrow.
-    /// Returning `Result` rather than `Option` matters here: a body that
-    /// needed to charge through this access and silently swallowed a `None`
-    /// would keep running unmetered with no signal, exactly the condition
-    /// [`Frame::call`] itself maps to a refusal rather than an absent value.
+    /// `Meter` is already mutably borrowed by this transition, rather than
+    /// panicking on the double borrow. Returning `Result` keeps the refusal
+    /// visible to the generated body.
     /// Propagate with `?`, then fold a returned `Err(r)` into
     /// `Outcome::Refused(r)` to keep returning the body's own declared
     /// `Outcome<Value>`.
@@ -988,16 +852,5 @@ impl<'a> Frame<'a> {
     /// The [`ObjectClosure`] this call was made against.
     pub fn objects(&self) -> &ObjectClosure {
         self.objects
-    }
-
-    /// This frame's re-entrant call depth: the value of [`CheckedPackage`]'s
-    /// shared depth counter at the instant this frame was built. `0` only for
-    /// a program's actual first call into an otherwise-idle package; a root
-    /// [`Frame`] built by a direct, bypassing re-entry into
-    /// [`CheckedPackage::call`] or [`CheckedPackage::evaluate`] (from within
-    /// a running [`Body`] holding its own `Rc<CheckedPackage>`) reports the
-    /// depth already active on that package, which is non-zero.
-    pub fn depth(&self) -> u64 {
-        self.depth
     }
 }

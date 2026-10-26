@@ -191,7 +191,7 @@ exact:
     status: not authorized; vendored code to be deleted; no exception, no expiry, no approval (FR-275)
     rule: every exact item the upstream quire-exact crate does not export, other than the runtime_owned items
     consumed:
-      function_application: [PackageDeclarations, FunctionDeclaration, CheckedPackage, CheckMode, CheckingLimits, CheckRefusal, InputRefusal, Frame, Body, Evaluation, plan_call]
+      function_application: [PackageDeclarations, FunctionDeclaration, CheckedPackage, CheckMode, CheckingLimits, CheckRefusal, InputRefusal, Frame, Body, BodyState, BodyStep, Evaluation, plan_call]
       checking: [TypeEnvironment, CompositeDeclaration, CompositeShape, ObjectTypeDeclaration, RecursionEdges, DeclarationCause, InvalidDeclaration, ObjectEnvironment]
       equality: [CheckedEquality, EqualityOperand, EqualityOperator, EqualitySchedule]
       enumeration: [EnumValue]

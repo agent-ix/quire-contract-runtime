@@ -14,7 +14,7 @@ use charge_points::ChargePoints;
 
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
-    CheckMode, CheckingLimits, FunctionDeclaration, PackageDeclarations,
+    BodyStep, CheckMode, CheckingLimits, Frame, FunctionDeclaration, PackageDeclarations,
 };
 use quire_contract_runtime::scalar::{evaluate_boolean_short_circuit, ShortCircuitConnective};
 use quire_exact::{
@@ -75,7 +75,11 @@ fn drive_function_call(meter: &mut Meter) -> Incomplete {
             ieee_requirements: Vec::new(),
             integer_division_consumers: Vec::new(),
             measure_discharged: true,
-            body: Box::new(|_frame, _arguments| Outcome::Completed(Value::Boolean(true))),
+            body: Box::new(|_| {
+                Box::new(|_: &Frame<'_, '_>, _: Option<Value>| {
+                    BodyStep::Return(Outcome::Completed(Value::Boolean(true)))
+                })
+            }),
         }],
     }
     .check(CheckMode::Linked, CheckingLimits::default())
