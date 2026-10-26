@@ -288,9 +288,12 @@ the charge log, `charge_log_truncated` nor `CHARGE_LOG_CAPACITY` (grep). The har
 | QSL-358 residue slices | `quire-semantic-value` holds `stop`, `quantity`, `unit`, `declaration`, `containment`, `enumeration`, `definition`, `semantic_node`, `checking`, `call`, `loss`, `location`, `object_closure` | present; QSL-358 is Done |
 | FR-275 step 2 (the residue) | the 15 `expression` items and the lazy connective | not delivered, although interface-001 and FR-275 expect QSL-358 to move function application: no QSL crate this crate may depend on defines it. QSL-358 is Done. The lazy connective is absent from both crates |
 
-Still missing for this crate, each stated to QSL below: the evaluation leaf's IR-583 interface and
-IR-590 usable `no_std` implementation (Q-1); RT's `CheckingLimits::depth`,
-The removed `DepthAboveMaximum` and `MAX_CALL_DEPTH` followed QSL FR-262's work-fuel-only call rule;
+Still missing for this crate, as stated to QSL below: the evaluation leaf's IR-583 interface and
+IR-590 usable `no_std` implementation (Q-1).
+
+The removed `CheckingLimits::depth`, `DepthAboveMaximum` and `MAX_CALL_DEPTH` followed QSL FR-262's
+work-fuel-only call rule.
+
 R-3 is now decided below: RT's three extra `PackageCause` variants retire, rather than move to
 QSV. The injected denial is not single-shot and `occurrence`
 admits zero (FR-010-AC-5, AC-6); `Origin` and `Location` are defined twice by QSL, in `quire-exact` as a
