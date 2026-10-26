@@ -47,3 +47,8 @@ Independent semantic review used claude-opus-5-5 on the frozen test, FR-008-AC-1
 | FND-002 | fixed | Verified at b3e71ed: ambient marker branch removed |
 | FND-003 | fixed | Verified at b3e71ed: child removes inherited RUST_MIN_STACK |
 | FND-004 | still-open | With RUST_TEST_THREADS=1, libtest writes the test name before execution and the completion marker before ok; the exact substring is absent although the child exits successfully. |
+| FND-004 | fixed | Verified at 9490bfe3: the fragile exact result-line assertion is removed; child success, one-test count and post-exercise marker remain. |
+
+## Disposition verdict
+
+**PASS** — every finding has a fixed latest disposition at 9490bfe3; no new finding was introduced in disposition pass 2.

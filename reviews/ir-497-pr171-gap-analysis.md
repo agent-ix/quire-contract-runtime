@@ -43,3 +43,8 @@ The computed Quoin matrix tags both new test functions to FR-008-AC-13 and TC-02
 | --- | --- | --- |
 | FND-001 | fixed | Verified at b3e71ed: child test count and completion marker are asserted |
 | FND-002 | still-open | With RUST_TEST_THREADS=1, libtest writes the test name before execution and the completion marker before ok; the exact substring is absent although the child exits successfully. |
+| FND-002 | fixed | Verified at 9490bfe3: the fragile exact result-line assertion is removed; child success, one-test count and post-exercise marker remain. |
+
+## Disposition verdict
+
+**PASS** — every finding has a fixed latest disposition at 9490bfe3; no new finding was introduced in disposition pass 2.
