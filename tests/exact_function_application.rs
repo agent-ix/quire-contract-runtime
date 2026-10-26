@@ -22,7 +22,7 @@ use quire_contract_runtime::scalar::{
 use quire_exact::{
     ChargePoint, CheckedInvariantCause, EffectiveId, Identifier, IeeeOperationKind, IeeeWidth,
     Integer, LimitKind, Meter, NodeKey, ObjectId, ObjectReference, Outcome, Refusal, RoundingMode,
-    ScalarLimits, UnionMember, UnionValue, UniverseId, Value, ValueType,
+    ScalarLimits, Undefined, UnionMember, UnionValue, UniverseId, Value, ValueType,
 };
 use quire_semantic_value::declaration::{
     CompositeDeclaration, CompositeShape, ObjectTypeDeclaration, TypeEnvironment,
@@ -1155,7 +1155,10 @@ fn tc_194_explicit_frames_reach_4096_calls_on_64_kib_stack_with_exact_fuel() {
                                 assert_eq!(active.get(), 0, "only one body transition is active");
                                 active.set(1);
                                 let next = if waiting {
-                                    assert!(matches!(completed, Some(Value::Integer(_))));
+                                    assert_eq!(
+                                        completed,
+                                        Some(Value::Integer(Integer::from((remaining - 1) as i64)))
+                                    );
                                     BodyStep::Return(Outcome::Completed(Value::Integer(
                                         Integer::from(remaining as i64),
                                     )))
@@ -1425,6 +1428,136 @@ fn tc_194_reentrant_meter_borrow_has_typed_cause() {
         Outcome::Completed(Value::Boolean(true))
     ));
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+}
+
+/// Child arity and kind faults stop before the child body or charge.
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-11")]
+#[test]
+fn tc_194_invalid_child_arguments_refuse_before_child_charge_or_body() {
+    for arguments in [Vec::new(), vec![Value::Integer(Integer::one())]] {
+        let entered_child = Rc::new(Cell::new(false));
+        let child_flag = Rc::clone(&entered_child);
+        let resumed_parent = Rc::new(Cell::new(false));
+        let parent_flag = Rc::clone(&resumed_parent);
+        let package = PackageDeclarations {
+            types: Default::default(),
+            functions: vec![
+                FunctionDeclaration {
+                    name: "parent".to_string(),
+                    parameters: Vec::new(),
+                    result: ValueType::Boolean,
+                    ieee_requirements: Vec::new(),
+                    integer_division_consumers: Vec::new(),
+                    measure_discharged: true,
+                    body: Box::new(move |_| {
+                        let arguments = arguments.clone();
+                        let resumed = Rc::clone(&parent_flag);
+                        let mut first = true;
+                        Box::new(move |_: &Frame<'_, '_>, _: Option<Value>| {
+                            if first {
+                                first = false;
+                                BodyStep::Call {
+                                    function: "child".to_string(),
+                                    arguments: arguments.clone(),
+                                }
+                            } else {
+                                resumed.set(true);
+                                BodyStep::Return(Outcome::Completed(Value::Boolean(true)))
+                            }
+                        })
+                    }),
+                },
+                FunctionDeclaration {
+                    name: "child".to_string(),
+                    parameters: vec![("value".to_string(), ValueType::Boolean)],
+                    result: ValueType::Boolean,
+                    ieee_requirements: Vec::new(),
+                    integer_division_consumers: Vec::new(),
+                    measure_discharged: true,
+                    body: one_step(move |_, _| {
+                        child_flag.set(true);
+                        Outcome::Completed(Value::Boolean(true))
+                    }),
+                },
+            ],
+        }
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .unwrap();
+        let mut meter = Meter::new(UNLIMITED);
+        let result = package
+            .call("parent", Vec::new(), &ObjectClosure::default(), &mut meter)
+            .unwrap();
+        assert!(matches!(
+            result.outcome,
+            Outcome::Refused(Refusal::CheckedInvariant {
+                cause: CheckedInvariantCause::GeneratedArgumentShapeMismatch
+            })
+        ));
+        assert!(!entered_child.get());
+        assert!(!resumed_parent.get());
+        assert_eq!(meter.admitted_charge_points(), &[ChargePoint::FunctionCall]);
+    }
+}
+
+/// A stopped child terminates the scheduler without delivering a value to its parent.
+#[trace("TC-194", "FR-273-AC-11")]
+#[test]
+fn tc_194_stopped_child_does_not_resume_parent() {
+    let resumed = Rc::new(Cell::new(false));
+    let resumed_body = Rc::clone(&resumed);
+    let package = PackageDeclarations {
+        types: Default::default(),
+        functions: vec![
+            FunctionDeclaration {
+                name: "parent".to_string(),
+                parameters: Vec::new(),
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: Box::new(move |_| {
+                    let resumed = Rc::clone(&resumed_body);
+                    let mut first = true;
+                    Box::new(move |_: &Frame<'_, '_>, _: Option<Value>| {
+                        if first {
+                            first = false;
+                            BodyStep::Call {
+                                function: "child".to_string(),
+                                arguments: Vec::new(),
+                            }
+                        } else {
+                            resumed.set(true);
+                            BodyStep::Return(Outcome::Completed(Value::Boolean(true)))
+                        }
+                    })
+                }),
+            },
+            FunctionDeclaration {
+                name: "child".to_string(),
+                parameters: Vec::new(),
+                result: ValueType::Boolean,
+                ieee_requirements: Vec::new(),
+                integer_division_consumers: Vec::new(),
+                measure_discharged: true,
+                body: one_step(|_, _| Outcome::Undefined(Undefined::DivisionByZero)),
+            },
+        ],
+    }
+    .check(CheckMode::Linked, CheckingLimits::default())
+    .unwrap();
+    let mut meter = Meter::new(UNLIMITED);
+    let result = package
+        .call("parent", Vec::new(), &ObjectClosure::default(), &mut meter)
+        .unwrap();
+    assert!(matches!(
+        result.outcome,
+        Outcome::Undefined(Undefined::DivisionByZero)
+    ));
+    assert!(!resumed.get());
+    assert_eq!(
+        meter.admitted_charge_points(),
+        &[ChargePoint::FunctionCall; 2]
+    );
 }
 
 /// A generated child request for a missing checked function preserves its

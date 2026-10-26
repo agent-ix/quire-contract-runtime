@@ -99,8 +99,8 @@ calls the ported surface.
   name, an argument count or kind mismatch against the checked signature, or an argument
   `Value::Reference` the supplied `ObjectEnvironment` cannot resolve, each refuse call input with no
   `Meter` participation, exactly as `plan_equality`'s pre-charge refusals do for equality.
-- The runtime SHALL use a resumable body interface in place of a synchronous `Body` closure and
-  `Frame::call`. For each invocation the
+- The runtime SHALL use `Body` as a factory for resumable state in place of a synchronous
+  evaluator closure and `Frame::call`. For each invocation the
   generated producer creates owned state containing its next instruction, bound values and the
   destination for a child's result. The runtime invokes one transition at a time with either the
   initial arguments or a completed child value; a transition returns either a request to

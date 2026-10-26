@@ -14,7 +14,7 @@ use core::{
 };
 
 use quire_contract_runtime::{
-    exact::{CheckMode, CheckingLimits, PackageDeclarations},
+    exact::{BodyStep, CheckMode, CheckingLimits, Frame, PackageDeclarations},
     scalar::{
         evaluate_boolean_short_circuit, negotiate_ieee, negotiate_integer_division,
         IeeeBackendCapabilities, IntegerDivisionConsumer, ShortCircuitConnective,
@@ -89,7 +89,11 @@ pub extern "C" fn quire_runtime_exact_panic(input: u32) -> u32 {
             .check_expression(
                 vec![],
                 quire_exact::ValueType::Boolean,
-                Box::new(|_, _| Outcome::Completed(Value::Boolean(true))),
+                Box::new(|_| {
+                    Box::new(|_: &Frame<'_, '_>, _: Option<Value>| {
+                        BodyStep::Return(Outcome::Completed(Value::Boolean(true)))
+                    })
+                }),
             )
             .ok()?;
         package

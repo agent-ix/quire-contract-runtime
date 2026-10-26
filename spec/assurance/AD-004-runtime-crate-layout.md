@@ -142,7 +142,7 @@ Modules of this crate after the steps below (one feature `exact`; no `exact` mod
 | `text` | none | module not created | `text`, `enumeration`: 728 lines |
 | `composite` | none | module not created | `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`: 3,463 lines |
 | `outcome` | none | module not created | `outcome`, `accounting`: 907 lines |
-| `expression` (`exact`) | `expression` | none: the module does not exist in the end state. The 15 current items (`Body`, `Frame`, `FunctionDeclaration`, `PackageDeclarations`, `CheckedPackage`, `CheckedExpression`, `CheckRefusal`, `CheckCause`, `CallPlan`, `plan_call`, `plan_evaluation`, `Evaluation`, `EvaluationRefusal`, `DepthAboveMaximum`, `MAX_CALL_DEPTH`; FR-273) are a port. IR-583 supplies the QSL-owned interface and std reference seam; the usable `no_std` implementation is IR-590 (Q-1) | the whole file only after IR-590's implementation passes RT's `no_std` target acceptance in step 5; the vocabulary (`CheckMode`, `CheckingLimits`, `Origin`, `Location`, `InputRefusal`, `ValueLoss`, `LocatedLoss`) is already in `quire-semantic-value` |
+| `expression` (`exact`) | `expression` | none: the module does not exist in the end state. The current function-application items (`Body`, `BodyState`, `BodyStep`, `Frame`, `FunctionDeclaration`, `PackageDeclarations`, `CheckedPackage`, `CheckedExpression`, `CheckRefusal`, `CheckCause`, `CallPlan`, `plan_call`, `plan_evaluation`, `Evaluation`, `EvaluationRefusal`; FR-273) are a port. IR-583 supplies the QSL-owned interface and std reference seam; the usable `no_std` implementation is IR-590 (Q-1) | the whole file only after IR-590's implementation passes RT's `no_std` target acceptance in step 5; the vocabulary (`CheckMode`, `CheckingLimits`, `Origin`, `Location`, `InputRefusal`, `ValueLoss`, `LocatedLoss`) is already in `quire-semantic-value` |
 
 ### What this crate keeps, and what it deletes
 
@@ -290,8 +290,7 @@ the charge log, `charge_log_truncated` nor `CHARGE_LOG_CAPACITY` (grep). The har
 
 Still missing for this crate, each stated to QSL below: the evaluation leaf's IR-583 interface and
 IR-590 usable `no_std` implementation (Q-1); RT's `CheckingLimits::depth`,
-`DepthAboveMaximum` and `MAX_CALL_DEPTH` are obsolete under QSL FR-262's work-fuel-only call rule
-(the FR-273 amendment is separate IR-512 work);
+The removed `DepthAboveMaximum` and `MAX_CALL_DEPTH` followed QSL FR-262's work-fuel-only call rule;
 R-3 is now decided below: RT's three extra `PackageCause` variants retire, rather than move to
 QSV. The injected denial is not single-shot and `occurrence`
 admits zero (FR-010-AC-5, AC-6); `Origin` and `Location` are defined twice by QSL, in `quire-exact` as a
