@@ -1613,7 +1613,7 @@ fn tc_194_missing_child_has_typed_cause_and_does_not_resume_parent() {
 
 /// A generated transition cannot open another scheduler on the same checked
 /// package while it is active, even if host code captures the package.
-#[trace("TC-194", "FR-273-AC-7")]
+#[trace("TC-194", "FR-273-AC-7", "FR-273-AC-8")]
 #[test]
 fn tc_194_direct_host_reentry_is_refused_before_nested_charge() {
     let holder: Rc<RefCell<Option<Rc<CheckedPackage>>>> = Rc::new(RefCell::new(None));
@@ -1657,7 +1657,7 @@ fn tc_194_direct_host_reentry_is_refused_before_nested_charge() {
     assert!(matches!(
         result.outcome,
         Outcome::Refused(Refusal::CheckedInvariant {
-            cause: CheckedInvariantCause::GeneratedUnexpectedOutcome
+            cause: CheckedInvariantCause::PackageReentry
         })
     ));
     assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);

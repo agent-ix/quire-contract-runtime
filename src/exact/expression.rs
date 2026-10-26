@@ -709,7 +709,7 @@ impl CheckedPackage {
                 },
                 Err(stop) => outcome_from_stop(Err(stop)),
             },
-            None => checked_invariant(CheckedInvariantCause::GeneratedUnexpectedOutcome),
+            None => checked_invariant(CheckedInvariantCause::PackageReentry),
         };
         Ok(Evaluation {
             outcome,
@@ -742,7 +742,7 @@ impl CheckedPackage {
         }
         let outcome = match self.begin() {
             Some(_execution) => self.run((expression.root)(arguments), objects, meter),
-            None => checked_invariant(CheckedInvariantCause::GeneratedUnexpectedOutcome),
+            None => checked_invariant(CheckedInvariantCause::PackageReentry),
         };
         Ok(Evaluation {
             outcome,
