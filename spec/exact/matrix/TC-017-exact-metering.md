@@ -27,7 +27,7 @@ RT's older quire-exact dependency revision still needs a separate refresh.
 ## Test Procedure
 
 1. Multiply `2^64 × 2^64` under `integer_bits` 128; expect `Incomplete` at
-   `integer-arithmetic.arithmetic` with consumed 65 and denied amount 129.
+   `integer-arithmetic.arithmetic` with consumed 65 and denied amount 130.
 2. Run two operations on one meter; check size counters keep the high-water mark and
    `work_units`/`result_units` accumulate.
 3. Exhaust two counters at once; check the first in `ScalarLimitsV1` field order is reported.
