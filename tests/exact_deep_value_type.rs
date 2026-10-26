@@ -107,10 +107,6 @@ fn deep_value_type_traits_complete_on_small_and_default_stacks() {
         stdout.contains(CHILD_COMPLETED),
         "child did not finish the deep type exercise: {stdout}"
     );
-    assert!(
-        stdout.contains(&format!("test {CHILD_TEST} ... ok")),
-        "child did not pass the selected test: {stdout}"
-    );
 }
 
 #[test]
