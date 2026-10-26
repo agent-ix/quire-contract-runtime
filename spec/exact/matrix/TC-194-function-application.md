@@ -76,9 +76,13 @@ agent-ix/quire-contract-runtime#34.
 15. After AD-004 step 5, invoke one admitted checked input and one CG-generated
     resumable body through the QSL-owned leaf with `std` disabled. Run the same
     inputs through QSL's std reference. Compare the complete outcome or typed
-    refusal, location and losses, consumed work, and ordered charge log; use
-    one negative input whose first denied charge preserves the admitted prefix
-    (FR-273-AC-12).
+    refusal, location and losses, consumed work, and ordered charge log. Include
+    completed decimal rounding and IEEE loss cases with nonempty `LocatedLoss`
+    entries at their producing expression locations; check their order and that
+    the completed evaluations have no stop location. Include a stop at an executed
+    child node and compare its exact declaration origin and child-index path.
+    Include a call-entry charge denial before any expression node runs; check
+    `location: None`, empty losses and the admitted charge prefix (FR-273-AC-12).
 16. On a native thread limited to a 512 KiB stack, run the checked decreasing
     `count(100000)` and the corresponding generated-body case. Record the
     sufficient run's measured work spend `w` separately for each path. Run each
