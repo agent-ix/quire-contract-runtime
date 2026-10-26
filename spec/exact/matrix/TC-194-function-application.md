@@ -71,7 +71,7 @@ agent-ix/quire-contract-runtime#34.
 14. Trigger a missing function from within an admitted checked body and a nested `Frame::meter`
     borrow; assert `UnknownCheckedFunction` and `MeterBorrowConflict` respectively. Check a
     foreign expression carries `ForeignCheckedExpression`. Also call the same package directly
-    from a running generated transition and assert that the nested entry is refused before charge,
+    from a running generated transition and assert `PackageReentry` before nested charge,
     so host re-entry cannot recurse the scheduler (FR-273-AC-7/8).
 15. After AD-004 step 5, invoke one admitted checked input and one CG-generated
     resumable body through the QSL-owned leaf with `std` disabled. Run the same
