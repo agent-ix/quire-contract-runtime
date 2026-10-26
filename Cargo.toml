@@ -13,6 +13,12 @@ repository = "https://github.com/agent-ix/quire-contract-runtime"
 name = "quire_contract_runtime"
 path = "src/lib.rs"
 
+[[bin]]
+name = "exact_deep_value_type_child"
+path = "tests/support/exact_deep_value_type_child.rs"
+required-features = ["exact"]
+test = false
+
 [workspace]
 members = ["measurement/footprint", "measurement/exact-panic", "tools/kernel-api-check", "tools/runtime-gates"]
 resolver = "2"
