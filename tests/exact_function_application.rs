@@ -1155,10 +1155,11 @@ fn tc_194_explicit_frames_reach_4096_calls_on_64_kib_stack_with_exact_fuel() {
                                 assert_eq!(active.get(), 0, "only one body transition is active");
                                 active.set(1);
                                 let next = if waiting {
-                                    assert_eq!(
+                                    assert!(matches!(
                                         completed,
-                                        Some(Value::Integer(Integer::from((remaining - 1) as i64)))
-                                    );
+                                        Some(Value::Integer(value))
+                                            if value == Integer::from((remaining - 1) as i64)
+                                    ));
                                     BodyStep::Return(Outcome::Completed(Value::Integer(
                                         Integer::from(remaining as i64),
                                     )))
