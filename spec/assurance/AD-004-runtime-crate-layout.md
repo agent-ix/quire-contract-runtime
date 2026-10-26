@@ -116,7 +116,7 @@ those six, so "same declaration" is a candidate for "same semantics", settled by
 | Same fields, boxed in RT | 7 | delete; representation only | `Decimal`, `DecimalType`, `Rational`, `RationalDomain`, `Text`, `EnumValue`, `CompoundUnit` |
 | Same value, different representation | 1 | delete; layout only | `Integer` (RT `{small: i64, big: Option<Box<BigInt>>}`, QSL `(BigInt)`) |
 | Same name, different declaration | 22 | delete in the step; consumers repoint to the owner type, no adapter | `Meter`, `ChargePoint`, `InjectedDenial`, `Refusal`, `Undefined`, `Value`, `ValueType`, `Quantity`, `QuantityOperation`, `ObjectReference`, `ObjectTypeDeclaration`, `FieldDeclaration`, `TypeEnvironment`, `CheckedEquality`, `DeclarationCause`, `CollectionType`, `UnitGraph`, `CheckingLimits`, `InputRefusal`, `PackageCause`, `Origin`, `Location` |
-| RT-only | 27 types, 7 free items and the alias `Body` | keep (the 11 `scalar` items), delete when the evaluation leaf lands (the `expression` items, Q-1), or delete with a successor (below) | see What this crate keeps |
+| RT-only | runtime-owned `scalar` items and temporary `expression` items, including the `Body` alias | keep (the 11 `scalar` items), delete when the evaluation leaf lands (the `expression` items, Q-1), or delete with a successor (below) | see What this crate keeps |
 
 The six read in full:
 
