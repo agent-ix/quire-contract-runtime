@@ -48,3 +48,9 @@ The computed Quoin matrix tags both new test functions to FR-008-AC-13 and TC-02
 ## Disposition verdict
 
 **PASS** — every finding has a fixed latest disposition at 9490bfe3; no new finding was introduced in disposition pass 2.
+
+## Revalidation (guard-fix pass 3)
+
+Frozen head: 664438839c5476e8d9526ef87f7b182e2212bafa. Previous approved code head: 9490bfe3d9412687d068ee7ea304c1e8b5853b58.
+
+**PASS** — no open or new finding. FR-008-AC-13 and TC-024 remain bound to two active integration tests. The removed ignored child test contributed no independent acceptance evidence; its exercised body moved to an exact-feature Cargo helper. The parent checks child success and exact marker output after the shared deep exercise. No new trace or acceptance gap was found. Final aggregate gates remain with the code lead.

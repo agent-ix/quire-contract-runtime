@@ -52,3 +52,9 @@ Independent semantic review used claude-opus-5-5 on the frozen test, FR-008-AC-1
 ## Disposition verdict
 
 **PASS** — every finding has a fixed latest disposition at 9490bfe3; no new finding was introduced in disposition pass 2.
+
+## Revalidation (guard-fix pass 3)
+
+Frozen head: 664438839c5476e8d9526ef87f7b182e2212bafa. Previous approved code head: 9490bfe3d9412687d068ee7ea304c1e8b5853b58.
+
+**PASS** — no open or new finding. Cargo declares an exact-only helper binary with test = false; both the integration test and child compile the same tests/support/deep_value_type.rs source. The child executable runs that exercise on its process main thread, exits unsuccessfully on panic or stack failure, and prints only the completion marker after all deep drops. The 64 KiB thread remains the recursion-sensitive control. No code duplication or gate narrowing was found. Final aggregate gates remain with the code lead.
