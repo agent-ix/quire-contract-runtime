@@ -229,6 +229,24 @@ mod json {
         assert!(decode(format!(" \n{EMPTY}\r\t").as_bytes()).is_ok());
     }
 
+    #[trace("TC-015", "FR-004-AC-7")]
+    #[test]
+    fn tc_015_deep_snapshot_input_refuses_on_small_stack() {
+        std::thread::Builder::new()
+            .stack_size(64 * 1024)
+            .spawn(|| {
+                let nested = format!("{}0{}", "[".repeat(30_000), "]".repeat(30_000));
+                assert!(nested.len() < 65_536);
+                assert_eq!(decode(nested.as_bytes()), Err(SnapshotError::Malformed));
+                let in_counts = EMPTY.replace("\"accepted\":0", &format!("\"accepted\":{nested}"));
+                assert!(in_counts.len() < 65_536);
+                assert_eq!(decode(in_counts.as_bytes()), Err(SnapshotError::Malformed));
+            })
+            .expect("spawn small-stack snapshot reader")
+            .join()
+            .expect("snapshot reader must refuse deep input without exhausting the stack");
+    }
+
     #[trace("TC-015", "FR-004-AC-5")]
     #[test]
     fn tc_015_structured_refusals_remain_distinct() {
