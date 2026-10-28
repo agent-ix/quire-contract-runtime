@@ -5,6 +5,14 @@ use quire_exact::{CardinalityBound, CollectionKind, CollectionType, ValueType};
 pub(crate) const CHILD_COMPLETED: &str = "deep-value-type-child-completed";
 const DEPTH: usize = 100_000;
 
+fn nested_option() -> ValueType {
+    let mut value_type = ValueType::Boolean;
+    for _ in 0..DEPTH {
+        value_type = ValueType::option(value_type);
+    }
+    value_type
+}
+
 fn nested_type(
     leaf: ValueType,
     kind: CollectionKind,
@@ -26,6 +34,22 @@ fn nested_type(
 }
 
 pub(crate) fn exercise_deep_type() {
+    let options = nested_option();
+    let options_copy = options.clone();
+    assert_eq!(
+        options, options_copy,
+        "every Option layer must survive cloning"
+    );
+    let rendered_options = format!("{options:?}");
+    assert_eq!(
+        rendered_options.matches("Option(").count(),
+        DEPTH,
+        "debug output must traverse every Option layer"
+    );
+    assert!(rendered_options.contains("Boolean"));
+    drop(options_copy);
+    drop(options);
+
     let original = nested_type(ValueType::Boolean, CollectionKind::Set, None);
     let copy = original.clone();
     assert!(original == copy, "a deep clone must retain every type link");
