@@ -3,7 +3,7 @@
 use quire_exact::{CardinalityBound, CollectionKind, CollectionType, ValueType};
 
 pub(crate) const CHILD_COMPLETED: &str = "deep-value-type-child-completed";
-const DEPTH: usize = 16_384;
+const DEPTH: usize = 100_000;
 
 fn nested_type(
     leaf: ValueType,
