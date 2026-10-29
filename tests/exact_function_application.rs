@@ -21,8 +21,8 @@ use quire_contract_runtime::scalar::{
 };
 use quire_exact::{
     ChargePoint, CheckedInvariantCause, EffectiveId, Identifier, IeeeOperationKind, IeeeWidth,
-    Integer, LimitKind, Meter, NodeKey, ObjectId, ObjectReference, Outcome, Refusal, RoundingMode,
-    ScalarLimits, Undefined, UnionMember, UnionValue, UniverseId, Value, ValueType,
+    Incomplete, Integer, LimitKind, Meter, NodeKey, ObjectId, ObjectReference, Outcome, Refusal,
+    RoundingMode, ScalarLimits, Undefined, UnionMember, UnionValue, UniverseId, Value, ValueType,
 };
 use quire_semantic_value::declaration::{
     CompositeDeclaration, CompositeShape, ObjectTypeDeclaration, TypeEnvironment,
