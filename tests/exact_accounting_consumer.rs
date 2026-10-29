@@ -97,7 +97,7 @@ fn first_short_counter_uses_field_order_and_exact_denied_amount() {
     let mut meter = Meter::new(ScalarLimits {
         integer_bits: 128,
         value_occurrences: 1,
-        work_units: 1,
+        work_units: 2,
         result_units: 0,
         ..UNLIMITED
     });
@@ -149,7 +149,7 @@ fn first_short_counter_uses_field_order_and_exact_denied_amount() {
         denied,
         Err(Incomplete {
             limit_kind: LimitKind::WorkUnits,
-            limit: 1,
+            limit: 2,
             consumed: 1,
             next_charge: Integer::from(2_i64),
             charge_point: POINT,
