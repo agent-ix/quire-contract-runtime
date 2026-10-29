@@ -86,7 +86,7 @@ invariants:
 compatibility:
   enums: the five runtime-owned scalar enums are exhaustive; core and remaining expression-residue data enums are non-exhaustive, and consumers must preserve their future unknown states
   const-evaluation: the checked index helper is runtime-only because safe slice lookup is not const-stable at the runtime's Rust floor
-  msrv: Rust 1.98.1
+  msrv: root Cargo.toml rust-version
   licensing: AGPL-3.0-or-later
   publication: disabled (`publish = false`)
 ```
@@ -230,9 +230,8 @@ The table below records, for every residue `exact` operation that evaluates a
 
 **Open issue.** The upstream `quire-exact` crate is now `#![no_std]` plus `alloc` and builds for
 `thumbv7em-none-eabi` in its own repository's gate (QSL-357), so the `no_std` half of the earlier
-conflict is resolved. The Rust floor is the owner's decision of 2026-10-01: the runtime takes one floor,
-Rust 1.98.1, for all features (above the 1.82 that `quire-exact` needs, as relayed).
-`compatibility.msrv` below states it. The end state (no ported QSL code in the runtime) and the `deny.toml` guard on QSL crates are
+conflict is resolved. The root `Cargo.toml` `rust-version` declares one compiler floor for all
+features, and `compatibility.msrv` refers to that field. The end state (no ported QSL code in the runtime) and the `deny.toml` guard on QSL crates are
 [FR-275](../../exact/functional/FR-275-single-exact-kernel.md).
 
 ### Acceptance criteria
