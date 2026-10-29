@@ -404,6 +404,21 @@ fn spec(home: &Path, root: &Path, target: &Path, args: &[&str]) -> CommandSpec {
     }
 }
 
+fn declared_msrv(root: &Path) -> Result<String, String> {
+    let manifest = fs::read_to_string(root.join("Cargo.toml"))
+        .map_err(|error| format!("cannot read root Cargo.toml: {error}"))?;
+    let manifest: toml::Value = manifest
+        .parse()
+        .map_err(|error| format!("cannot parse root Cargo.toml: {error}"))?;
+    manifest
+        .get("package")
+        .and_then(|package| package.get("rust-version"))
+        .and_then(toml::Value::as_str)
+        .filter(|version| !version.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| "root Cargo.toml has no package rust-version".into())
+}
+
 pub fn collect_features<R: CommandRunner>(runner: &mut R, root: &Path, home: &Path) -> Vec<Row> {
     let available = cargo(home).is_file();
     let target = root.join("target");
@@ -440,6 +455,7 @@ pub fn collect_features<R: CommandRunner>(runner: &mut R, root: &Path, home: &Pa
             .with_trace_ids(feature.trace_ids),
         );
     }
+    let msrv = declared_msrv(root);
     for build in NO_STD_BUILDS {
         if !available {
             rows.push(
@@ -453,12 +469,23 @@ pub fn collect_features<R: CommandRunner>(runner: &mut R, root: &Path, home: &Pa
             );
             continue;
         }
+        let version = match &msrv {
+            Ok(version) => version,
+            Err(reason) => {
+                rows.push(
+                    row(build.name, Outcome::Malformed, None, Some(reason.clone()))
+                        .with_trace_ids(build.trace_ids),
+                );
+                continue;
+            }
+        };
+        let toolchain = format!("+{version}");
         let command = spec(
             home,
             root,
             &target,
             &[
-                "+1.98.1",
+                &toolchain,
                 "build",
                 "--locked",
                 "--lib",
@@ -805,6 +832,11 @@ mod tests {
         }
         let root = tempfile::tempdir().expect("root");
         let home = tempfile::tempdir().expect("home");
+        fs::write(
+            root.path().join("Cargo.toml"),
+            "[package]\nname = \"quire-contract-runtime\"\nrust-version = \"1.70.0\"\n",
+        )
+        .expect("root manifest");
         fs::create_dir_all(home.path().join(".cargo/bin")).expect("cargo bin");
         fs::write(home.path().join(".cargo/bin/cargo"), "").expect("cargo executable");
         let mut runner = RecordingRunner(Vec::new());
@@ -836,7 +868,7 @@ mod tests {
         let no_std = runner
             .0
             .iter()
-            .filter(|command| command.args.first().is_some_and(|arg| arg == "+1.98.1"))
+            .filter(|command| command.args.first().is_some_and(|arg| arg == "+1.70.0"))
             .collect::<Vec<_>>();
         assert_eq!(no_std.len(), 2);
         for command in no_std {
@@ -848,6 +880,137 @@ mod tests {
                 .args
                 .iter()
                 .any(|arg| arg == "--no-default-features"));
+        }
+
+        fs::write(
+            root.path().join("Cargo.toml"),
+            "[package]\nname = \"quire-contract-runtime\"\nrust-version = \"1.71.0\"\n",
+        )
+        .expect("changed root manifest");
+        let mut changed_runner = RecordingRunner(Vec::new());
+        let changed_rows = collect_features(&mut changed_runner, root.path(), home.path());
+        assert!(changed_rows.iter().all(|row| row.outcome == Outcome::Pass));
+        assert_eq!(
+            changed_runner
+                .0
+                .iter()
+                .filter(|command| command.args.first().is_some_and(|arg| arg == "+1.71.0"))
+                .count(),
+            2
+        );
+
+        fs::write(
+            root.path().join("Cargo.toml"),
+            "[package]\nname = \"quire-contract-runtime\"\n",
+        )
+        .expect("missing floor manifest");
+        let mut missing_runner = RecordingRunner(Vec::new());
+        let missing_rows = collect_features(&mut missing_runner, root.path(), home.path());
+        assert!(missing_rows
+            .iter()
+            .rev()
+            .take(2)
+            .all(|row| row.outcome == Outcome::Malformed));
+        assert_eq!(missing_runner.0.len(), 19, "no missing-floor build may run");
+
+        fs::write(
+            root.path().join("Cargo.toml"),
+            "[package]\nname = \"quire-contract-runtime\"\nrust-version = \"1.71.0\"\n",
+        )
+        .expect("unavailable floor manifest");
+        struct UnavailableRunner;
+        impl CommandRunner for UnavailableRunner {
+            fn run(&mut self, command: &CommandSpec) -> io::Result<CommandOutput> {
+                if command.args.first().is_some_and(|arg| arg == "+1.71.0") {
+                    Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "declared compiler unavailable",
+                    ))
+                } else {
+                    output(0, "")
+                }
+            }
+        }
+        let unavailable_rows = collect_features(&mut UnavailableRunner, root.path(), home.path());
+        assert!(unavailable_rows
+            .iter()
+            .rev()
+            .take(2)
+            .all(|row| row.outcome == Outcome::Unavailable));
+    }
+
+    #[test]
+    #[trace("TC-199", "FR-275-AC-20", "FR-275-AC-21")]
+    fn make_msrv_and_size_select_manifest_floor_and_fail_closed() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let root = tempfile::tempdir().expect("scratch root");
+        let manifest = root.path().join("Cargo.toml");
+        let makefile = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("Makefile");
+        let run = |args: &[&str], path: Option<&Path>| {
+            let mut command = Command::new("make");
+            command
+                .arg("-f")
+                .arg(&makefile)
+                .args(args)
+                .current_dir(root.path());
+            if let Some(path) = path {
+                command.env(
+                    "PATH",
+                    format!(
+                        "{}:{}",
+                        path.display(),
+                        std::env::var("PATH").expect("PATH")
+                    ),
+                );
+            }
+            command.output().expect("make invocation")
+        };
+
+        for version in ["1.70.0", "1.71.0"] {
+            fs::write(
+                &manifest,
+                format!("[package]\nname = \"scratch\"\nrust-version = \"{version}\"\n"),
+            )
+            .expect("scratch manifest");
+            let output = run(&["-n", "msrv", "size"], None);
+            assert!(output.status.success(), "make dry run failed: {output:?}");
+            let stdout = String::from_utf8(output.stdout).expect("make stdout");
+            assert!(stdout.contains(&format!("rustup run {version} cargo check")));
+            assert!(stdout.contains(&format!("cargo +{version} build")));
+        }
+
+        fs::write(&manifest, "[package]\nname = \"scratch\"\n").expect("missing floor manifest");
+        for target in ["msrv", "size"] {
+            let output = run(&[target], None);
+            assert!(
+                !output.status.success(),
+                "{target} accepted a missing floor"
+            );
+            assert!(String::from_utf8_lossy(&output.stderr)
+                .contains("root Cargo.toml has no package rust-version"));
+        }
+
+        fs::write(
+            &manifest,
+            "[package]\nname = \"scratch\"\nrust-version = \"1.71.0\"\n",
+        )
+        .expect("unavailable floor manifest");
+        let bin = root.path().join("bin");
+        fs::create_dir(&bin).expect("scratch bin");
+        let rustup = bin.join("rustup");
+        fs::write(&rustup, "#!/bin/sh\nexit 1\n").expect("refusing rustup");
+        fs::set_permissions(&rustup, fs::Permissions::from_mode(0o755)).expect("executable rustup");
+        for target in ["msrv", "size"] {
+            let output = run(&[target], Some(&bin));
+            assert!(
+                !output.status.success(),
+                "{target} accepted an unavailable floor"
+            );
+            assert!(String::from_utf8_lossy(&output.stderr)
+                .contains("declared MSRV 1.71.0 is unavailable"));
         }
     }
 }
