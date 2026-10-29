@@ -124,6 +124,7 @@ fn closed_charge_point(point: ChargePoint) {
     }
 }
 
+#[trace("FR-006-AC-3")]
 #[test]
 fn consumed_kernel_charge_points_match_authoritative_vocabulary() {
     let vectors: serde_json::Value = serde_json::from_str(VALUE_ACCOUNTING_CHARGE_POINT_VECTORS)
@@ -161,6 +162,11 @@ fn consumed_kernel_charge_points_match_authoritative_vocabulary() {
         closed_charge_point(point);
         assert_eq!(ChargePoint::from_code(point.as_str()), Some(point));
     }
+    assert_ne!(ChargePoint::EqualityPlanForm, ChargePoint::EqualityPlan);
+    assert_eq!(
+        ChargePoint::from_code("equality.plan-form"),
+        Some(ChargePoint::EqualityPlanForm)
+    );
 
     let undeclared = vectors["undeclared"]
         .as_array()
@@ -170,6 +176,51 @@ fn consumed_kernel_charge_points_match_authoritative_vocabulary() {
         let spelling = entry.as_str().expect("QSpec negative spelling is a string");
         assert!(!declared_set.contains(spelling), "{spelling:?} is declared");
         assert_eq!(ChargePoint::from_code(spelling), None);
+    }
+}
+
+#[trace("FR-006-AC-3")]
+#[test]
+fn consumed_limit_kinds_match_qspec_field_order_and_spelling() {
+    let expected = [
+        (LimitKind::IntegerBits, "integer_bits"),
+        (LimitKind::DecimalDigits, "decimal_digits"),
+        (LimitKind::ScaleExpansion, "scale_expansion"),
+        (LimitKind::TextInputBytes, "text_input_bytes"),
+        (LimitKind::TextScalars, "text_scalars"),
+        (LimitKind::NormalizedScalars, "normalized_scalars"),
+        (LimitKind::UnitEdges, "unit_edges"),
+        (LimitKind::ValueOccurrences, "value_occurrences"),
+        (LimitKind::WorkUnits, "work_units"),
+        (LimitKind::ResultUnits, "result_units"),
+    ];
+    assert_eq!(LimitKind::ALL.len(), expected.len());
+    let mut spellings = BTreeSet::new();
+    for (actual, (kind, spelling)) in LimitKind::ALL.into_iter().zip(expected) {
+        closed_limit_kind(actual);
+        assert_eq!(actual, kind);
+        assert_eq!(actual.as_str(), spelling);
+        assert!(
+            spellings.insert(actual.as_str()),
+            "duplicate limit spelling"
+        );
+        assert_eq!(
+            LimitKind::ALL
+                .into_iter()
+                .find(|candidate| candidate.as_str() == spelling),
+            Some(actual),
+            "QSpec spelling did not select its limit kind"
+        );
+        assert_eq!(
+            actual.is_cumulative(),
+            matches!(actual, LimitKind::WorkUnits | LimitKind::ResultUnits)
+        );
+    }
+    for undeclared in ["integer-bits", "result_unit", "not-a-limit"] {
+        assert!(
+            !spellings.contains(undeclared),
+            "undeclared limit kind was accepted"
+        );
     }
 }
 

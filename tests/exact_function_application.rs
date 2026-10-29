@@ -594,7 +594,7 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
 
 /// An `InjectedDenial` at the `function.call` charge stops before the body
 /// runs: the body's side effect (setting a flag) never happens.
-#[trace("TC-194", "FR-273-AC-2")]
+#[trace("TC-194", "FR-273-AC-2", "FR-006-AC-3")]
 #[test]
 fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     let ran = Rc::new(Cell::new(false));
@@ -624,6 +624,30 @@ fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     let evaluation = package.call("f", Vec::new(), &objects, &mut meter).unwrap();
     assert!(matches!(evaluation.outcome, Outcome::Incomplete(_)));
     assert!(!ran.get());
+
+    let mut ordinary_limit = Meter::new(ScalarLimits {
+        work_units: 0,
+        ..UNLIMITED
+    });
+    let denied = package
+        .call("f", Vec::new(), &objects, &mut ordinary_limit)
+        .unwrap();
+    let Outcome::Incomplete(record) = denied.outcome else {
+        panic!("a denied function call did not return Incomplete");
+    };
+    assert_eq!(
+        record,
+        Incomplete {
+            limit_kind: LimitKind::WorkUnits,
+            limit: 0,
+            consumed: 0,
+            next_charge: Integer::from(1_i64),
+            charge_point: ChargePoint::FunctionCall,
+        }
+    );
+    assert!(!ran.get(), "a denied charge ran the function body");
+    assert_eq!(ordinary_limit.admission_count(), 0);
+    assert_eq!(ordinary_limit.consumed(LimitKind::ResultUnits), 0);
 }
 
 /// `CallPlan::call_events` predicts, before any charge, exactly the number
