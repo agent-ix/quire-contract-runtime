@@ -2,7 +2,6 @@
 //! RT consumer checks for the public exact meter contract.
 #![cfg(feature = "exact")]
 
-use ix_trace_rs::trace;
 use quire_exact::{Charge, ChargePoint, Incomplete, Integer, LimitKind, Meter, ScalarLimits};
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -22,7 +21,6 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 /// independent of a particular scalar operation's charge schedule.
 const POINT: ChargePoint = ChargePoint::IntegerArithmeticOperands;
 
-#[trace("FR-006-AC-3")]
 #[test]
 fn consumed_size_counters_keep_high_water_while_work_and_results_accumulate() {
     for kind in LimitKind::ALL {
@@ -54,7 +52,6 @@ fn consumed_size_counters_keep_high_water_while_work_and_results_accumulate() {
     assert_eq!(meter.admission_count(), 3);
 }
 
-#[trace("FR-006-AC-3")]
 #[test]
 fn first_short_counter_uses_field_order_and_exact_denied_amount() {
     let mut meter = Meter::new(ScalarLimits {

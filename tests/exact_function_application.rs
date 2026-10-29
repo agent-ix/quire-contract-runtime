@@ -592,9 +592,9 @@ fn tc_194_evaluate_charges_one_function_call_per_reached_application() {
     assert_eq!(calls, 2);
 }
 
-/// An `InjectedDenial` at the `function.call` charge stops before the body
-/// runs: the body's side effect (setting a flag) never happens.
-#[trace("TC-194", "FR-273-AC-2", "FR-006-AC-3")]
+/// An injected or ordinary work-limit denial at `function.call` stops before
+/// the body runs: its side effect (setting a flag) never happens.
+#[trace("TC-194", "FR-273-AC-2")]
 #[test]
 fn tc_194_incomplete_function_call_charge_stops_before_the_body() {
     let ran = Rc::new(Cell::new(false));
