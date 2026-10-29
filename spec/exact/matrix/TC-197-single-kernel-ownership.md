@@ -32,10 +32,10 @@ Every procedure below remains required and planned until its full end-state evid
 2. Read `Cargo.toml`; expect `quire-exact` and `quire-semantic-value` optional, enabled only by `exact`,
    each using its own Git repository, `branch = "main"`, and no `rev`, `tag`, `path` or `[patch]`
    (FR-275-AC-3, FR-275-AC-4).
-3. Run `make deny`; expect success, and `quire check-lock Cargo.lock` to report coherence with one
-   entry each for `quire-exact` and `quire-semantic-value`, plus one each for transitive
-   `quire-canonical` and `quire-canonical-derive` (FR-275-AC-5). TC-202 separately
-   checks that the gate rejects a duplicate first-party Git crate entry.
+3. Inspect the committed `Cargo.lock`; expect exactly one entry each for `quire-exact`,
+   `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive` (FR-275-AC-5).
+   Run `make deny` separately for the retained cargo-deny source, licence and ban policy;
+   TC-198 exercises the QSL source refusal.
 4. List the files under `tests/`, `src/` and any fixture directory; expect no test that runs a second
    kernel implementation, no use of the QSL Git repository, and no file copied from the
    QSL repository (FR-275-AC-12, FR-275-AC-13).
