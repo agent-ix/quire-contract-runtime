@@ -31,3 +31,14 @@ Reviewed the three changed Rust tests at the assigned PR head. Rust style and re
 - `tests/exact_function_application.rs`: ordinary work-limit denial before a function body side effect; no separate code finding.
 - `tests/exact_outcome_consumer.rs`: charge point QSpec vector check and new LimitKind census; findings above.
 - `src/` and CI workflows are unchanged. `quire-exact::LimitKind` has `ALL` and `as_str` but no public `from_code` at the inspected dependency interface. The review does not claim the code compiles or the gate passes; neither was run.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | The `expected` LimitKind table and its entire test were removed at 3ee6928; no QSpec field-list copy remains in this PR's diff. |
+| FND-002 | fixed | The undeclared LimitKind loop was removed with that test; the PR no longer asserts rejection that it cannot observe. |
+
+## Disposition verdict
+
+**PASS for this partial code slice** — both code-review defects were removed. FR-006-AC-3 remains open and is not claimed by a trace tag. Static review only; final gates have not run.

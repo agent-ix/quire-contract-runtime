@@ -28,3 +28,14 @@ Planless manual AC-to-test review of the PR diff. The new trace tags mark FR-006
 ## Coverage
 
 Plan completion: not assessed. Examined FR-006-AC-3 and the full TC-016/TC-017 procedures against the changed trace-tagged tests. ChargePoint uses the QSpec vector and checks `from_code`; high-water, cumulative and first-short meter tests have discriminating assertions; the function-call denial checks no body side effect. No `src/` code changed, so the PR adds no reverse code-to-spec surface. The RT matrix still labels AC3 and TC-017 open, which is truthful; the trace tag is premature. No tests or builds ran under the one-lane order. QSL-1106's downstream boundary is unresolved and is not claimed as evidence here.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | deferred | The unsupported LimitKind census and every new FR-006-AC-3 trace tag were removed at 3ee6928, so this PR no longer claims full TC-016/AC3 coverage. The underlying QSpec vocabulary and kernel reverse-intake evidence remain on open IR-1011 for a later slice. |
+| FND-002 | deferred | The synthetic meter assertion remains as partial evidence without an FR-006-AC-3 trace tag. TC-017's concrete 2^64 multiplication and exact 130 denial remain on open IR-1011, with QSL-1106 owning the downstream case boundary. |
+
+## Disposition verdict
+
+**CONDITIONAL for this partial evidence slice** — no premature AC3 binding remains; the complete criterion and TC-017 procedure remain open. Static review only; final gates have not run.
