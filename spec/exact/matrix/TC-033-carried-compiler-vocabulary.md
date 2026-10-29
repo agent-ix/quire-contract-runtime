@@ -25,7 +25,10 @@ preserved below as historical FR-012-AC-1 text.
    streams), and local `NodeKey` definitions inside macros. Flag named hex decoding paths and
    functions taking `&str` or `&[u8]` and returning `[u8; 32]` (also through `Option` or
    `Result`). Confirm the retired parser and round-trip tests are absent.
-2. Compare the kernel's `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` with their normative strings.
+2. Drive independently admitted checked-package identities through declaration,
+   reference-universe and declared/compound unit comparisons. Confirm the retained declaration
+   identity, foreign-universe refusal and cross-domain inequality, including the equal-byte
+   declared/compound control. The test receives the admitted identities from the producer.
 3. Check `SelectionRefusalCode::ALL` order, each `as_str`, `from_code` over each spelling and over
    unlisted spellings, and `PackageRefusalCode::as_str`.
 4. Drive QSV `DimensionNode::checked`, `UnitNode::checked`, `UnitGraph::from_checked_nodes`,
@@ -46,13 +49,14 @@ preserved below as historical FR-012-AC-1 text.
 1. Before the step-4 cutover only, check the local parser's 64-lowercase-hex-digit behavior.
 2. Before the step-4 cutover only, check the local `from_bytes`, `as_bytes`, `Display` and
    `from_hex` round trip. Retire both steps and their tests when the local type is deleted;
-   test-only shared-key fixtures then use `NodeKey::from_digest([u8; 32])`.
+   subsequent identity fixtures consume admitted values rather than constructing digest bytes.
 
 ## Expected Results
 
 RT has no local `NodeKey` type, alias, constructor, hex decoder or public re-export; its library
 source contains no `NodeKey` construction. The retired parser and round-trip tests are absent.
-The remaining vocabulary spellings are byte-exact. QSV owns the complete structural-cause
+The admitted-identity controls retain their foreign and cross-domain behavior. The remaining
+refusal vocabulary spellings are byte-exact. QSV owns the complete structural-cause
 reachability and normalized unit ordering obligations; RT has no second unit graph.
 The R-3 step is implemented: RT has no local definition refusal vocabulary, its tests import QSV
 directly, and the three retired causes cannot be paired with `invalid_package`.

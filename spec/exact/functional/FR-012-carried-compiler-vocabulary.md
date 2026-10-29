@@ -24,20 +24,20 @@ recompute, re-derive or invent any of them.
 `src/exact/mod.rs` no longer exports a runtime unit vocabulary; the quantity and unit cutover
 consumes QSV's checked graph and units directly. The R-3 definition cutover consumes
 `quire_semantic_value::definition` directly.
-`NodeKey` and `NODE_KEY_DOMAIN` are consumed directly from `quire_exact`;
+`NodeKey` values in the current shared interface are consumed directly from `quire_exact`;
 `InvalidSemanticGraph` and `SemanticGraphCause` are consumed directly from
 `quire_semantic_value::semantic_node`.
 
 ## Inputs
 
-- Compiler-admitted 32-byte `quire.checked-semantic-node/v1` node keys carried in shared values.
+- Compiler-admitted semantic identities carried in shared values.
 - Normative refusal spellings read from a definition lock.
 - Compiler-admitted dimension nodes with their `(base dimension, exponent)` terms, and unit
   declarations with their dimension, optional target, scale and offset.
 
 ## Outputs
 
-- The kernel-owned `COMPOUND_UNIT_DOMAIN` evaluator domain string, consumed without an RT copy.
+- Admitted declaration and unit identities, consumed without an RT digest-domain copy.
 - QSV's definition vocabulary supplies `SelectionRefusalCode`, `PackageRefusalCode`,
   `PackageCause` and `PackageRefusal` with their normative spellings.
 - A QSV-admitted `UnitGraph`, `Unit`, `Dimension` and `CompoundUnit`, each unit's admitted `UnitEdge`
@@ -48,13 +48,12 @@ consumes QSV's checked graph and units directly. The R-3 definition cutover cons
 
 ## Behavior
 
-- **The runtime never computes or constructs a node key in library code.** It carries admitted
-  `quire_exact::NodeKey` values in the current runtime values. The local `NodeKey::from_bytes` and
-  `NodeKey::from_hex` constructors were deleted with the local definition in the IR-882 key-owner
-  slice of step 4; hex decoding has no RT owner. Test-only fixtures may mint keys with the shared
-  `NodeKey::from_digest([u8; 32])`, using a key from an admitted package when lookup must succeed.
-  `NODE_KEY_DOMAIN` is `quire.checked-semantic-node/v1` and `COMPOUND_UNIT_DOMAIN` is
-  `quire.value.compound-unit/v1`; both are carried verbatim and neither is constructed at runtime.
+- **The runtime never computes or constructs a semantic identity in library code.** It carries
+  identities from the checked package through the current shared types. RT's local `NodeKey`
+  constructors and hex decoder were deleted in the IR-882 key-owner cutover. Tests that need
+  declaration, reference-universe or unit identity use admitted values from their producer; they
+  do not mint identity bytes or assert a fixed digest or digest-domain string. RT neither owns a
+  digest-domain constant nor reconstructs a shared identity from constituent bytes.
 - **The refusal vocabularies are closed and byte-exact.** `SelectionRefusalCode::ALL` lists the
   lock's eight `selection_refusal_codes` in normative check order, `as_str` yields the lock's exact
   spelling for each, and `from_code` is its exact inverse: it resolves every listed spelling and
@@ -110,22 +109,13 @@ consumes QSV's checked graph and units directly. The R-3 definition cutover cons
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-012-AC-1 | `NodeKey::from_hex` accepts exactly the 64-lowercase-hex-digit inputs and returns `None` for every wrong length, uppercase digit and non-hexadecimal byte; `from_bytes`/`as_bytes`/`from_hex`/`Display` round-trip every digest unchanged. Retired at IR-882 step 4; this ID remains reserved with its original criterion text. | Test (TC-033; pre-cutover only) |
-| FR-012-AC-2 | `NODE_KEY_DOMAIN` and `COMPOUND_UNIT_DOMAIN` equal their normative strings, and no code path constructs either from parts. | Test (TC-033) |
+| FR-012-AC-2 | Given admitted checked-package identities, RT consumers retain the declaration identity, distinguish an identity from a foreign reference universe, and distinguish declared from compound unit identities regardless of equal underlying bytes. The corresponding foreign and cross-domain comparisons retain their inequality or typed refusal outcomes without an RT reminting step. | Test (TC-033) |
 | FR-012-AC-3 | `SelectionRefusalCode::ALL` is the eight codes in normative check order, `as_str` yields the lock spelling for each, `from_code` resolves exactly those eight spellings and nothing else, and `PackageRefusalCode::as_str` is `invalid_package`. | Test (TC-033) |
 | FR-012-AC-4 | Each of the twelve graph causes reachable through QSV's `DimensionNode::checked`, `UnitNode::checked` or `UnitGraph::from_checked_nodes` is raised by a malformed input; `DuplicateNode` is unrepresentable because the graph accepts key-unique `BTreeMap`s, rather than a list with repeated keys. `UndeclaredCase` arises by reading a case against its declaration; no graph input raises any of the four compiler-admission causes. `EnumDeclaration::new` raises `NonCanonicalPreimage` and `UnsortedUnorderedMembers` for the malformed member lists named above; `OwnerNotSelected`, `StaleKey`, `ForeignDeclaration` and `UnreducedRational` have no RT raise site. | Test (TC-033) |
 | FR-012-AC-5 | QSV's `Dimension` and `CompoundUnit` hold no zero exponent, iterate ascending by node key, and compare equal exactly when they denote the same unit, for every insertion order of the same admitted graph nodes; compound term input is ascending, and an unsorted term input is refused. | Test (TC-033) |
 | FR-012-AC-6 | At the IR-882 step-4 cutover, inspection finds no RT-local `NodeKey`, no RT `from_bytes` or `from_hex` constructor, and no TC-033 parser or round-trip test of those local constructors. RT library code has no `NodeKey` construction or hex decoder. | Inspection |
 | FR-012-AC-7 | After the R-3 cutover, inspection finds no RT-local `PackageCause`, `PackageRefusal` or `PackageRefusalCode` definition, type alias, public re-export or adapter. The RT consumers of selection and package refusals use QSV's definition types directly; `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` are absent from RT's `invalid_package` surface, while FR-012-AC-3's eight selection spellings and `invalid_package` code remain available from QSV. | Inspection (TC-033) |
-
-## Planned carried identity representation review
-
-This replacement is **Planned**, with no executable claim. FR-012-AC-2, FR-012-AC-6, and the
-current shared-kernel `NodeKey` surface remain active. RT library code constructs no node key;
-test fixtures use shared-kernel identity values to distinguish checked declarations, reference
-universes, and declared from compound units. Before changing those carried identities, QSpec and the QSL
-producer must define their admitted replacement values and the lookup at the checked-package
-boundary. The replacement must preserve the current foreign-declaration, foreign-universe, and
-cross-domain inequality/refusal cases without giving RT a second identity constructor or decoder.
+| FR-012-AC-8 | Inspection finds no RT library or test fixture that constructs a semantic identity from bytes or constituent parts, and no RT-owned digest-domain constant, fixed digest oracle, or replacement identity pin. RT tests obtain identities from admitted checked-package values. | Inspection |
 
 ## Kernel ownership
 
