@@ -99,6 +99,16 @@ the runtime.
 | FR-004-AC-11 | The decoder validates each member without materializing an intermediate generic JSON value tree. | Inspection |
 | FR-004-AC-12 | Parser scratch on the `decode_campaign_snapshot` path remains bounded proportionally to the input cap of `MAX_BYTES` (65536 bytes), including escaped-string scratch and owned decoded identities; no input can cause scratch allocation to grow without a bound derived from that cap. | Inspection |
 
+## Planned campaign identity replacement
+
+This replacement is **Planned**, with no executable claim. FR-004-AC-8 and the snapshot identity
+criteria remain active. A verdict for a different source revision of the same requirement must
+still leave every counter and prior snapshot unchanged and return both identities to the caller.
+Before changing the `RevisionId` carrier or the snapshot's `revision` field, QSpec and the
+QSL/code-generation producer must settle the admitted identity and its transport. The replacement
+must preserve the mismatch refusal and the read-only snapshot's identity; the current text identity
+is not evidence of authenticated source content.
+
 ## Verification
 
 For FR-004-AC-11, read `decode_campaign_snapshot`, `SnapshotSeed`, `CountsSeed`, and

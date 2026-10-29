@@ -117,6 +117,16 @@ consumes QSV's checked graph and units directly. The R-3 definition cutover cons
 | FR-012-AC-6 | At the IR-882 step-4 cutover, inspection finds no RT-local `NodeKey`, no RT `from_bytes` or `from_hex` constructor, and no TC-033 parser or round-trip test of those local constructors. RT library code has no `NodeKey` construction or hex decoder. | Inspection |
 | FR-012-AC-7 | After the R-3 cutover, inspection finds no RT-local `PackageCause`, `PackageRefusal` or `PackageRefusalCode` definition, type alias, public re-export or adapter. The RT consumers of selection and package refusals use QSV's definition types directly; `RevisionMismatch`, `DigestDomainMismatch` and `ByteDigestMismatch` are absent from RT's `invalid_package` surface, while FR-012-AC-3's eight selection spellings and `invalid_package` code remain available from QSV. | Inspection (TC-033) |
 
+## Planned carried identity representation review
+
+This replacement is **Planned**, with no executable claim. FR-012-AC-2, FR-012-AC-6, and the
+current shared-kernel `NodeKey` surface remain active. RT library code constructs no node key;
+test fixtures use shared-kernel identity values to distinguish checked declarations, reference
+universes, and declared from compound units. Before changing those carried identities, QSpec and the QSL
+producer must define their admitted replacement values and the lookup at the checked-package
+boundary. The replacement must preserve the current foreign-declaration, foreign-universe, and
+cross-domain inequality/refusal cases without giving RT a second identity constructor or decoder.
+
 ## Kernel ownership
 
 The behaviour above that `quire-exact` implements (interface-001, "Exact kernel surface") is the
