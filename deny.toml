@@ -34,9 +34,6 @@ exceptions = [
 multiple-versions = "allow"
 wildcards = "warn"
 
-# One copy of every first-party crate is enforced by the shared `quire check-lock` command
-# (run from `make deny`), which reads every tracked Cargo.lock.
-
 [advisories]
 version = 2
 

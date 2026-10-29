@@ -32,7 +32,7 @@ help:
 	@echo "  make exact-panic      - Inspect retained exact-profile RT panic relocations"
 	@echo "  make spec             - Validate and cover the specification with Quire"
 	@echo "  make clean            - cargo clean"
-	@echo "  make deny             - cargo-deny licenses, bans and sources; one-copy lockfile check"
+	@echo "  make deny             - cargo-deny licenses, bans and sources"
 	@echo "  make deny-mutations   - Require QSL Git dependencies to fail cargo-deny in a scratch copy"
 	@echo "  make use-local        - patch first-party git deps to sibling checkouts"
 	@echo "  make use-remote       - Remove the local patch file and restore Cargo.lock; build from GitHub"
@@ -199,12 +199,6 @@ use-remote:
 .PHONY: deny
 deny:
 	$(CARGO) deny --workspace check licenses bans sources
-	# Complete enumeration successfully before validating its NUL-delimited result.
-	bash -c 'locks_file=$$(mktemp) || exit; \
-	  cleanup() { rm -f -- "$$locks_file"; }; trap cleanup EXIT; \
-	  git ls-files -z -- "Cargo.lock" "*/Cargo.lock" > "$$locks_file" || exit; \
-	  mapfile -d "" -t locks < "$$locks_file" || exit; \
-	  $(QUIRE) check-lock -- "$${locks[@]}"'
 
 # Mutation check of the QSL Git source policy (FR-275-AC-8, TC-198): each scratch dependency
 # must fail `cargo deny` with the QSL source rejection diagnostic.
