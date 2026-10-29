@@ -969,10 +969,10 @@ mod tests {
             command.output().expect("make invocation")
         };
 
-        for version in ["1.70.0", "1.71.0"] {
+        for (version, quote) in [("1.70.0", '"'), ("1.71.0", '"'), ("1.72.0", '\'')] {
             fs::write(
                 &manifest,
-                format!("[package]\nname = \"scratch\"\nrust-version = \"{version}\"\n"),
+                format!("[package]\nname = \"scratch\"\nrust-version = {quote}{version}{quote}\n"),
             )
             .expect("scratch manifest");
             let output = run(&["-n", "msrv", "size"], None);

@@ -11,7 +11,7 @@ CARGO ?= cargo
 LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 QUIRE ?= quire
 
-MSRV := $(shell sed -n '/^\[package\]/,/^\[/{s/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p;}' Cargo.toml)
+MSRV := $(shell python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["rust-version"])' 2>/dev/null)
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
 EXACT_PANIC_TARGET_DIR := $(FOOTPRINT_TARGET_DIR)
