@@ -55,8 +55,7 @@ dependencies point and who reports each failure.
 
 ### What crosses the seam
 
-Measured at the `origin/main` of the runtime and codegen repositories on 2026-10-01 (the commits,
-runtime 215e443 and codegen 2fad745, are informational and asserted nowhere).
+Measured at the `origin/main` of the runtime and codegen repositories on 2026-10-01.
 
 | Group | Runtime items | Owner | Where codegen uses them (`codegen` paths) |
 | --- | --- | --- | --- |
@@ -67,7 +66,7 @@ runtime 215e443 and codegen 2fad745, are informational and asserted nowhere).
 | Function application | `PackageDeclarations::check`, `CheckedPackage::call`, `Value`, `ObjectEnvironment`, `InputRefusal`, `Origin`, `Location` | runtime (FR-273, AD-002) | linked at `codegen src/exact_function.rs:952`; emitted at `:1277` and `:1353` |
 | Backend negotiation | `negotiate_ieee`, `negotiate_integer_division` and their disposition types | runtime (FR-009) | no codegen source calls either (grep of `codegen src/`) |
 | Snapshot wire | `runtime.campaign-snapshot/v1`, feature `snapshot-json` | runtime (FR-004) | not consumed: codegen's interface document says so (`codegen spec/core/functional/interface-001-codegen-api.md:304`) |
-| Generated manifest text | `quire-contract-runtime = { git, rev, features }` and the `[package.metadata.kani]` flags | codegen writes it | three emitters: `codegen src/exact_scalar.rs:2817`, `codegen src/composite_equality.rs:1573`, `codegen src/exact_function.rs:1378`; the revision constant is `codegen src/oracle.rs:13`, and the other users of it are codegen tests |
+| Generated manifest text | `quire-contract-runtime = { git, branch, features }` and the `[package.metadata.kani]` flags | codegen writes it | codegen's generated crate emitters |
 | Spelling of runtime paths in generated text | `quire_contract_runtime::ContractIdentity`, `::ClauseId` | codegen's schema asserts the text | `codegen schemas/generated-rust-oracle-v1.schema.json:9-10` |
 | Serializable copies of runtime enums | `IllTypedCause`, `RecursionEdges`, `DeclarationCause`, `Origin`, `Location` | codegen | `codegen src/composite_equality.rs:201-330`, `codegen src/exact_function.rs:374-400`; each has a `From` impl over a runtime enum |
 | A trusted flag | `FunctionDeclaration::measure_discharged` | runtime reads it, codegen sets it | codegen sets `true` unconditionally (`codegen src/exact_function.rs:935`, and in emitted source at `:1303`) |
@@ -82,21 +81,15 @@ records the same, and it is runtime's coupling).
 
 ### Identity and versions on this seam
 
-- This crate is `0.1.0` with `publish = false`. Its features (`default`, `alloc`, `std`,
+- This crate is unpublished. Its features (`default`, `alloc`, `std`,
   `proptest`, `snapshot-json`, `exact`) are the opt-in surface. There is no semantic version to
   negotiate, and none is proposed.
 - The assertion on the Rust surface is that generated source compiles against this crate, and
   codegen's tests build every generator's output against it (for example
   `codegen tests/it/exact_scalar_generation.rs:1424`).
-- Codegen's own dependency is a git `branch = "main"` with `version = "=0.1.0"`
-  (`codegen Cargo.toml:18`), resolved in codegen's lock at one commit (informational: ccc722b). The
-  emitted manifests name a different one: `RUNTIME_REVISION` is a commit before RT #83 to #88
-  (informational: ed0a04b; SR-623 records that the runtime changed a lot after it). Between the
-  two the runtime's `src/` differs by 8 files and 28 changed lines. Two runtime revisions are
-  therefore live for one codegen build, and the compile tests build against the old one while the
-  generator links the newer. CG's layout AD (IR-344, CG PR #215, open) deletes `RUNTIME_REVISION`
-  at its step 1c and has the emitted manifest name the runtime the way CG's own `Cargo.toml` does;
-  that ends the two-revision condition, and until it lands the condition stands (T-2).
+- Codegen's own dependency and generated manifests must select the runtime through their Cargo
+  manifests. Codegen's compile tests establish that generated source builds against that
+  selection (T-2).
 - Wire versions this crate owns: `runtime.campaign-snapshot/v1` (decoder refuses another
   version, `UnsupportedVersion`), the node-key domain `quire.checked-semantic-node/v1` and the
   accounting version `quire.value.accounting/v1`, carried verbatim; IEEE definition
@@ -115,7 +108,7 @@ records the same, and it is runtime's coupling).
 | runtime to any other QSL crate (`qsl-eval`, `qsl-replay`, the QSL root) | no | this repository's own `deny.toml`: a per-crate `[bans]` `deny` entry for each of those crates (each repository guards its own edges); the sources policy alone cannot do it once `allow-git` admits the QSL repository for `quire-exact`, because `allow-git` names a repository | the entries do not exist yet; they are added in the RT layout work (IR-349, "Refactor RT to its layout AD"). This does not rely on QSL's lint (QSL-356) |
 | runtime to `quire-exact` | yes (accepted, decision F) | QSL ADR-011 lists "RT to `quire-exact`" as a new edge. QSL's `arch-lint` classifies a dependency whose source names the QSL repository as QSL and exempts every normal CG edge into QSL, which is not the RT edge | QSL fixes FB-05 and its lint (QSL-356, as relayed); RT's `deny.toml` then needs `allow-git` for that one source |
 | any cycle among the four repositories | no | QSL `arch-lint direction` (FB-05, FB-11), run on request with the clones and outside QSL's `make ci` | manual; QSL gives no CI option (as relayed) |
-| generated crate to runtime | yes, by manifest | codegen's compile tests | covers the pinned revision only |
+| generated crate to runtime | yes, by manifest | codegen's compile tests | covers the selected runtime dependency |
 
 ### Failure outcomes and who reports them
 
@@ -209,9 +202,6 @@ What is measured today, what is open and with whom, and what is routed.
 - The copy of QSL's kernel (decision F) puts two kernels in codegen's build graph
   (`rt::ScalarLimits` and `qsl_replay::ScalarLimits`, `codegen src/spine_replay.rs:16`), so the
   oracle codegen emits and the replay QSL runs can disagree (T-7).
-- Pin: `RUNTIME_REVISION` (`codegen src/oracle.rs:13`) is a stale SHA written into the three
-  emitters' manifests, and it makes the tests build against a runtime codegen does not link. It is
-  deleted by CG's layout AD at step 1c (IR-344, PR #215, open), so nothing is routed for it here.
 - Panics at the seam: codegen has 37 `unreachable!` arms over runtime `#[non_exhaustive]` enums
   (`codegen src/exact_scalar.rs` 26, `codegen src/composite_equality.rs` 9,
   `codegen src/exact_function.rs` 2). Most are lowering matches that choose the `rt::` path to

@@ -246,8 +246,8 @@ records the gap.
 
 ### CG paths that change in the same step
 
-Measured at CG `origin/main`. CG's emitted manifest carries no pinned revision; it names this
-crate by git URL and branch (`src/core/profile.rs`).
+Measured at CG `origin/main`. CG's emitted manifest names this crate by git URL and branch
+(`src/core/profile.rs`).
 
 | CG path | Names `quire_contract_runtime::exact` as | Count |
 | --- | --- | --- |
@@ -522,10 +522,9 @@ The evaluation-leaf dependency remains. The independent stop slice removed RT's 
 QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The definition code cutover
 follows the R-3 decision below and has now landed.
 
-CG remains pinned to an earlier RT revision while its scalar oracle still emits quantity and
-unit calls against RT. The RT quantity/unit owner cutover can merge independently because that
-pin keeps CG compiling. CG's quantity source is allocated to IR-853: the evaluation leaf and
-T12-A facade amendment must settle it before CG advances its RT pin. This is the remaining
+CG's scalar oracle still emits quantity and unit calls against RT. CG's quantity source is
+allocated to IR-853: the evaluation leaf and T12-A facade amendment must settle those calls
+before CG consumes the updated RT interface. This is the remaining
 cross-repository step-4 dependency, not a reason to retain RT's duplicate quantity code.
 
 R-3 is decided from an RT source/test/spec use audit: `RevisionMismatch`,
