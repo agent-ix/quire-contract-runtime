@@ -2,7 +2,6 @@
 name = "quire-contract-runtime-exact-panic"
 version = "0.0.0"
 edition = "2021"
-rust-version = "1.98.1"
 license = "AGPL-3.0-or-later"
 publish = false
 
