@@ -179,7 +179,6 @@ crates that the runtime consumes.
 | FR-275-AC-3 | `quire-exact` is an optional dependency of the runtime, enabled only by the `exact` feature. | Inspection (TC-197) |
 | FR-275-AC-4 | The optional `quire-exact` and `quire-semantic-value` dependencies use their own `agent-ix` Git repositories with `branch = "main"` and no `rev`, `tag`, `path` or committed `[patch]`. | Inspection (TC-197) |
 | FR-275-AC-5 | `Cargo.lock` holds exactly one entry each for `quire-exact`, `quire-semantic-value`, `quire-canonical` and `quire-canonical-derive`, and, after AD-004 step 5, the QSL-owned evaluation leaf. | Inspection (TC-197) |
-| FR-275-AC-6 | **Retired; ID reserved.** The separate first-party Git lock-entry mutation gate is removed because it duplicates dependency resolution checks without establishing the runtime's source or licence policy. | Inspection |
 | FR-275-AC-7 | `deny.toml` admits only the `quire-exact`, `quire-semantic-value` and `quire-canonical` own-repository Git sources and the dev-only `ix-trace-rs` first-party tooling source before AD-004 step 5, then also the QSL-owned evaluation leaf's own-repository Git source; it keeps `unknown-git = "deny"` and never admits the QSL Git repository. | Inspection (TC-198) |
 | FR-275-AC-8 | `make deny` reports cargo-deny's `source-not-allowed` error for the QSL Git repository, and exits non-zero, when a normal, build or dev dependency resolves from it; a licence failure alone does not satisfy this. | Test (TC-198) |
 | FR-275-AC-9 | With `exact` enabled and `std` disabled, the runtime builds for `thumbv7em-none-eabi`. The row `build-exact-no-std-msrv` builds it on the root `Cargo.toml` `rust-version` floor. | Test (TC-199, `make test-features` row `build-exact-no-std-msrv`) |
@@ -197,20 +196,15 @@ crates that the runtime consumes.
 | FR-275-AC-21 | `make msrv` and `make size` build with the root `Cargo.toml` `rust-version` compiler; changing that field changes the compiler selected by both gates, and a missing or unavailable declared compiler fails either gate. | Test (TC-199) |
 | FR-275-AC-22 | Inspection of runtime source finds no local definition or alias of QSV's `SemanticGraphCause`, `InvalidSemanticGraph`, or semantic-node term checker, including definitions emitted by macros. | Inspection (TC-205) |
 | FR-275-AC-23 | After the step-4 value-bearing cutover, QSV's `Conversion::identified_quantity` returns a `quire_exact::Quantity` with the exact magnitude and the target's compound-arm `UnitId`, paired with QSV's `IdentifiedUnit` for that same target; a non-exact conversion returns `HandoffRefusal::NotExact`, and target identity refusal returns `HandoffRefusal::Identity` with neither value nor identified unit. Retaining the identified unit with `UnitScope::form` permits `UnitScope::resolve(&quantity)` to supply the same normalized `QuantityUnit::Compound` to the next conversion. Declared and compound ID arms remain distinct even for equal bytes. QSpec TC-187 U25's first compound-target conversion feeds its result into the conversion to `J` with exact value `1` and FR-007-AC-23's charges, without a new charge for the handoff. RT defines no `CompoundUnit` identity, `UnitId` resolver, parallel unit table or conversion adapter. | Test |
-| FR-275-AC-24 | **Retired; ID reserved.** The `make deny` invocation of the separate `quire check-lock` gate is removed. | Inspection |
-| FR-275-AC-25 | **Retired; ID reserved.** Duplicate-name and split-revision scratch lock controls belonged only to the retired gate. | Inspection |
-| FR-275-AC-26 | **Retired; ID reserved.** Checker absence, malformed scratch lock and checker-refusal controls belonged only to the retired gate. | Inspection |
-| FR-275-AC-27 | **Retired; ID reserved.** The local-checker replacement control belonged only to the retired gate; the no-copy requirement in AC-13 remains active. | Inspection |
-| FR-275-AC-28 | **Retired; ID reserved.** The committed-lock checker qualification and invocation receipt belonged only to the retired gate. | Inspection |
 | FR-275-AC-29 | After AD-004 step 5, with `exact` enabled and `std` disabled on the root `Cargo.toml` `rust-version`, the RT consumer and a generated-body consumer of the QSL-owned evaluation leaf compile for `thumbv7em-none-eabi` using one lock entry for that leaf; neither consumer resolves the QSL workspace Git source, an RT-local evaluator copy, or a compatibility alias. A host build of the same no_std profile executes the checked-input and generated-body cases of FR-273-AC-12 and AC-13. | Test (TC-199, TC-194) |
 | FR-275-AC-30 | After AD-004 step 5, `make size` still measures the default fixed population at 500 bytes through 4 KiB linked `.text` plus `.rodata` with no evaluation leaf in its graph and no panic relocation. A separate `measurement/evaluator` no_std executable that links RT, the QSL evaluation leaf and one generated-body consumer for `thumbv7em-none-eabi` has its linked ELF path and `.text` plus `.rodata` byte sum reported from `llvm-size -A`. A solitary native FR-273-AC-13 deep-test executable has its peak resident set size reported in bytes from `/usr/bin/time -v`'s `Maximum resident set size` field, with the reported KiB multiplied by 1024. The receipt names both artifact paths and measurements separately from the default footprint; neither is compared with the default 4 KiB ceiling, and no exact-profile memory limit is inferred from this default measurement. | Test (TC-199) |
 
 ## Lockfile and Dependency Policy
 
 AC-5 retains direct inspection of the committed lockfile's shared-crate entries.
-The separate `quire check-lock` invocation and its scratch lock controls are retired
-under reserved AC-6 and AC-24 through AC-28. Cargo-deny's source, licence and ban
-checks remain active under AC-7 and AC-8; TC-198 still exercises the QSL source refusal.
+The separate `quire check-lock` invocation and its scratch lock controls are removed
+without a runtime-owned replacement. Cargo-deny's source, licence and ban checks
+remain active under AC-7 and AC-8; TC-198 still exercises the QSL source refusal.
 
 ## Residue list (not authorized; to be deleted)
 
@@ -277,5 +271,4 @@ and is deleted in step 1.
 TC-197 continues the one-kernel ownership inspection, including direct inspection
 of the committed lockfile's shared-crate entry count under AC-5. TC-198 continues
 the cargo-deny source-policy qualification with its normal, build and dev dependency
-mutation controls. The retired lock-check consumer controls and TC-202 retain their
-IDs for traceability without claiming an active gate or test result.
+mutation controls.
