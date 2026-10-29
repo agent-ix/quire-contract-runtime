@@ -161,6 +161,11 @@ fn consumed_kernel_charge_points_match_authoritative_vocabulary() {
         closed_charge_point(point);
         assert_eq!(ChargePoint::from_code(point.as_str()), Some(point));
     }
+    assert_ne!(ChargePoint::EqualityPlanForm, ChargePoint::EqualityPlan);
+    assert_eq!(
+        ChargePoint::from_code("equality.plan-form"),
+        Some(ChargePoint::EqualityPlanForm)
+    );
 
     let undeclared = vectors["undeclared"]
         .as_array()

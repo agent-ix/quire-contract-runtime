@@ -11,7 +11,7 @@ CARGO ?= cargo
 LOCKED ?= $(if $(wildcard .cargo/config.toml),,--locked)
 QUIRE ?= quire
 
-MSRV := 1.98.1
+MSRV := $(shell python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["rust-version"])' 2>/dev/null)
 FOOTPRINT_TARGET := thumbv7em-none-eabi
 FOOTPRINT_TARGET_DIR := target/footprint-msrv
 EXACT_PANIC_TARGET_DIR := $(FOOTPRINT_TARGET_DIR)
@@ -81,13 +81,18 @@ doc:
 build:
 	$(CARGO) build --release --no-default-features
 
+.PHONY: require-msrv
+require-msrv:
+	@test -n "$(MSRV)" || { echo "root Cargo.toml has no package rust-version" >&2; exit 1; }
+	@rustup run "$(MSRV)" rustc --version >/dev/null || { echo "declared MSRV $(MSRV) is unavailable" >&2; exit 1; }
+
 .PHONY: msrv
-msrv:
+msrv: require-msrv
 	rustup run $(MSRV) $(CARGO) check $(LOCKED) --all-targets --all-features
 
 # Link the footprint staticlib on the MSRV compiler, then measure it.
 .PHONY: size
-size:
+size: require-msrv
 	$(CARGO) +$(MSRV) build $(LOCKED) --release --manifest-path measurement/footprint/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(FOOTPRINT_TARGET_DIR)
 	$(CARGO) run $(LOCKED) --quiet --bin check_linked_footprint --
@@ -108,7 +113,7 @@ spec:
 	$(QUIRE) coverage --scope . --strict
 
 .PHONY: exact-panic-probe
-exact-panic-probe:
+exact-panic-probe: require-msrv
 	$(CARGO) +$(MSRV) build $(LOCKED) --profile exact-panic --manifest-path measurement/exact-panic/Cargo.toml \
 		--target $(FOOTPRINT_TARGET) --target-dir $(EXACT_PANIC_TARGET_DIR)
 	$(CARGO) run $(LOCKED) --quiet -p quire-contract-runtime-gates -- exact-panic-probe \
@@ -116,7 +121,7 @@ exact-panic-probe:
 		$(EXACT_PANIC_TARGET_DIR) $(MSRV) $(FOOTPRINT_TARGET)
 
 .PHONY: exact-panic
-exact-panic:
+exact-panic: require-msrv
 	$(CARGO) test $(LOCKED) --test exact_panic_gate
 	$(CARGO) +$(MSRV) test $(LOCKED) -p quire-contract-runtime-kernel-api-check --lib
 	$(CARGO) +$(MSRV) test $(LOCKED) -p quire-contract-runtime-kernel-api-check --doc
