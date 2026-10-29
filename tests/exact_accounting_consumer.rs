@@ -3,6 +3,46 @@
 #![cfg(feature = "exact")]
 
 use quire_exact::{Charge, ChargePoint, Incomplete, Integer, LimitKind, Meter, ScalarLimits};
+use quire_specification::VALUE_ACCOUNTING_LIMIT_KIND_VECTORS;
+
+#[test]
+fn consumed_kernel_limit_kinds_match_authoritative_scalar_limits_vocabulary() {
+    let vectors: serde_json::Value = serde_json::from_str(VALUE_ACCOUNTING_LIMIT_KIND_VECTORS)
+        .expect("QSpec limit-kind vectors are JSON");
+    let declared = vectors["limit_kinds"]
+        .as_array()
+        .expect("QSpec limit kinds are an array");
+    let declared: Vec<&str> = declared
+        .iter()
+        .map(|entry| entry.as_str().expect("QSpec limit kind is a string"))
+        .collect();
+    let kernel: Vec<&str> = LimitKind::ALL.iter().map(|kind| kind.as_str()).collect();
+
+    assert_eq!(
+        kernel, declared,
+        "kernel counters must match ScalarLimitsV1 field order"
+    );
+    for (&kind, &spelling) in LimitKind::ALL.iter().zip(&declared) {
+        assert_eq!(LimitKind::from_code(spelling), Some(kind));
+    }
+
+    let undeclared = vectors["undeclared"]
+        .as_array()
+        .expect("QSpec undeclared spellings are an array");
+    assert!(!undeclared.is_empty(), "QSpec has negative spellings");
+    for entry in undeclared {
+        let spelling = entry.as_str().expect("QSpec negative spelling is a string");
+        assert!(
+            !declared.contains(&spelling),
+            "negative spelling {spelling:?} is declared"
+        );
+        assert_eq!(
+            LimitKind::from_code(spelling),
+            None,
+            "{spelling:?} must be refused"
+        );
+    }
+}
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
     integer_bits: u64::MAX,

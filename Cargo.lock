@@ -327,7 +327,7 @@ dependencies = [
 [[package]]
 name = "quire-specification-qualification"
 version = "0.0.0"
-source = "git+https://github.com/agent-ix/quire-specification?branch=main#00a1647d56987d800394d23b5a76927ae8e045e8"
+source = "git+https://github.com/agent-ix/quire-specification?branch=main#938452fbc1ff1fae0106b858d833f5f5814133f0"
 
 [[package]]
 name = "quote"
