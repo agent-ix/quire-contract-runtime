@@ -130,9 +130,8 @@ records the same, and it is runtime's coupling).
   names them by path and codegen defines no second spelling.
 - B. Codegen reports a runtime variant it does not know as a typed refusal of the whole
   generation, never as a panic at generation time and never as a panic inside generated source.
-- C. Emitted manifests name this crate the way codegen's own manifest does, so one runtime
-  revision is live per codegen build. CG's layout AD (IR-344 step 1c, PR #215) settles the form:
-  `RUNTIME_REVISION` is deleted and the manifest names the runtime by branch as `Cargo.toml` does.
+- C. Emitted manifests name this crate by the same Git URL and branch as codegen's own
+  Cargo manifest. Codegen's compile tests build generated crates with that dependency selection.
 - D. The runtime computes no digest and keeps no version record about codegen, and codegen keeps
   none about the runtime beyond its lock.
 - E. Provider dispositions stay outside the evaluation path (AD-002, FR-009).
@@ -167,8 +166,8 @@ Local labels; the repository assigns requirement ids when one is authored.
 - T-1. This crate declares no dependency on codegen or IR, and its only first-party edge is
   `quire-exact` once decision F lands (enforced by the sources policy today; add a direct
   assertion).
-- T-2. Every generated crate compiles against the runtime codegen itself links (codegen's
-  compile tests, with one runtime revision; not true today: two revisions).
+- T-2. Generated manifests select the same runtime Git URL and branch as codegen's own
+  Cargo manifest, and codegen's compile tests build the generated crates.
 - T-3. No `unreachable!` arm names a runtime enum in generator code or in emitted source (a count
   a test can take; not true today).
 - T-4. `Verdict` has exactly three kinds and none converts to `bool` (existing: FR-001).
@@ -223,7 +222,6 @@ What is measured today, what is open and with whom, and what is routed.
 
 | Question | Owner | Recommendation | Cost of the alternative |
 | --- | --- | --- | --- |
-| Confirm CG's step 1c lands (the emitted manifest) | codegen | settled in CG's layout AD (IR-344 step 1c, PR #215, open) | a stale SHA keeps two runtimes live |
 | Replace codegen's `unreachable!` arms with `UnknownRuntimeVariant`, and the two emitted ones with a typed stop | codegen (IR-352) | yes | a runtime variant crashes generation or generated code |
 | Where does the discharge of a function's `decreases` measure travel to codegen? | QSL and codegen | admission carries it (QSL's answer, as relayed); codegen sets the flag only for functions read from an admitted package | the flag stays a constant codegen asserts |
 | Should RT's Kani module stop importing `exact` unconditionally? | runtime | gate the import so a core-only crate verifies without `exact`; moot for the kernel once decision F lands | every Kani crate pulls in the large kernel |
