@@ -42,3 +42,29 @@ Reviewed the three changed Rust tests at the assigned PR head. Rust style and re
 ## Disposition verdict
 
 **PASS for this partial code slice** — both code-review defects were removed. FR-006-AC-3 remains open and is not claimed by a trace tag. Static review only; final gates have not run.
+
+## New findings (disposition pass 2)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | high | The new QSpec LimitKind consumer test calls `LimitKind::from_code`, but RT's locked `quire-exact` revision 6ec67288 has no such method; this PR head cannot compile. | tests/exact_accounting_consumer.rs:29 |
+
+## Dispositions (round 2)
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-003 | still-open | RT Cargo.lock selects quire-exact 6ec67288, whose `LimitKind` implementation has only `ALL`, `as_str`, and `is_cumulative`; only `ChargePoint` has `from_code`. Wait for the kernel method to land, then refresh RT's lock and re-check this test. |
+
+## Delta review at 8a9d044
+
+The new test reads the QSpec `VALUE_ACCOUNTING_LIMIT_KIND_VECTORS` constant from the dependency, compares the declared order exactly with `LimitKind::ALL`, and checks declared and undeclared spellings through the intended reverse method. It copies no vector into RT and does not add a premature FR-006-AC-3 trace tag. Those design checks pass statically. The missing method on the selected kernel revision is a compile blocker. No build or test ran under the one-lane order.
+
+## Dispositions (round 3)
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-003 | fixed | RT Cargo.lock now selects quire-exact 03a9a7f, whose `LimitKind::from_code` public method resolves exact ScalarLimitsV1 spellings by scanning `ALL`. The two test calls now target an existing method. |
+
+## Delta review at ecb66be
+
+The QSpec vector dependency remains at 938452fb and the test still compares the ordered declared list against `LimitKind::ALL`, then checks every declared spelling and every QSpec undeclared spelling with the kernel reverse method. This addresses the static compile blocker; actual compilation and test execution remain unverified in this review. `rust-toolchain.toml` was deleted, while `Cargo.toml` still declares `rust-version = "1.98.1"`, Makefile's MSRV remains 1.98.1 and CI explicitly selects both stable and 1.98.1; no changed CI gate was found. FR-006-AC-3 remains untagged and TC-017 remains open.

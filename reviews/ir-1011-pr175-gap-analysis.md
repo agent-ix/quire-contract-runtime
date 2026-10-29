@@ -39,3 +39,11 @@ Plan completion: not assessed. Examined FR-006-AC-3 and the full TC-016/TC-017 p
 ## Disposition verdict
 
 **CONDITIONAL for this partial evidence slice** — no premature AC3 binding remains; the complete criterion and TC-017 procedure remain open. Static review only; final gates have not run.
+
+## Delta review at 8a9d044
+
+QSpec revision 938452fb now exports a LimitKind vector with all ten ordered ScalarLimitsV1 spellings and eight undeclared spellings. RT's new test consumes that source directly, compares ordered equality, and intends to test declared and undeclared `from_code` behavior. The locked quire-exact revision 6ec67288 lacks `LimitKind::from_code`, so the test cannot compile or supply recognized evidence yet. FR-006-AC-3 remains untagged and TC-017's concrete multiplication case remains open. The prior FND-001 and FND-002 deferrals remain applicable; no new gap finding is added. No build or test ran.
+
+## Delta review at ecb66be
+
+RT Cargo.lock now selects quire-exact 03a9a7f, which exports the intended `LimitKind::from_code`; the QSpec vector test now has a real reverse path for declared and undeclared spellings. This improves the TC-016 vocabulary subset, subject to execution in the sole build lane. FR-006-AC-3 remains untagged because its complete meter-before-work and TC-017 procedure evidence is still open; the matrix remains truthful. No new gap finding or AC narrowing was found in this delta. No build or test ran in this review.
