@@ -955,8 +955,7 @@ mod tests {
                 .arg("-f")
                 .arg(&makefile)
                 .args(args)
-                .current_dir(root.path())
-                .env("CARGO", "cargo");
+                .current_dir(root.path());
             if let Some(path) = path {
                 command.env(
                     "PATH",
@@ -979,8 +978,15 @@ mod tests {
             let output = run(&["-n", "msrv", "size"], None);
             assert!(output.status.success(), "make dry run failed: {output:?}");
             let stdout = String::from_utf8(output.stdout).expect("make stdout");
-            assert!(stdout.contains(&format!("rustup run {version} cargo check")));
-            assert!(stdout.contains(&format!("cargo +{version} build")));
+            assert!(stdout.lines().any(|line| {
+                line.starts_with(&format!("rustup run {version} "))
+                    && line.ends_with(" check --locked --all-targets --all-features")
+            }));
+            assert!(stdout.lines().any(|line| {
+                line.contains(&format!(
+                    "+{version} build --locked --release --manifest-path measurement/footprint/Cargo.toml"
+                ))
+            }));
         }
 
         fs::write(&manifest, "[package]\nname = \"scratch\"\n").expect("missing floor manifest");
