@@ -259,6 +259,7 @@ dependencies = [
  "proptest",
  "quire-exact",
  "quire-semantic-value",
+ "quire-specification-qualification",
  "serde",
  "serde_json",
  "syn 2.0.119",
@@ -322,6 +323,11 @@ dependencies = [
  "serde",
  "thiserror",
 ]
+
+[[package]]
+name = "quire-specification-qualification"
+version = "0.0.0"
+source = "git+https://github.com/agent-ix/quire-specification?branch=main#00a1647d56987d800394d23b5a76927ae8e045e8"
 
 [[package]]
 name = "quote"

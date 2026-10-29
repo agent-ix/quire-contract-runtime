@@ -8,6 +8,8 @@ use quire_exact::{
     ChargePoint, CheckedInvariantCause, Incomplete, Integer, LimitKind, Meter, Outcome, Refusal,
     ScalarLimits, Undefined,
 };
+use quire_specification::VALUE_ACCOUNTING_CHARGE_POINT_VECTORS;
+use std::collections::BTreeSet;
 
 fn closed_refusal(reason: &Refusal) {
     match reason {
@@ -123,14 +125,51 @@ fn closed_charge_point(point: ChargePoint) {
 }
 
 #[test]
-fn consumed_kernel_exposes_frame_charge_points() {
-    for (point, spelling) in [
-        (ChargePoint::FrameWrite, "frame.write"),
-        (ChargePoint::FrameRedefinesLink, "frame.redefines-link"),
-    ] {
+fn consumed_kernel_charge_points_match_authoritative_vocabulary() {
+    let vectors: serde_json::Value = serde_json::from_str(VALUE_ACCOUNTING_CHARGE_POINT_VECTORS)
+        .expect("QSpec vectors are JSON");
+    let declared = vectors["charge_points"]
+        .as_array()
+        .expect("QSpec charge points are an array");
+    let declared: Vec<&str> = declared
+        .iter()
+        .map(|entry| entry.as_str().expect("QSpec charge point is a string"))
+        .collect();
+    let kernel: Vec<&str> = ChargePoint::ALL
+        .iter()
+        .map(|point| point.as_str())
+        .collect();
+    let declared_set: BTreeSet<&str> = declared.iter().copied().collect();
+    let kernel_set: BTreeSet<&str> = kernel.iter().copied().collect();
+
+    assert_eq!(
+        declared_set.len(),
+        declared.len(),
+        "QSpec spellings are unique"
+    );
+    assert_eq!(
+        kernel_set.len(),
+        kernel.len(),
+        "kernel spellings are unique"
+    );
+    assert_eq!(
+        kernel_set, declared_set,
+        "kernel and QSpec spellings differ"
+    );
+
+    for point in ChargePoint::ALL {
         closed_charge_point(point);
-        assert_eq!(point.as_str(), spelling);
-        assert_eq!(ChargePoint::from_code(spelling), Some(point));
+        assert_eq!(ChargePoint::from_code(point.as_str()), Some(point));
+    }
+
+    let undeclared = vectors["undeclared"]
+        .as_array()
+        .expect("QSpec undeclared spellings are an array");
+    assert!(!undeclared.is_empty(), "QSpec has negative spellings");
+    for entry in undeclared {
+        let spelling = entry.as_str().expect("QSpec negative spelling is a string");
+        assert!(!declared_set.contains(spelling), "{spelling:?} is declared");
+        assert_eq!(ChargePoint::from_code(spelling), None);
     }
 }
 
