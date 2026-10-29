@@ -116,7 +116,21 @@ fn closed_charge_point(point: ChargePoint) {
         | ChargePoint::GraphResultRetain
         | ChargePoint::ModelDeref
         | ChargePoint::ModelNavigate
-        | ChargePoint::TemporalVisit => {}
+        | ChargePoint::TemporalVisit
+        | ChargePoint::FrameWrite
+        | ChargePoint::FrameRedefinesLink => {}
+    }
+}
+
+#[test]
+fn consumed_kernel_exposes_frame_charge_points() {
+    for (point, spelling) in [
+        (ChargePoint::FrameWrite, "frame.write"),
+        (ChargePoint::FrameRedefinesLink, "frame.redefines-link"),
+    ] {
+        closed_charge_point(point);
+        assert_eq!(point.as_str(), spelling);
+        assert_eq!(ChargePoint::from_code(spelling), Some(point));
     }
 }
 
