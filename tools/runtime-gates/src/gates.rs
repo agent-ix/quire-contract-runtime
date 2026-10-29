@@ -955,7 +955,8 @@ mod tests {
                 .arg("-f")
                 .arg(&makefile)
                 .args(args)
-                .current_dir(root.path());
+                .current_dir(root.path())
+                .env("CARGO", "cargo");
             if let Some(path) = path {
                 command.env(
                     "PATH",
