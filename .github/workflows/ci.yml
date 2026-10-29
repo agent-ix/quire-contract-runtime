@@ -30,18 +30,27 @@ jobs:
 
       - name: Validate specification
         run: |
-          npm install --global '@agent-ix/quire-cli@0.33.0' '@agent-ix/quoin@0.24.1' '@agent-ix/ix-flow@0.2.3'
+          npm install --global '@agent-ix/quire-cli' '@agent-ix/quoin' '@agent-ix/ix-flow'
           quoin module ensure-defaults
           make spec
 
   msrv:
-    name: Rust 1.98.1 surface and footprint
+    name: MSRV surface and footprint
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Read declared MSRV
+        id: msrv
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import tomllib
+          with open("Cargo.toml", "rb") as manifest:
+              print(f"version={tomllib.load(manifest)['package']['rust-version']}")
+          PY
       - name: Install MSRV
-        uses: dtolnay/rust-toolchain@1.98.1
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ steps.msrv.outputs.version }}
           targets: thumbv7em-none-eabi
       - name: Check full declared surface
         run: make msrv
@@ -55,8 +64,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prove truth tables and definedness boundaries
         uses: model-checking/kani-github-action@v1
-        with:
-          kani-version: "0.67.0"
 
   licenses:
     name: License Check
