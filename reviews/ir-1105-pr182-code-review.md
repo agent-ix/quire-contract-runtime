@@ -34,3 +34,7 @@ PASS for the changed Rust code. The deletion removes a fixed-value identity orac
 ## Checks
 
 `git diff --check` and targeted `quire validate` pass. Full Cargo gate is reserved for the final reviewed head under the shared build lock.
+
+## Disposition recheck
+
+Rechecked at e1bff83. The only fix restores AC-2 criterion text verbatim and places the producer witness in Verification; no code, AC-8, or other TC-033 behavior changed. The original clean verdict stands.

@@ -33,3 +33,7 @@ PASS for the responsibility allocation. The independent base review records the 
 | ID | Severity | Summary | Refs |
 | --- | --- | --- | --- |
 | FND-001 | low | No findings (placeholder) | - |
+
+## Disposition recheck
+
+Rechecked at e1bff83. The only fix restores AC-2 criterion text verbatim and places the producer witness in Verification; no code, AC-8, or other TC-033 behavior changed. The original clean verdict stands.

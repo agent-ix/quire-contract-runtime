@@ -41,3 +41,13 @@ The prior criterion began `Given admitted checked-package identities`. The edite
 ## Checks
 
 Targeted `quire validate --scope .` passed on the three edited spec files. Existing RT test fixtures still construct digest-shaped keys; the matrix keeps AC-8 open.
+
+## Dispositions
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | At e1bff83, AC-2's behavior text exactly matches the baseline universal admitted-identity criterion; QSL and quire-integration details occur only in its Verification cell and TC-033. |
+
+### After excerpt
+
+> Given admitted checked-package identities, RT consumers retain the declaration identity, distinguish an identity from a foreign reference universe, and distinguish declared from compound unit identities regardless of equal underlying bytes. The corresponding foreign and cross-domain comparisons retain their inequality or typed refusal outcomes without an RT reminting step.
