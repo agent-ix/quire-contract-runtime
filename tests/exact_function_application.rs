@@ -12,8 +12,8 @@ use charge_points::ChargePoints;
 use ix_trace_rs::trace;
 use quire_contract_runtime::exact::{
     plan_call, plan_evaluation, Body, BodyStep, CheckCause, CheckMode, CheckRefusal,
-    CheckedPackage, CheckingLimits, Frame, FunctionDeclaration, InputRefusal,
-    Location, Origin, PackageDeclarations,
+    CheckedPackage, CheckingLimits, Frame, FunctionDeclaration, InputRefusal, Location, Origin,
+    PackageDeclarations,
 };
 use quire_contract_runtime::scalar::{
     negotiate_ieee, negotiate_integer_division, IeeeBackendCapabilities, IeeeDisposition,

@@ -497,36 +497,33 @@ struct FixtureIdentityInspection {
 }
 
 impl<'ast> Visit<'ast> for FixtureIdentityInspection {
-    fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
-        if let syn::Expr::Path(path) = call.func.as_ref() {
-            let parts: Vec<_> = path
-                .path
-                .segments
-                .iter()
-                .map(|part| part.ident.to_string())
-                .collect();
-            let method = parts.last().map(String::as_str);
-            let owner = parts.iter().rev().nth(1).map(String::as_str);
-            let identity_owner = matches!(
-                owner,
-                Some(
-                    "NodeKey"
-                        | "EffectiveId"
-                        | "UniverseId"
-                        | "VariantId"
-                        | "OriginalDeclarationKey"
-                        | "UnitId"
-                )
-            );
-            if matches!(
-                method,
-                Some("from_digest" | "decode_admitted" | "from_bytes" | "from_hex")
-            ) || (identity_owner && matches!(method, Some("new" | "declared" | "compound")))
-            {
-                self.findings.push(parts.join("::"));
-            }
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        let parts: Vec<_> = path
+            .segments
+            .iter()
+            .map(|part| part.ident.to_string())
+            .collect();
+        let method = parts.last().map(String::as_str);
+        let owner = parts.iter().rev().nth(1).map(String::as_str);
+        let identity_owner = matches!(
+            owner,
+            Some(
+                "NodeKey"
+                    | "EffectiveId"
+                    | "UniverseId"
+                    | "VariantId"
+                    | "OriginalDeclarationKey"
+                    | "UnitId"
+            )
+        );
+        if matches!(
+            method,
+            Some("from_digest" | "decode_admitted" | "from_bytes" | "from_hex")
+        ) || (identity_owner && matches!(method, Some("new" | "declared" | "compound")))
+        {
+            self.findings.push(parts.join("::"));
         }
-        visit::visit_expr_call(self, call);
+        visit::visit_path(self, path);
     }
 
     fn visit_item_fn(&mut self, function: &'ast syn::ItemFn) {
@@ -588,6 +585,8 @@ fn tc_033_rt_does_not_construct_semantic_identities() {
         "let key = NodeKey::new(\"package\", vec![], 0);",
         "let universe = UniverseId::new(key);",
         "let unit = UnitId::declared(key);",
+        "let build = NodeKey::new; let key = build(\"package\", vec![], 0);",
+        "let build = UnitId::declared; let unit = build(key);",
         "fn key() -> NodeKey { unreachable!() }",
     ] {
         let parsed = syn::parse_file(&format!("fn fixture() {{ {forbidden} }}")).unwrap();
