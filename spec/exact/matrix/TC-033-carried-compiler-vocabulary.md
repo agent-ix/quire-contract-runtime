@@ -12,7 +12,9 @@ relationships:
 
 Check the absence of RT-local node-key ownership after the IR-882 key-owner cutover, the closed
 refusal spellings, and QSV's structural semantic-graph causes and normalized unit values. RT evidence:
-`tests/exact_vocabulary.rs` and `tests/exact_unit_owner.rs` (`--features exact`). The retired
+`tests/exact_vocabulary.rs` and `tests/exact_unit_owner.rs` (`--features exact`).
+`quire-integration` owns step 2's producer-origin Test because RT's source policy excludes QSL
+and IR dependencies; RT owns the source Inspection in step 1 and FR-012-AC-8. The retired
 parser and round-trip steps are
 preserved below as historical FR-012-AC-1 text.
 
@@ -25,10 +27,13 @@ preserved below as historical FR-012-AC-1 text.
    streams), and local `NodeKey` definitions inside macros. Flag named hex decoding paths and
    functions taking `&str` or `&[u8]` and returning `[u8; 32]` (also through `Option` or
    `Result`). Confirm the retired parser and round-trip tests are absent.
-2. Drive independently admitted checked-package identities through declaration,
-   reference-universe and declared/compound unit comparisons. Confirm the retained declaration
-   identity, foreign-universe refusal and cross-domain inequality, including the equal-byte
-   declared/compound control. The test receives the admitted identities from the producer.
+2. In `quire-integration`, emit QSL checked packages and admit their same bytes through the
+   checked-package reader. Select the declaration, foreign reference-universe and declared and
+   compound unit node ids from the admitted values, then obtain their `NodeKey` values through
+   QSL's read-only admitted-node lookup on the corresponding package. Drive RT consumers with
+   those identities and confirm the
+   retained declaration identity, foreign-universe refusal and cross-domain inequality, including
+   the equal-byte declared/compound control. The test does not remint or pin an identity in RT.
 3. Check `SelectionRefusalCode::ALL` order, each `as_str`, `from_code` over each spelling and over
    unlisted spellings, and `PackageRefusalCode::as_str`.
 4. Drive QSV `DimensionNode::checked`, `UnitNode::checked`, `UnitGraph::from_checked_nodes`,
@@ -59,4 +64,6 @@ The admitted-identity controls retain their foreign and cross-domain behavior. T
 refusal vocabulary spellings are byte-exact. QSV owns the complete structural-cause
 reachability and normalized unit ordering obligations; RT has no second unit graph.
 The R-3 step is implemented: RT has no local definition refusal vocabulary, its tests import QSV
-directly, and the three retired causes cannot be paired with `invalid_package`.
+directly, and the three retired causes cannot be paired with `invalid_package`. The
+`quire-integration` producer-origin test obtains the same admitted identities QSL supplies and
+does not require RT to depend on QSL or IR.

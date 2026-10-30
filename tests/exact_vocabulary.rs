@@ -4,7 +4,7 @@
 
 use ix_trace_rs::trace;
 use proc_macro2::{TokenStream, TokenTree};
-use quire_exact::{NodeKey, COMPOUND_UNIT_DOMAIN, NODE_KEY_DOMAIN};
+use quire_exact::NodeKey;
 use quire_semantic_value::definition::{
     PackageCause, PackageRefusal, PackageRefusalCode, SelectionRefusalCode,
 };
@@ -515,13 +515,6 @@ fn tc_033_enum_declaration_member_raises_undeclared_case() {
         undeclared_case_member().unwrap_err().cause,
         SemanticGraphCause::UndeclaredCase
     );
-}
-
-#[trace("TC-033", "FR-012-AC-2")]
-#[test]
-fn tc_033_digest_domains_equal_their_normative_strings() {
-    assert_eq!(NODE_KEY_DOMAIN, "quire.checked-semantic-node/v1");
-    assert_eq!(COMPOUND_UNIT_DOMAIN, "quire.value.compound-unit/v1");
 }
 
 #[trace("TC-033", "FR-012-AC-3")]
