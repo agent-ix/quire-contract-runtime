@@ -4,12 +4,9 @@
 
 use ix_trace_rs::trace;
 use proc_macro2::{TokenStream, TokenTree};
-use quire_exact::NodeKey;
 use quire_semantic_value::definition::{
     PackageCause, PackageRefusal, PackageRefusalCode, SelectionRefusalCode,
 };
-use quire_semantic_value::enumeration::{EnumDeclaration, EnumValue};
-use quire_semantic_value::semantic_node::{InvalidSemanticGraph, SemanticGraphCause};
 use std::path::{Path, PathBuf};
 use syn::visit::{self, Visit};
 
@@ -494,27 +491,112 @@ fn tc_033_runtime_has_no_local_node_key_constructor() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
-fn key(byte: u8) -> NodeKey {
-    NodeKey::from_digest([byte; 32])
+#[derive(Default)]
+struct FixtureIdentityInspection {
+    findings: Vec<String>,
 }
 
-/// `UndeclaredCase` is structural but is never raised by `UnitGraph::admit` or `check_terms`: it
-/// is raised only by QSV `EnumDeclaration::member`, a public item that
-/// FR-012-AC-4's text does not name as a witness path. Reached here for completeness; see the
-/// report on this gap.
-fn undeclared_case_member() -> Result<EnumValue, InvalidSemanticGraph> {
-    let declaration =
-        EnumDeclaration::new(key(1), true, vec!["red".into(), "green".into()]).unwrap();
-    declaration.member("blue", key(2))
+impl<'ast> Visit<'ast> for FixtureIdentityInspection {
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        let parts: Vec<_> = path
+            .segments
+            .iter()
+            .map(|part| part.ident.to_string())
+            .collect();
+        let method = parts.last().map(String::as_str);
+        let owner = parts.iter().rev().nth(1).map(String::as_str);
+        let identity_owner = matches!(
+            owner,
+            Some(
+                "NodeKey"
+                    | "EffectiveId"
+                    | "UniverseId"
+                    | "VariantId"
+                    | "OriginalDeclarationKey"
+                    | "UnitId"
+            )
+        );
+        if matches!(
+            method,
+            Some("from_digest" | "decode_admitted" | "from_bytes" | "from_hex")
+        ) || (identity_owner && matches!(method, Some("new" | "declared" | "compound")))
+        {
+            self.findings.push(parts.join("::"));
+        }
+        visit::visit_path(self, path);
+    }
+
+    fn visit_item_fn(&mut self, function: &'ast syn::ItemFn) {
+        if let syn::ReturnType::Type(_, ty) = &function.sig.output {
+            if let syn::Type::Path(path) = ty.as_ref() {
+                if path.path.segments.iter().any(|part| {
+                    matches!(
+                        part.ident.to_string().as_str(),
+                        "NodeKey"
+                            | "EffectiveId"
+                            | "UniverseId"
+                            | "VariantId"
+                            | "OriginalDeclarationKey"
+                            | "UnitId"
+                    )
+                }) {
+                    self.findings
+                        .push(format!("identity fixture function: {}", function.sig.ident));
+                }
+            }
+        }
+        visit::visit_item_fn(self, function);
+    }
 }
 
-#[trace("TC-033", "FR-012-AC-4")]
+#[trace("TC-033", "FR-012-AC-8")]
 #[test]
-fn tc_033_enum_declaration_member_raises_undeclared_case() {
-    assert_eq!(
-        undeclared_case_member().unwrap_err().cause,
-        SemanticGraphCause::UndeclaredCase
-    );
+fn tc_033_rt_does_not_construct_semantic_identities() {
+    let mut sources = Vec::new();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    for directory in [
+        "src",
+        "tests",
+        "verification",
+        "examples",
+        "measurement",
+        "tools",
+    ] {
+        rust_sources(&root.join(directory), &mut sources);
+    }
+    assert!(!sources.is_empty());
+    let mut failures = Vec::new();
+    for path in sources {
+        let source = std::fs::read_to_string(&path).unwrap();
+        let parsed = syn::parse_file(&source).unwrap();
+        let mut inspection = FixtureIdentityInspection::default();
+        inspection.visit_file(&parsed);
+        failures.extend(
+            inspection
+                .findings
+                .into_iter()
+                .map(|finding| format!("{}: {finding}", path.display())),
+        );
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+
+    for forbidden in [
+        "let key = NodeKey::from_digest([1; 32]);",
+        "let key = NodeKey::new(\"package\", vec![], 0);",
+        "let universe = UniverseId::new(key);",
+        "let unit = UnitId::declared(key);",
+        "let build = NodeKey::new; let key = build(\"package\", vec![], 0);",
+        "let build = UnitId::declared; let unit = build(key);",
+        "fn key() -> NodeKey { unreachable!() }",
+    ] {
+        let parsed = syn::parse_file(&format!("fn fixture() {{ {forbidden} }}")).unwrap();
+        let mut inspection = FixtureIdentityInspection::default();
+        inspection.visit_file(&parsed);
+        assert!(
+            !inspection.findings.is_empty(),
+            "undetected fixture: {forbidden}"
+        );
+    }
 }
 
 #[trace("TC-033", "FR-012-AC-3")]
@@ -664,28 +746,4 @@ fn tc_033_definition_refusals_have_only_the_qsv_owner() {
             format!("invalid_package: {spelling}")
         );
     }
-}
-
-#[trace("TC-033", "FR-012-AC-4")]
-#[test]
-fn tc_033_qsv_enum_declaration_checks_structural_admission() {
-    let empty = EnumDeclaration::new(key(1), true, vec![]);
-    let repeated = EnumDeclaration::new(key(1), true, vec!["a".into(), "a".into()]);
-    let non_identifier = EnumDeclaration::new(key(1), true, vec!["1a".into()]);
-    for refused in [empty, repeated, non_identifier] {
-        assert_eq!(
-            refused.unwrap_err().cause,
-            SemanticGraphCause::NonCanonicalPreimage
-        );
-    }
-
-    let unsorted = EnumDeclaration::new(key(1), false, vec!["b".into(), "a".into()]);
-    assert_eq!(
-        unsorted.unwrap_err().cause,
-        SemanticGraphCause::UnsortedUnorderedMembers
-    );
-
-    // An ordered declaration may list its cases in any order.
-    assert!(EnumDeclaration::new(key(1), true, vec!["b".into(), "a".into()]).is_ok());
-    assert!(EnumDeclaration::new(key(1), false, vec!["a".into(), "b".into()]).is_ok());
 }
