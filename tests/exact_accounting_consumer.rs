@@ -2,7 +2,11 @@
 //! RT consumer checks for the public exact meter contract.
 #![cfg(feature = "exact")]
 
-use quire_exact::{Charge, ChargePoint, Incomplete, Integer, LimitKind, Meter, ScalarLimits};
+use ix_trace_rs::trace;
+use quire_exact::{
+    evaluate_integer_arithmetic, Charge, ChargePoint, Incomplete, Integer, IntegerArithmetic,
+    LimitKind, Meter, Outcome, ScalarLimits,
+};
 use quire_specification::VALUE_ACCOUNTING_LIMIT_KIND_VECTORS;
 
 #[test]
@@ -60,6 +64,42 @@ const UNLIMITED: ScalarLimits = ScalarLimits {
 /// The point labels these public meter requests; this test checks aggregation,
 /// independent of a particular scalar operation's charge schedule.
 const POINT: ChargePoint = ChargePoint::IntegerArithmeticOperands;
+
+#[trace("TC-017", "FR-006-AC-3")]
+#[test]
+fn integer_multiplication_denies_130_bits_after_admitting_65_bit_operands() {
+    let operand = Integer::one().shifted_left(64);
+    let mut meter = Meter::new(ScalarLimits {
+        integer_bits: 128,
+        ..UNLIMITED
+    });
+
+    let outcome = evaluate_integer_arithmetic(
+        IntegerArithmetic::Multiply(&operand, &operand),
+        None,
+        &mut meter,
+    );
+
+    assert_eq!(
+        outcome,
+        Outcome::Incomplete(Incomplete {
+            limit_kind: LimitKind::IntegerBits,
+            limit: 128,
+            consumed: 65,
+            next_charge: Integer::from(130_i64),
+            charge_point: ChargePoint::IntegerArithmeticArithmetic,
+        })
+    );
+    assert_eq!(meter.consumed(LimitKind::IntegerBits), 65);
+    assert_eq!(meter.consumed(LimitKind::ValueOccurrences), 2);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), 1);
+    assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
+    assert_eq!(meter.admission_count(), 1);
+    let admitted = meter.admitted_charges();
+    assert_eq!(admitted.len(), 1);
+    assert_eq!(admitted[0].point, ChargePoint::IntegerArithmeticOperands);
+    assert_eq!(admitted[0].integer_bits, Some(65));
+}
 
 #[test]
 fn consumed_size_counters_keep_high_water_while_work_and_results_accumulate() {
