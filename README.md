@@ -114,7 +114,7 @@ quire-contract-runtime = { git = "https://github.com/agent-ix/quire-contract-run
 - Undefined partial operations return `None`; counters saturate and do not panic.
 - Public data enums are `#[non_exhaustive]`, so consumers must handle unknown future states and
   cannot treat them as success.
-- Exact type and release artifact sizes are target-dependent. The size gate fixes Rust 1.98.1 and
+- Exact type and release artifact sizes are target-dependent. The size gate fixes
   `thumbv7em-none-eabi`, then limits the representative static-library consumer's linked `.text`
   plus `.rodata` to 4 KiB with no panic relocation.
 - A decoded snapshot is validated for shape and limits. Validation does not authenticate that the
