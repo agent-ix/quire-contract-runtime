@@ -19,11 +19,11 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |---|---|---|---|
-| FR-006 | FR-006-AC-1 | TC-016 | 🚧 AC-1 has a tagged RT consumer test for all four dispositions, completed `false` and the closed kernel reason enums; TC-016's AC-3 vocabulary and accounting procedure remains open |
+| FR-006 | FR-006-AC-1 | TC-016 | ✅ `consumed_exact_outcomes_keep_false_distinct_from_all_stops` checks all four dispositions, completed `false` and closed kernel reason enums through the RT consumer. |
 | FR-006 | FR-006-AC-6 | — (Inspection) | 🚧 owner-backed by quire-exact FR-096-AC-8 for code/cause; RT consumes typed `Outcome::Refused(Refusal)` directly through `src/exact/mod.rs`, but no RT-local inspection binder remains after the stale four-code test was removed |
 | FR-006 | FR-006-AC-2 | TC-020, TC-021, TC-022 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, and its evidence with it |
-| FR-006 | FR-006-AC-3 | TC-016, TC-017 | 🚧 TC-016 now requires the complete QSpec vocabulary, including `equality.plan-form`; quire-exact FR-368-AC-1/2 owns spelling tests and FR-359-AC-6/7 owns meter ordering, but the local kernel tests were removed and the complete TC-016/TC-017 procedure remains open |
-| FR-006 | FR-006-AC-4 | TC-017 | 🚧 owner-backed by quire-exact FR-358-AC-1/2 and FR-362-AC-11 for admitted-charge denial and scalar stops; local kernel test removed |
+| FR-006 | FR-006-AC-3 | TC-016, TC-017 | ✅ RT consumer tests compare every public `ChargePoint` and `LimitKind` with QSpec vectors, including distinct `equality.plan-form`, and check the corrected 130-bit arithmetic denial, high-water and cumulative counters, first-short field order, refusal before retention, and exact counters past the charge-log cap. Each test is traced to AC-3; quire-exact FR-368-AC-1/2 and FR-359-AC-6/7 own the kernel behavior. |
+| FR-006 | FR-006-AC-4 | TC-017 | ✅ `every_named_charge_point_can_be_denied_without_mutating_meter` injects a work-unit denial at every public charge point, checks the exact `Incomplete` record and unchanged meter; `charge_log_truncation_preserves_counters_and_late_denials` checks a denial after the log cap. quire-exact FR-358-AC-1/2 and FR-362-AC-11 retain owner evidence. |
 | FR-006 | FR-006-AC-7 | — (Inspection) | 🚧 planned: RT-local host floating-point inspection has no bound evidence symbol |
 | FR-006 | FR-006-AC-8 | TC-199 | 🚧 planned: `build-exact-no-std-msrv` exists but has no bound criterion evidence symbol |
 | FR-006 | FR-006-AC-9 | — (`compile_fail` and Inspection) | 🚧 planned: per-child private-path doctests and direct-public-definition inspection are not yet bound |
@@ -96,8 +96,8 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 |---|---|---|---|---|---|
-| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3 | 🚧 AC-1 has a tagged RT consumer test; AC-3 vocabulary round-trips and accounting still require complete owner and consumer evidence |
-| TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | 🚧 local kernel meter tests removed; matching owner evidence is FR-358/359/368 |
+| TC-016 | Inspect the exact outcome envelope and vocabulary | Unit | P0 | FR-006-AC-1, FR-006-AC-3 | ✅ AC-1 retains its tagged RT consumer outcome test; AC-3 has tagged RT `ChargePoint` and `LimitKind` vector comparisons, round-trips and undeclared-spelling refusals, with kernel owner evidence in FR-368. |
+| TC-017 | Meter charges before work and deny them without effect | Unit | P0 | FR-006-AC-3, FR-006-AC-4 | ✅ `tests/exact_accounting_consumer.rs` checks all six steps through the public kernel API, including the 130-bit denial, counter semantics, first-short record, refusal ordering, injected denial per charge point, and log cap behavior. |
 | TC-018 | Agree with the authority on integer division vectors | Integration | P0 | FR-007-AC-1, FR-007-AC-6 | 🚧 local allocation tests removed; owner dividend-bit exact/one-under evidence exists, arithmetic `max(bits(a), bits(b))` remains unproved (IR-678), and two-sided agreement remains IR-669 work |
 | TC-019 | Agree with the authority on exact decimal vectors | Integration | P0 | FR-007-AC-2, FR-007-AC-6 | 🚧 local allocation tests removed; owner FR-361-AC-9 tests the denied upscale, and two-sided agreement remains IR-669 work |
 | TC-020 | Agree with the authority on IEEE profile vectors | Integration | P0 | FR-006-AC-2, FR-007-AC-3, FR-007-AC-6 | 🚧 planned (Linear IR-669, open quire-integration owner; IR-430 removal is Done): the QSL agreement oracle is removed from this repository, no test evidences it here |
