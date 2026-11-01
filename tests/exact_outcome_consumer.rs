@@ -124,6 +124,7 @@ fn closed_charge_point(point: ChargePoint) {
     }
 }
 
+#[trace("TC-016", "FR-006-AC-3")]
 #[test]
 fn consumed_kernel_charge_points_match_authoritative_vocabulary() {
     let vectors: serde_json::Value = serde_json::from_str(VALUE_ACCOUNTING_CHARGE_POINT_VECTORS)

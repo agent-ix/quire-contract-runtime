@@ -103,7 +103,7 @@ fn drive_boolean_result(meter: &mut Meter) -> Incomplete {
 type Driver = fn(&mut Meter) -> Incomplete;
 
 /// An injected denial at occurrence one of the charge point the runtime still owns.
-#[trace("TC-031", "FR-010-AC-1")]
+#[trace("TC-031", "TC-017", "FR-010-AC-1", "FR-006-AC-4")]
 #[test]
 fn tc_031_injected_denial_at_occurrence_one_names_every_residue_charge_point() {
     let drivers: Vec<(ChargePoint, Driver)> = vec![

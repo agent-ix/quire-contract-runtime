@@ -4,11 +4,14 @@
 
 use ix_trace_rs::trace;
 use quire_exact::{
-    evaluate_integer_arithmetic, Charge, ChargePoint, Incomplete, Integer, IntegerArithmetic,
-    LimitKind, Meter, Outcome, ScalarLimits,
+    evaluate_integer_arithmetic, modulo, Charge, ChargePoint, Incomplete, InjectedDenial, Integer,
+    IntegerArithmetic, IntegerDomain, IntegerInterval, LimitKind, Meter, Outcome, Refusal,
+    ScalarLimits,
 };
 use quire_specification::VALUE_ACCOUNTING_LIMIT_KIND_VECTORS;
+use std::num::NonZeroU64;
 
+#[trace("TC-016", "FR-006-AC-3")]
 #[test]
 fn consumed_kernel_limit_kinds_match_authoritative_scalar_limits_vocabulary() {
     let vectors: serde_json::Value = serde_json::from_str(VALUE_ACCOUNTING_LIMIT_KIND_VECTORS)
@@ -101,6 +104,7 @@ fn integer_multiplication_denies_130_bits_after_admitting_65_bit_operands() {
     assert_eq!(admitted[0].integer_bits, Some(65));
 }
 
+#[trace("TC-017", "FR-006-AC-3")]
 #[test]
 fn consumed_size_counters_keep_high_water_while_work_and_results_accumulate() {
     for kind in LimitKind::ALL {
@@ -132,6 +136,7 @@ fn consumed_size_counters_keep_high_water_while_work_and_results_accumulate() {
     assert_eq!(meter.admission_count(), 3);
 }
 
+#[trace("TC-017", "FR-006-AC-3")]
 #[test]
 fn first_short_counter_uses_field_order_and_exact_denied_amount() {
     let mut meter = Meter::new(ScalarLimits {
@@ -210,4 +215,115 @@ fn first_short_counter_uses_field_order_and_exact_denied_amount() {
     );
     assert_eq!(LimitKind::ALL.map(|kind| meter.consumed(kind)), before);
     assert_eq!(meter.admission_count(), 1);
+}
+
+#[trace("TC-017", "FR-006-AC-3")]
+#[test]
+fn out_of_domain_modulo_refuses_before_result_retention() {
+    let interval = IntegerInterval::new(Integer::from(0_i64), Integer::from(1_i64)).unwrap();
+    let domain = IntegerDomain::Bounded(interval.clone());
+    let mut meter = Meter::new(UNLIMITED);
+    let outcome = modulo(
+        &Integer::from(-7_i64),
+        &Integer::from(3_i64),
+        &domain,
+        &mut meter,
+    );
+
+    assert_eq!(
+        outcome,
+        Outcome::Refused(Refusal::ModuloOutOfDomain {
+            domain: Box::new(interval),
+        })
+    );
+    assert_eq!(meter.consumed(LimitKind::ResultUnits), 0);
+    assert_eq!(
+        meter
+            .admitted_charges()
+            .iter()
+            .map(|charge| charge.point)
+            .collect::<Vec<_>>(),
+        [
+            ChargePoint::IntegerModulusOperands,
+            ChargePoint::IntegerModulusArithmetic,
+            ChargePoint::IntegerModulusDomain,
+        ]
+    );
+}
+
+#[trace("TC-017", "FR-006-AC-4")]
+#[test]
+fn every_named_charge_point_can_be_denied_without_mutating_meter() {
+    for point in ChargePoint::ALL {
+        let mut meter = Meter::new(UNLIMITED).with_injected_denial(InjectedDenial {
+            point,
+            occurrence: NonZeroU64::MIN,
+        });
+        let before_counters = LimitKind::ALL.map(|kind| meter.consumed(kind));
+        let before_admissions = meter.admission_count();
+        let before_log = meter.admitted_charges().to_vec();
+        let denial = meter.charge(Charge::new(point).results(1));
+        assert_eq!(
+            denial,
+            Err(Incomplete {
+                limit_kind: LimitKind::WorkUnits,
+                limit: 0,
+                consumed: 0,
+                next_charge: Integer::one(),
+                charge_point: point,
+            }),
+            "{point:?}"
+        );
+        assert_eq!(
+            LimitKind::ALL.map(|kind| meter.consumed(kind)),
+            before_counters,
+            "{point:?} changed counters"
+        );
+        assert_eq!(meter.admission_count(), before_admissions, "{point:?}");
+        assert_eq!(meter.admitted_charges(), before_log, "{point:?}");
+    }
+}
+
+#[trace("TC-017", "FR-006-AC-3", "FR-006-AC-4")]
+#[test]
+fn charge_log_truncation_preserves_counters_and_late_denials() {
+    const CAPACITY: usize = 4096;
+    let point = ChargePoint::FunctionCall;
+    let mut meter = Meter::new(UNLIMITED);
+    for _ in 0..CAPACITY {
+        meter.charge(Charge::new(point)).unwrap();
+    }
+    assert_eq!(meter.admitted_charges().len(), CAPACITY);
+    assert!(!meter.charge_log_truncated());
+    meter.charge(Charge::new(point)).unwrap();
+    assert_eq!(meter.admitted_charges().len(), CAPACITY);
+    assert!(meter.charge_log_truncated());
+    assert_eq!(meter.admission_count(), (CAPACITY + 1) as u64);
+    assert_eq!(meter.consumed(LimitKind::WorkUnits), (CAPACITY + 1) as u64);
+
+    let mut meter = meter.with_injected_denial(InjectedDenial {
+        point,
+        occurrence: NonZeroU64::MIN,
+    });
+    let before_counters = LimitKind::ALL.map(|kind| meter.consumed(kind));
+    let before_admissions = meter.admission_count();
+    let before_log_len = meter.admitted_charges().len();
+    let before_truncated = meter.charge_log_truncated();
+    assert_eq!(
+        meter.charge(Charge::new(point)),
+        Err(Incomplete {
+            limit_kind: LimitKind::WorkUnits,
+            limit: (CAPACITY + 1) as u64,
+            consumed: (CAPACITY + 1) as u64,
+            next_charge: Integer::one(),
+            charge_point: point,
+        })
+    );
+    assert_eq!(
+        LimitKind::ALL.map(|kind| meter.consumed(kind)),
+        before_counters
+    );
+    assert_eq!(meter.admission_count(), before_admissions);
+    assert_eq!(meter.admitted_charges().len(), before_log_len);
+    assert_eq!(meter.charge_log_truncated(), before_truncated);
 }

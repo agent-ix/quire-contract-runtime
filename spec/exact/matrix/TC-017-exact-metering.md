@@ -23,6 +23,9 @@ The RT residue charge-point driver remains in `tests/exact_outcomes.rs` under TC
 The exact injected record and ordinary-limit precedence now have direct owner evidence under
 [quire-exact FR-358-AC-12](ix://agent-ix/quire-exact/FR-358) and [quire-exact FR-358-AC-13](ix://agent-ix/quire-exact/FR-358);
 RT's older quire-exact dependency revision still needs a separate refresh.
+RT's `tests/exact_accounting_consumer.rs` exercises all six procedure steps through the consumed
+public kernel API. Its vocabulary, high-water, cumulative, first-short, refusal-order and
+log-truncation tests bind FR-006-AC-3; its injected-denial tests bind FR-006-AC-4.
 
 ## Test Procedure
 
