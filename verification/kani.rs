@@ -7,6 +7,7 @@ use crate::{
     ClauseId, ClauseKind, ClauseOutcome, ContractIdentity, ExecutionPoint, FailureDetail,
     FailureKind, Observation, RequirementId, RevisionId, Verdict, VerdictContext, VerdictKind,
 };
+#[cfg(feature = "exact")]
 use quire_exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, ScalarLimits};
 
 // `quire-contract-codegen`'s generated exact-scalar oracles call
@@ -32,6 +33,7 @@ use quire_exact::{compare_ieee, IeeeComparison, IeeeValue, Meter, Outcome, Scala
 // `Stop::Refused` or any `LimitKind` boundary. Those paths are unproved. The struct literal
 // names every field with no `..Default::default()` so a new member breaks the build rather than
 // silently defaulting into scope.
+#[cfg(feature = "exact")]
 const EXACT_UNLIMITED: ScalarLimits = ScalarLimits {
     integer_bits: u64::MAX,
     decimal_digits: u64::MAX,
@@ -274,6 +276,7 @@ fn tc_003_option_helpers_preserve_definedness() {
 // bounds `Meter::charge`'s own bookkeeping loop over its two-entry size vector;
 // CBMC discharges the loop's unwinding assertion at that bound with room to spare.
 // Implements: TC-003
+#[cfg(feature = "exact")]
 #[kani::proof]
 #[kani::unwind(8)]
 fn tc_003_exact_ieee_numeric_equal_matches_nan_unordered() {
