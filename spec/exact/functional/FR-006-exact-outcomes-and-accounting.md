@@ -112,7 +112,12 @@ types so a new variant requires an RT consumer decision. The owner declarations 
 `quire-exact/src/outcome.rs`, with `LimitKind` and `ChargePoint` in
 `quire-exact/src/accounting.rs`. `Incomplete` is a struct, not an enum; its
 typed reason fields use those closed enums. TC-016 retains the RT consumer
-check of this criterion; its vocabulary and accounting procedure under AC-3 remains open.
+check of this criterion. FR-006-AC-3 is checked by the traced RT consumer tests in
+`tests/exact_outcome_consumer.rs` and `tests/exact_accounting_consumer.rs`: they compare and
+round-trip the consumed charge-point and limit-kind enums against QSpec's published vectors,
+including `equality.plan-form`; exercise the corrected arithmetic denial before result work;
+and check high-water and cumulative counters and the first short counter's exact denied amount.
+The kernel owner evidence for those same behaviors is FR-368-AC-1/2 and FR-359-AC-6/7.
 
 Owner evidence covers only matching subsets: [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096) owns
 kernel refusal codes and causes; `FR-362-AC-11` covers public scalar outcome stops;
