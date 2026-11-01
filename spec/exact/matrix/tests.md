@@ -89,7 +89,7 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | FR-275 | FR-275-AC-29, FR-275-AC-30 | TC-199, TC-194 | 🚧 PLANNED/UNRUN (IR-1009, blocked by IR-590; AD-004 step 5): evaluation-leaf no_std target/host consumers and separate default versus exact-profile footprint receipts. |
 | FR-275 | FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21 | TC-199 | 🚧 `make test-features`, `make size` and `make msrv` contain the exact no-std, footprint graph, size and toolchain checks; AC-20 is an inspection, while AC-9 through AC-11, AC-21 and TC-199 have no Quire test-symbol binder. IR-499 remains open for strict-coverage evidence |
 | FR-275 | FR-275-AC-22 | TC-205 | ✅ `tests/ir882_qsv_vocabulary.rs` rejects local semantic-node vocabulary definitions and aliases, including renamed copies |
-| FR-275 | FR-275-AC-23 | TC-201, TC-197 | 🚧 QSV exact/non-exact handoff, declared/compound distinction and U25 two-step RT consumer controls now run in quire-integration TC-096; QSV FR-124-AC-4/TC-923 retains owner refusal evidence. |
+| FR-275 | FR-275-AC-23 | TC-201, TC-197; TC-096 (`quire-integration`) | 🚧 TC-096 checks producer-origin exact/non-exact handoff and a compound-to-declared second conversion; the original U25 `1 J` two-step and equal-byte declared/compound controls remain open. QSV FR-124-AC-4/TC-923 retains owner refusal evidence. |
 | FR-277 | FR-277-AC-1, FR-277-AC-2, FR-277-AC-3, FR-277-AC-4, FR-277-AC-5, FR-277-AC-6, FR-277-AC-7, FR-277-AC-8 | TC-203 | 🚧 AC-8 RT owner-deletion inspection remains; AC-1 through AC-6 QSV evaluator consumer controls now run in quire-integration TC-096; AC-7 Kani proof remains separate. |
 | FR-278 | FR-278-AC-1, FR-278-AC-2 | TC-204 | 🚧 RT function producer controls remain to be bound; collection and composite causes need shared-owner evidence; equality and quantity causes are owned by quire-semantic-value FR-122-AC-1 and AC-4 |
 ## Test Case Summary
@@ -118,7 +118,7 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | TC-197 | Inspect that the runtime holds one kernel and no copy | Integration | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19, FR-275-AC-23 | 🚧 planned across IR-349 (independent steps 1–4) and IR-1009 (step 5 and dependent end state): FR-275-AC-22 has its own inspection in TC-205. Value, equality, quantity and unit owners are cut over; AC-23 producer-origin consumer evidence now runs in quire-integration TC-096. Function-application deletion awaits IR-590 target acceptance; step 7 fails while residue exists |
 | TC-198 | Fail the build on a dependency from the QSL Git source | Integration | P0 | FR-275-AC-7, FR-275-AC-8 | 🚧 source rejection gate exists in `deny.toml` and `make deny-mutations`; the traced Rust test checks the diagnostic discriminator, and the real mutation gate supplies dependency evidence |
 | TC-199 | Build the exact profile no_std and keep the default footprint | Integration | P0 | FR-006-AC-8, FR-275-AC-9, FR-275-AC-10, FR-275-AC-11, FR-275-AC-20, FR-275-AC-21, FR-275-AC-29, FR-275-AC-30 | 🚧 exact profile and footprint gates exist in `make test-features`, `make size` and `make msrv`; Quire has no test-symbol binder for TC-199 |
-| TC-201 | Convert a quantity exactly between units of one dimension | Integration | P0 | FR-007-AC-20, FR-007-AC-21, FR-007-AC-22, FR-007-AC-23, FR-007-AC-24, FR-007-AC-25, FR-275-AC-23 | 🚧 The moved QSV quantity conversion and handoff controls run in quire-integration TC-096 with admitted identities; see its `producer_origin_identity` and `producer_origin_quantity_residual` targets. |
+| TC-201 | Convert a quantity exactly between units of one dimension | Integration | P0 | FR-007-AC-20, FR-007-AC-21, FR-007-AC-22, FR-007-AC-23, FR-007-AC-24, FR-007-AC-25, FR-275-AC-23 | 🚧 The moved QSV quantity conversion and handoff controls run in quire-integration TC-096 with admitted identities; the original U25 `1 J` and equal-byte controls remain open. |
 | TC-203 | Exercise checked equality through the kernel plan and runtime meter | Unit | P0 | FR-277-AC-1, FR-277-AC-2, FR-277-AC-3, FR-277-AC-4, FR-277-AC-5, FR-277-AC-6, FR-277-AC-7, FR-277-AC-8 | 🚧 RT retains AC-8 owner-deletion inspection; QSV equality evaluator consumer controls AC-1 through AC-6 now run in quire-integration TC-096; AC-7 Kani proof remains separate. |
 | TC-204 | Runtime checked-invariant producer controls | Unit | P0 | FR-278-AC-1, FR-278-AC-2 | 🚧 bind RT function producer evidence and shared-owner collection/composite controls; inspect QSV FR-122 owner controls for equality/quantity |
 | TC-205 | Inspect QSV semantic-node vocabulary ownership | Integration | P0 | FR-275-AC-22 | ✅ `tests/ir882_qsv_vocabulary.rs` inspects all runtime source for local semantic-node definitions and aliases and rejects representative copies |
@@ -198,11 +198,9 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   corpus cannot distinguish an implementation that checks arity, then per-argument kind and
   reference, then charges `function.call`, from one that checks in some other order and happens to
   agree on each single-violation vector's result. That ordering claim is instead backed only by the
-  runtime-only tests in `tests/exact_function_application.rs`
-  (`tc_194_arity_is_decided_before_any_per_argument_check`,
-  `tc_194_earlier_parameter_refusal_wins_over_a_later_dangling_reference`,
-  `tc_194_function_call_precedes_the_body`,
-  `tc_194_frame_call_charges_function_call_before_the_body_it_invokes`), which construct vectors
+  producer-origin `admitted_function_arguments_keep_precedence_and_zero_charge`
+  in `quire-integration` TC-096 and the retained RT
+  `tc_194_function_call_precedes_the_body`, which construct vectors
   that do carry two simultaneous violations specifically to discriminate check order. Nor does the
   corpus agree on function-body semantics: AD-002 draws the runtime's boundary at typed values and
   operators, so `Body` is an opaque Rust closure while the authority's function bodies are a typed

@@ -17,8 +17,9 @@ directly; no RT-local membership or pair walker is acceptable evidence.
 Check `construct_collection`/`form_collection` charge and refusal ordering, membership-comparison
 and bound charges, each of the four kinds' retained and visiting order, and the total canonical key
 that fixes set and bag order. IR-882 removed RT's duplicate implementation and its former
-`tests/exact_collection.rs` controls. `tests/ir882_kernel_pair_results.rs` checks
-the retained-member-first foreign-reference refusal at the kernel boundary.
+`tests/exact_collection.rs` controls. `quire-integration` TC-096's
+`admitted_model_roots_set_the_reference_universe_and_distinct_owner_result`
+restores the moved foreign-reference owner/result control with admitted identities.
 The other owner evidence and RT consumer controls need mapping before this
 procedure receives full acceptance credit.
 
@@ -70,5 +71,5 @@ invalid deferred element carries `CollectionElementNotAdmitted`.
 ## Status
 
 PARTIAL: retained under FR-275-AC-14 after removal of RT's duplicate implementation.
-The new membership foreign-reference control supplies one consumer case;
+The producer-origin foreign-reference control supplies one consumer case;
 the other procedures remain planned. No deleted RT test is counted as evidence.

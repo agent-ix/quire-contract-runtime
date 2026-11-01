@@ -30,9 +30,11 @@ single-member admission, `FR-357-AC-3` tests exposed-member domain refusal, and
 `FR-357-AC-7` tests all four `mod` sign quadrants independently of the division profile.
 Those are kernel subsets only. RT-local `tests/exact_semantics.rs` backs the consumed
 rounding behavior in AC-8, quotient-sign rounding and exact loss in AC-15, Euclidean `mod`
-in AC-18, and division exposure in AC-19. RT's `tests/exact_quantity_conversion.rs` checks
-QSV's public quantity type-fault order, affine power in AC-16 and same-dimension arithmetic
-in AC-17. RT/QSL agreement remains a separate obligation.
+in AC-18, and division exposure in AC-19. The `quire-integration` TC-096
+`producer_origin_identity` and `producer_origin_quantity_residual` tests check
+QSV's public quantity type-fault order, affine power in AC-16 and same-dimension
+arithmetic in AC-17 from admitted identities. RT/QSL agreement remains a
+separate obligation.
 
 ## Test Procedure
 
