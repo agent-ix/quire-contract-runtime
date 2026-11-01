@@ -11,14 +11,16 @@ relationships:
 ## Description
 
 Check QSV's public `convert_quantity` with `QuantityTarget::Exact`, and the affine refusals of
-QSV's public `evaluate_quantity`, through RT integration tests. No RT symbol is added
+QSV's public `evaluate_quantity`, through producer-origin tests in `quire-integration`
+TC-096. No RT symbol is added
 (FR-275-AC-18). The criteria cite QSpec [quire-specification FR-142-AC-1](ix://agent-ix/quire-specification/FR-142),
 `FR-142-AC-2`, `FR-142-AC-4`, `FR-142-AC-5`, `FR-142-AC-7` and `FR-142-AC-10` and QSpec TC-187 rows U01,
 U03, U04, U05, U09, U10, U15, U20, U22, U25 and U26 by id; their vectors are re-stated in
 FR-007-AC-20 through AC-25, not copied from QSpec. Lossy conversion (`FR-142-AC-3`), `Decimal` and
 `Integer` targets and rounding are out of scope except the FR-275-AC-23 refusal check. Evidence:
-`tests/exact_quantity_conversion.rs` and `tests/exact_quantity_owner.rs` (`--features exact`). Shared-corpus agreement is IR-669
-(TC-022).
+`tests/producer_origin_identity.rs` and `tests/producer_origin_quantity_residual.rs`
+in `quire-integration`. Their admitted identities come from a live QSL checked-package
+producer and the IR reader. Shared-corpus agreement is IR-669 (TC-022).
 
 ## Test Procedure
 
@@ -50,10 +52,17 @@ FR-007-AC-20 through AC-25, not copied from QSpec. Lossy conversion (`FR-142-AC-
    expect distinct IDs. Exercise compound identity refusal and expect no returned quantity
    or retained unit. Check that a non-exact `Conversion` has no exact-quantity
    result and that successful handoff adds no meter charge (FR-275-AC-23).
-   The RT test checks the exact and non-exact cases and the two-step handoff; QSV TC-923
+   The `quire-integration` test checks the exact and non-exact cases and the two-step handoff; QSV TC-923
    checks the large compound identity refusal.
 
 ## Expected Results
 
 Every value, refusal and charge is the one FR-007-AC-20 through AC-25 state, and each check fails
 if the stated decision changes.
+
+## Status
+
+PARTIAL: TC-096 restores the moved conversion and handoff assertions with admitted
+identities. The equal-byte declared/compound control and complete U25 result
+remain open under FR-012-AC-2 and FR-275-AC-23 respectively; the merged tests
+do not claim those full procedure steps.

@@ -14,9 +14,9 @@ Check QSV's `check_equality`, quire-exact's `plan_equality`, QSV's
 `CheckedEquality::evaluate` over `quire_exact::Value`, and terminal `Reference<T>`
 identity through RT consumer tests. IR-882 removed the former RT-local
 `tests/exact_equality.rs` controls with the duplicate evaluator. TC-203 now
-tests the real QSV evaluator's bounded kernel-plan schedule, and
-`tests/ir882_kernel_pair_results.rs` checks the three changed kernel pair
-results; the other
+tests the real QSV evaluator's bounded kernel-plan schedule in
+`quire-integration` TC-096. Its `producer_origin_equality` tests restore the
+composite, enum and foreign-reference pair results; the other
 procedures below still need owner evidence and RT consumer mapping. A Kani proof of the
 plan/evaluate pair-count agreement property (Test Procedure step 6) is tracked as IR-241 (Linear).
 
@@ -66,6 +66,7 @@ count, and the number of `equality.pair` charges QSV `CheckedEquality::evaluate`
 ## Status
 
 PARTIAL: TC-203 exercises the consumed QSV equality schedule and static
-composite-type refusal. RT also consumes and checks the changed composite,
-enum and membership kernel pair results. The remaining TC-026 matrix and
+composite-type refusal through `quire-integration` TC-096. Its producer-origin
+tests also check the changed composite, enum and foreign-reference pair results.
+The remaining TC-026 matrix and
 reference procedures are planned. No deleted RT test is counted as QSV-path evidence.

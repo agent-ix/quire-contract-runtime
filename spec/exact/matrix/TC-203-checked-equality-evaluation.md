@@ -10,7 +10,10 @@ relationships:
 
 ## Description
 
-Verify FR-277-AC-1 through AC-6 by RT consumer tests and AC-8 by inspection only after QSV's `CheckedEquality::evaluate` routes through `quire_exact::planned_equality_with_plan` and RT removes its duplicate. FR-277-AC-7 is the separate titan:kani:plan claim.
+Verify FR-277-AC-1 through AC-6 through `quire-integration` TC-096 producer-origin
+consumer tests and AC-8 by RT inspection after QSV's `CheckedEquality::evaluate`
+routes through `quire_exact::planned_equality_with_plan` and RT removes its duplicate.
+FR-277-AC-7 is the separate titan:kani:plan claim.
 
 ## Test Procedure
 
@@ -29,7 +32,8 @@ Verify FR-277-AC-1 through AC-6 by RT consumer tests and AC-8 by inspection only
 
 ## Status
 
-PARTIAL: `tests/ir882_equality_owner.rs` exercises AC-1 through AC-6 through
-the locked QSV result-bearing kernel route after RT removed its distinct
-`Value`, evaluator and pair walker. AC-8 also requires source inspection;
+PARTIAL: `quire-integration/tests/producer_origin_equality.rs` exercises AC-1
+through AC-6 through the producer-origin QSV result-bearing kernel route after
+RT removed its distinct `Value`, evaluator and pair walker. AC-8 retains the
+RT source inspection in `tests/ir882_equality_owner.rs`;
 AC-7 remains the separate titan:kani:plan claim.

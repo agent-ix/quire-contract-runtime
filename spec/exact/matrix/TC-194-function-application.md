@@ -12,8 +12,9 @@ relationships:
 
 Check `CheckedPackage::call` and `CheckedPackage::evaluate` over a package `PackageDeclarations::check`
 admitted under `CheckMode::Linked`, and check every `InputRefusal` variant against a matching malformed
-call. Evidence: `tests/exact_function_application.rs` (`--features exact`), planned for
-agent-ix/quire-contract-runtime#34.
+call. RT evidence: `tests/exact_function_application.rs` (`--features exact`).
+The seven identity-dependent cases removed by IR-1162 run in
+`quire-integration` TC-096's `tests/producer_origin_function.rs`.
 
 ## Test Procedure
 

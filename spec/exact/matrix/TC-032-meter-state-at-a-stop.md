@@ -12,8 +12,10 @@ relationships:
 
 Check what the meter holds at `Undefined`, `Refused` and `Incomplete` stops, charge atomicity, the
 field-order scan, the bounded log, exact over-`u64` charge requests and the exposed deterministic orders. RT evidence:
-`tests/exact_meter_state.rs` and `tests/exact_quantity_conversion.rs` (`--features exact`);
-kernel and QSV owner evidence supplies the removed implementation's remaining controls.
+`tests/exact_meter_state.rs` (`--features exact`). The moved quantity and unit
+graph controls run in `quire-integration` TC-096's `producer_origin_identity`
+and `producer_origin_quantity_residual` tests; kernel and QSV owner evidence
+supplies the removed implementation's remaining controls.
 
 ## Ownership and evidence
 
@@ -29,7 +31,7 @@ and consumed readers; `FR-358-AC-8` through `FR-358-AC-11` cover post-cap accoun
 `FR-359-AC-1` through `FR-359-AC-5` cover cumulative boundaries and atomicity; and
 `FR-364-AC-1` covers IEEE flag order. Steps 1–3 and 6–8 and the kernel part of step 9 left
 with the kernel copy. QSV owns quantity and unit graph behavior after the IR-882 cutover;
-RT's step-4 integration check uses QSV directly. The lazy connective remains RT-owned.
+TC-096's step-4 integration check uses QSV directly. The lazy connective remains RT-owned.
 QSL-358's QSL-side extraction is Done.
 
 ## Test Procedure
