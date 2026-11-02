@@ -12,9 +12,9 @@ pub struct StepBudget {
     pub scalar: ScalarLimits,
     /// Maximum live interpreter continuations.
     pub stack_frames: usize,
-    /// Live operand addresses plus cumulative native membership reservation elements.
+    /// Live operand/result addresses plus cumulative canonical-slot and native membership elements.
     pub scratch_elements: usize,
-    /// Cumulative byte reservations made by shared supplied membership.
+    /// Cumulative canonical-slot and shared supplied-membership byte reservations.
     pub scratch_bytes: usize,
 }
 
@@ -27,9 +27,9 @@ pub enum StepResource {
     Work,
     /// A continuation would exceed the explicit stack.
     Stack,
-    /// Operand or native membership element storage.
+    /// Operand, canonical result/slot or native membership element storage.
     ScratchElements,
-    /// Native membership byte storage.
+    /// Canonical-slot or native membership byte storage.
     ScratchBytes,
     /// A representable allocation or native storage identity was unavailable.
     Storage,

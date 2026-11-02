@@ -99,10 +99,11 @@ remains canonical.
 One continuation dispatch costs one work unit. A nontrivial conformance walk charges
 the shared supplied-membership events from the same remaining work budget. The
 explicit continuation vector bounds stack use. Scratch elements bound the live
-operand-address slots plus cumulative native membership element reservations;
-scratch bytes bound cumulative native membership byte reservations. Actual native
-reservation units are preserved. Scratch vectors are prepared at build; a controlled
-reservation may stop later shared membership before it grows storage.
+operand/projection/canonical-result addresses plus cumulative canonical-slot and
+native membership element reservations; scratch bytes bound cumulative slot-array
+and native membership byte reservations. Actual reservation units are preserved.
+Interpreter vectors are prepared at build; later canonical-slot allocation and
+shared membership storage require charged reservations before they grow storage.
 
 Immutable already-admitted literals and arguments retain their type facts. Shared
 `same_type` equality for each relevant expression edge is cached once at build, so
