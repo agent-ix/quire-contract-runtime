@@ -97,3 +97,31 @@ scope:
   excerpt: The runtime uses the capacity supplied by QSL rather than deriving a second
     formula.
 ```
+
+## Dispositions
+
+Round 1 inspected faf1d5c238704140d5e02f4659a63500c1b3eb38 against the original frozen head.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Verified the fix against the test diff; exact after_excerpt follows. |
+| FND-002 | fixed | Verified the fix against the test diff; exact after_excerpt follows. |
+
+Both code findings are fixed by actual assertions in faf1d5c238704140d5e02f4659a63500c1b3eb38. The ownership test now checks all four exact associations, function signatures, body identities/types and retained literal State/Results contents. The added refusal control independently covers duplicate expression locations, invalid Call callee/argument and each If child edge with a valid condition on branch-edge cases. No source/API/spec delta or new defect was found. Construction review is PASS after these dispositions.
+
+Supplied focused evidence: 10 passed, zero failed/ignored; all-target/all-feature Clippy passed. Reviewer ran no Cargo or Kani. Full make ci remains owed; joint API freeze remains pending.
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: fixed
+  after_excerpt: "assert_eq!(\n        second.layout().entries,\n        Entries {\n\
+    \            init: FunctionId(0),\n            on_event: FunctionId(1),\n    \
+    \        on_watermark: FunctionId(2),\n            on_gap: FunctionId(3)\n   \
+    \     }\n    );"
+- fnd: FND-002
+  outcome: fixed
+  after_excerpt: "let mut duplicate = parts();\n    duplicate.expressions[1].key =\
+    \ duplicate.expressions[0].key.clone();\n    duplicate.expressions[1].body_path\
+    \ = duplicate.expressions[0].body_path.clone();\n    refused(duplicate, ProgramRefusalCode::DuplicateKey);"
+```
