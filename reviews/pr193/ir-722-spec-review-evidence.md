@@ -157,3 +157,17 @@ bindings:
   trace: correct
 dispositions: []
 ```
+
+## Final RT carry (round 5)
+
+Final RT carry inspected 019de067d34569f4fc6bb6cf8deebbbcd4893c0d. The local tests/monitor_program.rs identity fixture is deleted. TC-209 routes authentic construction controls to quire-integration IT-018/TC-098 and explicitly identifies diagnostic record/layout-key semantics. Production validation selects an existing UnitTable id through declared_key equality, retains exact Time dimension identity, and adds no affine or positive-scale restriction. Integration f9a59bda was already reviewed with authentic declarations, nested key and emitted negative/affine units; all integration findings are fixed. RT FND-003 and FND-004 are now fixed. Earlier FND-001/FND-002 remain fixed; no new source/contract defect found in this final carry.
+
+Supplied final TC-033 evidence has seven passing tests including the semantic-identity inspection; all-target/all-feature Clippy passes. Integration ordinary aggregate evidence is reported as 81 passing, zero failed and six existing ignored. No ignored heavy proof is credited as executed. Reviewer ran no Cargo/Kani and edited no source.
+
+Coverage is explicitly not green: current strict coverage is reported as 118 unbacked/zero contradicted, comprising unchanged baseline 114 plus four interface criteria now tested externally without local RT binders. The prior user exception covered identical 114 only and does not authorize 118; a new ruling is pending. The existing heavy IEEE proof was stopped and remains uncompleted. No all-gates-green or merge-ready claim is made. Full FR-276 execution acceptance remains deferred on open IR-722; this is only the RT-first construction slice.
+
+Current method verdict: **PASS** for construction review; unresolved aggregate gates still prevent a merge-ready conclusion.
+
+```yaml
+dispositions: []
+```
