@@ -61,6 +61,7 @@ impl Machine {
             .len()
             .checked_add(self.arguments.len())
             .and_then(|n| n.checked_add(self.active_bindings))
+            .and_then(|n| n.checked_add(self.active_folds))
             .and_then(|n| n.checked_add(self.projections.len()))
             .and_then(|n| n.checked_add(self.computed.len()))
             .ok_or_else(|| StepResourceStop::storage(count))?;

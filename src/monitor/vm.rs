@@ -2,14 +2,15 @@
 //! Iterative execution of ordinary retained expressions, with no source evaluator.
 
 mod collections;
+mod folding;
 mod unions;
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::cell::{Cell, RefCell};
 
 use quire_exact::{
-    Cancel, CompositeValue, FieldValue, Integer, IntegerArithmetic, Meter, OrderedOperands,
-    Outcome, UnionValue, Value, ValueType,
+    Cancel, CollectionValue, CompositeValue, FieldValue, Integer, IntegerArithmetic, Meter,
+    OrderedOperands, Outcome, UnionValue, Value, ValueType,
 };
 use quire_semantic_value::{
     declaration::{CompositeShape, StorageRequest, StorageUnit},
@@ -84,6 +85,10 @@ enum Operand {
 }
 
 enum Projection {
+    Sequence {
+        owner: Arc<CollectionValue>,
+        position: usize,
+    },
     Composite {
         owner: Arc<CompositeValue>,
         position: usize,
@@ -97,6 +102,7 @@ enum Projection {
 impl Projection {
     fn value(&self) -> Option<&Value> {
         match self {
+            Self::Sequence { owner, position } => owner.elements().get(*position),
             Self::Composite { owner, position } => match owner.slots().get(*position)? {
                 FieldValue::Present(value) => Some(value),
                 _ => None,
@@ -120,8 +126,13 @@ struct ActiveBinding {
     operand: Operand,
 }
 
-#[derive(Clone, Copy)]
 enum Frame {
+    FoldStart {
+        expression: ExpressionId,
+        scope: Scope,
+    },
+    FoldNext(folding::FoldState),
+    FoldBody(folding::FoldState),
     Unary {
         expression: ExpressionId,
     },
@@ -239,12 +250,12 @@ impl Checks {
                     }
                 }
                 Operation::Local(binding) => {
-                    let (_, initializer) = program
+                    let (_, source) = program
                         .bindings
                         .resolve(*binding)
                         .ok_or_else(|| broken(site, Broken::Binding))?;
-                    let value = program
-                        .expression(initializer)
+                    let value_type = source
+                        .value_type(&program.parts)
                         .ok_or_else(|| broken(site, Broken::Address))?;
                     edges
                         .try_reserve_exact(1)
@@ -252,8 +263,23 @@ impl Checks {
                     edges.push(
                         program
                             .types()
-                            .same_type(&value.value_type, &expression.value_type),
+                            .same_type(value_type, &expression.value_type),
                     );
+                }
+                Operation::SequenceFold { initial, body, .. } => {
+                    edges
+                        .try_reserve_exact(2)
+                        .map_err(|_| StepResourceStop::storage(2))?;
+                    for child in [initial, body] {
+                        let value = program
+                            .expression(*child)
+                            .ok_or_else(|| broken(site, Broken::Address))?;
+                        edges.push(
+                            program
+                                .types()
+                                .same_type(&value.value_type, &expression.value_type),
+                        );
+                    }
                 }
                 Operation::Let { body, .. } => {
                     let value = program
@@ -430,6 +456,7 @@ pub(super) struct Machine {
     touched_flags: Vec<bool>,
     touched: Vec<usize>,
     active_bindings: usize,
+    active_folds: usize,
     projections: Vec<Projection>,
     computed: Vec<Value>,
 }
@@ -456,6 +483,7 @@ impl Machine {
                 Operation::TupleElement { .. }
                     | Operation::RecordField { .. }
                     | Operation::UnionPayload { .. }
+                    | Operation::SequenceFold { .. }
             )
         }) {
             projections
@@ -502,6 +530,7 @@ impl Machine {
             touched_flags,
             touched,
             active_bindings: 0,
+            active_folds: 0,
             projections,
             computed,
             checks,
@@ -531,6 +560,7 @@ impl Machine {
             .len()
             .checked_add(self.arguments.len())
             .and_then(|n| n.checked_add(self.active_bindings))
+            .and_then(|n| n.checked_add(self.active_folds))
             .and_then(|n| n.checked_add(self.projections.len()))
             .and_then(|n| n.checked_add(self.computed.len()))
             .and_then(|n| n.checked_add(resources.elements.get()));
@@ -584,6 +614,7 @@ impl Machine {
         self.values.clear();
         self.arguments.clear();
         self.clear_bindings();
+        self.active_folds = 0;
         self.projections.clear();
         self.computed.clear();
         result
@@ -630,6 +661,11 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::FoldStart { expression, scope } => {
+                    self.fold_start(program, supplied, expression, scope, resources)?
+                }
+                Frame::FoldNext(state) => self.fold_next(program, supplied, state, resources)?,
+                Frame::FoldBody(state) => self.fold_body(program, supplied, state, resources)?,
                 Frame::Equality { expression } => {
                     self.equality(program, supplied, expression, resources)?
                 }
@@ -763,6 +799,25 @@ impl Machine {
                 self.frame(
                     Frame::Evaluate {
                         expression: *value,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::SequenceFold {
+                sequence, initial, ..
+            } => {
+                self.frame(Frame::FoldStart { expression, scope }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *initial,
+                        scope,
+                    },
+                    resources,
+                )?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *sequence,
                         scope,
                     },
                     resources,
@@ -994,6 +1049,7 @@ impl Machine {
             .len()
             .checked_add(self.arguments.len())
             .and_then(|n| n.checked_add(self.active_bindings))
+            .and_then(|n| n.checked_add(self.active_folds))
             .and_then(|n| n.checked_add(self.projections.len()))
             .and_then(|n| n.checked_add(self.computed.len()))
             .ok_or_else(|| StepResourceStop::storage(count))?;
@@ -1403,26 +1459,7 @@ impl Machine {
             .bindings
             .resolve(*binding)
             .ok_or_else(|| broken(site, Broken::Binding))?;
-        let entry = self
-            .bindings
-            .get_mut(slot)
-            .ok_or_else(|| broken(site, Broken::Address))?;
-        let previous = entry.replace(ActiveBinding {
-            invocation: scope.invocation,
-            operand,
-        });
-        let touched = self
-            .touched_flags
-            .get_mut(slot)
-            .ok_or_else(|| broken(site, Broken::Address))?;
-        if !*touched {
-            *touched = true;
-            self.touched.push(slot);
-        }
-        self.active_bindings = self
-            .active_bindings
-            .checked_add(1)
-            .ok_or_else(|| StepResourceStop::storage(1))?;
+        let previous = self.activate(slot, operand, scope.invocation, site)?;
         self.frame(
             Frame::Check {
                 expression,
@@ -1446,6 +1483,36 @@ impl Machine {
             },
             resources,
         )
+    }
+
+    fn activate(
+        &mut self,
+        slot: usize,
+        operand: Operand,
+        invocation: u64,
+        site: Site,
+    ) -> Result<Option<ActiveBinding>, Failure> {
+        let entry = self
+            .bindings
+            .get_mut(slot)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let previous = entry.replace(ActiveBinding {
+            invocation,
+            operand,
+        });
+        let touched = self
+            .touched_flags
+            .get_mut(slot)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if !*touched {
+            *touched = true;
+            self.touched.push(slot);
+        }
+        self.active_bindings = self
+            .active_bindings
+            .checked_add(1)
+            .ok_or_else(|| StepResourceStop::storage(1))?;
+        Ok(previous)
     }
 
     fn restore(
@@ -1576,6 +1643,7 @@ impl Machine {
             .len()
             .checked_add(self.arguments.len())
             .and_then(|count| count.checked_add(self.active_bindings))
+            .and_then(|count| count.checked_add(self.active_folds))
             .and_then(|count| count.checked_add(self.projections.len()))
             .and_then(|count| count.checked_add(self.computed.len()))
             .ok_or_else(|| StepResourceStop::storage(usize::MAX))?;

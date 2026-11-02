@@ -158,6 +158,19 @@ pub enum Operation {
         /// Ordered element operands; the result annotation supplies CollectionType.
         elements: Vec<ExpressionId>,
     },
+    /// Scoped left fold over sequence occurrence order.
+    SequenceFold {
+        /// Sequence receiver, evaluated first and once.
+        sequence: ExpressionId,
+        /// Declared identity, evaluated before visiting occurrences.
+        initial: ExpressionId,
+        /// Current-function accumulator slot.
+        accumulator: LocalId,
+        /// Distinct current-function element slot.
+        item: LocalId,
+        /// Scoped step expression.
+        body: ExpressionId,
+    },
     /// Count sequence occurrences as an exact shared Integer.
     SequenceSize {
         /// Sequence-valued operand.

@@ -164,6 +164,24 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
             }
+            Operation::SequenceFold {
+                sequence,
+                initial,
+                accumulator,
+                item,
+                body,
+            } => {
+                let source = expression(parts, *sequence, &value.key)?;
+                if !matches!(&source.value_type, ValueType::Collection(value) if value.kind() == CollectionKind::Sequence)
+                    || accumulator == item
+                    || accumulator.function != item.function
+                    || parts.functions.get(accumulator.function.0).is_none()
+                {
+                    return Err(refusal(Code::InvalidBinding, Some(&value.key)));
+                }
+                expression(parts, *initial, &value.key)?;
+                expression(parts, *body, &value.key)?;
+            }
             Operation::Equality { left, right, .. } => {
                 expression(parts, *left, &value.key)?;
                 expression(parts, *right, &value.key)?;
@@ -586,6 +604,16 @@ fn operands(
 ) -> Result<(), ProgramRefusal> {
     match &value.operation {
         Operation::Literal(_) | Operation::Argument { .. } | Operation::Local(_) => {}
+        Operation::SequenceFold {
+            sequence,
+            initial,
+            body,
+            ..
+        } => {
+            visit(*body)?;
+            visit(*initial)?;
+            visit(*sequence)?;
+        }
         Operation::Record { fields } => {
             for (_, child) in fields.iter().rev() {
                 visit(*child)?;
@@ -668,6 +696,10 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, 
             if leaving {
                 let mut binding = match &value.operation {
                     Operation::Argument { function, .. } => BindingOwner::one(*function, false),
+                    Operation::SequenceFold {
+                        accumulator, item, ..
+                    } => BindingOwner::one(accumulator.function, true)
+                        .merge(BindingOwner::one(item.function, true)),
                     Operation::Local(binding) | Operation::Let { binding, .. } => {
                         BindingOwner::one(binding.function, true)
                     }
