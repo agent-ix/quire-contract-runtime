@@ -34,7 +34,7 @@ This is a planned consumer contract, not an implemented monitor.
   selected checked package/clause and target. It carries the exact subject, clock binding with
   counter/unit/width, uncertainty, maximum reading gap, rate limit, intervals, buffer capacities
   (premises of the plan root), atoms, ordered topology, the `State` type and the three function
-  entries `init`, `on_event` and `on_watermark`.
+  entries `init`, `on_event` and `on_watermark`, and `on_gap` (QSL FR-251's fourth entry, pending QSpec FR-487's change).
   Its `PlanId` selects the complete plan in driver ownership, not merely its resource table.
 - An observed event with the plan's admitted raw counter reading, snapshot/invocation values and
   binding identity; the runtime, not the plan, computes the modular delta from the previous reading
@@ -56,7 +56,9 @@ This is a planned consumer contract, not an implemented monitor.
   indeterminate; `Incomplete(LimitReached{limit, value, setting})` for an event-rate buffer stop;
   or `Failed(ReadingGapExceeded{gap, max_reading_gap})` for a counter fault. Incomplete and failed
   are not temporal verdicts. An invalid event/progress input yields a typed refusal without state
-  change; executor invariant failure yields `Failed` and terminates the monitor. Unaffected
+  change. A per-step budget exhaustion yields the typed `StepResourceStop` (below), distinct from every
+  verdict, from `Incomplete`, from `Failed(ReadingGapExceeded)` and from the terminal
+  `ExecutorInvariantFailure`, which yields `Failed` for the monitor and terminates it. Unaffected
   obligations retain their prior state.
 
 ## Behavior
@@ -76,6 +78,26 @@ This is a planned consumer contract, not an implemented monitor.
   declared width without truncating a reading or overflowing host integer arithmetic. A
   difference greater than `max_reading_gap` SHALL settle each affected obligation `Failed` with
   `ReadingGapExceeded{gap, max_reading_gap}` and SHALL NOT emit a temporal verdict for it.
+- **Baseline.** The first admitted reading of a monitor SHALL establish the baseline: the runtime
+  makes no gap check for it and passes `on_event` the delta 0, so the entry's unwrapped time stays
+  at the value `init` set.
+- When a gap fault occurs, the runtime SHALL make the faulting reading the new baseline, so the
+  next reading's difference is taken from it, and the monitor SHALL continue.
+- When a gap fault occurs, the runtime SHALL call the plan's fourth entry
+  `on_gap(State, gap) -> (State, Results)` with the checked gap (QSL FR-251; the entry's wire
+  binding is pending QSpec FR-487's `on_gap` change). Every live instance whose verdict is still
+  open (pending, its window or deadline spanning the gap) yields
+  `Failed(ReadingGapExceeded{gap, max_reading_gap})` and is dropped from `State`; instances already
+  decided, results already emitted and instances not yet started are unaffected. The runtime SHALL
+  NOT infer instance identities from buffer contents or reconstruct formula meaning.
+- **Step resource stop.** The runtime SHALL charge each step against a work, stack and scratch
+  budget supplied at build. When a step exhausts it, the runtime SHALL return the typed
+  `StepResourceStop`, leave the state unchanged and the event or watermark unconsumed, and remain
+  usable. `StepResourceStop` is not a temporal verdict, not `Incomplete(LimitReached)` (the
+  event-buffer stop), not `Failed(ReadingGapExceeded)` and not the terminal
+  `ExecutorInvariantFailure`; allocation or resource failure is not an invariant defect and not a
+  property result. The runtime SHALL NOT promise recovery from an arbitrary allocator
+  out-of-memory.
 - The runtime SHALL use the plan's capacities as fixed upper bounds. If an event would exceed a
   buffered subformula's capacity, the runtime SHALL retain the event or stop before consuming it,
   and SHALL settle the affected obligations `Incomplete(LimitReached{limit, value, setting})`
@@ -89,7 +111,7 @@ This is a planned consumer contract, not an implemented monitor.
 - The runtime SHALL preserve the plan's subformula and obligation identities through each
   result. A fault or limit stop on one obligation SHALL NOT overwrite an unrelated sibling's
   decision. Subject-scoped IDs from another plan SHALL NOT alias despite equal numeric indices.
-  An executor invariant failure SHALL terminate the monitor as `Failed`, never as a Boolean
+  An executor invariant failure (`ExecutorInvariantFailure`) SHALL terminate the monitor as `Failed`, never as a Boolean
   property verdict; the runtime SHALL reject subsequent input. The runtime SHALL NOT treat this
   monitor's result as proof of elapsed real time,
   worst-case execution time, preemption, or interrupt timing (QSL ADR-026 KG-4).
@@ -106,6 +128,8 @@ This is a planned consumer contract, not an implemented monitor.
 | FR-276-AC-6 | The complete admitted plan alone builds a monitor after driver preparation objects are dropped. Its checked subject, activation/captures, atom bodies, ordered topology, `State` type and the `init`, `on_event` and `on_watermark` function entries (the plan-root node's dependencies; node form pending STD-647) remain available. Build runs `init` and the monitor's state is its result. Build consumes no event and emits no verdict; a second build has independent state, and neither monitor can be rebound to another plan. No source parse, second clause, callback or RT operator translation completes it. | Test |
 | FR-276-AC-7 | For each of a foreign atom/operand, missing entry body, changed `init` body, interval/buffer owner, activation binding, uncertainty and maximum gap under the original selection, driver/IR admission refuses without RT initialization; equal numeric subformula IDs under different subjects do not alias. An unsupported entry operation yields `Unsupported`, and RT allocation or initialization failure returns typed build failure with no monitor. | Test |
 | FR-276-AC-8 | Invalid event/progress inputs, including a missing required admitted value, leave monitor state unchanged with no verdict. An admitted progress assertion can settle a deadline, while a mere counter poll cannot. Executing the admitted program agrees with QSL's reference evaluator on boundary, reversed-operand, false-activation and open/closed-endpoint cases; an RT executor invariant failure returns `Failed`, terminates the monitor and rejects later input. | Test |
+| FR-276-AC-9 | On the 16-bit target of AC-3 the first admitted reading, whatever its value, passes `on_event` the delta 0 with no gap check and leaves the unwrapped time at `init`'s value; after readings `65530` then `65500` fault, a following reading `65510` is differenced from `65500` (delta 10), not from `65530`. RT calls `on_gap` with the gap 65506: the instance still open across the gap settles `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` and is dropped from the state, while an instance already decided before the fault and an instance not yet started are unaffected and settle normally afterwards. | Test |
+| FR-276-AC-10 | With a per-step budget too small for one `on_event`, the call returns `StepResourceStop`, the monitor state is unchanged and the event unconsumed, and the same event under a sufficient budget then executes and gives the outcome it would have given; the result is distinct from a verdict, `Incomplete(LimitReached)`, `Failed(ReadingGapExceeded)` and `ExecutorInvariantFailure` (after which the monitor rejects input), and the monitor accepts the next input after a stop. No test relies on recovery from an allocator out-of-memory. | Test |
 
 ## Dependencies
 
