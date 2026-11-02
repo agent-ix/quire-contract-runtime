@@ -106,6 +106,11 @@ Round 1 inspected faf1d5c238704140d5e02f4659a63500c1b3eb38 against the original 
 | --- | --- | --- |
 | FND-001 | fixed | Verified the fix against the test diff; exact after_excerpt follows. |
 | FND-002 | fixed | Verified the fix against the test diff; exact after_excerpt follows. |
+| FND-003 | still-open | The inspected head 3a3aa0ba8722b12afed82e349017dfe7f1cc30ed still rejects unit.is_affine() or canonical scale numerator <= 0. Remove these extra checks while preserving exact Time identity; regression evidence and fix inspection remain pending. |
+| FND-003 | still-open | The proposed removal of extra unit restrictions is visible only in the uncommitted worktree; final fix and authenticated regression evidence have not yet been provided for disposition. |
+| FND-004 | still-open | The current tests/monitor_program.rs still constructs NodeKeys (and its added unit control constructs UnitId). Proposed production lookup changes alone do not resolve the RT fixture violation. Authentic quire-integration relocation with admitted producer identities remains required. |
+| FND-003 | fixed | Verified production fix and actual fixture deletion at 019de067; authentic integration controls reviewed separately. |
+| FND-004 | fixed | Verified production fix and actual fixture deletion at 019de067; authentic integration controls reviewed separately. |
 
 Both code findings are fixed by actual assertions in faf1d5c238704140d5e02f4659a63500c1b3eb38. The ownership test now checks all four exact associations, function signatures, body identities/types and retained literal State/Results contents. The added refusal control independently covers duplicate expression locations, invalid Call callee/argument and each If child edge with a valid condition on branch-edge cases. No source/API/spec delta or new defect was found. Construction review is PASS after these dispositions.
 
@@ -185,4 +190,121 @@ bindings:
   ac_id: interface-002-AC-3
   trace: correct
 dispositions: []
+```
+
+## New findings (disposition pass 3)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | medium | Construction rejects a correctly admitted Time unit when its composed scale is negative or its composed offset is nonzero, although the referenced source contract requires exact Time dimension identity and does not impose these additional restrictions. | src/monitor/validation.rs:168 |
+
+QSpec FR-487 at supplied 0e89e9c930f956529bc906a2c8e485178525486b, tick_unit property and reader References/Premises, requires exact base-Time dimension identity but no affine/positive-scale restriction. FR-322-AC-127 also specifies dimension identity. FR-142 unit semantics permit nonzero exact scales and affine units; arithmetic refusal for affine quantities does not justify rejecting the retained construction representation. A Time unit with scale -1/offset 0 or scale 1/offset 7 is therefore a concrete rejected case. Source admission and interval conversion remain upstream under RT FR-276. No source changes or Cargo/Kani commands were performed by this reviewer.
+
+
+```yaml
+new_findings:
+- fnd: FND-003
+  severity: medium
+  confidence: high
+  method: code-review
+  check: code-bug
+  artifact_id: interface_002
+  related_ids:
+  - FR-276
+  path: src/monitor/validation.rs
+  lines: 168-172
+  excerpt: '`Layout.tick_unit` refers to the unit retained in the shared TypeEnvironment''s
+    unit
+
+    table. Its Time dimension and scale are read there; no copied unit definition
+    or
+
+    second tick-scale field exists. Rate and uncertainty are exact shared Rationals.'
+  finding: Construction rejects a correctly admitted Time unit when its composed scale
+    is negative or its composed offset is nonzero, although the referenced source
+    contract requires exact Time dimension identity and does not impose these additional
+    restrictions.
+dispositions:
+- fnd: FND-003
+  outcome: still-open
+  reason: The inspected head 3a3aa0ba8722b12afed82e349017dfe7f1cc30ed still rejects
+    unit.is_affine() or canonical scale numerator <= 0. Remove these extra checks
+    while preserving exact Time identity; regression evidence and fix inspection remain
+    pending.
+```
+
+## New findings (disposition pass 4)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-004 | high | The RT construction fixture constructs NodeKey identities from constituent parts, and the frozen production validator constructs a declared UnitId, violating FR-012-AC-8 identity provenance. Construction controls must obtain admitted producer identities in quire-integration; RT must look up retained unit identities rather than remint them. | tests/monitor_program.rs:25; src/monitor/validation.rs:164 |
+
+Grounded against FR-012-AC-8 and TC-033 step 2. The existing RT helper calls NodeKey::new with package/path/ordinal; the root and its expected value also call NodeKey::new directly. Frozen production 3a3aa0ba8722b12afed82e349017dfe7f1cc30ed uses UnitId::declared(layout.tick_unit.clone()). The uncommitted production change instead selects an existing unit-table id by declared_key, but the local RT fixture remains. This review grants no fixed disposition for an alias, AST inspection evasion, copied identity fixture, or a diagnostic fabricated-key run. Existing baseline identity inspection is the applicable requirement, not a new review policy. Prior FND-001/FND-002 remain fixed; the full FR-276 execution gap remains deferred to open IR-722. No source edits or Cargo/Kani commands were performed.
+
+```yaml
+new_findings:
+- fnd: FND-004
+  severity: high
+  confidence: high
+  method: code-review
+  check: code-bug
+  artifact_id: FR-012-AC-8
+  related_ids:
+  - TC-033
+  - interface_002
+  path: tests/monitor_program.rs
+  lines: 24-25,210-221,291-303
+  excerpt: Inspection finds no RT library or test fixture that constructs a semantic
+    identity from bytes or constituent parts, and no RT-owned digest-domain constant,
+    fixed digest oracle, or replacement identity pin. The producer-origin tests of
+    RT consumers run in `quire-integration` and obtain identities from admitted checked-package
+    values through QSL's read-only lookup; the RT repository carries no copied identity
+    fixture or QSL/IR dependency.
+  finding: The RT construction fixture constructs NodeKey identities from constituent
+    parts, and the frozen production validator constructs a declared UnitId, violating
+    FR-012-AC-8 identity provenance. Construction controls must obtain admitted producer
+    identities in quire-integration; RT must look up retained unit identities rather
+    than remint them.
+dispositions:
+- fnd: FND-003
+  outcome: still-open
+  reason: The proposed removal of extra unit restrictions is visible only in the uncommitted
+    worktree; final fix and authenticated regression evidence have not yet been provided
+    for disposition.
+- fnd: FND-004
+  outcome: still-open
+  reason: The current tests/monitor_program.rs still constructs NodeKeys (and its
+    added unit control constructs UnitId). Proposed production lookup changes alone
+    do not resolve the RT fixture violation. Authentic quire-integration relocation
+    with admitted producer identities remains required.
+```
+
+Current round 4 verdict: **FAIL** — FND-004 is high and remains open; FND-003 also remains open.
+
+## Final RT carry (round 5)
+
+Final RT carry inspected 019de067d34569f4fc6bb6cf8deebbbcd4893c0d. The local tests/monitor_program.rs identity fixture is deleted. TC-209 routes authentic construction controls to quire-integration IT-018/TC-098 and explicitly identifies diagnostic record/layout-key semantics. Production validation selects an existing UnitTable id through declared_key equality, retains exact Time dimension identity, and adds no affine or positive-scale restriction. Integration f9a59bda was already reviewed with authentic declarations, nested key and emitted negative/affine units; all integration findings are fixed. RT FND-003 and FND-004 are now fixed. Earlier FND-001/FND-002 remain fixed; no new source/contract defect found in this final carry.
+
+Supplied final TC-033 evidence has seven passing tests including the semantic-identity inspection; all-target/all-feature Clippy passes. Integration ordinary aggregate evidence is reported as 81 passing, zero failed and six existing ignored. No ignored heavy proof is credited as executed. Reviewer ran no Cargo/Kani and edited no source.
+
+Coverage is explicitly not green: current strict coverage is reported as 118 unbacked/zero contradicted, comprising unchanged baseline 114 plus four interface criteria now tested externally without local RT binders. The prior user exception covered identical 114 only and does not authorize 118; a new ruling is pending. The existing heavy IEEE proof was stopped and remains uncompleted. No all-gates-green or merge-ready claim is made. Full FR-276 execution acceptance remains deferred on open IR-722; this is only the RT-first construction slice.
+
+Current method verdict: **PASS** for construction review; unresolved aggregate gates still prevent a merge-ready conclusion.
+
+```yaml
+dispositions:
+- fnd: FND-003
+  outcome: fixed
+  after_excerpt: "let unit_id = parts\n        .types\n        .units()\n        .ids()\n\
+    \        .find(|id| id.declared_key() == Some(&layout.tick_unit))\n        .ok_or_else(invalid)?;\n\
+    \    let Some(QuantityUnit::Declared(unit)) = parts.types.units().get(unit_id)\
+    \ else {\n        return Err(invalid());\n    };\n    if unit.dimension_node()\
+    \ != layout.time_dimension {\n        return Err(invalid());\n    }"
+- fnd: FND-004
+  outcome: fixed
+  after_excerpt: "let unit_id = parts\n        .types\n        .units()\n        .ids()\n\
+    \        .find(|id| id.declared_key() == Some(&layout.tick_unit))\n        .ok_or_else(invalid)?;\n\
+    \    let Some(QuantityUnit::Declared(unit)) = parts.types.units().get(unit_id)\
+    \ else {\n        return Err(invalid());\n    };\n    if unit.dimension_node()\
+    \ != layout.time_dimension {\n        return Err(invalid());\n    }"
 ```
