@@ -8,6 +8,7 @@
 mod bindings;
 mod budget;
 mod executor;
+mod fields;
 mod program;
 mod validation;
 mod vm;

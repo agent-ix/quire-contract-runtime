@@ -3,7 +3,7 @@
 
 use alloc::vec::Vec;
 
-use quire_exact::{CollectionKind, Integer, NodeKey, Presence, ValueType};
+use quire_exact::{CollectionKind, Integer, MemberOwner, NodeKey, Presence, ValueType};
 use quire_semantic_value::{declaration::CompositeShape, quantity::QuantityUnit};
 
 use super::program::{
@@ -142,6 +142,25 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     .get(*position)
                     .ok_or_else(|| refusal(Code::InvalidReference, Some(&value.key)))?;
                 if !parts.types.same_type(expected, &value.value_type) {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                }
+            }
+            Operation::RecordField {
+                value: receiver,
+                member,
+            } => {
+                let receiver = expression(parts, *receiver, &value.key)?;
+                let ValueType::Composite(key) = &receiver.value_type else {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                };
+                if member.owner() != &MemberOwner::Node(key.clone()) {
+                    return Err(refusal(Code::InvalidReference, Some(&value.key)));
+                }
+                let declaration = parts
+                    .types
+                    .composite(key.clone())
+                    .ok_or_else(|| refusal(Code::TypeMismatch, Some(&value.key)))?;
+                if !matches!(declaration.shape(), CompositeShape::Record(_)) {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
             }
@@ -457,7 +476,9 @@ fn operands(
                 visit(*argument)?;
             }
         }
-        Operation::BooleanNot { value } | Operation::TupleElement { value, .. } => visit(*value)?,
+        Operation::BooleanNot { value }
+        | Operation::TupleElement { value, .. }
+        | Operation::RecordField { value, .. } => visit(*value)?,
         Operation::BooleanAnd { left, right } | Operation::BooleanOr { left, right } => {
             visit(*right)?;
             visit(*left)?;

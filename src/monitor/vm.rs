@@ -156,7 +156,8 @@ impl Checks {
                 | Operation::BooleanNot { .. }
                 | Operation::BooleanAnd { .. }
                 | Operation::BooleanOr { .. }
-                | Operation::TupleElement { .. } => {}
+                | Operation::TupleElement { .. }
+                | Operation::RecordField { .. } => {}
                 Operation::Local(binding) => {
                     let (_, initializer) = program
                         .bindings
@@ -366,12 +367,12 @@ impl Machine {
             .try_reserve_exact(limits.scratch_elements)
             .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
         let mut projections = Vec::new();
-        if program
-            .parts
-            .expressions
-            .iter()
-            .any(|node| matches!(node.operation, Operation::TupleElement { .. }))
-        {
+        if program.parts.expressions.iter().any(|node| {
+            matches!(
+                node.operation,
+                Operation::TupleElement { .. } | Operation::RecordField { .. }
+            )
+        }) {
             projections
                 .try_reserve_exact(limits.scratch_elements)
                 .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
@@ -621,7 +622,7 @@ impl Machine {
                     .ok_or_else(|| broken(site, Broken::Address))?;
                 self.value(operand, resources)
             }
-            Operation::TupleElement { value, .. } => {
+            Operation::TupleElement { value, .. } | Operation::RecordField { value, .. } => {
                 self.frame(Frame::TupleElement { expression }, resources)?;
                 self.frame(
                     Frame::Evaluate {
@@ -694,8 +695,17 @@ impl Machine {
         let node = program
             .expression(expression)
             .ok_or_else(|| broken(site, Broken::Address))?;
-        let Operation::TupleElement { value, position } = &node.operation else {
-            return Err(broken(site, Broken::Address));
+        let (value, declared_position, member) = match &node.operation {
+            Operation::TupleElement { value, position } => (*value, *position, None),
+            Operation::RecordField { value, member } => (
+                *value,
+                program
+                    .fields
+                    .position(expression)
+                    .ok_or_else(|| broken(site, Broken::Projection))?,
+                Some(member),
+            ),
+            _ => return Err(broken(site, Broken::Address)),
         };
         let operand = self
             .values
@@ -706,7 +716,7 @@ impl Machine {
             return Err(broken(site, Broken::Projection));
         };
         let receiver = program
-            .expression(*value)
+            .expression(value)
             .ok_or_else(|| broken(site, Broken::Address))?;
         let ValueType::Composite(expected) = &receiver.value_type else {
             return Err(broken(site, Broken::Projection));
@@ -723,23 +733,42 @@ impl Machine {
             .types()
             .composite(owner.declaration().clone())
             .ok_or_else(|| broken(site, Broken::Projection))?;
-        let CompositeShape::Tuple(positions) = declaration.shape() else {
-            return Err(broken(site, Broken::Projection));
+        let (position, actual) = match (declaration.shape(), member) {
+            (CompositeShape::Tuple(positions), None) => (
+                declared_position,
+                positions
+                    .get(declared_position)
+                    .ok_or_else(|| broken(site, Broken::Projection))?,
+            ),
+            (CompositeShape::Record(fields), Some(member)) => {
+                let position = if exact {
+                    declared_position
+                } else {
+                    let mut found = None;
+                    for (position, field) in fields.iter().enumerate() {
+                        resources.charge()?;
+                        if field.name() == member.member() {
+                            found = Some(position);
+                            break;
+                        }
+                    }
+                    found.ok_or_else(|| broken(site, Broken::Projection))?
+                };
+                let field = fields
+                    .get(position)
+                    .ok_or_else(|| broken(site, Broken::Projection))?;
+                (position, field.value_type())
+            }
+            _ => return Err(broken(site, Broken::Projection)),
         };
-        let actual = positions
-            .get(*position)
-            .ok_or_else(|| broken(site, Broken::Projection))?;
-        if !matches!(owner.slots().get(*position), Some(FieldValue::Present(_))) {
+        if !matches!(owner.slots().get(position), Some(FieldValue::Present(_))) {
             return Err(broken(site, Broken::Projection));
         }
         let trusted = exact || native_type_fact(program, actual, &node.value_type);
         let owner = Arc::clone(owner);
         self.slot(resources)?;
         let index = self.projections.len();
-        self.projections.push(Projection {
-            owner,
-            position: *position,
-        });
+        self.projections.push(Projection { owner, position });
         let result = Operand::Projection(index);
         if !trusted {
             self.admit(program, supplied, result, &node.value_type, site, resources)?;
