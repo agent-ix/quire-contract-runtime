@@ -62,6 +62,8 @@ This is a planned consumer contract, not an implemented monitor.
 - Each affected obligation has a typed step result: definite true, definite false, pending, or
   indeterminate; `Incomplete(LimitReached{limit, value, setting})` for an event-rate buffer stop (`limit` `event_buffer`, setting `monitor.max_event_rate`) or an
   activation stop (`limit` `activation`, setting `monitor.max_activations`);
+  or `Incomplete(LimitReached{limit: atom_projection, value: <AtomId integer>, setting: monitor.atom_projection})`
+  when an atom has no admitted projection (QSpec #597, FR-487-AC-12);
   or `Failed(ReadingGapExceeded{gap, max_reading_gap})` for a counter fault. Incomplete and failed
   are not temporal verdicts. An invalid event/progress input yields a typed refusal without state
   change. A per-step budget exhaustion yields the typed `StepResourceStop` (below), distinct from every
@@ -87,6 +89,10 @@ This is a planned consumer contract, not an implemented monitor.
   difference greater than `max_reading_gap` SHALL settle each live instance whose verdict is still open `Failed` with
   `ReadingGapExceeded{gap, max_reading_gap}` (through `on_gap`, below) and SHALL NOT emit a temporal verdict for it.
 - **Reporting.** The runtime SHALL return the plan's results as produced: each interval-operator instance once on settlement, each pending instance at every watermark step and no event step, and one folded outcome per activation for an unbounded root (QSpec FR-487-AC-10, QSL FR-251); it SHALL NOT synthesise per-position results.
+- **Atom projection.** The runtime SHALL preserve the admitted program's
+  `atom_projection` limit kind, exact AtomId integer and `monitor.atom_projection`
+  setting in canonical Outcome values. This is not an executor resource stop.
+- RT SHALL NOT substitute an atom callback or infer an unavailable projection.
 - **Event position.** State SHALL end with the required integer `event_position`
   field after `activations`, with no extra field.
 - `init` SHALL set `event_position` to 0.
