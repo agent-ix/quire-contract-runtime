@@ -15,6 +15,15 @@ pub struct ExpressionId(pub usize);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FunctionId(pub usize);
 
+/// An address of a lexical slot within one owning function, never a source identity.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LocalId {
+    /// Function whose invocation owns this slot.
+    pub function: FunctionId,
+    /// Compact position among that function's lexical binding declarations.
+    pub position: usize,
+}
+
 /// One source type and its shared executable value type.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TypeBinding {
@@ -116,6 +125,17 @@ pub enum Operation {
         /// Position in that function's declared parameter order.
         position: usize,
     },
+    /// Read a lexical slot active in this exact owning invocation.
+    Local(LocalId),
+    /// Evaluate once and bind the operand while evaluating the scoped body.
+    Let {
+        /// Compact owning slot; it has exactly one declaration in the closure.
+        binding: LocalId,
+        /// Initializer expression, evaluated before the binding becomes active.
+        value: ExpressionId,
+        /// Scoped result expression.
+        body: ExpressionId,
+    },
     /// An ordinary checked call, with operands in declaration order.
     Call {
         /// Resolved callee.
@@ -188,6 +208,8 @@ pub enum ProgramRefusalCode {
     ForeignArgument,
     /// The expression edges contain a cycle rather than a finite expression.
     ExpressionCycle,
+    /// A lexical binding is absent, duplicate, sparse or foreign to its function.
+    InvalidBinding,
     /// Validation scratch could not be reserved.
     Storage,
     /// The shared value-membership walk stopped; its native cause is retained.
@@ -216,6 +238,7 @@ impl core::error::Error for ProgramRefusal {}
 /// A checked immutable program retained independently of driver preparation.
 pub struct Program {
     pub(super) parts: ProgramParts,
+    pub(super) bindings: super::bindings::Bindings,
 }
 
 impl Program {
@@ -226,7 +249,8 @@ impl Program {
     /// promise recovery from arbitrary allocator exhaustion.
     pub fn try_new(parts: ProgramParts) -> Result<Rc<Self>, ProgramRefusal> {
         super::validation::validate(&parts)?;
-        Ok(Rc::new(Self { parts }))
+        let bindings = super::bindings::Bindings::prepare(&parts)?;
+        Ok(Rc::new(Self { parts, bindings }))
     }
 
     /// Inspect the exact retained selection and root premises.
