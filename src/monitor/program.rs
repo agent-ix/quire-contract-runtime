@@ -4,8 +4,8 @@
 use alloc::{boxed::Box, rc::Rc, string::String, vec::Vec};
 use core::fmt;
 
-use quire_exact::{MemberId, NodeKey, OrderingOperator, Rational, Value, ValueType};
-use quire_semantic_value::declaration::{EnvironmentFailure, TypeEnvironment};
+use quire_exact::{MemberId, NodeKey, OrderingOperator, Rational, Value, ValueType, VariantId};
+use quire_semantic_value::declaration::{CheckedEquality, EnvironmentFailure, TypeEnvironment};
 
 /// An address in the owned expression arena, never a source identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -152,6 +152,53 @@ pub enum Operation {
     Tuple {
         /// Ordered operands; the result annotation supplies the admitted tuple key.
         positions: Vec<ExpressionId>,
+    },
+    /// Construct an admitted sequence, evaluating elements in order.
+    Sequence {
+        /// Ordered element operands; the result annotation supplies CollectionType.
+        elements: Vec<ExpressionId>,
+    },
+    /// Count sequence occurrences as an exact shared Integer.
+    SequenceSize {
+        /// Sequence-valued operand.
+        value: ExpressionId,
+    },
+    /// Flatten nested sequences in outer then inner occurrence order.
+    SequenceFlatten {
+        /// Sequence of sequences.
+        value: ExpressionId,
+    },
+    /// Construct an originally verified native union member.
+    Union {
+        /// Full original member identity, resolved in the retained environment.
+        variant: VariantId,
+        /// Payload operands in declaration position order.
+        positions: Vec<ExpressionId>,
+    },
+    /// Test one original full native union-member identity.
+    UnionIs {
+        /// Union-valued operand.
+        value: ExpressionId,
+        /// Original member identity.
+        variant: VariantId,
+    },
+    /// Project a payload position on its source-admitted active branch.
+    UnionPayload {
+        /// Union-valued operand.
+        value: ExpressionId,
+        /// Original active member identity.
+        variant: VariantId,
+        /// Declared payload position.
+        position: usize,
+    },
+    /// Delegate comparison to the original checked shared equality plan.
+    Equality {
+        /// Left operand, evaluated first.
+        left: ExpressionId,
+        /// Right operand.
+        right: ExpressionId,
+        /// Native checked operator, conversion, enum and unit facts.
+        checked: Box<CheckedEquality>,
     },
     /// Select a required position from a canonical tuple value.
     TupleElement {

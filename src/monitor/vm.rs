@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Iterative execution of ordinary retained expressions, with no source evaluator.
 
+mod collections;
+mod unions;
+
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::cell::{Cell, RefCell};
 
 use quire_exact::{
     Cancel, CompositeValue, FieldValue, Integer, IntegerArithmetic, Meter, OrderedOperands,
-    Outcome, Value, ValueType,
+    Outcome, UnionValue, Value, ValueType,
 };
 use quire_semantic_value::{
     declaration::{CompositeShape, StorageRequest, StorageUnit},
@@ -80,9 +83,27 @@ enum Operand {
     Computed(usize),
 }
 
-struct Projection {
-    owner: Arc<CompositeValue>,
-    position: usize,
+enum Projection {
+    Composite {
+        owner: Arc<CompositeValue>,
+        position: usize,
+    },
+    Union {
+        owner: Arc<UnionValue>,
+        position: usize,
+    },
+}
+
+impl Projection {
+    fn value(&self) -> Option<&Value> {
+        match self {
+            Self::Composite { owner, position } => match owner.slots().get(*position)? {
+                FieldValue::Present(value) => Some(value),
+                _ => None,
+            },
+            Self::Union { owner, position } => owner.payload().get(*position),
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -101,6 +122,17 @@ struct ActiveBinding {
 
 #[derive(Clone, Copy)]
 enum Frame {
+    Unary {
+        expression: ExpressionId,
+    },
+    Equality {
+        expression: ExpressionId,
+    },
+    SequenceElement {
+        expression: ExpressionId,
+        position: usize,
+        scope: Scope,
+    },
     Construct {
         expression: ExpressionId,
         values: usize,
@@ -181,8 +213,16 @@ impl Checks {
                 | Operation::IntegerSubtract { .. }
                 | Operation::IntegerMultiply { .. }
                 | Operation::IntegerNegate { .. }
-                | Operation::IntegerOrder { .. } => {}
-                Operation::Record { .. } | Operation::Tuple { .. } => {
+                | Operation::IntegerOrder { .. }
+                | Operation::Equality { .. }
+                | Operation::UnionIs { .. }
+                | Operation::UnionPayload { .. }
+                | Operation::SequenceSize { .. }
+                | Operation::SequenceFlatten { .. } => {}
+                Operation::Record { .. }
+                | Operation::Tuple { .. }
+                | Operation::Union { .. }
+                | Operation::Sequence { .. } => {
                     let operands = super::construction::operands(program, ExpressionId(index))
                         .ok_or_else(|| broken(site, Broken::Address))?;
                     edges
@@ -413,7 +453,9 @@ impl Machine {
         if program.parts.expressions.iter().any(|node| {
             matches!(
                 node.operation,
-                Operation::TupleElement { .. } | Operation::RecordField { .. }
+                Operation::TupleElement { .. }
+                    | Operation::RecordField { .. }
+                    | Operation::UnionPayload { .. }
             )
         }) {
             projections
@@ -430,6 +472,10 @@ impl Machine {
                     | Operation::IntegerNegate { .. }
                     | Operation::Record { .. }
                     | Operation::Tuple { .. }
+                    | Operation::Union { .. }
+                    | Operation::Sequence { .. }
+                    | Operation::SequenceSize { .. }
+                    | Operation::SequenceFlatten { .. }
             )
         }) {
             computed
@@ -584,6 +630,17 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::Equality { expression } => {
+                    self.equality(program, supplied, expression, resources)?
+                }
+                Frame::Unary { expression } => {
+                    self.unary(program, supplied, expression, resources)?
+                }
+                Frame::SequenceElement {
+                    expression,
+                    position,
+                    scope,
+                } => self.sequence_element(program, expression, position, scope, resources)?,
                 Frame::Construct { expression, values } => {
                     self.construct(program, supplied, expression, values, resources)?
                 }
@@ -711,7 +768,57 @@ impl Machine {
                     resources,
                 )
             }
-            Operation::Record { .. } | Operation::Tuple { .. } => {
+            Operation::Equality { left, right, .. } => {
+                self.frame(Frame::Equality { expression }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *right,
+                        scope,
+                    },
+                    resources,
+                )?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *left,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::UnionIs { value, .. }
+            | Operation::UnionPayload { value, .. }
+            | Operation::SequenceSize { value }
+            | Operation::SequenceFlatten { value } => {
+                self.frame(Frame::Unary { expression }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *value,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::Sequence { elements } => {
+                self.frame(
+                    Frame::Construct {
+                        expression,
+                        values: self.values.len(),
+                    },
+                    resources,
+                )?;
+                for position in (0..elements.len()).rev() {
+                    self.frame(
+                        Frame::SequenceElement {
+                            expression,
+                            position,
+                            scope,
+                        },
+                        resources,
+                    )?;
+                }
+                Ok(())
+            }
+            Operation::Record { .. } | Operation::Tuple { .. } | Operation::Union { .. } => {
                 let operands = super::construction::operands(program, expression)
                     .ok_or_else(|| broken(site, Broken::Address))?;
                 self.frame(
@@ -875,6 +982,12 @@ impl Machine {
         let count = operands.len();
         if base.checked_add(count) != Some(self.values.len()) {
             return Err(broken(site, Broken::Arity));
+        }
+        if matches!(
+            program.expression(expression).map(|node| &node.operation),
+            Some(Operation::Sequence { .. } | Operation::Union { .. })
+        ) {
+            return self.construct_values(program, supplied, expression, base, count, resources);
         }
         let live = self
             .values
@@ -1128,7 +1241,8 @@ impl Machine {
         let owner = Arc::clone(owner);
         self.slot(resources)?;
         let index = self.projections.len();
-        self.projections.push(Projection { owner, position });
+        self.projections
+            .push(Projection::Composite { owner, position });
         let result = Operand::Projection(index);
         if !trusted {
             self.admit(program, supplied, result, &node.value_type, site, resources)?;
@@ -1142,7 +1256,7 @@ impl Machine {
         supplied: &[&Value],
         expression: ExpressionId,
         scope: Scope,
-        resources: &Resources,
+        resources: &mut Resources,
     ) -> Result<(), Failure> {
         let site = Site::Expression(expression);
         let operand = self
@@ -1160,12 +1274,13 @@ impl Machine {
         else {
             return Err(broken(site, Broken::Condition));
         };
+        let left = *left;
         match program.expression(expression).map(|node| &node.operation) {
-            Some(Operation::BooleanNot { .. }) => {
-                self.value(Operand::BooleanConstant(!left), resources)
+            Some(Operation::BooleanNot { .. }) => self.boolean_result(!left, site, resources),
+            Some(Operation::BooleanAnd { .. }) if !left => {
+                self.boolean_result(left, site, resources)
             }
-            Some(Operation::BooleanAnd { .. }) if !left => self.value(operand, resources),
-            Some(Operation::BooleanOr { .. }) if *left => self.value(operand, resources),
+            Some(Operation::BooleanOr { .. }) if left => self.boolean_result(left, site, resources),
             Some(Operation::BooleanAnd { right, .. } | Operation::BooleanOr { right, .. }) => {
                 self.frame(Frame::BooleanRight { expression }, resources)?;
                 self.frame(
@@ -1185,27 +1300,39 @@ impl Machine {
         program: &Program,
         supplied: &[&Value],
         expression: ExpressionId,
-        resources: &Resources,
+        resources: &mut Resources,
     ) -> Result<(), Failure> {
         let site = Site::Expression(expression);
         let operand = self
             .values
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
-        if !matches!(
-            resolve(
-                program,
-                supplied,
-                &self.projections,
-                &self.computed,
-                operand,
-                site
-            )?,
-            Value::Boolean(_)
-        ) {
+        let Value::Boolean(value) = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            operand,
+            site,
+        )?
+        else {
             return Err(broken(site, Broken::Condition));
-        }
-        self.value(operand, resources)
+        };
+        let value = *value;
+        self.boolean_result(value, site, resources)
+    }
+
+    fn boolean_result(
+        &mut self,
+        value: bool,
+        site: Site,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let outcome = match quire_exact::retain_boolean(value, &mut resources.scalar) {
+            Ok(value) => Outcome::Completed(Value::Boolean(value)),
+            Err(cause) => Outcome::Incomplete(cause),
+        };
+        self.computed_result(outcome, site, resources)
     }
 
     fn read_local(
@@ -1580,10 +1707,9 @@ fn resolve<'a>(
             let place = projections
                 .get(index)
                 .ok_or_else(|| broken(site, Broken::Address))?;
-            match place.owner.slots().get(place.position) {
-                Some(FieldValue::Present(value)) => Ok(value),
-                _ => Err(broken(site, Broken::Projection)),
-            }
+            place
+                .value()
+                .ok_or_else(|| broken(site, Broken::Projection))
         }
         Operand::BooleanConstant(value) => Ok(if value { &BOOLEAN_TRUE } else { &BOOLEAN_FALSE }),
         Operand::Supplied(index) => supplied

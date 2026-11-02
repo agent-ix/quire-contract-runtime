@@ -48,7 +48,7 @@ reads the original member's positional payload without copying a subtree. The
 source admission proves its selected branch; a mismatched evaluated member is
 an executor invariant failure, never a default payload or property verdict.
 
-`Equality { left, right, checked: quire_semantic_value::declaration::CheckedEquality }`
+`Equality { left, right, checked: Box<quire_semantic_value::declaration::CheckedEquality> }`
 retains the original shared checked equality, including its operator, conversions,
 selected unit facts and filtered enum-member metadata. Operands evaluate left
 before right, and evaluation calls that plan against the retained native type
