@@ -141,3 +141,58 @@ dispositions:
 ```
 
 Current method verdict after the documented disposition: **CONDITIONAL**. All broader qualification blockers remain explicit.
+
+## Dispatch carry disposition
+
+The earlier scalar API-doc fix remains fixed. New recursive dispatch is relevant but does not yet prove scalar computed/native-meter recovery; preserve that existing finding ownership rather than duplicate it in the new review.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | deferred | The new same-Machine recursive dispatch control qualifies lexical/projection cleanup, but executes no computed scalar/native meter charge before stopping. Scalar-specific stopped-computed/native-meter recovery remains unqualified pending authentic dispatch control on the same open IR-722; no AC narrowing or fresh-machine substitution. |
+| FND-002 | fixed | The earlier scalar API-doc fix remains fixed. New recursive dispatch is relevant but does not yet prove scalar computed/native-meter recovery; preserve that existing finding ownership rather than duplicate it in the new review. |
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: deferred
+  reason: The new same-Machine recursive dispatch control qualifies lexical/projection
+    cleanup, but executes no computed scalar/native meter charge before stopping.
+    Scalar-specific stopped-computed/native-meter recovery remains unqualified pending
+    authentic dispatch control on the same open IR-722; no AC narrowing or fresh-machine
+    substitution.
+- fnd: FND-002
+  outcome: fixed
+  after_excerpt: 'contains `work: u64`, required `scalar: quire_exact::ScalarLimits`,
+
+    `stack_frames: usize`, `scratch_elements: usize` and `scratch_bytes: usize`;
+
+    zero is a real zero ceiling, including each native scalar counter.'
+```
+
+## Dispatch scalar recovery disposition
+
+Disposition verified at unchanged RT65bd26971bbf23a9bce4432ef459536fc1b75dcd / integration0d1bd5ad55e8df8ac088138c6328cbd27b823a47. Actual test diff and preserved logs show ten dispatch controls PASS and touched Clippy PASS ONLY on the explicitly archived interim lock. This is not a whole85 or current-cohort qualification claim. The separately preserved final IR953 dependency-head long-chain control passes100001nodes (61.13s test,63.78s command); that formerly owed narrow run is now evidenced. Candidate committed IT cohort still fails six unchanged driver API adoption errors. Accepted external RT coverage discharge remains unresolved; no expanded114 exception, producer/FR276/full-feature acceptance, final aggregate or IEEE backend claim is granted. No Cargo/backend runs or source/test edits by reviewer.
+
+The native ResultUnits stop/retry control and stopped IntegerAdd fold jointly cover native-meter and computed-storage recovery on the same machines/budgets. Boolean values themselves remain canonical constants.
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: fixed
+  after_excerpt: budget.scalar.result_units = 20;
+  reason: The stopped watermark30 preserves committed10; same monitor/budget accepts20
+    then refuses19. The500-item fold stops on ScratchElements64 and the same machine/budget
+    then computes three-item sum6. Recursive dispatch exhausts native ResultUnits20
+    after repeated Boolean retention, then the same machine/budget completes later
+    inputs. The fold also populates computed Integer values, so recovery covers both
+    computed storage and native Meter reset.
+- fnd: FND-002
+  outcome: fixed
+  after_excerpt: 'contains `work: u64`, required `scalar: quire_exact::ScalarLimits`,
+
+    `stack_frames: usize`, `scratch_elements: usize` and `scratch_bytes: usize`;
+
+    zero is a real zero ceiling, including each native scalar counter.'
+```
+
+Current scalar code/evidence method verdict: **PASS**; broader acceptance remains conditional.
