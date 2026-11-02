@@ -94,3 +94,42 @@ scope:
   excerpt: Ordinary function-qualified lexical slots extend that same arena through
 bindings: []
 ```
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | deferred | Authentic integration criteria tags remain external to RT. Accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722; no local fake binder or coverage exception is granted. |
+| FND-002 | deferred | Authentic integration criteria tags remain external to RT. Accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722; no local fake binder or coverage exception is granted. |
+| FND-003 | deferred | Authentic integration criteria tags remain external to RT. Accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722; no local fake binder or coverage exception is granted. |
+| FND-004 | deferred | Authentic integration criteria tags remain external to RT. Accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722; no local fake binder or coverage exception is granted. |
+
+Lexical disposition carry inspected current RT af4c3d8effd378cac9cd953b01404aee6f118981 and integration 7fcff282ce80a05527bcd4b3493837a61f74f12d. The new public lexical_recursive_shadow_counts_the_retained_caller_operand control distinguishes a four-slot refusal from a five-slot success and checks restored outer now=99; it closes the caller-shadow accounting portion of the original finding. It builds a fresh Machine for each attempt and therefore does not establish reuse of one stopped Machine. That remainder stays on the existing IR-722 entry-dispatch work; no API widening, acceptance narrowing or full AC-4 credit is granted.
+
+The interface-004 preparation prose is corrected from visits-once to linear preparation, matching its fixed passes. No new lexical runtime defect found. Evidence remains interim-cohort only for integration; current RT Clippy passes on new leaves, but committed integration cohort, our final dependency-head long chain, QSL1463/2106 producer qualification, coverage acceptance and IEEE replay remain unresolved. No Cargo/heavy jobs or source edits by reviewer.
+
+Current verdict remains **FAIL** for external/local criterion acceptance.
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: deferred
+  reason: Authentic integration criteria tags remain external to RT. Accepted cross-repository
+    discharge and committed-cohort qualification remain pending on open IR-722; no
+    local fake binder or coverage exception is granted.
+- fnd: FND-002
+  outcome: deferred
+  reason: Authentic integration criteria tags remain external to RT. Accepted cross-repository
+    discharge and committed-cohort qualification remain pending on open IR-722; no
+    local fake binder or coverage exception is granted.
+- fnd: FND-003
+  outcome: deferred
+  reason: Authentic integration criteria tags remain external to RT. Accepted cross-repository
+    discharge and committed-cohort qualification remain pending on open IR-722; no
+    local fake binder or coverage exception is granted.
+- fnd: FND-004
+  outcome: deferred
+  reason: Authentic integration criteria tags remain external to RT. Accepted cross-repository
+    discharge and committed-cohort qualification remain pending on open IR-722; no
+    local fake binder or coverage exception is granted.
+```
