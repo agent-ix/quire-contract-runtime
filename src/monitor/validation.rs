@@ -123,6 +123,28 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     expression(parts, *argument, &value.key)?;
                 }
             }
+            Operation::TupleElement {
+                value: receiver,
+                position,
+            } => {
+                let receiver = expression(parts, *receiver, &value.key)?;
+                let ValueType::Composite(key) = &receiver.value_type else {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                };
+                let declaration = parts
+                    .types
+                    .composite(key.clone())
+                    .ok_or_else(|| refusal(Code::TypeMismatch, Some(&value.key)))?;
+                let CompositeShape::Tuple(positions) = declaration.shape() else {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                };
+                let expected = positions
+                    .get(*position)
+                    .ok_or_else(|| refusal(Code::InvalidReference, Some(&value.key)))?;
+                if !parts.types.same_type(expected, &value.value_type) {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                }
+            }
             Operation::BooleanNot { value: child } => {
                 boolean_operands(parts, value, &[*child])?;
             }
@@ -435,7 +457,7 @@ fn operands(
                 visit(*argument)?;
             }
         }
-        Operation::BooleanNot { value } => visit(*value)?,
+        Operation::BooleanNot { value } | Operation::TupleElement { value, .. } => visit(*value)?,
         Operation::BooleanAnd { left, right } | Operation::BooleanOr { left, right } => {
             visit(*right)?;
             visit(*left)?;
