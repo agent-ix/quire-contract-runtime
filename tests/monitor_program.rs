@@ -590,3 +590,56 @@ fn duplicate_expression_locations_and_each_call_or_if_child_refuse() {
         refused(invalid, ProgramRefusalCode::InvalidReference);
     }
 }
+#[trace("TC-209", "interface-002-AC-2")]
+#[test]
+fn declared_time_units_retain_nonzero_scales_and_affine_offsets() {
+    for (scale, offset) in [(-1_i64, 0_i64), (1, 7)] {
+        let mut input = parts();
+        let dimensions = BTreeMap::from([(
+            key("Time"),
+            DimensionNode::checked(vec![], NominalDeclaration::default()).unwrap(),
+        )]);
+        let units = BTreeMap::from([
+            (
+                key("tick"),
+                UnitNode::checked(
+                    key("Time"),
+                    Some(key("root-tick")),
+                    Rational::from_integer(Integer::from(scale)),
+                    Rational::from_integer(Integer::from(offset)),
+                    NominalDeclaration::default(),
+                )
+                .unwrap(),
+            ),
+            (
+                key("root-tick"),
+                UnitNode::checked(
+                    key("Time"),
+                    None,
+                    Rational::from_integer(Integer::one()),
+                    Rational::from_integer(Integer::zero()),
+                    NominalDeclaration::default(),
+                )
+                .unwrap(),
+            ),
+        ]);
+        let graph = UnitGraph::from_checked_nodes(&dimensions, &units).unwrap();
+        input.types = input.types.with_units(UnitTable::declared(&graph));
+        let program =
+            Program::try_new(input).expect("retain admitted Time unit without extra restrictions");
+        let retained = program
+            .types()
+            .units()
+            .get(quire_exact::UnitId::declared(key("tick")))
+            .unwrap();
+        let quire_semantic_value::quantity::QuantityUnit::Declared(retained) = retained else {
+            panic!("declared unit was replaced");
+        };
+        assert_eq!(retained.dimension_node(), key("Time"));
+        assert_eq!(
+            retained.canonical().scale(),
+            &Rational::from_integer(Integer::from(scale))
+        );
+        assert_eq!(retained.is_affine(), offset != 0);
+    }
+}
