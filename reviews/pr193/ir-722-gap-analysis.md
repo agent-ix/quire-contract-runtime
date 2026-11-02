@@ -193,3 +193,23 @@ Current method verdict: **FAIL** for continuing full-delivery coverage gap; its 
 ```yaml
 dispositions: []
 ```
+
+## QSpec 595 amendment carry
+
+QSpec #595 amendment carry inspected RT 8e0ff8fb57d5d24f7fe88d3619149e011de8e95d and integration 7ee2876a342446bf4a9b963c9cfa764a10e6b908 against the prior reviewed construction slice. Canonical source ruling now appends event_position to State; seventeen root bindings and public Layout/API remain unchanged. The outer State validator borrows the shared record, requires exact ordered required fields, Integer now/history_start/event_position, canonical buffer_0..n Sequence fields matching capacity count, and Sequence activations. It returns TypeMismatch at the State key; no compatibility default or host counter mirror appears. Source admission still owns activation/result internals.
+
+Reviewed actual QSL State variants and matching shared declarations, valid zero/two-buffer cohorts, typed missing-position closure, malformed outer fields, State-specific refusal assertions, and retained literal zero. Supplied evidence is 14 passing controls, all-target Clippy pass, and intended red/green for the complete missing-position closure. These establish construction only. FR-276-AC-11 event increments and watermark/poll/gap preservation remain open execution obligations, together with AC-1..10. No genuine temporal producer or execution acceptance is granted. Previous code findings remain fixed; full-delivery gap remains deferred/open. Pending consumer acknowledgement, strict coverage authorization and incomplete heavy IEEE proof remain explicit; no merge-ready or all-gates-green claim is made. Reviewer ran no Cargo/Kani and changed no source.
+
+No new defect in this method. A separate EARS method records the newly compound SHALL sentence; its disposition is still required.
+
+## Final event-position review carry
+
+Final event-position carry inspected 23a4cf5523644e3c4ca31065d7cffbe216fefe4d. The initializer and admitted-event increment are separate obligation statements with unchanged semantics. EARS FND-001 is fixed. The only engine grammar warning in supplied validation remains the pre-existing Reporting sentence at line 85, not this amendment. No RT production change after reviewed 8e0ff8fb; the closed State validator and shared-field ownership remain unchanged. All prior RT code findings remain fixed; no new defect found.
+
+Integration final ordinary aggregate evidence at 33020725707bd6e559c00090fc33138f6a0ec5a3 reports exit 0, 84 passing, zero failed and six existing ignored; fourteen construction controls pass. Ignored proofs are not credited. State initialization literal retention does not prove event increments: FR-276-AC-1 through AC-11 remain open execution obligations on IR-722. Full-delivery gap stays deferred/open. RT strict-coverage authorization and stopped heavy IEEE proof remain unresolved; user merge hold persists. This is a construction review result, not all-gates-green or merge authorization. Reviewer ran no Cargo/Kani and edited no source.
+
+Current method verdict: **FAIL** for continuing full-delivery gap; acknowledged construction scope is reviewed.
+
+```yaml
+dispositions: []
+```
