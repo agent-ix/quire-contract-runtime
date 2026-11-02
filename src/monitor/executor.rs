@@ -48,6 +48,8 @@ pub enum ExecutorInvariantCode {
     ValueStack,
     /// An evaluated condition is not Boolean.
     Condition,
+    /// A body produced a value outside its admitted signature.
+    Membership,
 }
 
 /// A terminal executor defect, distinct from resources and temporal outcomes.
@@ -241,6 +243,14 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
                 arena,
             } = *native;
             result.code = MonitorBuildFailureCode::Admission;
+            if matches!(failure, SuppliedAdmissionError::Invalid { .. }) {
+                result.code = MonitorBuildFailureCode::Invariant;
+                result.invariant = Some(Box::new(ExecutorInvariantFailure {
+                    code: ExecutorInvariantCode::Membership,
+                    site: site.into(),
+                    program: Rc::clone(program),
+                }));
+            }
             result.admission = Some(Box::new(AdmissionFailure {
                 site: site.into(),
                 failure,
