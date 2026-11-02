@@ -76,8 +76,8 @@ This is a planned consumer contract, not an implemented monitor.
   watermark. The runtime SHALL NOT infer admitted order from ingestion or numeric tick order.
 - The runtime SHALL compute consecutive counter differences modulo `2^width_bits`, using the
   declared width without truncating a reading or overflowing host integer arithmetic. A
-  difference greater than `max_reading_gap` SHALL settle each affected obligation `Failed` with
-  `ReadingGapExceeded{gap, max_reading_gap}` and SHALL NOT emit a temporal verdict for it.
+  difference greater than `max_reading_gap` SHALL settle each live instance whose verdict is still open `Failed` with
+  `ReadingGapExceeded{gap, max_reading_gap}` (through `on_gap`, below) and SHALL NOT emit a temporal verdict for it.
 - **Baseline.** The first admitted reading of a monitor SHALL establish the baseline: the runtime
   makes no gap check for it and passes `on_event` the delta 0, so the entry's unwrapped time stays
   at the value `init` set.
@@ -122,7 +122,7 @@ This is a planned consumer contract, not an implemented monitor.
 | --- | --- | --- |
 | FR-276-AC-1 | With a 20-bit 1 MHz counter and zero uncertainty, request at tick 0 (covering `[0, 1)`) and first acknowledgement at 2998, 3000, or 3001 yield respectively definite true (difference in `(2997, 2999)`), indeterminate (`(2999, 3001)`, which straddles the bound 3000) and definite false (`(3000, 3002)`) for the 3 ms obligation; with 2 µs uncertainty the 2998 case (`(2993, 3003)`) remains indeterminate. No boundary case is decided from a point estimate. | Test |
 | FR-276-AC-2 | The QSL plan's 21-slot buffer for `once[0 ms, 10 ms] holds(p)` at 2 events/ms admits 21 in-window events; the 22nd yields `Incomplete(LimitReached)` naming 2 events/ms, without dropping that event or changing an unrelated obligation. The runtime uses the capacity supplied by QSL rather than deriving a second formula. | Test |
-| FR-276-AC-3 | Under a 16-bit counter with maximum gap 100, readings 65530 then 4 advance by 10 (RT passes `on_event` the delta 10); readings 65530 then 65500 settle `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` with no temporal verdict and no entry called. A plan whose maximum gap is 65536 is refused before construction. | Test |
+| FR-276-AC-3 | Under a 16-bit counter with maximum gap 100, readings 65530 then 4 advance by 10 (RT passes `on_event` the delta 10); readings 65530 then 65500 make RT call `on_gap` with 65506 and not `on_event`; each instance still open across the fault settles `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` with no temporal verdict. A plan whose maximum gap is 65536 is refused before construction. | Test |
 | FR-276-AC-4 | Changing the counter identity, unit, width, profile or admitted order never reuses the first plan's monitor state or settles its obligation; equal timestamps without admitted order never acquire causality from arrival order. | Test |
 | FR-276-AC-5 | The step API carries distinct definite, pending, indeterminate, incomplete and failed outcomes with the affected obligation identities; a limit or fault on one obligation does not turn a sibling's state into a verdict or erase its identity. | Test |
 | FR-276-AC-6 | The complete admitted plan alone builds a monitor after driver preparation objects are dropped. Its checked subject, activation/captures, atom bodies, ordered topology, `State` type and the `init`, `on_event` and `on_watermark` function entries (the plan-root node's dependencies, QSpec FR-487) remain available. Build runs `init` and the monitor's state is its result. Build consumes no event and emits no verdict; a second build has independent state, and neither monitor can be rebound to another plan. No source parse, second clause, callback or RT operator translation completes it. | Test |

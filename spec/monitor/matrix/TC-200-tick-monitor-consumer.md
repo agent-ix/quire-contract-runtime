@@ -72,7 +72,7 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
 - Step 3 computes the wrap difference 10 in RT and passes `on_event` that delta (the entry never
   sees a raw wrapping reading), reports
   `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` for the backward-looking pair,
-  and emits no temporal verdict for that fault and calls no entry. The 65536-gap target yields QSL
+  and emits no temporal verdict for that fault; RT calls `on_gap` with 65506 (not `on_event`) and each instance still open across the fault settles `Failed`. The 65536-gap target yields QSL
   `GapExceedsWidth` with no RT monitor constructed. Every foreign or incomplete binding is
   refused before it can settle an obligation; no order is inferred from equal ticks.
 - Step 4 builds two independent monitors without a verdict from initialization; a request in the
