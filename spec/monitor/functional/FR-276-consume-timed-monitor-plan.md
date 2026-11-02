@@ -33,8 +33,8 @@ This is a planned consumer contract, not an implemented monitor.
 - One driver-admitted immutable executable plan in RT representation, bound to the independently
   selected checked package/clause and target. It carries the exact subject, clock binding with
   counter/unit/width, uncertainty, maximum reading gap, rate limit, intervals, buffer capacities
-  (premises of the plan root), atoms, ordered topology, the `State` type and the three function
-  entries `init`, `on_event` and `on_watermark`, and `on_gap` (QSL FR-251's fourth entry, pending QSpec FR-487's change).
+  (premises of the plan root), atoms, ordered topology, the `State` type and the four function
+  entries `init`, `on_event`, `on_watermark` and `on_gap`, and `on_gap` (QSL FR-251's fourth entry, member 15 of QSpec FR-487's root, FR-487-AC-7).
   Its `PlanId` selects the complete plan in driver ownership, not merely its resource table.
 - An observed event with the plan's admitted raw counter reading, snapshot/invocation values and
   binding identity; the runtime, not the plan, computes the modular delta from the previous reading
@@ -85,7 +85,7 @@ This is a planned consumer contract, not an implemented monitor.
   next reading's difference is taken from it, and the monitor SHALL continue.
 - When a gap fault occurs, the runtime SHALL call the plan's fourth entry
   `on_gap(State, gap) -> (State, Results)` with the checked gap (QSL FR-251; the entry's wire
-  binding is pending QSpec FR-487's `on_gap` change). Every live instance whose verdict is still
+  binding is member 15 of QSpec FR-487's root, FR-487-AC-7; its returned state has `now` advanced by `gap`). Every live instance whose verdict is still
   open (pending, its window or deadline spanning the gap) yields
   `Failed(ReadingGapExceeded{gap, max_reading_gap})` and is dropped from `State`; instances already
   decided, results already emitted and instances not yet started are unaffected. The runtime SHALL
