@@ -5,6 +5,7 @@
 //! Source keys and semantic values come from the shared leaves. This module
 //! does not parse a source package or reconstruct temporal operators.
 
+mod bindings;
 mod budget;
 mod executor;
 mod program;
@@ -12,8 +13,8 @@ mod validation;
 mod vm;
 
 pub use program::{
-    Buffer, Entries, Expression, ExpressionId, Function, FunctionId, Layout, Operation, Program,
-    ProgramParts, ProgramRefusal, ProgramRefusalCode, TypeBinding,
+    Buffer, Entries, Expression, ExpressionId, Function, FunctionId, Layout, LocalId, Operation,
+    Program, ProgramParts, ProgramRefusal, ProgramRefusalCode, TypeBinding,
 };
 
 pub use budget::{StepBudget, StepResource, StepResourceStop};

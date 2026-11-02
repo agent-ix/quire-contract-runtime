@@ -92,6 +92,22 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
             }
+            Operation::Local(binding) => {
+                if parts.functions.get(binding.function.0).is_none() {
+                    return Err(refusal(Code::InvalidBinding, Some(&value.key)));
+                }
+            }
+            Operation::Let {
+                binding,
+                value: initializer,
+                body,
+            } => {
+                if parts.functions.get(binding.function.0).is_none() {
+                    return Err(refusal(Code::InvalidBinding, Some(&value.key)));
+                }
+                expression(parts, *initializer, &value.key)?;
+                expression(parts, *body, &value.key)?;
+            }
             Operation::Call {
                 function,
                 arguments,
@@ -126,10 +142,18 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
     }
     let owners = validate_expression_graph(parts)?;
     for (index, function) in parts.functions.iter().enumerate() {
-        match owners.get(function.body.0) {
-            Some(ArgumentOwner::None) => {}
-            Some(ArgumentOwner::One(owner)) if *owner == FunctionId(index) => {}
-            _ => return Err(refusal(Code::ForeignArgument, Some(&function.key))),
+        let owner = owners
+            .get(function.body.0)
+            .ok_or_else(|| refusal(Code::InvalidReference, Some(&function.key)))?;
+        if owner.mixed || owner.function.is_some_and(|id| id != FunctionId(index)) {
+            return Err(refusal(
+                if owner.local {
+                    Code::InvalidBinding
+                } else {
+                    Code::ForeignArgument
+                },
+                Some(&function.key),
+            ));
         }
     }
     Ok(())
@@ -340,18 +364,32 @@ fn expression<'a>(
 }
 
 #[derive(Clone, Copy)]
-enum ArgumentOwner {
-    None,
-    One(FunctionId),
-    Mixed,
+struct BindingOwner {
+    function: Option<FunctionId>,
+    mixed: bool,
+    local: bool,
 }
 
-impl ArgumentOwner {
+impl BindingOwner {
+    const NONE: Self = Self {
+        function: None,
+        mixed: false,
+        local: false,
+    };
+    fn one(function: FunctionId, local: bool) -> Self {
+        Self {
+            function: Some(function),
+            mixed: false,
+            local,
+        }
+    }
     fn merge(self, other: Self) -> Self {
-        match (self, other) {
-            (Self::None, owner) | (owner, Self::None) => owner,
-            (Self::One(left), Self::One(right)) if left == right => Self::One(left),
-            _ => Self::Mixed,
+        Self {
+            function: self.function.or(other.function),
+            mixed: self.mixed
+                || other.mixed
+                || matches!((self.function, other.function), (Some(a), Some(b)) if a != b),
+            local: self.local || other.local,
         }
     }
 }
@@ -361,7 +399,11 @@ fn operands(
     mut visit: impl FnMut(ExpressionId) -> Result<(), ProgramRefusal>,
 ) -> Result<(), ProgramRefusal> {
     match &value.operation {
-        Operation::Literal(_) | Operation::Argument { .. } => {}
+        Operation::Literal(_) | Operation::Argument { .. } | Operation::Local(_) => {}
+        Operation::Let { value, body, .. } => {
+            visit(*body)?;
+            visit(*value)?;
+        }
         Operation::Call { arguments, .. } => {
             for argument in arguments.iter().rev() {
                 visit(*argument)?;
@@ -380,7 +422,7 @@ fn operands(
     Ok(())
 }
 
-fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<ArgumentOwner>, ProgramRefusal> {
+fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, ProgramRefusal> {
     let mut colors = Vec::new();
     colors
         .try_reserve_exact(parts.expressions.len())
@@ -390,7 +432,7 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<ArgumentOwner>,
     owners
         .try_reserve_exact(parts.expressions.len())
         .map_err(|_| refusal(Code::Storage, None))?;
-    owners.resize(parts.expressions.len(), ArgumentOwner::None);
+    owners.resize(parts.expressions.len(), BindingOwner::NONE);
     let mut pending = Vec::new();
     for root in 0..parts.expressions.len() {
         if colors.get(root) == Some(&2) {
@@ -407,8 +449,11 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<ArgumentOwner>,
                 .ok_or_else(|| refusal(Code::InvalidReference, None))?;
             if leaving {
                 let mut binding = match &value.operation {
-                    Operation::Argument { function, .. } => ArgumentOwner::One(*function),
-                    _ => ArgumentOwner::None,
+                    Operation::Argument { function, .. } => BindingOwner::one(*function, false),
+                    Operation::Local(binding) | Operation::Let { binding, .. } => {
+                        BindingOwner::one(binding.function, true)
+                    }
+                    _ => BindingOwner::NONE,
                 };
                 operands(value, |child| {
                     let owner = owners

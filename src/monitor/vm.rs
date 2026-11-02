@@ -14,7 +14,7 @@ use quire_semantic_value::{
 };
 
 use super::budget::{StepBudget, StepResource, StepResourceStop};
-use super::{ExpressionId, FunctionId, Operation, Program};
+use super::{ExpressionId, FunctionId, LocalId, Operation, Program};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Site {
@@ -29,6 +29,7 @@ pub(super) enum Broken {
     Arity,
     ValueStack,
     Condition,
+    Binding,
 }
 
 pub(super) enum Failure {
@@ -72,10 +73,27 @@ struct Scope {
     function: FunctionId,
     start: usize,
     len: usize,
+    invocation: u64,
+}
+
+#[derive(Clone, Copy)]
+struct ActiveBinding {
+    invocation: u64,
+    operand: Operand,
 }
 
 #[derive(Clone, Copy)]
 enum Frame {
+    Bind {
+        expression: ExpressionId,
+        scope: Scope,
+    },
+    Restore {
+        expression: ExpressionId,
+        slot: usize,
+        previous: Option<ActiveBinding>,
+        invocation: u64,
+    },
     Evaluate {
         expression: ExpressionId,
         scope: Scope,
@@ -115,6 +133,36 @@ impl Checks {
             let mut edges = Vec::new();
             match &expression.operation {
                 Operation::Literal(_) | Operation::Argument { .. } => {}
+                Operation::Local(binding) => {
+                    let (_, initializer) = program
+                        .bindings
+                        .resolve(*binding)
+                        .ok_or_else(|| broken(site, Broken::Binding))?;
+                    let value = program
+                        .expression(initializer)
+                        .ok_or_else(|| broken(site, Broken::Address))?;
+                    edges
+                        .try_reserve_exact(1)
+                        .map_err(|_| StepResourceStop::storage(1))?;
+                    edges.push(
+                        program
+                            .types()
+                            .same_type(&value.value_type, &expression.value_type),
+                    );
+                }
+                Operation::Let { body, .. } => {
+                    let value = program
+                        .expression(*body)
+                        .ok_or_else(|| broken(site, Broken::Address))?;
+                    edges
+                        .try_reserve_exact(1)
+                        .map_err(|_| StepResourceStop::storage(1))?;
+                    edges.push(
+                        program
+                            .types()
+                            .same_type(&value.value_type, &expression.value_type),
+                    );
+                }
                 Operation::If {
                     when_true,
                     when_false,
@@ -271,6 +319,10 @@ pub(super) struct Machine {
     frames: Vec<Frame>,
     values: Vec<Operand>,
     arguments: Vec<Operand>,
+    bindings: Vec<Option<ActiveBinding>>,
+    touched_flags: Vec<bool>,
+    touched: Vec<usize>,
+    active_bindings: usize,
 }
 
 impl Machine {
@@ -288,7 +340,26 @@ impl Machine {
         arguments
             .try_reserve_exact(limits.scratch_elements)
             .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
+        let count = program.bindings.len();
+        let mut bindings = Vec::new();
+        let mut touched_flags = Vec::new();
+        let mut touched = Vec::new();
+        bindings
+            .try_reserve_exact(count)
+            .map_err(|_| StepResourceStop::storage(count))?;
+        touched_flags
+            .try_reserve_exact(count)
+            .map_err(|_| StepResourceStop::storage(count))?;
+        touched
+            .try_reserve_exact(count)
+            .map_err(|_| StepResourceStop::storage(count))?;
+        bindings.resize(count, None);
+        touched_flags.resize(count, false);
         Ok(Self {
+            bindings,
+            touched_flags,
+            touched,
+            active_bindings: 0,
             checks,
             frames,
             values,
@@ -315,6 +386,7 @@ impl Machine {
             .values
             .len()
             .checked_add(self.arguments.len())
+            .and_then(|n| n.checked_add(self.active_bindings))
             .and_then(|n| n.checked_add(resources.elements.get()));
         if used.is_none_or(|n| n >= resources.limits.scratch_elements) {
             return Err(StepResourceStop {
@@ -350,6 +422,7 @@ impl Machine {
         self.frames.clear();
         self.values.clear();
         self.arguments.clear();
+        self.clear_bindings();
         result
     }
 
@@ -374,6 +447,7 @@ impl Machine {
             function,
             start: 0,
             len: supplied.len(),
+            invocation: 0,
         };
         self.frame(
             Frame::Return {
@@ -393,8 +467,17 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::Bind { expression, scope } => {
+                    self.bind(program, expression, scope, resources)?
+                }
+                Frame::Restore {
+                    expression,
+                    slot,
+                    previous,
+                    invocation,
+                } => self.restore(expression, slot, previous, invocation)?,
                 Frame::Evaluate { expression, scope } => {
-                    self.evaluate(program, expression, scope, resources)?
+                    self.evaluate(program, supplied, expression, scope, resources)?
                 }
                 Frame::Choose { expression, scope } => {
                     self.choose(program, supplied, expression, scope, resources)?
@@ -444,9 +527,10 @@ impl Machine {
     fn evaluate(
         &mut self,
         program: &Program,
+        supplied: &[&Value],
         expression: ExpressionId,
         scope: Scope,
-        resources: &Resources,
+        resources: &mut Resources,
     ) -> Result<(), Failure> {
         let site = Site::Expression(expression);
         let node = program
@@ -454,6 +538,19 @@ impl Machine {
             .ok_or_else(|| broken(site, Broken::Address))?;
         match &node.operation {
             Operation::Literal(_) => self.value(Operand::Literal(expression), resources),
+            Operation::Local(binding) => {
+                self.read_local(program, supplied, expression, *binding, scope, resources)
+            }
+            Operation::Let { value, .. } => {
+                self.frame(Frame::Bind { expression, scope }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *value,
+                        scope,
+                    },
+                    resources,
+                )
+            }
             Operation::Argument { function, position } => {
                 if *function != scope.function || *position >= scope.len {
                     return Err(broken(site, Broken::ArgumentOwner));
@@ -498,6 +595,157 @@ impl Machine {
                 Ok(())
             }
         }
+    }
+
+    fn read_local(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        binding: LocalId,
+        scope: Scope,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        if binding.function != scope.function {
+            return Err(broken(site, Broken::Binding));
+        }
+        let (slot, _) = program
+            .bindings
+            .resolve(binding)
+            .ok_or_else(|| broken(site, Broken::Binding))?;
+        let active = self
+            .bindings
+            .get(slot)
+            .copied()
+            .flatten()
+            .ok_or_else(|| broken(site, Broken::Binding))?;
+        if active.invocation != scope.invocation {
+            return Err(broken(site, Broken::Binding));
+        }
+        let equal = self
+            .checks
+            .expressions
+            .get(expression.0)
+            .and_then(|edges| edges.first())
+            .copied()
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if !equal {
+            let expected = &program
+                .expression(expression)
+                .ok_or_else(|| broken(site, Broken::Address))?
+                .value_type;
+            self.admit(program, supplied, active.operand, expected, site, resources)?;
+        }
+        self.value(active.operand, resources)
+    }
+
+    fn bind(
+        &mut self,
+        program: &Program,
+        expression: ExpressionId,
+        scope: Scope,
+        resources: &Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let Some(Operation::Let { binding, body, .. }) =
+            program.expression(expression).map(|value| &value.operation)
+        else {
+            return Err(broken(site, Broken::Address));
+        };
+        if binding.function != scope.function {
+            return Err(broken(site, Broken::Binding));
+        }
+        let operand = self
+            .values
+            .pop()
+            .ok_or_else(|| broken(site, Broken::ValueStack))?;
+        self.slot(resources)?;
+        let (slot, _) = program
+            .bindings
+            .resolve(*binding)
+            .ok_or_else(|| broken(site, Broken::Binding))?;
+        let entry = self
+            .bindings
+            .get_mut(slot)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let previous = entry.replace(ActiveBinding {
+            invocation: scope.invocation,
+            operand,
+        });
+        let touched = self
+            .touched_flags
+            .get_mut(slot)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if !*touched {
+            *touched = true;
+            self.touched.push(slot);
+        }
+        self.active_bindings = self
+            .active_bindings
+            .checked_add(1)
+            .ok_or_else(|| StepResourceStop::storage(1))?;
+        self.frame(
+            Frame::Check {
+                expression,
+                edge: 0,
+            },
+            resources,
+        )?;
+        self.frame(
+            Frame::Restore {
+                expression,
+                slot,
+                previous,
+                invocation: scope.invocation,
+            },
+            resources,
+        )?;
+        self.frame(
+            Frame::Evaluate {
+                expression: *body,
+                scope,
+            },
+            resources,
+        )
+    }
+
+    fn restore(
+        &mut self,
+        expression: ExpressionId,
+        slot: usize,
+        previous: Option<ActiveBinding>,
+        invocation: u64,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let entry = self
+            .bindings
+            .get_mut(slot)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if entry
+            .as_ref()
+            .is_none_or(|active| active.invocation != invocation)
+        {
+            return Err(broken(site, Broken::Binding));
+        }
+        *entry = previous;
+        self.active_bindings = self
+            .active_bindings
+            .checked_sub(1)
+            .ok_or_else(|| broken(site, Broken::Binding))?;
+        Ok(())
+    }
+
+    fn clear_bindings(&mut self) {
+        for slot in self.touched.drain(..) {
+            if let Some(entry) = self.bindings.get_mut(slot) {
+                *entry = None;
+            }
+            if let Some(flag) = self.touched_flags.get_mut(slot) {
+                *flag = false;
+            }
+        }
+        self.active_bindings = 0;
     }
 
     fn choose(
@@ -581,6 +829,7 @@ impl Machine {
             .values
             .len()
             .checked_add(self.arguments.len())
+            .and_then(|count| count.checked_add(self.active_bindings))
             .ok_or_else(|| StepResourceStop::storage(usize::MAX))?;
         resources.live_elements.set(live);
         admit(program, supplied, operand, expected, site, resources)
@@ -654,6 +903,7 @@ impl Machine {
                     function: *function,
                     start,
                     len: arguments.len(),
+                    invocation: resources.work,
                 },
             },
             resources,

@@ -50,6 +50,8 @@ pub enum ExecutorInvariantCode {
     ValueStack,
     /// An evaluated condition is not Boolean.
     Condition,
+    /// A lexical binding was inactive or belonged to a different invocation.
+    Binding,
     /// A body produced a value outside its admitted signature.
     Membership,
 }
@@ -247,6 +249,7 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
                 vm::Broken::Arity => ExecutorInvariantCode::Arity,
                 vm::Broken::ValueStack => ExecutorInvariantCode::ValueStack,
                 vm::Broken::Condition => ExecutorInvariantCode::Condition,
+                vm::Broken::Binding => ExecutorInvariantCode::Binding,
             };
             result.invariant = Some(Box::new(ExecutorInvariantFailure {
                 code,
