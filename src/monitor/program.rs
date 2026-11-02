@@ -43,7 +43,7 @@ pub struct Buffer {
     /// Complete source subformula key.
     pub owner: NodeKey,
     /// Fixed maximum active element count, not a derived capacity formula.
-    pub capacity: usize,
+    pub capacity: quire_exact::Integer,
 }
 
 /// Source selection, entry associations and exact premises retained by the program.
@@ -94,6 +94,8 @@ pub struct Layout {
     pub uncertainty: Rational,
     /// Capacity associations in the admitted subformula-key order.
     pub buffers: Vec<Buffer>,
+    /// Exact nonnegative bound on live activation accumulators; zero is valid.
+    pub activation_capacity: quire_exact::Integer,
 }
 
 /// One ordinary closed executable expression.

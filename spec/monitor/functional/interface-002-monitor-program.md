@@ -86,7 +86,7 @@ Generic call/result conformance remains the shared value-admission boundary when
 executor applies a function; this interface does not introduce a second type checker.
 
 The four entry roles are `init`, `on_event`, `on_watermark`, `on_gap` of QSpec FR-487
-at #592. They retain the actual source function keys. Compatible roles may resolve to
+at #593. They retain the actual source function keys. Compatible roles may resolve to
 one function; no distinct-function premise is invented. Expression arena addresses are
 not semantic IDs. Inline terms can share one source node key and differ by their
 body-child paths. No runtime code mints a NodeKey or substitutes a digest for a key.
@@ -94,6 +94,11 @@ body-child paths. No runtime code mints a NodeKey or substitutes a digest for a 
 `Layout.tick_unit` refers to the unit retained in the shared TypeEnvironment's unit
 table. Its Time dimension and scale are read there; no copied unit definition or
 second tick-scale field exists. Rate and uncertainty are exact shared Rationals.
+Buffer capacities and the seventeenth binding, activation_capacity, stay shared exact
+Integers. Zero activation capacity is valid; no host-width cap is imposed on retained
+premises. Target storage representability is a build/resource concern, not source
+malformation. The admitted State is now, history_start, buffer_n, activations; activation
+status remains the ordinary admitted type, without an RT-invented status enum.
 Tick intervals remain derived from the source clause and unit scales, not extra plan
 bindings. The root's content key and independently selected lock/subject/occurrence
 context remain owned; a display name or arena index cannot replace that context.
@@ -169,7 +174,7 @@ Returns: Expression[0..1]
 | ID | Criteria | Verification |
 | --- | --- | --- |
 | interface-002-AC-1 | After construction consumes the preparation parts and one Rc owner drops, another owner retains the complete root key with nested operand keys, selection bytes, all four entry associations, literal bodies and shared nominal declarations. Invalid arena lookups return absent. No monitor execution credit is granted by this construction control. | Test (TC-200 construction controls) |
-| interface-002-AC-2 | Missing or mistyped on_gap, invalid counter width, a gap outside the declared width, negative uncertainty and a tick unit under another dimension yield the typed construction refusal before any entry executes; width64 with maximum gap u64::MAX remains representable. | Test (TC-200 construction controls) |
+| interface-002-AC-2 | Missing or mistyped on_gap, invalid counter width, a gap outside the declared width, negative uncertainty and a tick unit under another dimension yield the typed construction refusal before any entry executes; width64 with maximum gap u64::MAX remains representable. Activation capacity zero and a positive value above u64::MAX remain retained exactly, while a negative value refuses without a host-width truncation. | Test (TC-200 construction controls) |
 | interface-002-AC-3 | Duplicate source locations, invalid expression edges, direct expression cycles including unreachable arena nodes, and a reachable argument of another function refuse with their distinct typed codes. A finite shared subexpression and distinct inline body paths under the same source node remain admissible; a 20,000-level shared inline arena validates on a 512 KiB native stack without recursive graph descent. | Test (TC-200 construction controls) |
 | interface-002-AC-4 | Two compatible entry roles may reference the same retained function; construction does not add a distinct-function premise to FR-487. | Test (TC-200 construction controls) |
 

@@ -47,9 +47,30 @@ fn parts() -> ProgramParts {
     );
     let results = ValueType::collection(results_type.clone());
     let step_result = ValueType::Composite(key("step"));
+    let activation_type = CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::Composite(key("activation")),
+        None,
+    );
+    let activations = ValueType::collection(activation_type.clone());
     let types = TypeEnvironment::new(
         [
-            record("state", vec![("now", ValueType::Integer)]),
+            record(
+                "state",
+                vec![
+                    ("now", ValueType::Integer),
+                    ("history_start", ValueType::Integer),
+                    ("activations", activations),
+                ],
+            ),
+            record(
+                "activation",
+                vec![
+                    ("subformula", ValueType::Integer),
+                    ("origin", ValueType::Integer),
+                    ("status", ValueType::Boolean),
+                ],
+            ),
             record("inputs", vec![]),
             record("scope", vec![]),
             record(
@@ -135,7 +156,17 @@ fn parts() -> ProgramParts {
     let state_value = types
         .record(
             key("state"),
-            vec![("now", FieldValue::Present(Value::Integer(Integer::zero())))],
+            vec![
+                ("now", FieldValue::Present(Value::Integer(Integer::zero()))),
+                (
+                    "history_start",
+                    FieldValue::Present(Value::Integer(Integer::zero())),
+                ),
+                (
+                    "activations",
+                    FieldValue::Present(quire_exact::from_admitted(activation_type, vec![])),
+                ),
+            ],
         )
         .unwrap();
     let result_value = quire_exact::from_admitted(results_type, vec![]);
@@ -209,6 +240,7 @@ fn parts() -> ProgramParts {
             max_event_rate: one,
             uncertainty: zero,
             buffers: vec![],
+            activation_capacity: Integer::zero(),
         },
         types,
         functions,
@@ -413,4 +445,19 @@ fn deeply_shared_inline_arena_validates_on_a_small_native_stack() {
         .unwrap()
         .join()
         .unwrap();
+}
+
+#[trace("TC-200", "interface-002-AC-2")]
+#[test]
+fn exact_activation_capacity_includes_zero_and_values_above_host_width() {
+    let zero = Program::try_new(parts()).unwrap();
+    assert_eq!(zero.layout().activation_capacity, Integer::zero());
+    let mut large = parts();
+    let capacity = Integer::from(u64::MAX).add(&Integer::one());
+    large.layout.activation_capacity = capacity.clone();
+    let retained = Program::try_new(large).unwrap();
+    assert_eq!(retained.layout().activation_capacity, capacity);
+    let mut invalid = parts();
+    invalid.layout.activation_capacity = Integer::from(-1_i64);
+    refused(invalid, ProgramRefusalCode::InvalidLayout);
 }
