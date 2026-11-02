@@ -48,7 +48,7 @@ pub enum ExecutorInvariantCode {
     Arity,
     /// A continuation did not leave exactly its one result.
     ValueStack,
-    /// An evaluated condition is not Boolean.
+    /// An evaluated condition or Boolean operand is not Boolean.
     Condition,
     /// A lexical binding was inactive or belonged to a different invocation.
     Binding,

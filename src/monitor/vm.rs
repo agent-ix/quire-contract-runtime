@@ -66,6 +66,8 @@ fn broken(site: Site, cause: Broken) -> Failure {
 enum Operand {
     Literal(ExpressionId),
     Supplied(usize),
+    // Select one immutable canonical primitive; this is not another Value type.
+    BooleanConstant(bool),
 }
 
 #[derive(Clone, Copy)]
@@ -84,6 +86,13 @@ struct ActiveBinding {
 
 #[derive(Clone, Copy)]
 enum Frame {
+    BooleanLeft {
+        expression: ExpressionId,
+        scope: Scope,
+    },
+    BooleanRight {
+        expression: ExpressionId,
+    },
     Bind {
         expression: ExpressionId,
         scope: Scope,
@@ -132,7 +141,11 @@ impl Checks {
             let site = Site::Expression(ExpressionId(index));
             let mut edges = Vec::new();
             match &expression.operation {
-                Operation::Literal(_) | Operation::Argument { .. } => {}
+                Operation::Literal(_)
+                | Operation::Argument { .. }
+                | Operation::BooleanNot { .. }
+                | Operation::BooleanAnd { .. }
+                | Operation::BooleanOr { .. } => {}
                 Operation::Local(binding) => {
                     let (_, initializer) = program
                         .bindings
@@ -467,6 +480,12 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::BooleanLeft { expression, scope } => {
+                    self.boolean_left(program, supplied, expression, scope, resources)?
+                }
+                Frame::BooleanRight { expression } => {
+                    self.boolean_right(program, supplied, expression, resources)?
+                }
                 Frame::Bind { expression, scope } => {
                     self.bind(program, expression, scope, resources)?
                 }
@@ -565,6 +584,26 @@ impl Machine {
                     .ok_or_else(|| broken(site, Broken::Address))?;
                 self.value(operand, resources)
             }
+            Operation::BooleanNot { value } => {
+                self.frame(Frame::BooleanLeft { expression, scope }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *value,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::BooleanAnd { left, .. } | Operation::BooleanOr { left, .. } => {
+                self.frame(Frame::BooleanLeft { expression, scope }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *left,
+                        scope,
+                    },
+                    resources,
+                )
+            }
             Operation::If { condition, .. } => {
                 self.frame(Frame::Choose { expression, scope }, resources)?;
                 self.frame(
@@ -595,6 +634,63 @@ impl Machine {
                 Ok(())
             }
         }
+    }
+
+    fn boolean_left(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        scope: Scope,
+        resources: &Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let operand = self
+            .values
+            .pop()
+            .ok_or_else(|| broken(site, Broken::ValueStack))?;
+        let Value::Boolean(left) = resolve(program, supplied, operand, site)? else {
+            return Err(broken(site, Broken::Condition));
+        };
+        match program.expression(expression).map(|node| &node.operation) {
+            Some(Operation::BooleanNot { .. }) => {
+                self.value(Operand::BooleanConstant(!left), resources)
+            }
+            Some(Operation::BooleanAnd { .. }) if !left => self.value(operand, resources),
+            Some(Operation::BooleanOr { .. }) if *left => self.value(operand, resources),
+            Some(Operation::BooleanAnd { right, .. } | Operation::BooleanOr { right, .. }) => {
+                self.frame(Frame::BooleanRight { expression }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *right,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            _ => Err(broken(site, Broken::Address)),
+        }
+    }
+
+    fn boolean_right(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        resources: &Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let operand = self
+            .values
+            .pop()
+            .ok_or_else(|| broken(site, Broken::ValueStack))?;
+        if !matches!(
+            resolve(program, supplied, operand, site)?,
+            Value::Boolean(_)
+        ) {
+            return Err(broken(site, Broken::Condition));
+        }
+        self.value(operand, resources)
     }
 
     fn read_local(
@@ -911,6 +1007,10 @@ impl Machine {
     }
 }
 
+// Canonical scalar constants require no allocation or semantic identity.
+static BOOLEAN_TRUE: Value = Value::Boolean(true);
+static BOOLEAN_FALSE: Value = Value::Boolean(false);
+
 fn resolve<'a>(
     program: &'a Program,
     supplied: &[&'a Value],
@@ -922,6 +1022,7 @@ fn resolve<'a>(
             Some(Operation::Literal(value)) => Ok(value),
             _ => Err(broken(site, Broken::Address)),
         },
+        Operand::BooleanConstant(value) => Ok(if value { &BOOLEAN_TRUE } else { &BOOLEAN_FALSE }),
         Operand::Supplied(index) => supplied
             .get(index)
             .copied()

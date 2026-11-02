@@ -123,6 +123,12 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     expression(parts, *argument, &value.key)?;
                 }
             }
+            Operation::BooleanNot { value: child } => {
+                boolean_operands(parts, value, &[*child])?;
+            }
+            Operation::BooleanAnd { left, right } | Operation::BooleanOr { left, right } => {
+                boolean_operands(parts, value, &[*left, *right])?;
+            }
             Operation::If {
                 condition,
                 when_true,
@@ -154,6 +160,26 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                 },
                 Some(&function.key),
             ));
+        }
+    }
+    Ok(())
+}
+
+fn boolean_operands(
+    parts: &ProgramParts,
+    node: &Expression,
+    arguments: &[ExpressionId],
+) -> Result<(), ProgramRefusal> {
+    if !parts.types.same_type(&ValueType::Boolean, &node.value_type) {
+        return Err(refusal(Code::TypeMismatch, Some(&node.key)));
+    }
+    for id in arguments {
+        let argument = expression(parts, *id, &node.key)?;
+        if !parts
+            .types
+            .same_type(&ValueType::Boolean, &argument.value_type)
+        {
+            return Err(refusal(Code::TypeMismatch, Some(&node.key)));
         }
     }
     Ok(())
@@ -408,6 +434,11 @@ fn operands(
             for argument in arguments.iter().rev() {
                 visit(*argument)?;
             }
+        }
+        Operation::BooleanNot { value } => visit(*value)?,
+        Operation::BooleanAnd { left, right } | Operation::BooleanOr { left, right } => {
+            visit(*right)?;
+            visit(*left)?;
         }
         Operation::If {
             condition,

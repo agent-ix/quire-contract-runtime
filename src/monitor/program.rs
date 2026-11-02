@@ -143,6 +143,25 @@ pub enum Operation {
         /// Ordered argument expressions.
         arguments: Vec<ExpressionId>,
     },
+    /// Ordinary Boolean negation of one canonical Boolean operand.
+    BooleanNot {
+        /// The evaluated Boolean operand.
+        value: ExpressionId,
+    },
+    /// Ordinary lazy Boolean conjunction, evaluated left before right.
+    BooleanAnd {
+        /// Left Boolean operand.
+        left: ExpressionId,
+        /// Right Boolean operand, evaluated only when left is true.
+        right: ExpressionId,
+    },
+    /// Ordinary lazy Boolean disjunction, evaluated left before right.
+    BooleanOr {
+        /// Left Boolean operand.
+        left: ExpressionId,
+        /// Right Boolean operand, evaluated only when left is false.
+        right: ExpressionId,
+    },
     /// A lazy ordinary conditional; only the selected branch is evaluated.
     If {
         /// Boolean condition.
