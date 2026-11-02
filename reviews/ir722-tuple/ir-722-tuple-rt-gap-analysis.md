@@ -84,3 +84,36 @@ scope:
     the same machine.
 bindings: []
 ```
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | deferred | Authentic companion integration evidence exists, including the new dynamic diagnostic, but accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722. No local fake binder or coverage exception is granted. |
+| FND-002 | deferred | Authentic companion integration evidence exists, including the new dynamic diagnostic, but accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722. No local fake binder or coverage exception is granted. |
+| FND-003 | deferred | Authentic companion integration evidence exists, including the new dynamic diagnostic, but accepted cross-repository discharge and committed-cohort qualification remain pending on open IR-722. No local fake binder or coverage exception is granted. |
+
+Tuple disposition inspected RT 1b7ad105c008ef58282b2b2b36285b548bfbb1e5 (the tuple path is retained inside shared projection handling) and integration 55a53605667f81e854c8843a6ff3742427640d27. The new control uses genuinely emitted/strict-IR-read StatePairChild and BoundedIntegerPair declarations/shapes; native with_supertypes edges are explicitly test-owned, not claimed emitted by QSL. The first path has distinct actual declaration and preserves projected second State now=99 through native type facts. The Int[0,10]→Integer slot is nonidentical and outside the native composite/reference shortcut, reaching bounded supplied membership: work 4 produces resource Work with original admission present, while a generous budget succeeds. This closes the RT code-path coverage finding as a native diagnostic; it does not qualify producer-origin generalization edges or a temporal program.
+
+The preserved dynamic control and whole 43-test target pass only on the archived interim cohort. Restored committed-cohort compilation, final own dependency-head long chain, real producer, external criterion acceptance, full FR-276 and IEEE backend remain unresolved. Existing same-Machine cleanup-after-stop remainder stays deferred until dispatch. No source edits, Cargo or heavy/proof jobs by reviewer.
+
+Current result: **FAIL** for unresolved external/local acceptance.
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: deferred
+  reason: Authentic companion integration evidence exists, including the new dynamic
+    diagnostic, but accepted cross-repository discharge and committed-cohort qualification
+    remain pending on open IR-722. No local fake binder or coverage exception is granted.
+- fnd: FND-002
+  outcome: deferred
+  reason: Authentic companion integration evidence exists, including the new dynamic
+    diagnostic, but accepted cross-repository discharge and committed-cohort qualification
+    remain pending on open IR-722. No local fake binder or coverage exception is granted.
+- fnd: FND-003
+  outcome: deferred
+  reason: Authentic companion integration evidence exists, including the new dynamic
+    diagnostic, but accepted cross-repository discharge and committed-cohort qualification
+    remain pending on open IR-722. No local fake binder or coverage exception is granted.
+```
