@@ -139,9 +139,13 @@ impl fmt::Debug for ScalarFailure {
     }
 }
 
-/// Stable initialization failure channel; no partial monitor is returned.
+/// Stable build or entry failure channel; no partial transition is committed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum MonitorBuildFailureCode {
+pub enum MonitorFailureCode {
+    /// Attached input data or its independent association was refused.
+    Input,
+    /// A source-body invariant has already terminated this monitor.
+    Terminated,
     /// An operating budget or real storage request stopped initialization.
     Resource,
     /// An initializer broke the retained executable contract.
@@ -150,11 +154,13 @@ pub enum MonitorBuildFailureCode {
     Admission,
 }
 
-/// A build refusal is neither a Boolean verdict nor a temporal Incomplete/Failed.
+/// A monitor failure is neither a Boolean verdict nor a temporal Incomplete/Failed.
 #[derive(Debug)]
-pub struct MonitorBuildFailure {
-    /// Stable category of the failed build.
-    pub code: MonitorBuildFailureCode,
+pub struct MonitorFailure {
+    /// Stable category of the failed operation.
+    pub code: MonitorFailureCode,
+    /// Stable input-association refusal, when entry execution never began.
+    pub input: Option<super::InputRefusal>,
     /// Present for an operating stop, preserving its actual request.
     pub resource: Option<Box<StepResourceStop>>,
     /// Present for a non-completed native scalar operation, retaining its original cause.
@@ -167,22 +173,25 @@ pub struct MonitorBuildFailure {
     pub path_capacity: Option<Box<PathArenaCapacity>>,
 }
 
-impl fmt::Display for MonitorBuildFailure {
+impl fmt::Display for MonitorFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "monitor build stopped: {:?}", self.code)
+        write!(f, "monitor operation stopped: {:?}", self.code)
     }
 }
-impl core::error::Error for MonitorBuildFailure {}
+impl core::error::Error for MonitorFailure {}
 
 /// One initialized state slot bound to one immutable executable owner.
 ///
 /// Canonical values are immutable; cloning their Arc-backed record does not
 /// create shared mutable monitor state. Each build owns its own replacement slot.
 pub struct Monitor {
-    program: Rc<Program>,
-    state: Value,
-    budget: StepBudget,
-    machine: vm::Machine,
+    pub(super) program: Rc<Program>,
+    pub(super) state: Value,
+    pub(super) budget: StepBudget,
+    pub(super) machine: vm::Machine,
+    pub(super) baseline: Option<u64>,
+    pub(super) progress: Option<quire_exact::Integer>,
+    pub(super) terminated: bool,
 }
 
 impl Monitor {
@@ -201,7 +210,7 @@ impl Monitor {
     /// Replace operating limits atomically, preserving the program and state.
     ///
     /// A failed scratch reservation keeps the old machine and limits intact.
-    pub fn set_step_budget(&mut self, budget: StepBudget) -> Result<(), MonitorBuildFailure> {
+    pub fn set_step_budget(&mut self, budget: StepBudget) -> Result<(), MonitorFailure> {
         let machine = vm::Machine::new(&self.program, budget)
             .map_err(|failure| build_failure(&self.program, failure))?;
         self.machine = machine;
@@ -215,7 +224,7 @@ impl Monitor {
 /// Build consumes no event and produces no obligation result. It does not promise
 /// recovery from arbitrary allocator exhaustion. No driver borrow or host callback
 /// completes the executable program.
-pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorBuildFailure> {
+pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
     let mut machine = vm::Machine::new(&plan.program, plan.budget)
         .map_err(|failure| build_failure(&plan.program, failure))?;
     let value = machine
@@ -241,6 +250,9 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorBuildFailure> {
         state,
         budget: plan.budget,
         machine,
+        baseline: None,
+        progress: None,
+        terminated: false,
     })
 }
 
@@ -251,9 +263,10 @@ fn source_node(program: &Program, site: ExecutionSite) -> Option<&NodeKey> {
     }
 }
 
-fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFailure {
-    let mut result = MonitorBuildFailure {
-        code: MonitorBuildFailureCode::Resource,
+pub(super) fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorFailure {
+    let mut result = MonitorFailure {
+        code: MonitorFailureCode::Resource,
+        input: None,
         resource: None,
         scalar: None,
         invariant: None,
@@ -261,6 +274,16 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
         path_capacity: None,
     };
     match failure {
+        vm::Failure::Input(native) => {
+            let mut failure = build_failure(program, *native);
+            if failure.code != MonitorFailureCode::Resource {
+                failure.code = MonitorFailureCode::Input;
+                failure.input = Some(super::InputRefusal::Values);
+                failure.invariant = None;
+            }
+            return failure;
+        }
+
         vm::Failure::Scalar { site, outcome } => {
             if let Outcome::Incomplete(cause) = outcome.as_ref() {
                 result.resource = Some(Box::new(StepResourceStop {
@@ -270,7 +293,7 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
                     requested: cause.next_charge.clone(),
                 }));
             } else {
-                result.code = MonitorBuildFailureCode::Invariant;
+                result.code = MonitorFailureCode::Invariant;
                 result.invariant = Some(Box::new(ExecutorInvariantFailure {
                     code: ExecutorInvariantCode::Scalar,
                     site: site.into(),
@@ -299,7 +322,7 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
             }));
         }
         vm::Failure::Invariant { site, cause } => {
-            result.code = MonitorBuildFailureCode::Invariant;
+            result.code = MonitorFailureCode::Invariant;
             let code = match cause {
                 vm::Broken::Address => ExecutorInvariantCode::Address,
                 vm::Broken::ArgumentOwner => ExecutorInvariantCode::ArgumentOwner,
@@ -321,9 +344,9 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
                 failure,
                 arena,
             } = *native;
-            result.code = MonitorBuildFailureCode::Admission;
+            result.code = MonitorFailureCode::Admission;
             if matches!(failure, SuppliedAdmissionError::Invalid { .. }) {
-                result.code = MonitorBuildFailureCode::Invariant;
+                result.code = MonitorFailureCode::Invariant;
                 result.invariant = Some(Box::new(ExecutorInvariantFailure {
                     code: ExecutorInvariantCode::Membership,
                     site: site.into(),

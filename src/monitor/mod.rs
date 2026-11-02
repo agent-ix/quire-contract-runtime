@@ -8,8 +8,10 @@
 mod bindings;
 mod budget;
 mod construction;
+mod dispatch;
 mod executor;
 mod fields;
+mod input;
 mod program;
 mod validation;
 mod vm;
@@ -22,5 +24,7 @@ pub use program::{
 pub use budget::{StepBudget, StepResource, StepResourceStop};
 pub use executor::{
     build, AdmissionFailure, BuildPlan, ExecutionSite, ExecutorInvariantCode,
-    ExecutorInvariantFailure, Monitor, MonitorBuildFailure, MonitorBuildFailureCode, ScalarFailure,
+    ExecutorInvariantFailure, Monitor, MonitorFailure, MonitorFailureCode, ScalarFailure,
 };
+
+pub use input::{Event, InputContext, InputRefusal, MonitorStep, Reading, Watermark};

@@ -72,6 +72,12 @@ pub struct Layout {
     pub occurrence: Box<[u8]>,
     /// The admitted timestamped-event profile identity.
     pub profile: String,
+    /// Original canonical QSpec clock-binding value encoding, not a binding identity.
+    pub clock_binding: Box<[u8]>,
+    /// Original independently admitted order value encoding.
+    pub admitted_order: Box<[u8]>,
+    /// Original stable progress association (clock/subjects/sources/scope/execution).
+    pub progress_context: Box<[u8]>,
     /// Typed persistent state, including its final exact Integer event position.
     ///
     /// The shared closed record retains `event_position` after `activations`;
