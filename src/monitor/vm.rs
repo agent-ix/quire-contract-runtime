@@ -1,0 +1,726 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//! Iterative execution of ordinary retained expressions, with no source evaluator.
+
+use alloc::{boxed::Box, vec::Vec};
+use core::cell::Cell;
+
+use quire_exact::{Cancel, Value, ValueType};
+use quire_semantic_value::{
+    declaration::{StorageRequest, StorageUnit},
+    supplied_membership::{
+        InvalidMembershipCause, MembershipLocus, MembershipPart, MembershipPathArena,
+        SuppliedAdmissionError, SuppliedMembershipBudget,
+    },
+};
+
+use super::budget::{StepBudget, StepResource, StepResourceStop};
+use super::{ExpressionId, FunctionId, Operation, Program};
+
+#[derive(Clone, Copy, Debug)]
+pub(super) enum Site {
+    Expression(ExpressionId),
+    Function(FunctionId),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(super) enum Broken {
+    Address,
+    ArgumentOwner,
+    Arity,
+    ValueStack,
+    Condition,
+}
+
+pub(super) enum Failure {
+    Stop(StepResourceStop),
+    Invariant { site: Site, cause: Broken },
+    Membership(Box<MembershipFailure>),
+}
+
+pub(super) struct MembershipFailure {
+    pub(super) site: Site,
+    pub(super) failure: SuppliedAdmissionError,
+    pub(super) arena: MembershipPathArena,
+}
+
+impl From<StepResourceStop> for Failure {
+    fn from(stop: StepResourceStop) -> Self {
+        Self::Stop(stop)
+    }
+}
+
+fn broken(site: Site, cause: Broken) -> Failure {
+    Failure::Invariant { site, cause }
+}
+
+#[derive(Clone, Copy)]
+enum Operand {
+    Literal(ExpressionId),
+    Supplied(usize),
+}
+
+#[derive(Clone, Copy)]
+struct Scope {
+    function: FunctionId,
+    start: usize,
+    len: usize,
+}
+
+#[derive(Clone, Copy)]
+enum Frame {
+    Evaluate {
+        expression: ExpressionId,
+        scope: Scope,
+    },
+    Choose {
+        expression: ExpressionId,
+        scope: Scope,
+    },
+    Check {
+        expression: ExpressionId,
+        edge: usize,
+    },
+    Apply {
+        expression: ExpressionId,
+        values: usize,
+    },
+    Return {
+        function: FunctionId,
+        arguments: usize,
+        values: usize,
+    },
+}
+
+struct Checks {
+    expressions: Vec<Vec<bool>>,
+    returns: Vec<bool>,
+}
+
+impl Checks {
+    fn new(program: &Program) -> Result<Self, Failure> {
+        let mut expressions = Vec::new();
+        expressions
+            .try_reserve_exact(program.parts.expressions.len())
+            .map_err(|_| StepResourceStop::storage(program.parts.expressions.len()))?;
+        for (index, expression) in program.parts.expressions.iter().enumerate() {
+            let site = Site::Expression(ExpressionId(index));
+            let mut edges = Vec::new();
+            match &expression.operation {
+                Operation::Literal(_) | Operation::Argument { .. } => {}
+                Operation::If {
+                    when_true,
+                    when_false,
+                    ..
+                } => {
+                    edges
+                        .try_reserve_exact(2)
+                        .map_err(|_| StepResourceStop::storage(2))?;
+                    for child in [when_true, when_false] {
+                        let child = program
+                            .expression(*child)
+                            .ok_or_else(|| broken(site, Broken::Address))?;
+                        edges.push(
+                            program
+                                .types()
+                                .same_type(&child.value_type, &expression.value_type),
+                        );
+                    }
+                }
+                Operation::Call {
+                    function,
+                    arguments,
+                } => {
+                    let function = program
+                        .function(*function)
+                        .ok_or_else(|| broken(site, Broken::Address))?;
+                    if function.parameters.len() != arguments.len() {
+                        return Err(broken(site, Broken::Arity));
+                    }
+                    let count = arguments
+                        .len()
+                        .checked_add(1)
+                        .ok_or_else(|| StepResourceStop::storage(usize::MAX))?;
+                    edges
+                        .try_reserve_exact(count)
+                        .map_err(|_| StepResourceStop::storage(count))?;
+                    for (argument, expected) in arguments.iter().zip(&function.parameters) {
+                        let argument = program
+                            .expression(*argument)
+                            .ok_or_else(|| broken(site, Broken::Address))?;
+                        edges.push(program.types().same_type(&argument.value_type, expected));
+                    }
+                    edges.push(
+                        program
+                            .types()
+                            .same_type(&function.result, &expression.value_type),
+                    );
+                }
+            }
+            expressions.push(edges);
+        }
+        let mut returns = Vec::new();
+        returns
+            .try_reserve_exact(program.parts.functions.len())
+            .map_err(|_| StepResourceStop::storage(program.parts.functions.len()))?;
+        for (index, function) in program.parts.functions.iter().enumerate() {
+            let body = program
+                .expression(function.body)
+                .ok_or_else(|| broken(Site::Function(FunctionId(index)), Broken::Address))?;
+            returns.push(
+                program
+                    .types()
+                    .same_type(&body.value_type, &function.result),
+            );
+        }
+        Ok(Self {
+            expressions,
+            returns,
+        })
+    }
+}
+
+struct Resources {
+    limits: StepBudget,
+    work: u64,
+    elements: Cell<usize>,
+    bytes: Cell<usize>,
+    denied: Cell<Option<StepResourceStop>>,
+    live_elements: Cell<usize>,
+}
+
+impl Resources {
+    fn new(limits: StepBudget) -> Self {
+        Self {
+            limits,
+            work: 0,
+            elements: Cell::new(0),
+            bytes: Cell::new(0),
+            denied: Cell::new(None),
+            live_elements: Cell::new(0),
+        }
+    }
+    fn charge(&mut self) -> Result<(), StepResourceStop> {
+        let next = self.work.checked_add(1);
+        if next.is_none_or(|next| next > self.limits.work) {
+            return Err(StepResourceStop {
+                resource: StepResource::Work,
+                limit: Some(u128::from(self.limits.work)),
+                spent: u128::from(self.work),
+                requested: 1,
+            });
+        }
+        self.work = next.ok_or_else(|| StepResourceStop::storage(1))?;
+        Ok(())
+    }
+    fn permit(&self, request: StorageRequest) -> bool {
+        let (used, limit, resource) = match request.unit() {
+            StorageUnit::AdditionalElements => (
+                &self.elements,
+                self.limits.scratch_elements,
+                StepResource::ScratchElements,
+            ),
+            StorageUnit::Bytes => (
+                &self.bytes,
+                self.limits.scratch_bytes,
+                StepResource::ScratchBytes,
+            ),
+        };
+        match used.get().checked_add(request.amount()) {
+            Some(next)
+                if next
+                    .checked_add(if request.unit() == StorageUnit::AdditionalElements {
+                        self.live_elements.get()
+                    } else {
+                        0
+                    })
+                    .is_some_and(|total| total <= limit) =>
+            {
+                used.set(next);
+                true
+            }
+            _ => {
+                self.denied.set(Some(StepResourceStop {
+                    resource,
+                    limit: Some(limit as u128),
+                    spent: used.get() as u128,
+                    requested: request.amount() as u128,
+                }));
+                false
+            }
+        }
+    }
+}
+
+/// A scratch machine contains only addresses and equality caches, never mirrored values.
+pub(super) struct Machine {
+    checks: Checks,
+    frames: Vec<Frame>,
+    values: Vec<Operand>,
+    arguments: Vec<Operand>,
+}
+
+impl Machine {
+    pub(super) fn new(program: &Program, limits: StepBudget) -> Result<Self, Failure> {
+        let checks = Checks::new(program)?;
+        let mut frames = Vec::new();
+        let mut values = Vec::new();
+        let mut arguments = Vec::new();
+        frames
+            .try_reserve_exact(limits.stack_frames)
+            .map_err(|_| StepResourceStop::storage(limits.stack_frames))?;
+        values
+            .try_reserve_exact(limits.scratch_elements)
+            .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
+        arguments
+            .try_reserve_exact(limits.scratch_elements)
+            .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
+        Ok(Self {
+            checks,
+            frames,
+            values,
+            arguments,
+        })
+    }
+
+    fn frame(&mut self, frame: Frame, resources: &Resources) -> Result<(), Failure> {
+        if self.frames.len() >= resources.limits.stack_frames {
+            return Err(StepResourceStop {
+                resource: StepResource::Stack,
+                limit: Some(resources.limits.stack_frames as u128),
+                spent: self.frames.len() as u128,
+                requested: 1,
+            }
+            .into());
+        }
+        self.frames.push(frame);
+        Ok(())
+    }
+
+    fn slot(&self, resources: &Resources) -> Result<(), Failure> {
+        let used = self
+            .values
+            .len()
+            .checked_add(self.arguments.len())
+            .and_then(|n| n.checked_add(resources.elements.get()));
+        if used.is_none_or(|n| n >= resources.limits.scratch_elements) {
+            return Err(StepResourceStop {
+                resource: StepResource::ScratchElements,
+                limit: Some(resources.limits.scratch_elements as u128),
+                spent: used.unwrap_or(usize::MAX) as u128,
+                requested: 1,
+            }
+            .into());
+        }
+        Ok(())
+    }
+
+    fn value(&mut self, operand: Operand, resources: &Resources) -> Result<(), Failure> {
+        self.slot(resources)?;
+        self.values.push(operand);
+        Ok(())
+    }
+
+    /// The caller already admitted each root argument against this exact signature.
+    pub(super) fn invoke<'a>(
+        &mut self,
+        program: &'a Program,
+        function: FunctionId,
+        supplied: &[&'a Value],
+        limits: StepBudget,
+    ) -> Result<&'a Value, Failure> {
+        self.frames.clear();
+        self.values.clear();
+        self.arguments.clear();
+        let mut resources = Resources::new(limits);
+        let result = self.run(program, function, supplied, &mut resources);
+        self.frames.clear();
+        self.values.clear();
+        self.arguments.clear();
+        result
+    }
+
+    fn run<'a>(
+        &mut self,
+        program: &'a Program,
+        function: FunctionId,
+        supplied: &[&'a Value],
+        resources: &mut Resources,
+    ) -> Result<&'a Value, Failure> {
+        let declared = program
+            .function(function)
+            .ok_or_else(|| broken(Site::Function(function), Broken::Address))?;
+        if declared.parameters.len() != supplied.len() {
+            return Err(broken(Site::Function(function), Broken::Arity));
+        }
+        for index in 0..supplied.len() {
+            self.slot(resources)?;
+            self.arguments.push(Operand::Supplied(index));
+        }
+        let scope = Scope {
+            function,
+            start: 0,
+            len: supplied.len(),
+        };
+        self.frame(
+            Frame::Return {
+                function,
+                arguments: 0,
+                values: 0,
+            },
+            resources,
+        )?;
+        self.frame(
+            Frame::Evaluate {
+                expression: declared.body,
+                scope,
+            },
+            resources,
+        )?;
+        while let Some(frame) = self.frames.pop() {
+            resources.charge()?;
+            match frame {
+                Frame::Evaluate { expression, scope } => {
+                    self.evaluate(program, expression, scope, resources)?
+                }
+                Frame::Choose { expression, scope } => {
+                    self.choose(program, supplied, expression, scope, resources)?
+                }
+                Frame::Apply { expression, values } => {
+                    self.apply(program, supplied, expression, values, resources)?
+                }
+                Frame::Check { expression, edge } => {
+                    self.check(program, supplied, expression, edge, resources)?
+                }
+                Frame::Return {
+                    function,
+                    arguments,
+                    values,
+                } => {
+                    let site = Site::Function(function);
+                    let operand = self
+                        .values
+                        .pop()
+                        .ok_or_else(|| broken(site, Broken::ValueStack))?;
+                    if self.values.len() != values {
+                        return Err(broken(site, Broken::ValueStack));
+                    }
+                    let equal = *self
+                        .checks
+                        .returns
+                        .get(function.0)
+                        .ok_or_else(|| broken(site, Broken::Address))?;
+                    if !equal {
+                        let expected = &program
+                            .function(function)
+                            .ok_or_else(|| broken(site, Broken::Address))?
+                            .result;
+                        self.admit(program, supplied, operand, expected, site, resources)?;
+                    }
+                    self.arguments.truncate(arguments);
+                    self.value(operand, resources)?;
+                }
+            }
+        }
+        let [operand] = self.values.as_slice() else {
+            return Err(broken(Site::Function(function), Broken::ValueStack));
+        };
+        resolve(program, supplied, *operand, Site::Function(function))
+    }
+
+    fn evaluate(
+        &mut self,
+        program: &Program,
+        expression: ExpressionId,
+        scope: Scope,
+        resources: &Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let node = program
+            .expression(expression)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        match &node.operation {
+            Operation::Literal(_) => self.value(Operand::Literal(expression), resources),
+            Operation::Argument { function, position } => {
+                if *function != scope.function || *position >= scope.len {
+                    return Err(broken(site, Broken::ArgumentOwner));
+                }
+                let index = scope
+                    .start
+                    .checked_add(*position)
+                    .ok_or_else(|| broken(site, Broken::Address))?;
+                let operand = *self
+                    .arguments
+                    .get(index)
+                    .ok_or_else(|| broken(site, Broken::Address))?;
+                self.value(operand, resources)
+            }
+            Operation::If { condition, .. } => {
+                self.frame(Frame::Choose { expression, scope }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *condition,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::Call { arguments, .. } => {
+                self.frame(
+                    Frame::Apply {
+                        expression,
+                        values: self.values.len(),
+                    },
+                    resources,
+                )?;
+                for argument in arguments.iter().rev() {
+                    self.frame(
+                        Frame::Evaluate {
+                            expression: *argument,
+                            scope,
+                        },
+                        resources,
+                    )?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn choose(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        scope: Scope,
+        resources: &Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let operand = self
+            .values
+            .pop()
+            .ok_or_else(|| broken(site, Broken::ValueStack))?;
+        let Value::Boolean(condition) = resolve(program, supplied, operand, site)? else {
+            return Err(broken(site, Broken::Condition));
+        };
+        let Some(Operation::If {
+            when_true,
+            when_false,
+            ..
+        }) = program.expression(expression).map(|node| &node.operation)
+        else {
+            return Err(broken(site, Broken::Address));
+        };
+        let (branch, edge) = if *condition {
+            (*when_true, 0)
+        } else {
+            (*when_false, 1)
+        };
+        self.frame(Frame::Check { expression, edge }, resources)?;
+        self.frame(
+            Frame::Evaluate {
+                expression: branch,
+                scope,
+            },
+            resources,
+        )
+    }
+
+    fn check(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        edge: usize,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let equal = *self
+            .checks
+            .expressions
+            .get(expression.0)
+            .and_then(|edges| edges.get(edge))
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if !equal {
+            let operand = *self
+                .values
+                .last()
+                .ok_or_else(|| broken(site, Broken::ValueStack))?;
+            let expected = &program
+                .expression(expression)
+                .ok_or_else(|| broken(site, Broken::Address))?
+                .value_type;
+            self.admit(program, supplied, operand, expected, site, resources)?;
+        }
+        Ok(())
+    }
+
+    fn admit(
+        &self,
+        program: &Program,
+        supplied: &[&Value],
+        operand: Operand,
+        expected: &ValueType,
+        site: Site,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let live = self
+            .values
+            .len()
+            .checked_add(self.arguments.len())
+            .ok_or_else(|| StepResourceStop::storage(usize::MAX))?;
+        resources.live_elements.set(live);
+        admit(program, supplied, operand, expected, site, resources)
+    }
+
+    fn apply(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        mark: usize,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let Some(Operation::Call {
+            function,
+            arguments,
+        }) = program.expression(expression).map(|node| &node.operation)
+        else {
+            return Err(broken(site, Broken::Address));
+        };
+        let callee = program
+            .function(*function)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if self.values.len().checked_sub(mark) != Some(arguments.len())
+            || callee.parameters.len() != arguments.len()
+        {
+            return Err(broken(site, Broken::Arity));
+        }
+        let start = self.arguments.len();
+        for (index, expected) in callee.parameters.iter().enumerate() {
+            let at = mark
+                .checked_add(index)
+                .ok_or_else(|| broken(site, Broken::Address))?;
+            let operand = *self
+                .values
+                .get(at)
+                .ok_or_else(|| broken(site, Broken::ValueStack))?;
+            let equal = *self
+                .checks
+                .expressions
+                .get(expression.0)
+                .and_then(|edges| edges.get(index))
+                .ok_or_else(|| broken(site, Broken::Address))?;
+            if !equal {
+                self.admit(program, supplied, operand, expected, site, resources)?;
+            }
+            self.slot(resources)?;
+            self.arguments.push(operand);
+        }
+        self.values.truncate(mark);
+        self.frame(
+            Frame::Check {
+                expression,
+                edge: arguments.len(),
+            },
+            resources,
+        )?;
+        self.frame(
+            Frame::Return {
+                function: *function,
+                arguments: start,
+                values: mark,
+            },
+            resources,
+        )?;
+        self.frame(
+            Frame::Evaluate {
+                expression: callee.body,
+                scope: Scope {
+                    function: *function,
+                    start,
+                    len: arguments.len(),
+                },
+            },
+            resources,
+        )
+    }
+}
+
+fn resolve<'a>(
+    program: &'a Program,
+    supplied: &[&'a Value],
+    operand: Operand,
+    site: Site,
+) -> Result<&'a Value, Failure> {
+    match operand {
+        Operand::Literal(id) => match program.expression(id).map(|node| &node.operation) {
+            Some(Operation::Literal(value)) => Ok(value),
+            _ => Err(broken(site, Broken::Address)),
+        },
+        Operand::Supplied(index) => supplied
+            .get(index)
+            .copied()
+            .ok_or_else(|| broken(site, Broken::Address)),
+    }
+}
+
+fn admit(
+    program: &Program,
+    supplied: &[&Value],
+    operand: Operand,
+    expected: &ValueType,
+    site: Site,
+    resources: &mut Resources,
+) -> Result<(), Failure> {
+    let value = resolve(program, supplied, operand, site)?;
+    let mut arena = MembershipPathArena::new().map_err(|_| StepResourceStop::storage(1))?;
+    let at = MembershipLocus {
+        path: arena.root(0),
+        part: MembershipPart::Value,
+    };
+    let remaining = resources
+        .limits
+        .work
+        .checked_sub(resources.work)
+        .ok_or_else(|| broken(site, Broken::ValueStack))?;
+    let mut work = SuppliedMembershipBudget::new(remaining);
+    let result = program
+        .types()
+        .admit_supplied_with_reservation::<InvalidMembershipCause>(
+            expected,
+            value,
+            &mut arena,
+            at,
+            &mut work,
+            &Cancel::new(),
+            &|request| resources.permit(request),
+        );
+    resources.work = resources
+        .work
+        .checked_add(work.spent())
+        .ok_or_else(|| broken(site, Broken::ValueStack))?;
+    match result {
+        Ok(()) => Ok(()),
+        Err(SuppliedAdmissionError::Limit { requested, .. }) => Err(StepResourceStop {
+            resource: StepResource::Work,
+            limit: Some(u128::from(resources.limits.work)),
+            spent: u128::from(resources.work),
+            requested: u128::from(requested),
+        }
+        .into()),
+        Err(
+            SuppliedAdmissionError::Allocation { request, .. }
+            | SuppliedAdmissionError::Capacity { request, .. },
+        ) => Err(resources
+            .denied
+            .take()
+            .unwrap_or_else(|| StepResourceStop::storage(request.amount()))
+            .into()),
+        Err(failure) => Err(Failure::Membership(Box::new(MembershipFailure {
+            site,
+            failure,
+            arena,
+        }))),
+    }
+}
