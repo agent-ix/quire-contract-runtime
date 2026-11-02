@@ -4,7 +4,7 @@
 use alloc::{boxed::Box, rc::Rc, string::String, vec::Vec};
 use core::fmt;
 
-use quire_exact::{MemberId, NodeKey, Rational, Value, ValueType};
+use quire_exact::{MemberId, NodeKey, OrderingOperator, Rational, Value, ValueType};
 use quire_semantic_value::declaration::{EnvironmentFailure, TypeEnvironment};
 
 /// An address in the owned expression arena, never a source identity.
@@ -156,6 +156,41 @@ pub enum Operation {
         value: ExpressionId,
         /// Original node-owned member, never a physical slot ordinal.
         member: MemberId,
+    },
+    /// Shared exact integer addition, evaluating left before right.
+    IntegerAdd {
+        /// Left integer operand.
+        left: ExpressionId,
+        /// Right integer operand.
+        right: ExpressionId,
+    },
+    /// Shared exact integer subtraction, evaluating left before right.
+    IntegerSubtract {
+        /// Left integer operand.
+        left: ExpressionId,
+        /// Right integer operand.
+        right: ExpressionId,
+    },
+    /// Shared exact integer multiplication, evaluating left before right.
+    IntegerMultiply {
+        /// Left integer operand.
+        left: ExpressionId,
+        /// Right integer operand.
+        right: ExpressionId,
+    },
+    /// Shared exact integer negation.
+    IntegerNegate {
+        /// Integer operand, evaluated once.
+        value: ExpressionId,
+    },
+    /// Shared exact integer ordering, evaluating left before right.
+    IntegerOrder {
+        /// Original shared relation, never a display string.
+        operator: OrderingOperator,
+        /// Left integer operand.
+        left: ExpressionId,
+        /// Right integer operand.
+        right: ExpressionId,
     },
     /// Ordinary Boolean negation of one canonical Boolean operand.
     BooleanNot {

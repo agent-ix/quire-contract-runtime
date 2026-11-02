@@ -2,9 +2,12 @@
 //! Iterative execution of ordinary retained expressions, with no source evaluator.
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use core::cell::Cell;
+use core::cell::{Cell, RefCell};
 
-use quire_exact::{Cancel, CompositeValue, FieldValue, Value, ValueType};
+use quire_exact::{
+    Cancel, CompositeValue, FieldValue, Integer, IntegerArithmetic, Meter, OrderedOperands,
+    Outcome, Value, ValueType,
+};
 use quire_semantic_value::{
     declaration::{CompositeShape, StorageRequest, StorageUnit},
     supplied_membership::{
@@ -34,6 +37,10 @@ pub(super) enum Broken {
 }
 
 pub(super) enum Failure {
+    Scalar {
+        site: Site,
+        outcome: Box<Outcome<Value>>,
+    },
     Stop(StepResourceStop),
     Invariant {
         site: Site,
@@ -70,6 +77,7 @@ enum Operand {
     // Select one immutable canonical primitive; this is not another Value type.
     BooleanConstant(bool),
     Projection(usize),
+    Computed(usize),
 }
 
 struct Projection {
@@ -93,6 +101,9 @@ struct ActiveBinding {
 
 #[derive(Clone, Copy)]
 enum Frame {
+    Scalar {
+        expression: ExpressionId,
+    },
     TupleElement {
         expression: ExpressionId,
     },
@@ -157,7 +168,12 @@ impl Checks {
                 | Operation::BooleanAnd { .. }
                 | Operation::BooleanOr { .. }
                 | Operation::TupleElement { .. }
-                | Operation::RecordField { .. } => {}
+                | Operation::RecordField { .. }
+                | Operation::IntegerAdd { .. }
+                | Operation::IntegerSubtract { .. }
+                | Operation::IntegerMultiply { .. }
+                | Operation::IntegerNegate { .. }
+                | Operation::IntegerOrder { .. } => {}
                 Operation::Local(binding) => {
                     let (_, initializer) = program
                         .bindings
@@ -265,7 +281,8 @@ struct Resources {
     work: u64,
     elements: Cell<usize>,
     bytes: Cell<usize>,
-    denied: Cell<Option<StepResourceStop>>,
+    denied: RefCell<Option<StepResourceStop>>,
+    scalar: Meter,
     live_elements: Cell<usize>,
 }
 
@@ -276,7 +293,8 @@ impl Resources {
             work: 0,
             elements: Cell::new(0),
             bytes: Cell::new(0),
-            denied: Cell::new(None),
+            denied: RefCell::new(None),
+            scalar: Meter::new(limits.scalar),
             live_elements: Cell::new(0),
         }
     }
@@ -287,7 +305,7 @@ impl Resources {
                 resource: StepResource::Work,
                 limit: Some(u128::from(self.limits.work)),
                 spent: u128::from(self.work),
-                requested: 1,
+                requested: Integer::one(),
             });
         }
         self.work = next.ok_or_else(|| StepResourceStop::storage(1))?;
@@ -320,7 +338,7 @@ impl Resources {
                 true
             }
             _ => {
-                self.denied.set(Some(StepResourceStop {
+                self.denied.replace(Some(StepResourceStop {
                     resource,
                     limit: Some(limit as u128),
                     spent: used.get().saturating_add(
@@ -330,7 +348,7 @@ impl Resources {
                             0
                         },
                     ) as u128,
-                    requested: request.amount() as u128,
+                    requested: Integer::from(request.amount()),
                 }));
                 false
             }
@@ -349,6 +367,7 @@ pub(super) struct Machine {
     touched: Vec<usize>,
     active_bindings: usize,
     projections: Vec<Projection>,
+    computed: Vec<Value>,
 }
 
 impl Machine {
@@ -377,6 +396,20 @@ impl Machine {
                 .try_reserve_exact(limits.scratch_elements)
                 .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
         }
+        let mut computed = Vec::new();
+        if program.parts.expressions.iter().any(|node| {
+            matches!(
+                node.operation,
+                Operation::IntegerAdd { .. }
+                    | Operation::IntegerSubtract { .. }
+                    | Operation::IntegerMultiply { .. }
+                    | Operation::IntegerNegate { .. }
+            )
+        }) {
+            computed
+                .try_reserve_exact(limits.scratch_elements)
+                .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
+        }
         let count = program.bindings.len();
         let mut bindings = Vec::new();
         let mut touched_flags = Vec::new();
@@ -398,6 +431,7 @@ impl Machine {
             touched,
             active_bindings: 0,
             projections,
+            computed,
             checks,
             frames,
             values,
@@ -411,7 +445,7 @@ impl Machine {
                 resource: StepResource::Stack,
                 limit: Some(resources.limits.stack_frames as u128),
                 spent: self.frames.len() as u128,
-                requested: 1,
+                requested: Integer::one(),
             }
             .into());
         }
@@ -426,13 +460,14 @@ impl Machine {
             .checked_add(self.arguments.len())
             .and_then(|n| n.checked_add(self.active_bindings))
             .and_then(|n| n.checked_add(self.projections.len()))
+            .and_then(|n| n.checked_add(self.computed.len()))
             .and_then(|n| n.checked_add(resources.elements.get()));
         if used.is_none_or(|n| n >= resources.limits.scratch_elements) {
             return Err(StepResourceStop {
                 resource: StepResource::ScratchElements,
                 limit: Some(resources.limits.scratch_elements as u128),
                 spent: used.unwrap_or(usize::MAX) as u128,
-                requested: 1,
+                requested: Integer::one(),
             }
             .into());
         }
@@ -461,7 +496,14 @@ impl Machine {
             .run(program, function, supplied, &mut resources)
             .and_then(|operand| {
                 let site = Site::Function(function);
-                match resolve(program, supplied, &self.projections, operand, site)? {
+                match resolve(
+                    program,
+                    supplied,
+                    &self.projections,
+                    &self.computed,
+                    operand,
+                    site,
+                )? {
                     Value::Composite(value) => Ok(Value::Composite(Arc::clone(value))),
                     _ => Err(broken(site, Broken::ValueStack)),
                 }
@@ -471,6 +513,7 @@ impl Machine {
         self.arguments.clear();
         self.clear_bindings();
         self.projections.clear();
+        self.computed.clear();
         result
     }
 
@@ -515,6 +558,9 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::Scalar { expression } => {
+                    self.scalar(program, supplied, expression, resources)?
+                }
                 Frame::TupleElement { expression } => {
                     self.tuple_element(program, supplied, expression, resources)?
                 }
@@ -632,6 +678,36 @@ impl Machine {
                     resources,
                 )
             }
+            Operation::IntegerAdd { left, right }
+            | Operation::IntegerSubtract { left, right }
+            | Operation::IntegerMultiply { left, right }
+            | Operation::IntegerOrder { left, right, .. } => {
+                self.frame(Frame::Scalar { expression }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *right,
+                        scope,
+                    },
+                    resources,
+                )?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *left,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::IntegerNegate { value } => {
+                self.frame(Frame::Scalar { expression }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *value,
+                        scope,
+                    },
+                    resources,
+                )
+            }
             Operation::BooleanNot { value } => {
                 self.frame(Frame::BooleanLeft { expression, scope }, resources)?;
                 self.frame(
@@ -684,6 +760,98 @@ impl Machine {
         }
     }
 
+    fn scalar(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let node = program
+            .expression(expression)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let right = self
+            .values
+            .pop()
+            .ok_or_else(|| broken(site, Broken::ValueStack))?;
+        let unary = matches!(node.operation, Operation::IntegerNegate { .. });
+        let left = if unary {
+            right
+        } else {
+            self.values
+                .pop()
+                .ok_or_else(|| broken(site, Broken::ValueStack))?
+        };
+        let left = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            left,
+            site,
+        )?;
+        let right = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            right,
+            site,
+        )?;
+        let (Value::Integer(left), Value::Integer(right)) = (left, right) else {
+            return Err(broken(site, Broken::ValueStack));
+        };
+        let bound = match &node.value_type {
+            ValueType::Int(bound) => Some(bound),
+            _ => None,
+        };
+        let arithmetic = match node.operation {
+            Operation::IntegerAdd { .. } => Some(IntegerArithmetic::Add(left, right)),
+            Operation::IntegerSubtract { .. } => Some(IntegerArithmetic::Subtract(left, right)),
+            Operation::IntegerMultiply { .. } => Some(IntegerArithmetic::Multiply(left, right)),
+            Operation::IntegerNegate { .. } => Some(IntegerArithmetic::Negate(left)),
+            _ => None,
+        };
+        let outcome = if let Some(operation) = arithmetic {
+            match quire_exact::evaluate_integer_arithmetic(operation, bound, &mut resources.scalar)
+            {
+                Outcome::Completed(value) => Outcome::Completed(Value::Integer(value)),
+                Outcome::Incomplete(cause) => Outcome::Incomplete(cause),
+                Outcome::Refused(cause) => Outcome::Refused(cause),
+                Outcome::Undefined(cause) => Outcome::Undefined(cause),
+            }
+        } else if let Operation::IntegerOrder { operator, .. } = node.operation {
+            match quire_exact::order_numbers(
+                operator,
+                OrderedOperands::Integers(left, right),
+                &mut resources.scalar,
+            ) {
+                Outcome::Completed(value) => Outcome::Completed(Value::Boolean(value)),
+                Outcome::Incomplete(cause) => Outcome::Incomplete(cause),
+                Outcome::Refused(cause) => Outcome::Refused(cause),
+                Outcome::Undefined(cause) => Outcome::Undefined(cause),
+            }
+        } else {
+            return Err(broken(site, Broken::Address));
+        };
+        match outcome {
+            Outcome::Completed(Value::Boolean(value)) => {
+                self.value(Operand::BooleanConstant(value), resources)
+            }
+            Outcome::Completed(value) => {
+                self.slot(resources)?;
+                let index = self.computed.len();
+                self.computed.push(value);
+                self.value(Operand::Computed(index), resources)
+            }
+            outcome => Err(Failure::Scalar {
+                site,
+                outcome: Box::new(outcome),
+            }),
+        }
+    }
+
     fn tuple_element(
         &mut self,
         program: &Program,
@@ -711,7 +879,14 @@ impl Machine {
             .values
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
-        let Value::Composite(owner) = resolve(program, supplied, &self.projections, operand, site)?
+        let Value::Composite(owner) = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            operand,
+            site,
+        )?
         else {
             return Err(broken(site, Broken::Projection));
         };
@@ -789,7 +964,14 @@ impl Machine {
             .values
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
-        let Value::Boolean(left) = resolve(program, supplied, &self.projections, operand, site)?
+        let Value::Boolean(left) = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            operand,
+            site,
+        )?
         else {
             return Err(broken(site, Broken::Condition));
         };
@@ -826,7 +1008,14 @@ impl Machine {
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
         if !matches!(
-            resolve(program, supplied, &self.projections, operand, site)?,
+            resolve(
+                program,
+                supplied,
+                &self.projections,
+                &self.computed,
+                operand,
+                site
+            )?,
             Value::Boolean(_)
         ) {
             return Err(broken(site, Broken::Condition));
@@ -998,8 +1187,14 @@ impl Machine {
             .values
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
-        let Value::Boolean(condition) =
-            resolve(program, supplied, &self.projections, operand, site)?
+        let Value::Boolean(condition) = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            operand,
+            site,
+        )?
         else {
             return Err(broken(site, Broken::Condition));
         };
@@ -1070,9 +1265,17 @@ impl Machine {
             .checked_add(self.arguments.len())
             .and_then(|count| count.checked_add(self.active_bindings))
             .and_then(|count| count.checked_add(self.projections.len()))
+            .and_then(|count| count.checked_add(self.computed.len()))
             .ok_or_else(|| StepResourceStop::storage(usize::MAX))?;
         resources.live_elements.set(live);
-        let value = resolve(program, supplied, &self.projections, operand, site)?;
+        let value = resolve(
+            program,
+            supplied,
+            &self.projections,
+            &self.computed,
+            operand,
+            site,
+        )?;
         admit_value(program.types(), value, expected, site, resources)
     }
 
@@ -1176,6 +1379,7 @@ fn resolve<'a>(
     program: &'a Program,
     supplied: &[&'a Value],
     projections: &'a [Projection],
+    computed: &'a [Value],
     operand: Operand,
     site: Site,
 ) -> Result<&'a Value, Failure> {
@@ -1184,6 +1388,9 @@ fn resolve<'a>(
             Some(Operation::Literal(value)) => Ok(value),
             _ => Err(broken(site, Broken::Address)),
         },
+        Operand::Computed(index) => computed
+            .get(index)
+            .ok_or_else(|| broken(site, Broken::Address)),
         Operand::Projection(index) => {
             let place = projections
                 .get(index)
@@ -1240,7 +1447,7 @@ fn admit_value(
             resource: StepResource::Work,
             limit: Some(u128::from(resources.limits.work)),
             spent: u128::from(resources.work),
-            requested: u128::from(requested),
+            requested: Integer::from(requested),
         }),
         SuppliedAdmissionError::Allocation { request, .. }
         | SuppliedAdmissionError::Capacity { request, .. } => Some(
@@ -1273,6 +1480,18 @@ mod tests {
     fn resources() -> Resources {
         Resources::new(StepBudget {
             work: 100,
+            scalar: quire_exact::ScalarLimits {
+                integer_bits: 100,
+                decimal_digits: 100,
+                scale_expansion: 100,
+                text_input_bytes: 100,
+                text_scalars: 100,
+                normalized_scalars: 100,
+                unit_edges: 100,
+                value_occurrences: 100,
+                work_units: 100,
+                result_units: 100,
+            },
             stack_frames: 10,
             scratch_elements: 100,
             scratch_bytes: 100_000,
@@ -1305,7 +1524,7 @@ mod tests {
         match check(&mut resources) {
             Err(Failure::MembershipStop { stop, native }) => {
                 assert_eq!(stop.resource, StepResource::Work);
-                assert_eq!((stop.spent, stop.requested), (100, 1));
+                assert_eq!((stop.spent, stop.requested), (100, Integer::one()));
                 let SuppliedAdmissionError::Limit {
                     ceiling,
                     spent,
@@ -1332,7 +1551,10 @@ mod tests {
         match check(&mut resources) {
             Err(Failure::MembershipStop { stop, native }) => {
                 assert_eq!(stop.resource, StepResource::ScratchElements);
-                assert_eq!((stop.limit, stop.spent, stop.requested), (Some(1), 1, 1));
+                assert_eq!(
+                    (stop.limit, stop.spent, stop.requested),
+                    (Some(1), 1, Integer::one())
+                );
                 let SuppliedAdmissionError::Allocation { request, locus } = native.failure else {
                     panic!("native allocation refusal");
                 };
@@ -1362,7 +1584,7 @@ mod tests {
         assert_eq!(stop.resource, StepResource::ScratchBytes);
         assert_eq!(
             (stop.limit, stop.spent, stop.requested),
-            (Some(amount as u128), amount as u128, amount as u128)
+            (Some(amount as u128), amount as u128, Integer::from(amount))
         );
         assert_eq!(
             resources.bytes.get(),
