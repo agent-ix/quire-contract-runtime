@@ -101,6 +101,14 @@ struct ActiveBinding {
 
 #[derive(Clone, Copy)]
 enum Frame {
+    Construct {
+        expression: ExpressionId,
+        values: usize,
+    },
+    ConstructCheck {
+        expression: ExpressionId,
+        position: usize,
+    },
     Scalar {
         expression: ExpressionId,
     },
@@ -174,6 +182,22 @@ impl Checks {
                 | Operation::IntegerMultiply { .. }
                 | Operation::IntegerNegate { .. }
                 | Operation::IntegerOrder { .. } => {}
+                Operation::Record { .. } | Operation::Tuple { .. } => {
+                    let operands = super::construction::operands(program, ExpressionId(index))
+                        .ok_or_else(|| broken(site, Broken::Address))?;
+                    edges
+                        .try_reserve_exact(operands.len())
+                        .map_err(|_| StepResourceStop::storage(operands.len()))?;
+                    for (position, operand) in operands.iter().enumerate() {
+                        let child = program
+                            .expression(*operand)
+                            .ok_or_else(|| broken(site, Broken::Address))?;
+                        let expected =
+                            super::construction::expected(program, ExpressionId(index), position)
+                                .ok_or_else(|| broken(site, Broken::Address))?;
+                        edges.push(program.types().same_type(&child.value_type, expected));
+                    }
+                }
                 Operation::Local(binding) => {
                     let (_, initializer) = program
                         .bindings
@@ -356,7 +380,7 @@ impl Resources {
     }
 }
 
-/// A scratch machine contains only addresses and equality caches, never mirrored values.
+/// Invocation addresses, cached native type facts and canonical computed values.
 pub(super) struct Machine {
     checks: Checks,
     frames: Vec<Frame>,
@@ -404,6 +428,8 @@ impl Machine {
                     | Operation::IntegerSubtract { .. }
                     | Operation::IntegerMultiply { .. }
                     | Operation::IntegerNegate { .. }
+                    | Operation::Record { .. }
+                    | Operation::Tuple { .. }
             )
         }) {
             computed
@@ -558,6 +584,13 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::Construct { expression, values } => {
+                    self.construct(program, supplied, expression, values, resources)?
+                }
+                Frame::ConstructCheck {
+                    expression,
+                    position,
+                } => self.construct_check(program, supplied, expression, position, resources)?,
                 Frame::Scalar { expression } => {
                     self.scalar(program, supplied, expression, resources)?
                 }
@@ -678,6 +711,34 @@ impl Machine {
                     resources,
                 )
             }
+            Operation::Record { .. } | Operation::Tuple { .. } => {
+                let operands = super::construction::operands(program, expression)
+                    .ok_or_else(|| broken(site, Broken::Address))?;
+                self.frame(
+                    Frame::Construct {
+                        expression,
+                        values: self.values.len(),
+                    },
+                    resources,
+                )?;
+                for (position, child) in operands.iter().enumerate().rev() {
+                    self.frame(
+                        Frame::ConstructCheck {
+                            expression,
+                            position,
+                        },
+                        resources,
+                    )?;
+                    self.frame(
+                        Frame::Evaluate {
+                            expression: *child,
+                            scope,
+                        },
+                        resources,
+                    )?;
+                }
+                Ok(())
+            }
             Operation::IntegerAdd { left, right }
             | Operation::IntegerSubtract { left, right }
             | Operation::IntegerMultiply { left, right }
@@ -760,6 +821,144 @@ impl Machine {
         }
     }
 
+    fn construct_check(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        position: usize,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let equal = self
+            .checks
+            .expressions
+            .get(expression.0)
+            .and_then(|edges| edges.get(position))
+            .copied()
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        if !equal {
+            let operand = self
+                .values
+                .last()
+                .copied()
+                .ok_or_else(|| broken(site, Broken::ValueStack))?;
+            let expected = super::construction::expected(program, expression, position)
+                .ok_or_else(|| broken(site, Broken::Address))?;
+            let child = super::construction::operands(program, expression)
+                .and_then(|values| values.get(position))
+                .copied()
+                .ok_or_else(|| broken(site, Broken::Address))?;
+            self.admit(
+                program,
+                supplied,
+                operand,
+                expected,
+                Site::Expression(child),
+                resources,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn construct(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        base: usize,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let operands = super::construction::operands(program, expression)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let count = operands.len();
+        if base.checked_add(count) != Some(self.values.len()) {
+            return Err(broken(site, Broken::Arity));
+        }
+        let live = self
+            .values
+            .len()
+            .checked_add(self.arguments.len())
+            .and_then(|n| n.checked_add(self.active_bindings))
+            .and_then(|n| n.checked_add(self.projections.len()))
+            .and_then(|n| n.checked_add(self.computed.len()))
+            .ok_or_else(|| StepResourceStop::storage(count))?;
+        resources.live_elements.set(live);
+        let bytes = count
+            .checked_mul(core::mem::size_of::<FieldValue>())
+            .ok_or_else(|| StepResourceStop::storage(count))?;
+        for request in [
+            StorageRequest::new(count, StorageUnit::AdditionalElements),
+            StorageRequest::new(bytes, StorageUnit::Bytes),
+        ] {
+            if !resources.permit(request) {
+                return Err(Failure::Stop(
+                    resources
+                        .denied
+                        .take()
+                        .unwrap_or_else(|| StepResourceStop::storage(request.amount())),
+                ));
+            }
+        }
+        let mut slots = Vec::new();
+        slots
+            .try_reserve_exact(count)
+            .map_err(|_| StepResourceStop::storage(count))?;
+        for operand in self
+            .values
+            .get(base..)
+            .ok_or_else(|| broken(site, Broken::ValueStack))?
+        {
+            resources.charge()?;
+            let value = resolve(
+                program,
+                supplied,
+                &self.projections,
+                &self.computed,
+                *operand,
+                site,
+            )?;
+            slots.push(FieldValue::Present(value.clone()));
+        }
+        let node = program
+            .expression(expression)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let ValueType::Composite(key) = &node.value_type else {
+            return Err(broken(site, Broken::Projection));
+        };
+        // Native type facts or bounded membership checked every slot before materialization.
+        let value = quire_exact::from_admitted_slots(key.clone(), slots.into_boxed_slice());
+        self.values.truncate(base);
+        let outcome = quire_exact::retain_composite(value, &mut resources.scalar);
+        self.computed_result(outcome, site, resources)
+    }
+
+    fn computed_result(
+        &mut self,
+        outcome: Outcome<Value>,
+        site: Site,
+        resources: &Resources,
+    ) -> Result<(), Failure> {
+        match outcome {
+            Outcome::Completed(Value::Boolean(value)) => {
+                self.value(Operand::BooleanConstant(value), resources)
+            }
+            Outcome::Completed(value) => {
+                self.slot(resources)?;
+                let index = self.computed.len();
+                self.computed.push(value);
+                self.value(Operand::Computed(index), resources)
+            }
+            outcome @ (Outcome::Incomplete(_) | Outcome::Refused(_) | Outcome::Undefined(_)) => {
+                Err(Failure::Scalar {
+                    site,
+                    outcome: Box::new(outcome),
+                })
+            }
+        }
+    }
+
     fn scalar(
         &mut self,
         program: &Program,
@@ -835,21 +1034,7 @@ impl Machine {
         } else {
             return Err(broken(site, Broken::Address));
         };
-        match outcome {
-            Outcome::Completed(Value::Boolean(value)) => {
-                self.value(Operand::BooleanConstant(value), resources)
-            }
-            Outcome::Completed(value) => {
-                self.slot(resources)?;
-                let index = self.computed.len();
-                self.computed.push(value);
-                self.value(Operand::Computed(index), resources)
-            }
-            outcome => Err(Failure::Scalar {
-                site,
-                outcome: Box::new(outcome),
-            }),
-        }
+        self.computed_result(outcome, site, resources)
     }
 
     fn tuple_element(

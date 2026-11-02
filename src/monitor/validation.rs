@@ -164,6 +164,16 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
             }
+            Operation::Record { fields } => {
+                for (_, child) in fields {
+                    expression(parts, *child, &value.key)?;
+                }
+            }
+            Operation::Tuple { positions } => {
+                for child in positions {
+                    expression(parts, *child, &value.key)?;
+                }
+            }
             Operation::IntegerAdd { left, right }
             | Operation::IntegerSubtract { left, right }
             | Operation::IntegerMultiply { left, right }
@@ -498,6 +508,16 @@ fn operands(
 ) -> Result<(), ProgramRefusal> {
     match &value.operation {
         Operation::Literal(_) | Operation::Argument { .. } | Operation::Local(_) => {}
+        Operation::Record { fields } => {
+            for (_, child) in fields.iter().rev() {
+                visit(*child)?;
+            }
+        }
+        Operation::Tuple { positions } => {
+            for child in positions.iter().rev() {
+                visit(*child)?;
+            }
+        }
         Operation::Let { value, body, .. } => {
             visit(*body)?;
             visit(*value)?;
