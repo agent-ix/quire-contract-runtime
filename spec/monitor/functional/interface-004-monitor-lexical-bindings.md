@@ -61,7 +61,7 @@ with a different result annotation reaches shared bounded membership admission;
 there is no second type checker or mirrored value representation. Let returns
 its body's annotated type through the existing shared conformance boundary.
 
-Binding indexing visits the retained expressions and functions once. Execution
+Binding index preparation is linear in the retained expressions and functions. Execution
 uses direct slot lookup, an invocation token from already charged work, and
 explicit bind/restore continuations. It does not scan all functions or all slots
 on each step. Cleanup visits only slots activated by that invocation chain;
