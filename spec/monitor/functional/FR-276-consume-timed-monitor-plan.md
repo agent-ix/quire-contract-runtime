@@ -21,7 +21,7 @@ executable program for a timestamped-event claim, `build(plan)` SHALL allocate f
 the plan's `init` entry, and yield a bounded monitor without consuming an event or
 emitting a verdict. The plan's entries are the state-passing checked-expression `function` nodes
 `init`, `on_event` and `on_watermark` of its plan-root node on the checked-package v2 wire (QSL
-FR-251; the plan-root node form is pending STD-647). The runtime SHALL execute `on_event` and
+FR-251; the plan-root node is the `temporal`/`monitor_plan` node of QSpec FR-487, FR-322-AC-308). The runtime SHALL execute `on_event` and
 `on_watermark` and own the modular counter arithmetic, state storage, input admission, and typed outcomes;
 QSL owns the checked claim, complete program's temporal meaning, interval conversion and capacities
 (ix://agent-ix/quire-spec-language/FR-251). The runtime SHALL NOT reconstruct a temporal formula
@@ -103,8 +103,8 @@ This is a planned consumer contract, not an implemented monitor.
 | FR-276-AC-3 | Under a 16-bit counter with maximum gap 100, readings 65530 then 4 advance by 10 (RT passes `on_event` the delta 10); readings 65530 then 65500 settle `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` with no temporal verdict and no entry called. A plan whose maximum gap is 65536 is refused before construction. | Test |
 | FR-276-AC-4 | Changing the counter identity, unit, width, profile or admitted order never reuses the first plan's monitor state or settles its obligation; equal timestamps without admitted order never acquire causality from arrival order. | Test |
 | FR-276-AC-5 | The step API carries distinct definite, pending, indeterminate, incomplete and failed outcomes with the affected obligation identities; a limit or fault on one obligation does not turn a sibling's state into a verdict or erase its identity. | Test |
-| FR-276-AC-6 | The complete admitted plan alone builds a monitor after driver preparation objects are dropped. Its checked subject, activation/captures, atom bodies, ordered topology, `State` type and the `init`, `on_event` and `on_watermark` function entries (the plan-root node's dependencies; node form pending STD-647) remain available. Build runs `init` and the monitor's state is its result. Build consumes no event and emits no verdict; a second build has independent state, and neither monitor can be rebound to another plan. No source parse, second clause, callback or RT operator translation completes it. | Test |
-| FR-276-AC-7 | For each of a foreign atom/operand, missing entry body, changed `init` body, interval/buffer owner, activation binding, uncertainty and maximum gap under the original selection, driver/IR admission refuses without RT initialization; equal numeric subformula IDs under different subjects do not alias. An unsupported entry operation yields `Unsupported`, and RT allocation or initialization failure returns typed build failure with no monitor. | Test |
+| FR-276-AC-6 | The complete admitted plan alone builds a monitor after driver preparation objects are dropped. Its checked subject, activation/captures, atom bodies, ordered topology, `State` type and the `init`, `on_event` and `on_watermark` function entries (the plan-root node's dependencies, QSpec FR-487) remain available. Build runs `init` and the monitor's state is its result. Build consumes no event and emits no verdict; a second build has independent state, and neither monitor can be rebound to another plan. No source parse, second clause, callback or RT operator translation completes it. | Test |
+| FR-276-AC-7 | For each of a foreign atom/operand, missing entry body, changed `init` body, interval/buffer owner, activation binding, uncertainty, counter, tick unit, event rate and maximum gap under the original selection (each of uncertainty, counter, tick unit, counter width, gap, rate and capacities is part of the plan-root's identity, QSpec FR-487-AC-6), driver/IR admission refuses without RT initialization; equal numeric subformula IDs under different subjects do not alias. An unsupported entry operation yields `Unsupported`, and RT allocation or initialization failure returns typed build failure with no monitor. | Test |
 | FR-276-AC-8 | Invalid event/progress inputs, including a missing required admitted value, leave monitor state unchanged with no verdict. An admitted progress assertion can settle a deadline, while a mere counter poll cannot. Executing the admitted program agrees with QSL's reference evaluator on boundary, reversed-operand, false-activation and open/closed-endpoint cases; an RT executor invariant failure returns `Failed`, terminates the monitor and rejects later input. | Test |
 
 ## Dependencies
@@ -116,5 +116,6 @@ This is a planned consumer contract, not an implemented monitor.
   QSL-587 must produce the plan, driver/IR must admit and lower its complete program, and IR-349
   must complete the applicable RT architecture migration before runtime implementation acceptance.
 - QSL FR-251 (QSL #2096) fixes the function-entry form, the plan-root node, the RT-owned modular
-  delta and the half-open tick cover; the plan-root node form and catalog additions are pending
-  STD-647.
+  delta and the half-open tick cover; QSpec FR-487 (with FR-322-AC-308) fixes the plan-root node,
+  and FR-487-AC-6 makes uncertainty, counter, tick unit, counter width, gap, rate and capacities
+  inputs of the plan's identity.

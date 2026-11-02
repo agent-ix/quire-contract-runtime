@@ -34,12 +34,12 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
    package/clause and target. Drop the driver's preparation objects, then build two RT monitors
    from that plan. Verify the plan retains subject, activation/captures, atom bodies, ordered
    implication/eventually/always topology, the `State` type and the `init`, `on_event` and
-   `on_watermark` function entries (plan-root node form pending STD-647); feed a request only to the first monitor. Try rebinding either live monitor to a
+   `on_watermark` function entries (the `monitor_plan` plan-root node, QSpec FR-487); feed a request only to the first monitor. Try rebinding either live monitor to a
    changed plan. No source parse, additional clause, atom callback or RT operator translation may
    complete the program.
 5. Before RT initialization, independently replace an atom/operand reference, entry body,
-   `init` body, interval association, buffer owner, activation binding, uncertainty and
-   maximum gap while keeping the original selected subject/target. Also give equal numeric
+   `init` body, interval association, buffer owner, activation binding, uncertainty, counter,
+   tick unit, event rate and maximum gap while keeping the original selected subject/target. Also give equal numeric
    subformula IDs from two different subjects. Exercise unsupported executable content and RT
    allocation and initialization failures separately. Record the boundary and typed result for
    every rejection rather than treating them as Boolean property decisions.
