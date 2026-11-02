@@ -242,7 +242,13 @@ impl Resources {
                 self.denied.set(Some(StepResourceStop {
                     resource,
                     limit: Some(limit as u128),
-                    spent: used.get() as u128,
+                    spent: used
+                        .get()
+                        .saturating_add(if request.unit() == StorageUnit::AdditionalElements {
+                            self.live_elements.get()
+                        } else {
+                            0
+                        }) as u128,
                     requested: request.amount() as u128,
                 }));
                 false
