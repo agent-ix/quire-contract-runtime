@@ -35,7 +35,7 @@ This is a planned consumer contract, not an implemented monitor.
   counter/unit/width, uncertainty, maximum reading gap, rate limit, intervals, buffer capacities
   and activation capacity (premises of the plan root, seventeen ordered bindings in QSpec FR-487;
   `activation_capacity` is member 16), atoms, ordered topology, the `State` type (exactly `now`,
-  `history_start`, one `buffer_<n>` per buffer, `activations` and `event_position` (the unwrapped count of admitted events, 0 from `init`, plus 1 per admitted event in `on_event`; an "on each" activation's position is read from it when the instance is created, with no separate activation field; QSpec FR-487, QSL FR-251)) and the four function
+  `history_start`, one `buffer_<n>` per buffer, `activations` and `event_position` (the unwrapped count of admitted events, 0 from `init`, plus 1 per admitted event in `on_event`; an "on each" activation's position is read from it when the instance is created, with no separate activation field; QSpec FR-487, QSL FR-251) and the four function
   entries `init`, `on_event`, `on_watermark` and `on_gap` (QSL FR-251's fourth entry,
   member 15 of QSpec FR-487's root, FR-487-AC-7).
   Its `PlanId` selects the complete plan in driver ownership, not merely its resource table.
