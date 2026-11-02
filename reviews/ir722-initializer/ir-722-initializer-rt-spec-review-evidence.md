@@ -145,3 +145,7 @@ Current result: CONDITIONAL for committed-cohort qualification; inspected source
 new_findings: []
 dispositions: []
 ```
+
+## Focused coverage diagnostic carry
+
+Read the preserved focused coverage diagnostic after RT 6402710 (466677da source plus trailing review artifacts): strict coverage has exactly 122 unbacked rows and zero contradicted statuses. interface-003-AC-3 is locally backed by the three actual native controls; only interface-003-AC-1, AC-2 and AC-4 remain newly unbacked locally (three, not four). TC-200 supplies no false full-monitor case credit, and FR-276 remains unbacked. This confirms the earlier AC-3 fixed disposition and leaves AC-1/2/4 deferrals in force. Gap verdict remains FAIL for unresolved external-binding/acceptance. No source change, new test run, Cargo invocation or gate rerun occurred; committed-cohort/IEEE/aggregate blockers remain unchanged.
