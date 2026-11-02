@@ -254,6 +254,29 @@ fn refused(parts: ProgramParts, expected: ProgramRefusalCode) {
     }
 }
 
+fn assert_state_contents(value: &Value) {
+    let Value::Composite(state) = value else {
+        panic!("retained State record");
+    };
+    assert_eq!(state.declaration(), &key("state"));
+    let [FieldValue::Present(Value::Integer(now)), FieldValue::Present(Value::Integer(history_start)), FieldValue::Present(Value::Collection(activations))] =
+        state.slots()
+    else {
+        panic!("now/history_start/activations state contents");
+    };
+    assert_eq!(now, &Integer::zero());
+    assert_eq!(history_start, &Integer::zero());
+    assert_eq!(
+        activations.collection_type().kind(),
+        CollectionKind::Sequence
+    );
+    assert_eq!(
+        activations.collection_type().element(),
+        &ValueType::Composite(key("activation"))
+    );
+    assert!(activations.elements().is_empty());
+}
+
 #[trace("TC-200", "interface-002-AC-1")]
 #[test]
 fn retained_program_outlives_preparation_and_keeps_four_entry_keys() {
@@ -279,13 +302,75 @@ fn retained_program_outlives_preparation_and_keeps_four_entry_keys() {
     assert!(second.expression(ExpressionId(100)).is_none());
     assert_eq!(second.layout().package_lock.as_ref(), b"selected-lock");
     assert_eq!(second.layout().occurrence.as_ref(), b"occurrence");
-    let gap = second.function(second.layout().entries.on_gap).unwrap();
-    assert_eq!(gap.key, key("gap"));
-    assert_eq!(gap.parameters.len(), 2);
-    assert!(matches!(
-        second.expression(gap.body).unwrap().operation,
-        Operation::Literal(_)
-    ));
+    assert_eq!(
+        second.layout().entries,
+        Entries {
+            init: FunctionId(0),
+            on_event: FunctionId(1),
+            on_watermark: FunctionId(2),
+            on_gap: FunctionId(3)
+        }
+    );
+    for (entry, name, parameters) in [
+        (second.layout().entries.init, "init", vec![]),
+        (
+            second.layout().entries.on_event,
+            "event",
+            vec![
+                ValueType::Composite(key("state")),
+                ValueType::Integer,
+                ValueType::Composite(key("inputs")),
+            ],
+        ),
+        (
+            second.layout().entries.on_watermark,
+            "watermark",
+            vec![
+                ValueType::Composite(key("state")),
+                ValueType::Integer,
+                ValueType::Composite(key("scope")),
+            ],
+        ),
+        (
+            second.layout().entries.on_gap,
+            "gap",
+            vec![ValueType::Composite(key("state")), ValueType::Integer],
+        ),
+    ] {
+        let function = second.function(entry).unwrap();
+        assert_eq!(function.key, key(name));
+        assert_eq!(function.parameters, parameters);
+        assert_eq!(function.body, ExpressionId(entry.0));
+        let body = second.expression(function.body).unwrap();
+        assert_eq!(body.key, key(name));
+        assert_eq!(body.body_path, [0]);
+        let Operation::Literal(value) = &body.operation else {
+            panic!("retained literal body");
+        };
+        if name == "init" {
+            assert_eq!(function.result, ValueType::Composite(key("state")));
+            assert_state_contents(value);
+        } else {
+            assert_eq!(function.result, ValueType::Composite(key("step")));
+            let Value::Composite(step) = value else {
+                panic!("retained tuple");
+            };
+            assert_eq!(step.declaration(), &key("step"));
+            let [FieldValue::Present(state), FieldValue::Present(Value::Collection(results))] =
+                step.slots()
+            else {
+                panic!("State/Results tuple contents");
+            };
+            assert_state_contents(state);
+            assert_eq!(results.collection_type().kind(), CollectionKind::Sequence);
+            assert_eq!(
+                results.collection_type().element(),
+                &ValueType::Composite(key("result"))
+            );
+            assert!(results.elements().is_empty());
+        }
+        assert_eq!(body.value_type, function.result);
+    }
     assert!(second.types().composite(key("state")).is_some());
 }
 
@@ -460,4 +545,48 @@ fn exact_activation_capacity_includes_zero_and_values_above_host_width() {
     let mut invalid = parts();
     invalid.layout.activation_capacity = Integer::from(-1_i64);
     refused(invalid, ProgramRefusalCode::InvalidLayout);
+}
+
+#[trace("TC-200", "interface-002-AC-3")]
+#[test]
+fn duplicate_expression_locations_and_each_call_or_if_child_refuse() {
+    let mut duplicate = parts();
+    duplicate.expressions[1].key = duplicate.expressions[0].key.clone();
+    duplicate.expressions[1].body_path = duplicate.expressions[0].body_path.clone();
+    refused(duplicate, ProgramRefusalCode::DuplicateKey);
+    for (function, arguments) in [
+        (FunctionId(100), vec![]),
+        (FunctionId(3), vec![ExpressionId(0), ExpressionId(100)]),
+    ] {
+        let mut invalid = parts();
+        invalid.expressions[1].operation = Operation::Call {
+            function,
+            arguments,
+        };
+        refused(invalid, ProgramRefusalCode::InvalidReference);
+    }
+    for (condition, when_true, when_false) in [
+        (ExpressionId(100), ExpressionId(1), ExpressionId(1)),
+        (ExpressionId(4), ExpressionId(100), ExpressionId(1)),
+        (ExpressionId(4), ExpressionId(1), ExpressionId(100)),
+    ] {
+        let mut invalid = parts();
+        invalid.expressions.push(Expression {
+            key: key("condition"),
+            body_path: vec![],
+            value_type: ValueType::Boolean,
+            operation: Operation::Literal(Value::Boolean(true)),
+        });
+        invalid.expressions.push(Expression {
+            key: key("bad-if"),
+            body_path: vec![],
+            value_type: invalid.layout.step_result.value_type.clone(),
+            operation: Operation::If {
+                condition,
+                when_true,
+                when_false,
+            },
+        });
+        refused(invalid, ProgramRefusalCode::InvalidReference);
+    }
 }
