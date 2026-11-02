@@ -115,7 +115,9 @@ The `exact` feature exposes the RT-owned `monitor` construction contract in
 [interface-002](../../monitor/functional/interface-002-monitor-program.md).
 Its immutable owner consumes shared leaf keys/values/declarations directly. It
 adds no IR/QSL dependency or callback-based body route. Monitor execution and
-real-producer qualification remain the obligations of FR-276.
+real-producer qualification remain the obligations of FR-276. The bounded initializer
+and operating-budget API are specified in
+[interface-003](../../monitor/functional/interface-003-monitor-executor.md).
 
 ## Exact kernel surface
 
