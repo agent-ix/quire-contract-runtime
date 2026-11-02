@@ -50,6 +50,8 @@ pub enum ExecutorInvariantCode {
     ValueStack,
     /// An evaluated condition or Boolean operand is not Boolean.
     Condition,
+    /// A selected tuple value or position broke its admitted projection contract.
+    Projection,
     /// A lexical binding was inactive or belonged to a different invocation.
     Binding,
     /// A body produced a value outside its admitted signature.
@@ -202,7 +204,7 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorBuildFailure> {
             },
         ));
     };
-    let state = value.clone();
+    let state = value;
     Ok(Monitor {
         program: plan.program,
         state,
@@ -250,6 +252,7 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
                 vm::Broken::ValueStack => ExecutorInvariantCode::ValueStack,
                 vm::Broken::Condition => ExecutorInvariantCode::Condition,
                 vm::Broken::Binding => ExecutorInvariantCode::Binding,
+                vm::Broken::Projection => ExecutorInvariantCode::Projection,
             };
             result.invariant = Some(Box::new(ExecutorInvariantFailure {
                 code,

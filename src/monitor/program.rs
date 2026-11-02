@@ -143,6 +143,13 @@ pub enum Operation {
         /// Ordered argument expressions.
         arguments: Vec<ExpressionId>,
     },
+    /// Select a required position from a canonical tuple value.
+    TupleElement {
+        /// Tuple-valued expression, evaluated once.
+        value: ExpressionId,
+        /// Original declared tuple position, not a record member identity.
+        position: usize,
+    },
     /// Ordinary Boolean negation of one canonical Boolean operand.
     BooleanNot {
         /// The evaluated Boolean operand.

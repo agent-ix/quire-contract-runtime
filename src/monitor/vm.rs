@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Iterative execution of ordinary retained expressions, with no source evaluator.
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::cell::Cell;
 
-use quire_exact::{Cancel, Value, ValueType};
+use quire_exact::{Cancel, CompositeValue, FieldValue, Value, ValueType};
 use quire_semantic_value::{
-    declaration::{StorageRequest, StorageUnit},
+    declaration::{CompositeShape, StorageRequest, StorageUnit},
     supplied_membership::{
         InvalidMembershipCause, MembershipLocus, MembershipPart, MembershipPathArena,
         PathArenaCapacity, SuppliedAdmissionError, SuppliedMembershipBudget,
@@ -30,6 +30,7 @@ pub(super) enum Broken {
     ValueStack,
     Condition,
     Binding,
+    Projection,
 }
 
 pub(super) enum Failure {
@@ -68,6 +69,12 @@ enum Operand {
     Supplied(usize),
     // Select one immutable canonical primitive; this is not another Value type.
     BooleanConstant(bool),
+    Projection(usize),
+}
+
+struct Projection {
+    owner: Arc<CompositeValue>,
+    position: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -86,6 +93,9 @@ struct ActiveBinding {
 
 #[derive(Clone, Copy)]
 enum Frame {
+    TupleElement {
+        expression: ExpressionId,
+    },
     BooleanLeft {
         expression: ExpressionId,
         scope: Scope,
@@ -145,7 +155,8 @@ impl Checks {
                 | Operation::Argument { .. }
                 | Operation::BooleanNot { .. }
                 | Operation::BooleanAnd { .. }
-                | Operation::BooleanOr { .. } => {}
+                | Operation::BooleanOr { .. }
+                | Operation::TupleElement { .. } => {}
                 Operation::Local(binding) => {
                     let (_, initializer) = program
                         .bindings
@@ -336,6 +347,7 @@ pub(super) struct Machine {
     touched_flags: Vec<bool>,
     touched: Vec<usize>,
     active_bindings: usize,
+    projections: Vec<Projection>,
 }
 
 impl Machine {
@@ -353,6 +365,17 @@ impl Machine {
         arguments
             .try_reserve_exact(limits.scratch_elements)
             .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
+        let mut projections = Vec::new();
+        if program
+            .parts
+            .expressions
+            .iter()
+            .any(|node| matches!(node.operation, Operation::TupleElement { .. }))
+        {
+            projections
+                .try_reserve_exact(limits.scratch_elements)
+                .map_err(|_| StepResourceStop::storage(limits.scratch_elements))?;
+        }
         let count = program.bindings.len();
         let mut bindings = Vec::new();
         let mut touched_flags = Vec::new();
@@ -373,6 +396,7 @@ impl Machine {
             touched_flags,
             touched,
             active_bindings: 0,
+            projections,
             checks,
             frames,
             values,
@@ -400,6 +424,7 @@ impl Machine {
             .len()
             .checked_add(self.arguments.len())
             .and_then(|n| n.checked_add(self.active_bindings))
+            .and_then(|n| n.checked_add(self.projections.len()))
             .and_then(|n| n.checked_add(resources.elements.get()));
         if used.is_none_or(|n| n >= resources.limits.scratch_elements) {
             return Err(StepResourceStop {
@@ -420,32 +445,41 @@ impl Machine {
     }
 
     /// The caller already admitted each root argument against this exact signature.
-    pub(super) fn invoke<'a>(
+    pub(super) fn invoke(
         &mut self,
-        program: &'a Program,
+        program: &Program,
         function: FunctionId,
-        supplied: &[&'a Value],
+        supplied: &[&Value],
         limits: StepBudget,
-    ) -> Result<&'a Value, Failure> {
+    ) -> Result<Value, Failure> {
         self.frames.clear();
         self.values.clear();
         self.arguments.clear();
         let mut resources = Resources::new(limits);
-        let result = self.run(program, function, supplied, &mut resources);
+        let result = self
+            .run(program, function, supplied, &mut resources)
+            .and_then(|operand| {
+                let site = Site::Function(function);
+                match resolve(program, supplied, &self.projections, operand, site)? {
+                    Value::Composite(value) => Ok(Value::Composite(Arc::clone(value))),
+                    _ => Err(broken(site, Broken::ValueStack)),
+                }
+            });
         self.frames.clear();
         self.values.clear();
         self.arguments.clear();
         self.clear_bindings();
+        self.projections.clear();
         result
     }
 
-    fn run<'a>(
+    fn run(
         &mut self,
-        program: &'a Program,
+        program: &Program,
         function: FunctionId,
-        supplied: &[&'a Value],
+        supplied: &[&Value],
         resources: &mut Resources,
-    ) -> Result<&'a Value, Failure> {
+    ) -> Result<Operand, Failure> {
         let declared = program
             .function(function)
             .ok_or_else(|| broken(Site::Function(function), Broken::Address))?;
@@ -480,6 +514,9 @@ impl Machine {
         while let Some(frame) = self.frames.pop() {
             resources.charge()?;
             match frame {
+                Frame::TupleElement { expression } => {
+                    self.tuple_element(program, supplied, expression, resources)?
+                }
                 Frame::BooleanLeft { expression, scope } => {
                     self.boolean_left(program, supplied, expression, scope, resources)?
                 }
@@ -540,7 +577,7 @@ impl Machine {
         let [operand] = self.values.as_slice() else {
             return Err(broken(Site::Function(function), Broken::ValueStack));
         };
-        resolve(program, supplied, *operand, Site::Function(function))
+        Ok(*operand)
     }
 
     fn evaluate(
@@ -583,6 +620,16 @@ impl Machine {
                     .get(index)
                     .ok_or_else(|| broken(site, Broken::Address))?;
                 self.value(operand, resources)
+            }
+            Operation::TupleElement { value, .. } => {
+                self.frame(Frame::TupleElement { expression }, resources)?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *value,
+                        scope,
+                    },
+                    resources,
+                )
             }
             Operation::BooleanNot { value } => {
                 self.frame(Frame::BooleanLeft { expression, scope }, resources)?;
@@ -636,6 +683,70 @@ impl Machine {
         }
     }
 
+    fn tuple_element(
+        &mut self,
+        program: &Program,
+        supplied: &[&Value],
+        expression: ExpressionId,
+        resources: &mut Resources,
+    ) -> Result<(), Failure> {
+        let site = Site::Expression(expression);
+        let node = program
+            .expression(expression)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let Operation::TupleElement { value, position } = &node.operation else {
+            return Err(broken(site, Broken::Address));
+        };
+        let operand = self
+            .values
+            .pop()
+            .ok_or_else(|| broken(site, Broken::ValueStack))?;
+        let Value::Composite(owner) = resolve(program, supplied, &self.projections, operand, site)?
+        else {
+            return Err(broken(site, Broken::Projection));
+        };
+        let receiver = program
+            .expression(*value)
+            .ok_or_else(|| broken(site, Broken::Address))?;
+        let ValueType::Composite(expected) = &receiver.value_type else {
+            return Err(broken(site, Broken::Projection));
+        };
+        let exact = owner.declaration() == expected;
+        if !exact
+            && !program
+                .types()
+                .composite_conforms(owner.declaration().clone(), expected.clone())
+        {
+            return Err(broken(site, Broken::Projection));
+        }
+        let declaration = program
+            .types()
+            .composite(owner.declaration().clone())
+            .ok_or_else(|| broken(site, Broken::Projection))?;
+        let CompositeShape::Tuple(positions) = declaration.shape() else {
+            return Err(broken(site, Broken::Projection));
+        };
+        let actual = positions
+            .get(*position)
+            .ok_or_else(|| broken(site, Broken::Projection))?;
+        if !matches!(owner.slots().get(*position), Some(FieldValue::Present(_))) {
+            return Err(broken(site, Broken::Projection));
+        }
+        let trusted = exact || native_type_fact(program, actual, &node.value_type);
+        let owner = Arc::clone(owner);
+        self.slot(resources)?;
+        let index = self.projections.len();
+        self.projections.push(Projection {
+            owner,
+            position: *position,
+        });
+        let result = Operand::Projection(index);
+        if !trusted {
+            self.admit(program, supplied, result, &node.value_type, site, resources)?;
+        }
+        self.value(result, resources)
+    }
+
     fn boolean_left(
         &mut self,
         program: &Program,
@@ -649,7 +760,8 @@ impl Machine {
             .values
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
-        let Value::Boolean(left) = resolve(program, supplied, operand, site)? else {
+        let Value::Boolean(left) = resolve(program, supplied, &self.projections, operand, site)?
+        else {
             return Err(broken(site, Broken::Condition));
         };
         match program.expression(expression).map(|node| &node.operation) {
@@ -685,7 +797,7 @@ impl Machine {
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
         if !matches!(
-            resolve(program, supplied, operand, site)?,
+            resolve(program, supplied, &self.projections, operand, site)?,
             Value::Boolean(_)
         ) {
             return Err(broken(site, Broken::Condition));
@@ -857,7 +969,9 @@ impl Machine {
             .values
             .pop()
             .ok_or_else(|| broken(site, Broken::ValueStack))?;
-        let Value::Boolean(condition) = resolve(program, supplied, operand, site)? else {
+        let Value::Boolean(condition) =
+            resolve(program, supplied, &self.projections, operand, site)?
+        else {
             return Err(broken(site, Broken::Condition));
         };
         let Some(Operation::If {
@@ -926,9 +1040,11 @@ impl Machine {
             .len()
             .checked_add(self.arguments.len())
             .and_then(|count| count.checked_add(self.active_bindings))
+            .and_then(|count| count.checked_add(self.projections.len()))
             .ok_or_else(|| StepResourceStop::storage(usize::MAX))?;
         resources.live_elements.set(live);
-        admit(program, supplied, operand, expected, site, resources)
+        let value = resolve(program, supplied, &self.projections, operand, site)?;
+        admit_value(program.types(), value, expected, site, resources)
     }
 
     fn apply(
@@ -1007,6 +1123,22 @@ impl Machine {
     }
 }
 
+// Only shared native facts discharge a nominal edge; other cases use bounded admission.
+fn native_type_fact(program: &Program, actual: &ValueType, expected: &ValueType) -> bool {
+    if program.types().same_type(actual, expected) {
+        return true;
+    }
+    match (actual, expected) {
+        (ValueType::Composite(actual), ValueType::Composite(expected)) => program
+            .types()
+            .composite_conforms(actual.clone(), expected.clone()),
+        (ValueType::Reference(actual), ValueType::Reference(expected)) => {
+            program.types().conforms(actual.clone(), expected.clone())
+        }
+        _ => false,
+    }
+}
+
 // Canonical scalar constants require no allocation or semantic identity.
 static BOOLEAN_TRUE: Value = Value::Boolean(true);
 static BOOLEAN_FALSE: Value = Value::Boolean(false);
@@ -1014,6 +1146,7 @@ static BOOLEAN_FALSE: Value = Value::Boolean(false);
 fn resolve<'a>(
     program: &'a Program,
     supplied: &[&'a Value],
+    projections: &'a [Projection],
     operand: Operand,
     site: Site,
 ) -> Result<&'a Value, Failure> {
@@ -1022,24 +1155,21 @@ fn resolve<'a>(
             Some(Operation::Literal(value)) => Ok(value),
             _ => Err(broken(site, Broken::Address)),
         },
+        Operand::Projection(index) => {
+            let place = projections
+                .get(index)
+                .ok_or_else(|| broken(site, Broken::Address))?;
+            match place.owner.slots().get(place.position) {
+                Some(FieldValue::Present(value)) => Ok(value),
+                _ => Err(broken(site, Broken::Projection)),
+            }
+        }
         Operand::BooleanConstant(value) => Ok(if value { &BOOLEAN_TRUE } else { &BOOLEAN_FALSE }),
         Operand::Supplied(index) => supplied
             .get(index)
             .copied()
             .ok_or_else(|| broken(site, Broken::Address)),
     }
-}
-
-fn admit(
-    program: &Program,
-    supplied: &[&Value],
-    operand: Operand,
-    expected: &ValueType,
-    site: Site,
-    resources: &mut Resources,
-) -> Result<(), Failure> {
-    let value = resolve(program, supplied, operand, site)?;
-    admit_value(program.types(), value, expected, site, resources)
 }
 
 fn admit_value(
