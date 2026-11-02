@@ -164,6 +164,84 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
             }
+            Operation::Equality { left, right, .. } => {
+                expression(parts, *left, &value.key)?;
+                expression(parts, *right, &value.key)?;
+                if !parts
+                    .types
+                    .same_type(&value.value_type, &ValueType::Boolean)
+                {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                }
+            }
+            Operation::Union { positions, .. }
+            | Operation::Sequence {
+                elements: positions,
+            } => {
+                for child in positions {
+                    expression(parts, *child, &value.key)?;
+                }
+            }
+            Operation::UnionIs {
+                value: receiver,
+                variant,
+            }
+            | Operation::UnionPayload {
+                value: receiver,
+                variant,
+                ..
+            } => {
+                let receiver = expression(parts, *receiver, &value.key)?;
+                let ValueType::Composite(key) = &receiver.value_type else {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                };
+                let (_, member) = parts
+                    .types
+                    .union_member(key.clone(), variant.clone())
+                    .filter(|(_, member)| member.member().is_some())
+                    .ok_or_else(|| refusal(Code::InvalidReference, Some(&value.key)))?;
+                let expected = if let Operation::UnionPayload { position, .. } = value.operation {
+                    member
+                        .positions()
+                        .get(position)
+                        .ok_or_else(|| refusal(Code::InvalidReference, Some(&value.key)))?
+                } else {
+                    &ValueType::Boolean
+                };
+                if !parts.types.same_type(expected, &value.value_type) {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                }
+            }
+            Operation::SequenceSize { value: receiver }
+            | Operation::SequenceFlatten { value: receiver } => {
+                let receiver = expression(parts, *receiver, &value.key)?;
+                let ValueType::Collection(collection) = &receiver.value_type else {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                };
+                if collection.kind() != CollectionKind::Sequence {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                }
+                if matches!(value.operation, Operation::SequenceSize { .. }) {
+                    if !parts
+                        .types
+                        .same_type(&value.value_type, &ValueType::Integer)
+                    {
+                        return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                    }
+                } else {
+                    let (ValueType::Collection(inner), ValueType::Collection(result)) =
+                        (collection.element(), &value.value_type)
+                    else {
+                        return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                    };
+                    if inner.kind() != CollectionKind::Sequence
+                        || result.kind() != CollectionKind::Sequence
+                        || !parts.types.same_type(inner.element(), result.element())
+                    {
+                        return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                    }
+                }
+            }
             Operation::Record { fields } => {
                 for (_, child) in fields {
                     expression(parts, *child, &value.key)?;
@@ -513,7 +591,11 @@ fn operands(
                 visit(*child)?;
             }
         }
-        Operation::Tuple { positions } => {
+        Operation::Tuple { positions }
+        | Operation::Union { positions, .. }
+        | Operation::Sequence {
+            elements: positions,
+        } => {
             for child in positions.iter().rev() {
                 visit(*child)?;
             }
@@ -529,6 +611,10 @@ fn operands(
         }
         Operation::BooleanNot { value }
         | Operation::IntegerNegate { value }
+        | Operation::SequenceSize { value }
+        | Operation::SequenceFlatten { value }
+        | Operation::UnionIs { value, .. }
+        | Operation::UnionPayload { value, .. }
         | Operation::TupleElement { value, .. }
         | Operation::RecordField { value, .. } => visit(*value)?,
         Operation::BooleanAnd { left, right }
@@ -536,7 +622,8 @@ fn operands(
         | Operation::IntegerAdd { left, right }
         | Operation::IntegerSubtract { left, right }
         | Operation::IntegerMultiply { left, right }
-        | Operation::IntegerOrder { left, right, .. } => {
+        | Operation::IntegerOrder { left, right, .. }
+        | Operation::Equality { left, right, .. } => {
             visit(*right)?;
             visit(*left)?;
         }
