@@ -52,3 +52,17 @@ installation route; a source installation uses `cargo install --git
 https://github.com/agent-ix/quire-cli --locked quire-cli`. `QUIRE` may select the
 installed executable for Make targets and the lock-gate integration tests. An
 older or missing executable fails the gate; no local checker fallback exists.
+
+## Cross-repository coverage inputs
+
+`make spec` reads the authoritative monitor controls from the sibling
+`quire-integration` checkout on `main`. It resolves the sibling from Git's common
+repository directory, so the same command works in an isolated RT worktree.
+`INTEGRATION_DIR` may select another checkout; it must still be on `main`, with
+`tests/monitor_program.rs` committed and unchanged. Missing inputs fail the gate.
+
+The scan scope contains file references to RT's spec/tracked sources and that
+external test file. It copies no test implementation and pins no source revision.
+A raw `quire coverage --scope .` remains a local-only report; use `make spec` for
+the complete declared inputs. The reference guard tests run with
+`python3 -m unittest discover -s tools/tests`.
