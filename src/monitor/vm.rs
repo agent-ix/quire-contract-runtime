@@ -787,7 +787,7 @@ mod tests {
         )
     }
 
-    #[trace("TC-200", "interface-003-AC-3")]
+    #[trace("interface-003-AC-3")]
     #[test]
     fn native_membership_work_stop_keeps_its_event_and_arena() {
         let mut resources = resources();
@@ -813,7 +813,7 @@ mod tests {
         }
     }
 
-    #[trace("TC-200", "interface-003-AC-3")]
+    #[trace("interface-003-AC-3")]
     #[test]
     fn native_membership_element_stop_counts_live_operand_addresses() {
         let mut resources = resources();
@@ -836,7 +836,7 @@ mod tests {
         }
     }
 
-    #[trace("TC-200", "interface-003-AC-3")]
+    #[trace("interface-003-AC-3")]
     #[test]
     fn byte_reservation_stop_preserves_measured_units_and_cumulative_use() {
         let mut resources = resources();
