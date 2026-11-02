@@ -4,7 +4,7 @@
 use alloc::{boxed::Box, rc::Rc};
 use core::fmt;
 
-use quire_exact::{NodeKey, Value};
+use quire_exact::{NodeKey, Outcome, Value};
 use quire_semantic_value::supplied_membership::{
     MembershipPathArena, PathArenaCapacity, SuppliedAdmissionError,
 };
@@ -50,8 +50,10 @@ pub enum ExecutorInvariantCode {
     ValueStack,
     /// An evaluated condition or Boolean operand is not Boolean.
     Condition,
-    /// A selected tuple value or position broke its admitted projection contract.
+    /// A selected record or tuple slot broke its admitted projection contract.
     Projection,
+    /// A native scalar operation did not complete under its admitted contract.
+    Scalar,
     /// A lexical binding was inactive or belonged to a different invocation.
     Binding,
     /// A body produced a value outside its admitted signature.
@@ -110,6 +112,33 @@ impl fmt::Debug for AdmissionFailure {
     }
 }
 
+/// Original shared scalar result and retained source evidence of a stopped operation.
+///
+/// Only non-completed outcomes appear here; no partial scalar value is exposed.
+pub struct ScalarFailure {
+    /// Source operation whose native evaluation stopped.
+    pub site: ExecutionSite,
+    /// Original typed refusal, undefined cause or native operating shortage.
+    pub outcome: Outcome<Value>,
+    program: Rc<Program>,
+}
+
+impl ScalarFailure {
+    /// Borrow the operation's complete original source identity.
+    pub fn source_node(&self) -> Option<&NodeKey> {
+        source_node(&self.program, self.site)
+    }
+}
+
+impl fmt::Debug for ScalarFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ScalarFailure")
+            .field("site", &self.site)
+            .field("outcome", &self.outcome)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Stable initialization failure channel; no partial monitor is returned.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MonitorBuildFailureCode {
@@ -127,7 +156,9 @@ pub struct MonitorBuildFailure {
     /// Stable category of the failed build.
     pub code: MonitorBuildFailureCode,
     /// Present for an operating stop, preserving its actual request.
-    pub resource: Option<StepResourceStop>,
+    pub resource: Option<Box<StepResourceStop>>,
+    /// Present for a non-completed native scalar operation, retaining its original cause.
+    pub scalar: Option<Box<ScalarFailure>>,
     /// Present for an evaluated-program defect.
     pub invariant: Option<Box<ExecutorInvariantFailure>>,
     /// Present for a native shared membership failure.
@@ -224,18 +255,42 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
     let mut result = MonitorBuildFailure {
         code: MonitorBuildFailureCode::Resource,
         resource: None,
+        scalar: None,
         invariant: None,
         admission: None,
         path_capacity: None,
     };
     match failure {
-        vm::Failure::Stop(stop) => result.resource = Some(stop),
+        vm::Failure::Scalar { site, outcome } => {
+            if let Outcome::Incomplete(cause) = outcome.as_ref() {
+                result.resource = Some(Box::new(StepResourceStop {
+                    resource: super::StepResource::Scalar(cause.limit_kind),
+                    limit: Some(u128::from(cause.limit)),
+                    spent: u128::from(cause.consumed),
+                    requested: cause.next_charge.clone(),
+                }));
+            } else {
+                result.code = MonitorBuildFailureCode::Invariant;
+                result.invariant = Some(Box::new(ExecutorInvariantFailure {
+                    code: ExecutorInvariantCode::Scalar,
+                    site: site.into(),
+                    program: Rc::clone(program),
+                }));
+            }
+            result.scalar = Some(Box::new(ScalarFailure {
+                site: site.into(),
+                outcome: *outcome,
+                program: Rc::clone(program),
+            }));
+        }
+
+        vm::Failure::Stop(stop) => result.resource = Some(Box::new(stop)),
         vm::Failure::PathCapacity(capacity) => {
-            result.resource = Some(StepResourceStop::storage(capacity.requested));
+            result.resource = Some(Box::new(StepResourceStop::storage(capacity.requested)));
             result.path_capacity = Some(Box::new(capacity));
         }
         vm::Failure::MembershipStop { stop, native } => {
-            result.resource = Some(stop);
+            result.resource = Some(Box::new(stop));
             result.admission = Some(Box::new(AdmissionFailure {
                 site: native.site.into(),
                 failure: native.failure,

@@ -164,6 +164,15 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
             }
+            Operation::IntegerAdd { left, right }
+            | Operation::IntegerSubtract { left, right }
+            | Operation::IntegerMultiply { left, right }
+            | Operation::IntegerOrder { left, right, .. } => {
+                integer_operands(parts, value, &[*left, *right])?;
+            }
+            Operation::IntegerNegate { value: child } => {
+                integer_operands(parts, value, &[*child])?;
+            }
             Operation::BooleanNot { value: child } => {
                 boolean_operands(parts, value, &[*child])?;
             }
@@ -201,6 +210,28 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                 },
                 Some(&function.key),
             ));
+        }
+    }
+    Ok(())
+}
+
+fn integer_operands(
+    parts: &ProgramParts,
+    node: &Expression,
+    children: &[ExpressionId],
+) -> Result<(), ProgramRefusal> {
+    let order = matches!(node.operation, Operation::IntegerOrder { .. });
+    if if order {
+        !parts.types.same_type(&node.value_type, &ValueType::Boolean)
+    } else {
+        !matches!(node.value_type, ValueType::Integer | ValueType::Int(_))
+    } {
+        return Err(refusal(Code::TypeMismatch, Some(&node.key)));
+    }
+    for child in children {
+        let child = expression(parts, *child, &node.key)?;
+        if !matches!(child.value_type, ValueType::Integer | ValueType::Int(_)) {
+            return Err(refusal(Code::TypeMismatch, Some(&node.key)));
         }
     }
     Ok(())
@@ -477,9 +508,15 @@ fn operands(
             }
         }
         Operation::BooleanNot { value }
+        | Operation::IntegerNegate { value }
         | Operation::TupleElement { value, .. }
         | Operation::RecordField { value, .. } => visit(*value)?,
-        Operation::BooleanAnd { left, right } | Operation::BooleanOr { left, right } => {
+        Operation::BooleanAnd { left, right }
+        | Operation::BooleanOr { left, right }
+        | Operation::IntegerAdd { left, right }
+        | Operation::IntegerSubtract { left, right }
+        | Operation::IntegerMultiply { left, right }
+        | Operation::IntegerOrder { left, right, .. } => {
             visit(*right)?;
             visit(*left)?;
         }

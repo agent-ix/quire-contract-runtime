@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Operating limits, independent of the admitted plan's semantic capacities.
 
+use quire_exact::{Integer, LimitKind, ScalarLimits};
+
 /// Per-invocation operating limits supplied when building a monitor.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StepBudget {
     /// Continuation dispatches plus shared supplied-membership events.
     pub work: u64,
+    /// Explicit native scalar limits; each counter retains its shared unit.
+    pub scalar: ScalarLimits,
     /// Maximum live interpreter continuations.
     pub stack_frames: usize,
     /// Live operand addresses plus cumulative native membership reservation elements.
@@ -17,6 +21,8 @@ pub struct StepBudget {
 /// The operating resource that stopped an invocation before commit.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StepResource {
+    /// A shared scalar counter, distinct from semantic monitor outcome limits.
+    Scalar(LimitKind),
     /// The next interpreter or membership work event.
     Work,
     /// A continuation would exceed the explicit stack.
@@ -30,7 +36,7 @@ pub enum StepResource {
 }
 
 /// A non-verdict operating stop; no transition may commit after it.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StepResourceStop {
     /// Resource that stopped progress.
     pub resource: StepResource,
@@ -39,7 +45,7 @@ pub struct StepResourceStop {
     /// Successful use before the denied request.
     pub spent: u128,
     /// Denied additional request in that resource's native unit.
-    pub requested: u128,
+    pub requested: Integer,
 }
 
 impl StepResourceStop {
@@ -48,7 +54,7 @@ impl StepResourceStop {
             resource: StepResource::Storage,
             limit: None,
             spent: 0,
-            requested: requested as u128,
+            requested: Integer::from(requested),
         }
     }
 }

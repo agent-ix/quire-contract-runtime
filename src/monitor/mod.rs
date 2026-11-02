@@ -21,5 +21,5 @@ pub use program::{
 pub use budget::{StepBudget, StepResource, StepResourceStop};
 pub use executor::{
     build, AdmissionFailure, BuildPlan, ExecutionSite, ExecutorInvariantCode,
-    ExecutorInvariantFailure, Monitor, MonitorBuildFailure, MonitorBuildFailureCode,
+    ExecutorInvariantFailure, Monitor, MonitorBuildFailure, MonitorBuildFailureCode, ScalarFailure,
 };
