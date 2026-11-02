@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -326,9 +332,10 @@ dependencies = [
 [[package]]
 name = "quire-exact"
 version = "0.1.0"
-source = "git+https://github.com/agent-ix/quire-exact?branch=main#eea6b1220c47494ac338434e2d213d41a2aceb16"
+source = "git+https://github.com/agent-ix/quire-exact?branch=main#a3052598dac0aa7275f03c260a6cd1b043c45f1d"
 dependencies = [
  "allocator-api2",
+ "arrayvec",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -342,7 +349,7 @@ dependencies = [
 [[package]]
 name = "quire-semantic-value"
 version = "0.1.0"
-source = "git+https://github.com/agent-ix/quire-semantic-value?branch=main#74ab6f8a772de060c485bc75fd97219d1d6a9de0"
+source = "git+https://github.com/agent-ix/quire-semantic-value?branch=main#25535387dd6091d82cc885e6764b86d2b052e2ce"
 dependencies = [
  "quire-canonical",
  "quire-exact",

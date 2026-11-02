@@ -13,7 +13,8 @@ use std::collections::BTreeSet;
 
 fn closed_refusal(reason: &Refusal) {
     match reason {
-        Refusal::InexactDecimal { .. }
+        Refusal::InexactConversion { .. }
+        | Refusal::InexactDecimal { .. }
         | Refusal::DecimalOutOfDomain { .. }
         | Refusal::DivisionOutOfDomain { .. }
         | Refusal::ModuloOutOfDomain { .. }
