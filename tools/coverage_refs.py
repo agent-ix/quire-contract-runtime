@@ -12,13 +12,17 @@ SOURCE_SUFFIXES = {".rs", ".py", ".ts", ".tsx", ".js", ".jsx"}
 EXTERNAL_TEST = Path("tests/monitor_program.rs")
 
 
-def git(root, *arguments):
+def git_bytes(root, *arguments):
     result = subprocess.run(
         ["git", "-C", str(root), *arguments],
         check=True,
         capture_output=True,
     )
-    return result.stdout.decode().strip()
+    return result.stdout
+
+
+def git(root, *arguments):
+    return git_bytes(root, *arguments).decode().strip()
 
 
 def sibling_checkout(root):
@@ -28,14 +32,31 @@ def sibling_checkout(root):
     return common.resolve().parent.parent / "quire-integration"
 
 
+def regular_blob(checkout, reference):
+    entry = git_bytes(checkout, "ls-tree", "-z", reference, "--", EXTERNAL_TEST.as_posix())
+    fields = entry.split(b"\t", 1)[0].split()
+    if len(fields) != 3 or fields[0] not in {b"100644", b"100755"} or fields[1] != b"blob":
+        raise ValueError(f"{reference} must track the authoritative test as a regular file")
+    return git_bytes(checkout, "cat-file", "blob", f"{reference}:{EXTERNAL_TEST.as_posix()}")
+
+
 def main_test_source(checkout):
+    origin = git(checkout, "config", "--get", "remote.origin.url").lower().rstrip("/").removesuffix(".git")
+    if origin not in {
+        "https://github.com/agent-ix/quire-integration",
+        "git@github.com:agent-ix/quire-integration",
+        "ssh://git@github.com/agent-ix/quire-integration",
+    }:
+        raise ValueError("integration origin must identify agent-ix/quire-integration")
     if git(checkout, "symbolic-ref", "--short", "HEAD") != "main":
         raise ValueError("the integration checkout must be on main")
-    git(checkout, "cat-file", "-e", f"HEAD:{EXTERNAL_TEST.as_posix()}")
-    git(checkout, "diff", "--quiet", "HEAD", "--", EXTERNAL_TEST.as_posix())
     source = checkout / EXTERNAL_TEST
-    if not source.is_file():
-        raise ValueError(f"authoritative main test source is absent: {source}")
+    if source.is_symlink() or not source.is_file():
+        raise ValueError(f"authoritative main source must be a regular file: {source}")
+    content = source.read_bytes()
+    if (content != regular_blob(checkout, "HEAD")
+            or content != regular_blob(checkout, "refs/remotes/origin/main")):
+        raise ValueError("test contents differ from committed main; refresh the sibling checkout")
     return source
 
 
@@ -83,6 +104,7 @@ def main():
         detail = error.stderr.decode().strip() if isinstance(
             error, subprocess.CalledProcessError
         ) else str(error)
+        detail = detail or str(error)
         print(f"coverage reference input refused: {detail}", file=sys.stderr)
         return 2
 

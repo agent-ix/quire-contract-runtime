@@ -59,7 +59,9 @@ older or missing executable fails the gate; no local checker fallback exists.
 `quire-integration` checkout on `main`. It resolves the sibling from Git's common
 repository directory, so the same command works in an isolated RT worktree.
 `INTEGRATION_DIR` may select another checkout; it must still be on `main`, with
-`tests/monitor_program.rs` committed and unchanged. Missing inputs fail the gate.
+`tests/monitor_program.rs` a regular file matching both committed main and fetched
+origin/main bytes. The origin must identify `agent-ix/quire-integration`; index
+flags cannot hide changed content. Missing or divergent inputs fail the gate.
 
 The scan scope contains file references to RT's spec/tracked sources and that
 external test file. It copies no test implementation and pins no source revision.
