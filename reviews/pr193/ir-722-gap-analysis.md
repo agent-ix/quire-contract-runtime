@@ -96,3 +96,25 @@ scope:
   excerpt: The runtime uses the capacity supplied by QSL rather than deriving a second
     formula.
 ```
+
+## Dispositions
+
+Round 1 inspected faf1d5c238704140d5e02f4659a63500c1b3eb38 against the original frozen head.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | deferred | Already-open IR-722 retains FR-276-AC-1 through AC-10 for the subsequent executor and genuine producer/reference qualification slices. The authorized RT-first construction PR does not close or narrow them; no execution acceptance or Done state is granted. |
+
+The original full-delivery FAIL remains an accurate view of unimplemented FR-276 execution acceptance. Its finding is deferred to the continuing IR-722 execution slices, which remain open on the same ticket. Construction-only merge scope is eligible after code dispositions, the mandatory full make ci gate and joint API freeze; this disposition grants neither runtime execution nor producer qualification.
+
+Supplied focused evidence: 10 passed, zero failed/ignored; all-target/all-feature Clippy passed. Reviewer ran no Cargo or Kani. Full make ci remains owed; joint API freeze remains pending.
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: deferred
+  reason: Already-open IR-722 retains FR-276-AC-1 through AC-10 for the subsequent
+    executor and genuine producer/reference qualification slices. The authorized RT-first
+    construction PR does not close or narrow them; no execution acceptance or Done
+    state is granted.
+```
