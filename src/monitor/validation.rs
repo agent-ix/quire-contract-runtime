@@ -3,7 +3,8 @@
 
 use alloc::{collections::BTreeSet, vec::Vec};
 
-use quire_exact::{Integer, NodeKey, ValueType};
+use quire_exact::{CollectionKind, Integer, NodeKey, UnitId, ValueType};
+use quire_semantic_value::{declaration::CompositeShape, quantity::QuantityUnit};
 
 use super::program::{
     Expression, ExpressionId, FunctionId, Operation, ProgramParts, ProgramRefusal,
@@ -14,6 +15,7 @@ fn refusal(code: Code, node: Option<&NodeKey>) -> ProgramRefusal {
     ProgramRefusal {
         code,
         node: node.cloned(),
+        membership_failure: None,
     }
 }
 
@@ -46,7 +48,10 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                 if !parts
                     .types
                     .admits(&value.value_type, literal)
-                    .map_err(|_| refusal(Code::Storage, Some(&value.key)))?
+                    .map_err(|cause| ProgramRefusal {
+                        membership_failure: Some(cause),
+                        ..refusal(Code::Membership, Some(&value.key))
+                    })?
                 {
                     return Err(refusal(Code::TypeMismatch, Some(&value.key)));
                 }
@@ -120,10 +125,22 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
             >= 1_u128
                 .checked_shl(u32::from(layout.counter_width_bits))
                 .ok_or_else(invalid)?
-        || layout.tick_scale.numerator() <= &Integer::zero()
         || layout.max_event_rate.numerator() <= &Integer::zero()
         || layout.uncertainty.numerator() < &Integer::zero()
         || layout.buffers.iter().any(|buffer| buffer.capacity == 0)
+    {
+        return Err(invalid());
+    }
+    let Some(QuantityUnit::Declared(unit)) = parts
+        .types
+        .units()
+        .get(UnitId::declared(layout.tick_unit.clone()))
+    else {
+        return Err(invalid());
+    };
+    if unit.dimension_node() != layout.time_dimension
+        || unit.is_affine()
+        || unit.canonical().scale().numerator() <= &Integer::zero()
     {
         return Err(invalid());
     }
@@ -146,6 +163,50 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
             .types
             .check_type(&binding.value_type)
             .map_err(|_| refusal(Code::TypeMismatch, Some(&binding.key)))?;
+    }
+    for binding in [&layout.state, &layout.inputs, &layout.scope] {
+        if binding.value_type != ValueType::Composite(binding.key.clone())
+            || !matches!(
+                parts
+                    .types
+                    .composite(binding.key.clone())
+                    .map(|declaration| declaration.shape()),
+                Some(CompositeShape::Record(_))
+            )
+        {
+            return Err(refusal(Code::TypeMismatch, Some(&binding.key)));
+        }
+    }
+    let ValueType::Collection(results) = &layout.results.value_type else {
+        return Err(invalid());
+    };
+    if results.kind() != CollectionKind::Sequence {
+        return Err(invalid());
+    }
+    let ValueType::Composite(tuple_key) = &layout.step_result.value_type else {
+        return Err(invalid());
+    };
+    if tuple_key != &layout.step_result.key {
+        return Err(invalid());
+    }
+    let Some(CompositeShape::Tuple(positions)) = parts
+        .types
+        .composite(tuple_key.clone())
+        .map(|declaration| declaration.shape())
+    else {
+        return Err(invalid());
+    };
+    let [state_position, results_position] = positions.as_slice() else {
+        return Err(invalid());
+    };
+    if !parts
+        .types
+        .same_type(state_position, &layout.state.value_type)
+        || !parts
+            .types
+            .same_type(results_position, &layout.results.value_type)
+    {
+        return Err(invalid());
     }
     let state = &layout.state.value_type;
     let result = &layout.step_result.value_type;
@@ -172,11 +233,9 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         ),
         (entries.on_gap, &[state.clone(), ValueType::Integer], result),
     ];
-    let mut keys = BTreeSet::new();
     for (entry, parameters, expected_result) in signatures {
         let function = parts.functions.get(entry.0).ok_or_else(invalid)?;
-        if !keys.insert(&function.key)
-            || function.parameters.len() != parameters.len()
+        if function.parameters.len() != parameters.len()
             || !function
                 .parameters
                 .iter()

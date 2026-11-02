@@ -5,7 +5,7 @@ use alloc::{boxed::Box, rc::Rc, string::String, vec::Vec};
 use core::fmt;
 
 use quire_exact::{NodeKey, Rational, Value, ValueType};
-use quire_semantic_value::declaration::TypeEnvironment;
+use quire_semantic_value::declaration::{EnvironmentFailure, TypeEnvironment};
 
 /// An address in the owned expression arena, never a source identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -79,8 +79,11 @@ pub struct Layout {
     pub counter: String,
     /// The admitted base-Time unit's source key.
     pub tick_unit: NodeKey,
-    /// Exact size of one tick in the base Time unit.
-    pub tick_scale: Rational,
+    /// Independently resolved base Time dimension key.
+    ///
+    /// The unit and its exact scale are retained in the shared type
+    /// environment's unit table, rather than copied into another unit record.
+    pub time_dimension: NodeKey,
     /// Declared counter width, from one through 64 bits.
     pub counter_width_bits: u8,
     /// Largest admitted consecutive modular difference.
@@ -182,6 +185,8 @@ pub enum ProgramRefusalCode {
     ExpressionCycle,
     /// Validation scratch could not be reserved.
     Storage,
+    /// The shared value-membership walk stopped; its native cause is retained.
+    Membership,
 }
 
 /// Typed construction refusal with the exact source node when available.
@@ -191,6 +196,8 @@ pub struct ProgramRefusal {
     pub code: ProgramRefusalCode,
     /// Source node that failed validation.
     pub node: Option<NodeKey>,
+    /// Native shared membership failure, when that walk stopped.
+    pub membership_failure: Option<EnvironmentFailure>,
 }
 
 impl fmt::Display for ProgramRefusal {
