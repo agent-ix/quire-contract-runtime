@@ -96,3 +96,34 @@ scope:
   excerpt: The runtime uses the capacity supplied by QSL rather than deriving a second
     formula.
 ```
+
+## Round 2 carry review
+
+Round 2 examined dd42a20f32935425c0da1347db2c1606d0567198. Borrowed function keys and expression (key, body_path) pairs are reserved once, sorted with canonical Ord, and adjacent equal locations refuse. Only scratch vectors reorder; owned arenas and FunctionId/ExpressionId references retain their original positions. No custom comparator, public type/field/API, gate or dependency changed. The changed ordering of duplicate checks does not violate a promised first-refusal order. Supplied exact-panic-probe evidence reports panic_references=0 and both negative controls pass. Supplied round2 focused controls report 10 passing and all-target/all-feature Clippy passes. No new current defect found.
+
+TC-209 now exclusively owns construction diagnostics: all ten source test case tags and all four interface Verification cells use it. Its verifies edge targets interface_002; its procedure matches actual construction assertions and expressly excludes TC-200/FR-276 execution acceptance. The recomputed matrix keeps all four interface criteria tagged and all ten FR-276 criteria untagged. Coverage comparison confirms the exact baseline and candidate 114 unbacked rows, zero contradicted statuses, with equal rows including multiplicity. Earlier construction tags therefore grant no remaining TC-200 execution credit. No hand matrix or FR-276 acceptance text changed.
+
+Code FND-001/FND-002 remain fixed; gap FND-001 remains deferred to the still-open IR-722 execution slices. Full-delivery gap verdict remains FAIL. Construction carry review is PASS; mandatory full local make ci is still owed and known baseline strict coverage failure remains explicit. Joint API freeze acknowledgement is reported by the dispatching owner; this delta changes no public API. No Cargo/Kani command or source edit was performed by this reviewer.
+
+```yaml
+scope:
+- id: src/monitor/validation.rs
+  path: src/monitor/validation.rs
+  role: examined
+  excerpt: //! Executable integrity checks; source-language admission remains upstream.
+- id: tests/monitor_program.rs
+  path: tests/monitor_program.rs
+  role: examined
+  excerpt: //! Construction controls; these do not qualify monitor execution or the
+    producer handoff.
+- id: TC-209
+  path: spec/monitor/matrix/TC-209-monitor-program-construction.md
+  role: examined
+  excerpt: 'id: TC-209'
+- id: spec/monitor/functional/interface-002-monitor-program.md
+  path: spec/monitor/functional/interface-002-monitor-program.md
+  role: examined
+  excerpt: 'id: interface_002'
+bindings: []
+dispositions: []
+```
