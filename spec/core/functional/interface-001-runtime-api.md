@@ -109,6 +109,14 @@ The interface's features in declaration order: every operation the contract abov
 | decode_campaign_snapshot | operation |
 | adapt_to_proptest_and_record | operation |
 
+## Monitor program construction
+
+The `exact` feature exposes the RT-owned `monitor` construction contract in
+[interface-002](../../monitor/functional/interface-002-monitor-program.md).
+Its immutable owner consumes shared leaf keys/values/declarations directly. It
+adds no IR/QSL dependency or callback-based body route. Monitor execution and
+real-producer qualification remain the obligations of FR-276.
+
 ## Exact kernel surface
 
 Today generated oracles and `quire-contract-codegen` reach exact semantic values through
