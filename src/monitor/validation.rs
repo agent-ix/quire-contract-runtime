@@ -127,7 +127,11 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                 .ok_or_else(invalid)?
         || layout.max_event_rate.numerator() <= &Integer::zero()
         || layout.uncertainty.numerator() < &Integer::zero()
-        || layout.buffers.iter().any(|buffer| buffer.capacity == 0)
+        || layout
+            .buffers
+            .iter()
+            .any(|buffer| buffer.capacity <= Integer::zero())
+        || layout.activation_capacity < Integer::zero()
     {
         return Err(invalid());
     }
