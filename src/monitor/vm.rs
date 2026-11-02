@@ -41,6 +41,7 @@ pub(super) enum Broken {
 }
 
 pub(super) enum Failure {
+    Input(Box<Failure>),
     Scalar {
         site: Site,
         outcome: Box<Outcome<Value>>,
@@ -590,12 +591,34 @@ impl Machine {
         supplied: &[&Value],
         limits: StepBudget,
     ) -> Result<Value, Failure> {
+        self.invoke_with_input(program, function, supplied, None, limits)
+    }
+
+    pub(super) fn invoke_with_input(
+        &mut self,
+        program: &Program,
+        function: FunctionId,
+        supplied: &[&Value],
+        required: Option<(&Value, &ValueType)>,
+        limits: StepBudget,
+    ) -> Result<Value, Failure> {
         self.frames.clear();
         self.values.clear();
         self.arguments.clear();
         let mut resources = Resources::new(limits);
-        let result = self
-            .run(program, function, supplied, &mut resources)
+        let admitted = match required {
+            Some((value, expected)) => admit_value(
+                program.types(),
+                value,
+                expected,
+                Site::Function(function),
+                &mut resources,
+            )
+            .map_err(|failure| Failure::Input(Box::new(failure))),
+            None => Ok(()),
+        };
+        let result = admitted
+            .and_then(|()| self.run(program, function, supplied, &mut resources))
             .and_then(|operand| {
                 let site = Site::Function(function);
                 match resolve(

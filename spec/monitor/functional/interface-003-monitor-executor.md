@@ -22,8 +22,8 @@ associated_types:
   - StepResource
   - StepResourceStop
   - Monitor
-  - MonitorBuildFailureCode
-  - MonitorBuildFailure
+  - MonitorFailureCode
+  - MonitorFailure
   - ExecutionSite
   - ExecutorInvariantCode
   - ExecutorInvariantFailure
@@ -62,7 +62,7 @@ invariants:
 ### build_monitor
 
 `monitor::build(BuildPlan { program, budget })` returns `Result<Monitor,
-MonitorBuildFailure>`. The input Program is the immutable owner of interface-002;
+MonitorFailure>`. The input Program is the immutable owner of interface-002;
 the reader/driver has already admitted and independently bound its complete program.
 Build consumes no event, produces no obligation result and runs the selected init
 entry once. Each successful build owns a separate mutable state replacement slot.
@@ -172,7 +172,7 @@ This is an operating-control change, not plan rebinding or source semantics repa
 
 Returns: Monitor[1..1]
 
-The Rust method returns `Result<(), MonitorBuildFailure>` and mutates only on success.
+The Rust method returns `Result<(), MonitorFailure>` and mutates only on success.
 
 ## Features
 
