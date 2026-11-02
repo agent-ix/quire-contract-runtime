@@ -3,7 +3,7 @@
 
 use alloc::vec::Vec;
 
-use quire_exact::{CollectionKind, Integer, NodeKey, UnitId, ValueType};
+use quire_exact::{CollectionKind, Integer, NodeKey, ValueType};
 use quire_semantic_value::{declaration::CompositeShape, quantity::QuantityUnit};
 
 use super::program::{
@@ -158,17 +158,16 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
     {
         return Err(invalid());
     }
-    let Some(QuantityUnit::Declared(unit)) = parts
+    let unit_id = parts
         .types
         .units()
-        .get(UnitId::declared(layout.tick_unit.clone()))
-    else {
+        .ids()
+        .find(|id| id.declared_key() == Some(&layout.tick_unit))
+        .ok_or_else(invalid)?;
+    let Some(QuantityUnit::Declared(unit)) = parts.types.units().get(unit_id) else {
         return Err(invalid());
     };
-    if unit.dimension_node() != layout.time_dimension
-        || unit.is_affine()
-        || unit.canonical().scale().numerator() <= &Integer::zero()
-    {
+    if unit.dimension_node() != layout.time_dimension {
         return Err(invalid());
     }
     for pair in layout.buffers.windows(2) {
