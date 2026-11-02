@@ -55,3 +55,34 @@ scope:
   excerpt: 'class CoverageReferences(unittest.TestCase):'
 bindings: []
 ```
+
+## Reference guard dispositions
+
+Verified sourcee61d2cc9df495802da44946a2a836f03433a5898 on originalRT193; integrationa2ba6f3 remains unchanged. Both original integrity findings are fixed without widening coverage claims: helper validates canonical declared repository origin, main branch, regular-file tree modes/working path and actual bytes against both HEAD and fetched origin/main. It calculates/persists no digest, pins no source revision and still gives Quire original sources by reference. Seven preserved guard controls PASS, covering reference identity/cleanup, nonmain/ordinary dirty, missingtracked/untracked substitution, tracked symlink, hidden assume-unchanged, unrelated origin and unpushed local-main divergence.
+
+The preserved make spec log runs seven guards and Quire validation, then correctly fails closed at the missing authoritative integration-main test file. Main rollout and actual accepted reference strict coverage are still owed; no branch fallback or false37-row closure. RT code scoped verdict nowPASS; scoped gap remainsFAIL for unavailable authoritative inputs/accepted discharge. Integration FR276AC11 sequence and whole86/0/touchedClippy interim-only evidence remain credited; restored candidate driver errors/current-cohort qualification remain held. IEEE/CBMC is OUT OF SCOPE. No Cargo/backend run, source/test edit, merge or closure by reviewer.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Actual referenced bytes must equal both main blobs. Both tree entries must have regular-file blob mode; the working source must not be a symlink. This removes reliance on index flags/git diff and rejects outside symlink content. Preserved guard tests include hidden assume-unchanged with git diff0 verified. |
+| FND-002 | fixed | Declared origin URL is checked against canonical GitHub HTTPS/SCP-SSH/SSH forms for agent-ix/quire-integration; branchmain and both local/fetched-main regular blob contents are required. Unrelated origin and unpushed local-main controls refuse. No revision/digest pin or test copy added. |
+
+```yaml
+dispositions:
+- fnd: FND-001
+  outcome: fixed
+  after_excerpt: "content = source.read_bytes()\n    if (content != regular_blob(checkout,\
+    \ \"HEAD\")\n            or content != regular_blob(checkout, \"refs/remotes/origin/main\"\
+    )):"
+  reason: Actual referenced bytes must equal both main blobs. Both tree entries must
+    have regular-file blob mode; the working source must not be a symlink. This removes
+    reliance on index flags/git diff and rejects outside symlink content. Preserved
+    guard tests include hidden assume-unchanged with git diff0 verified.
+- fnd: FND-002
+  outcome: fixed
+  after_excerpt: raise ValueError("integration origin must identify agent-ix/quire-integration")
+  reason: Declared origin URL is checked against canonical GitHub HTTPS/SCP-SSH/SSH
+    forms for agent-ix/quire-integration; branchmain and both local/fetched-main regular
+    blob contents are required. Unrelated origin and unpushed local-main controls
+    refuse. No revision/digest pin or test copy added.
+```
