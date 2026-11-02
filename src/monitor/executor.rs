@@ -5,7 +5,9 @@ use alloc::{boxed::Box, rc::Rc};
 use core::fmt;
 
 use quire_exact::{NodeKey, Value};
-use quire_semantic_value::supplied_membership::{MembershipPathArena, SuppliedAdmissionError};
+use quire_semantic_value::supplied_membership::{
+    MembershipPathArena, PathArenaCapacity, SuppliedAdmissionError,
+};
 
 use super::{vm, ExpressionId, FunctionId, Program, StepBudget, StepResourceStop};
 
@@ -126,6 +128,8 @@ pub struct MonitorBuildFailure {
     pub invariant: Option<Box<ExecutorInvariantFailure>>,
     /// Present for a native shared membership failure.
     pub admission: Option<Box<AdmissionFailure>>,
+    /// Native path-arena identifier capacity refusal, before any arena exists.
+    pub path_capacity: Option<Box<PathArenaCapacity>>,
 }
 
 impl fmt::Display for MonitorBuildFailure {
@@ -218,9 +222,23 @@ fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> MonitorBuildFai
         resource: None,
         invariant: None,
         admission: None,
+        path_capacity: None,
     };
     match failure {
         vm::Failure::Stop(stop) => result.resource = Some(stop),
+        vm::Failure::PathCapacity(capacity) => {
+            result.resource = Some(StepResourceStop::storage(capacity.requested));
+            result.path_capacity = Some(Box::new(capacity));
+        }
+        vm::Failure::MembershipStop { stop, native } => {
+            result.resource = Some(stop);
+            result.admission = Some(Box::new(AdmissionFailure {
+                site: native.site.into(),
+                failure: native.failure,
+                arena: native.arena,
+                program: Rc::clone(program),
+            }));
+        }
         vm::Failure::Invariant { site, cause } => {
             result.code = MonitorBuildFailureCode::Invariant;
             let code = match cause {
