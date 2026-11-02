@@ -34,7 +34,8 @@ This is a planned consumer contract, not an implemented monitor.
   selected checked package/clause and target. It carries the exact subject, clock binding with
   counter/unit/width, uncertainty, maximum reading gap, rate limit, intervals, buffer capacities
   (premises of the plan root), atoms, ordered topology, the `State` type and the four function
-  entries `init`, `on_event`, `on_watermark` and `on_gap`, and `on_gap` (QSL FR-251's fourth entry, member 15 of QSpec FR-487's root, FR-487-AC-7).
+  entries `init`, `on_event`, `on_watermark` and `on_gap` (QSL FR-251's fourth entry,
+  member 15 of QSpec FR-487's root, FR-487-AC-7).
   Its `PlanId` selects the complete plan in driver ownership, not merely its resource table.
 - An observed event with the plan's admitted raw counter reading, snapshot/invocation values and
   binding identity; the runtime, not the plan, computes the modular delta from the previous reading
