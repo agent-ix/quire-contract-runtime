@@ -88,8 +88,9 @@ This is a planned consumer contract, not an implemented monitor.
   `ReadingGapExceeded{gap, max_reading_gap}` (through `on_gap`, below) and SHALL NOT emit a temporal verdict for it.
 - **Reporting.** The runtime SHALL return the plan's results as produced: each interval-operator instance once on settlement, each pending instance at every watermark step and no event step, and one folded outcome per activation for an unbounded root (QSpec FR-487-AC-10, QSL FR-251); it SHALL NOT synthesise per-position results.
 - **Event position.** State SHALL end with the required integer `event_position`
-  field after `activations`, with no extra field. `init` SHALL set it to 0, and
-  `on_event` SHALL add 1 per admitted event, including the baseline reading's
+  field after `activations`, with no extra field.
+- `init` SHALL set `event_position` to 0.
+- `on_event` SHALL add 1 to `event_position` per admitted event, including the baseline reading's
   `on_event(0)`. `on_watermark`, `on_gap` and a clock poll SHALL leave it unchanged.
   The count is unwrapped and distinct from tick time; a faulting reading handled by
   `on_gap` is not an admitted event (QSpec #595, FR-487-AC-11).
