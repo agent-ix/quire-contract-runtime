@@ -35,9 +35,13 @@ This is a planned consumer contract, not an implemented monitor.
   counter/unit/width, uncertainty, maximum reading gap, rate limit, intervals, buffer capacities
   and activation capacity (premises of the plan root, seventeen ordered bindings in QSpec FR-487;
   `activation_capacity` is member 16), atoms, ordered topology, the `State` type (exactly `now`,
-  `history_start`, one `buffer_<n>` per buffer, `activations` and `event_position` (the unwrapped count of admitted events, 0 from `init`, plus 1 per admitted event in `on_event`; an "on each" activation's position is read from it when the instance is created, with no separate activation field; QSpec FR-487, QSL FR-251) and the four function
+  `history_start`, one `buffer_<n>` per buffer, then `activations` and `event_position`;
+  QSpec FR-487) and the four function
   entries `init`, `on_event`, `on_watermark` and `on_gap` (QSL FR-251's fourth entry,
   member 15 of QSpec FR-487's root, FR-487-AC-7).
+  The unwrapped event_position is 0 from init and increases by 1 per admitted event;
+  an "on each" activation reads its position when created, without a separate
+  activation field (QSpec FR-487, QSL FR-251).
   Its `PlanId` selects the complete plan in driver ownership, not merely its resource table.
 - An observed event with the plan's admitted raw counter reading, snapshot/invocation values and
   binding identity; the runtime, not the plan, computes the modular delta from the previous reading
@@ -83,6 +87,12 @@ This is a planned consumer contract, not an implemented monitor.
   difference greater than `max_reading_gap` SHALL settle each live instance whose verdict is still open `Failed` with
   `ReadingGapExceeded{gap, max_reading_gap}` (through `on_gap`, below) and SHALL NOT emit a temporal verdict for it.
 - **Reporting.** The runtime SHALL return the plan's results as produced: each interval-operator instance once on settlement, each pending instance at every watermark step and no event step, and one folded outcome per activation for an unbounded root (QSpec FR-487-AC-10, QSL FR-251); it SHALL NOT synthesise per-position results.
+- **Event position.** State SHALL end with the required integer `event_position`
+  field after `activations`, with no extra field. `init` SHALL set it to 0, and
+  `on_event` SHALL add 1 per admitted event, including the baseline reading's
+  `on_event(0)`. `on_watermark`, `on_gap` and a clock poll SHALL leave it unchanged.
+  The count is unwrapped and distinct from tick time; a faulting reading handled by
+  `on_gap` is not an admitted event (QSpec #595, FR-487-AC-11).
 - **Baseline.** The first admitted reading of a monitor SHALL establish the baseline: the runtime
   makes no gap check for it and passes `on_event` the delta 0, so the entry's unwrapped time stays
   at the value `init` set.
@@ -140,6 +150,7 @@ This is a planned consumer contract, not an implemented monitor.
 | FR-276-AC-8 | Invalid event/progress inputs, including a missing required admitted value, leave monitor state unchanged with no verdict. An admitted progress assertion can settle a deadline, while a mere counter poll cannot. Executing the admitted program agrees with QSL's reference evaluator on boundary, reversed-operand, false-activation and open/closed-endpoint cases; an RT executor invariant failure returns `Failed`, terminates the monitor and rejects later input. | Test |
 | FR-276-AC-9 | On the 16-bit target of AC-3 the first admitted reading, whatever its value, passes `on_event` the delta 0 with no gap check and leaves the unwrapped time at `init`'s value; after readings `65530` then `65500` fault, a following reading `65510` is differenced from `65500` (delta 10), not from `65530`. RT calls `on_gap` with the gap 65506: the instance still open across the gap settles `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` and is dropped from the state, while an instance already decided before the fault and an instance not yet started are unaffected and settle normally afterwards. | Test |
 | FR-276-AC-10 | With a per-step budget too small for one `on_event`, the call returns `StepResourceStop`, the monitor state is unchanged and the event unconsumed, and the same event under a sufficient budget then executes and gives the outcome it would have given; the result is distinct from a verdict, `Incomplete(LimitReached)`, `Failed(ReadingGapExceeded)` and `ExecutorInvariantFailure` (after which the monitor rejects input), and the monitor accepts the next input after a stop. No test relies on recovery from an allocator out-of-memory. | Test |
+| FR-276-AC-11 | Build observes event_position 0 from init. With width 16 and maximum gap 100, the baseline event reading 65530 calls on_event(0) and leaves event_position 1; a watermark and poll leave it 1; reading 65500 faults through on_gap and leaves it 1; admitted reading 65510 calls on_event(10) and leaves it 2. The unwrapped exact Integer count is independent of tick time, and State keeps it after activations with no extra field. | Test |
 
 ## Dependencies
 

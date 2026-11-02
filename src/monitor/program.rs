@@ -63,7 +63,10 @@ pub struct Layout {
     pub occurrence: Box<[u8]>,
     /// The admitted timestamped-event profile identity.
     pub profile: String,
-    /// Typed persistent state.
+    /// Typed persistent state, including its final exact Integer event position.
+    ///
+    /// The shared closed record retains `event_position` after `activations`;
+    /// it is not duplicated as plan metadata or a host-width counter.
     pub state: TypeBinding,
     /// Typed event captures.
     pub inputs: TypeBinding,

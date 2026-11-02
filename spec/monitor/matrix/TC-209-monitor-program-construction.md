@@ -27,7 +27,8 @@ storage; they do not claim an emitted temporal plan or FR-487 activation/result 
    owner. Check the complete nested root key, selection bytes, every entry association,
    function signature/body location, literal State/Results contents and declarations.
    Invalid lookups return absent.
-2. Replace the fourth entry with an absent function or wrong signature. Independently
+2. Refuse a missing, extra, optional, mistyped or misordered outer State field,
+   including event_position missing, non-Integer or before activations. Replace the fourth entry with an absent function or wrong signature. Independently
    change counter width, gap, uncertainty, and Time unit identity. Retain activation
    capacities zero and above u64::MAX; refuse a negative activation capacity. Keep
    the actually emitted negative-scale and affine Time units without adding an
@@ -48,4 +49,4 @@ storage; they do not claim an emitted temporal plan or FR-487 activation/result 
   inline locations remain accepted without recursive graph descent.
 - Compatible role aliases remain valid. No distinct-function premise is invented.
 - No construction result is reported as FR-276 build/step acceptance. TC-200 and
-  FR-276-AC-1 through AC-10 remain required independently.
+  FR-276-AC-1 through AC-11 remain required independently.

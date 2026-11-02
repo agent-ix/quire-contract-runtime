@@ -3,7 +3,7 @@
 
 use alloc::vec::Vec;
 
-use quire_exact::{CollectionKind, Integer, NodeKey, ValueType};
+use quire_exact::{CollectionKind, Integer, NodeKey, Presence, ValueType};
 use quire_semantic_value::{declaration::CompositeShape, quantity::QuantityUnit};
 
 use super::program::{
@@ -203,6 +203,7 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
             return Err(refusal(Code::TypeMismatch, Some(&binding.key)));
         }
     }
+    validate_state(parts)?;
     let ValueType::Collection(results) = &layout.results.value_type else {
         return Err(invalid());
     };
@@ -270,6 +271,58 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
             || !parts.types.same_type(&function.result, expected_result)
         {
             return Err(refusal(Code::TypeMismatch, Some(&function.key)));
+        }
+    }
+    Ok(())
+}
+
+fn validate_state(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
+    let state = &parts.layout.state;
+    let invalid = || refusal(Code::TypeMismatch, Some(&state.key));
+    let Some(CompositeShape::Record(fields)) = parts
+        .types
+        .composite(state.key.clone())
+        .map(|declaration| declaration.shape())
+    else {
+        return Err(invalid());
+    };
+    let [now, history_start, buffers @ .., activations, event_position] = fields.as_slice() else {
+        return Err(invalid());
+    };
+    if fields
+        .iter()
+        .any(|field| field.presence() != Presence::Required)
+        || now.name() != "now"
+        || history_start.name() != "history_start"
+        || activations.name() != "activations"
+        || event_position.name() != "event_position"
+        || buffers.len() != parts.layout.buffers.len()
+        || [now, history_start, event_position].iter().any(|field| {
+            !parts
+                .types
+                .same_type(field.value_type(), &ValueType::Integer)
+        })
+    {
+        return Err(invalid());
+    }
+    for (index, field) in buffers.iter().enumerate() {
+        let Some(suffix) = field.name().strip_prefix("buffer_") else {
+            return Err(invalid());
+        };
+        if suffix.is_empty()
+            || !suffix.bytes().all(|byte| byte.is_ascii_digit())
+            || (suffix.len() > 1 && suffix.starts_with('0'))
+            || suffix.parse::<usize>().ok() != Some(index)
+        {
+            return Err(invalid());
+        }
+    }
+    for field in buffers.iter().chain([activations]) {
+        let ValueType::Collection(collection) = field.value_type() else {
+            return Err(invalid());
+        };
+        if collection.kind() != CollectionKind::Sequence {
+            return Err(invalid());
         }
     }
     Ok(())

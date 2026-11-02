@@ -86,7 +86,7 @@ Generic call/result conformance remains the shared value-admission boundary when
 executor applies a function; this interface does not introduce a second type checker.
 
 The four entry roles are `init`, `on_event`, `on_watermark`, `on_gap` of QSpec FR-487
-at #593. They retain the actual source function keys. Compatible roles may resolve to
+at #595 (75508820b5003a342b2af8782dc400bdc9080403). They retain the actual source function keys. Compatible roles may resolve to
 one function; no distinct-function premise is invented. Expression arena addresses are
 not semantic IDs. Inline terms can share one source node key and differ by their
 body-child paths. No runtime code mints a NodeKey or substitutes a digest for a key.
@@ -97,8 +97,19 @@ second tick-scale field exists. Rate and uncertainty are exact shared Rationals.
 Buffer capacities and the seventeenth binding, activation_capacity, stay shared exact
 Integers. Zero activation capacity is valid; no host-width cap is imposed on retained
 premises. Target storage representability is a build/resource concern, not source
-malformation. The admitted State is now, history_start, buffer_n, activations; activation
-status remains the ordinary admitted type, without an RT-invented status enum.
+malformation. The retained State declaration is a closed record: now and history_start are
+required Integers, followed by exactly one required buffer_<n> Sequence per buffer,
+then required activations (a Sequence), then required event_position (an Integer).
+No missing, extra, mistyped, optional or misordered outer field is accepted. The shared
+declaration/value representation retains event_position; Layout has no duplicate host
+counter. Activation status remains the ordinary admitted type, without an RT-invented
+status enum. Source admission still owns the full activation/result schemas.
+
+The event position counts admitted events, independently of unwrapped ticks. Init
+returns 0; on_event adds 1 per admitted event, including the baseline on_event(0).
+On_watermark, on_gap and a clock poll leave it unchanged (QSpec FR-487-AC-11).
+Construction retains this field and its type but does not run or prove an entry body;
+these transition observations remain executor qualification.
 Tick intervals remain derived from the source clause and unit scales, not extra plan
 bindings. The root's content key and independently selected lock/subject/occurrence
 context remain owned; a display name or arena index cannot replace that context.
@@ -174,7 +185,7 @@ Returns: Expression[0..1]
 | ID | Criteria | Verification |
 | --- | --- | --- |
 | interface-002-AC-1 | After construction consumes the preparation parts and one Rc owner drops, another owner retains the complete root key with nested operand keys, selection bytes, all four entry associations, literal bodies and shared nominal declarations. Invalid arena lookups return absent. No monitor execution credit is granted by this construction control. | Test (TC-209) |
-| interface-002-AC-2 | Missing or mistyped on_gap, invalid counter width, a gap outside the declared width, negative uncertainty and a tick unit under another dimension yield the typed construction refusal before any entry executes; width64 with maximum gap u64::MAX remains representable. Activation capacity zero and a positive value above u64::MAX remain retained exactly, while a negative value refuses without a host-width truncation. | Test (TC-209) |
+| interface-002-AC-2 | Missing, extra, optional, mistyped or misordered outer State fields (including final required Integer event_position), missing or mistyped on_gap, invalid counter width, a gap outside the declared width, negative uncertainty and a tick unit under another dimension yield the typed construction refusal before any entry executes; width64 with maximum gap u64::MAX remains representable. Activation capacity zero and a positive value above u64::MAX remain retained exactly, while a negative value refuses without a host-width truncation. | Test (TC-209) |
 | interface-002-AC-3 | Duplicate source locations, invalid expression edges, direct expression cycles including unreachable arena nodes, and a reachable argument of another function refuse with their distinct typed codes. A finite shared subexpression and distinct inline body paths under the same source node remain admissible; a 20,000-level shared inline arena validates on a 512 KiB native stack without recursive graph descent. | Test (TC-209) |
 | interface-002-AC-4 | Two compatible entry roles may reference the same retained function; construction does not add a distinct-function premise to FR-487. | Test (TC-209) |
 
