@@ -16,6 +16,12 @@ The latter remains the complete FR-276 acceptance procedure.
 
 ## Test Procedure
 
+Run the complete `monitor_program` target in `quire-integration` (IT-018 / TC-098).
+Its live QSL producer and strict IR reader provide semantic identities and their
+matching declaration/unit meanings. RT carries no local semantic identity fixture.
+The derived layout-key probe and ordinary diagnostic record shapes test construction
+storage; they do not claim an emitted temporal plan or FR-487 activation/result schema.
+
 1. Move owned function/expression arenas and the shared declaration/unit environment
    into Program, drop preparation storage and one Rc owner, then inspect the surviving
    owner. Check the complete nested root key, selection bytes, every entry association,
@@ -23,7 +29,9 @@ The latter remains the complete FR-276 acceptance procedure.
    Invalid lookups return absent.
 2. Replace the fourth entry with an absent function or wrong signature. Independently
    change counter width, gap, uncertainty, and Time unit identity. Retain activation
-   capacities zero and above u64::MAX; refuse a negative activation capacity.
+   capacities zero and above u64::MAX; refuse a negative activation capacity. Keep
+   the actually emitted negative-scale and affine Time units without adding an
+   upstream admission restriction.
 3. Inject duplicate function keys and duplicate expression source locations; inject
    invalid function/body/Call/If addresses, a direct expression cycle and a foreign
    function argument. Keep valid shared DAG nodes and distinct inline body paths.
