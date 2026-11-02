@@ -85,10 +85,16 @@ failures. No arbitrary allocator-OOM recovery is promised.
 Returns: Monitor[1..1]
 
 BuildPlan has exactly `program: Rc<Program>` and `budget: StepBudget`. StepBudget
-contains `work: u64`, `stack_frames: usize`, `scratch_elements: usize` and
-`scratch_bytes: usize`; zero is a real zero ceiling. These are operating controls,
+contains `work: u64`, required `scalar: quire_exact::ScalarLimits`,
+`stack_frames: usize`, `scratch_elements: usize` and `scratch_bytes: usize`;
+zero is a real zero ceiling, including each native scalar counter. The scalar
+meter is fresh per invocation and cumulative across selected operations
+(interface-008). These are operating controls,
 not replacement capacities, finite semantic domains or host-width event counters.
-The State value, including its exact Integer event_position, remains canonical.
+`StepResourceStop.requested` retains an exact shared Integer; native scalar
+stops also retain their original typed outcome and charge point in
+`ScalarFailure`. The State value, including its exact Integer event_position,
+remains canonical.
 
 One continuation dispatch costs one work unit. A nontrivial conformance walk charges
 the shared supplied-membership events from the same remaining work budget. The
