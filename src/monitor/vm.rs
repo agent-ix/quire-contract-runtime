@@ -9,7 +9,7 @@ use quire_semantic_value::{
     declaration::{StorageRequest, StorageUnit},
     supplied_membership::{
         InvalidMembershipCause, MembershipLocus, MembershipPart, MembershipPathArena,
-        SuppliedAdmissionError, SuppliedMembershipBudget,
+        PathArenaCapacity, SuppliedAdmissionError, SuppliedMembershipBudget,
     },
 };
 
@@ -33,8 +33,16 @@ pub(super) enum Broken {
 
 pub(super) enum Failure {
     Stop(StepResourceStop),
-    Invariant { site: Site, cause: Broken },
+    Invariant {
+        site: Site,
+        cause: Broken,
+    },
     Membership(Box<MembershipFailure>),
+    MembershipStop {
+        stop: StepResourceStop,
+        native: Box<MembershipFailure>,
+    },
+    PathCapacity(PathArenaCapacity),
 }
 
 pub(super) struct MembershipFailure {
@@ -242,13 +250,13 @@ impl Resources {
                 self.denied.set(Some(StepResourceStop {
                     resource,
                     limit: Some(limit as u128),
-                    spent: used
-                        .get()
-                        .saturating_add(if request.unit() == StorageUnit::AdditionalElements {
+                    spent: used.get().saturating_add(
+                        if request.unit() == StorageUnit::AdditionalElements {
                             self.live_elements.get()
                         } else {
                             0
-                        }) as u128,
+                        },
+                    ) as u128,
                     requested: request.amount() as u128,
                 }));
                 false
@@ -680,7 +688,17 @@ fn admit(
     resources: &mut Resources,
 ) -> Result<(), Failure> {
     let value = resolve(program, supplied, operand, site)?;
-    let mut arena = MembershipPathArena::new().map_err(|_| StepResourceStop::storage(1))?;
+    admit_value(program.types(), value, expected, site, resources)
+}
+
+fn admit_value(
+    types: &quire_semantic_value::declaration::TypeEnvironment,
+    value: &Value,
+    expected: &ValueType,
+    site: Site,
+    resources: &mut Resources,
+) -> Result<(), Failure> {
+    let mut arena = MembershipPathArena::new().map_err(Failure::PathCapacity)?;
     let at = MembershipLocus {
         path: arena.root(0),
         part: MembershipPart::Value,
@@ -691,42 +709,160 @@ fn admit(
         .checked_sub(resources.work)
         .ok_or_else(|| broken(site, Broken::ValueStack))?;
     let mut work = SuppliedMembershipBudget::new(remaining);
-    let result = program
-        .types()
-        .admit_supplied_with_reservation::<InvalidMembershipCause>(
-            expected,
-            value,
-            &mut arena,
-            at,
-            &mut work,
-            &Cancel::new(),
-            &|request| resources.permit(request),
-        );
+    let result = types.admit_supplied_with_reservation::<InvalidMembershipCause>(
+        expected,
+        value,
+        &mut arena,
+        at,
+        &mut work,
+        &Cancel::new(),
+        &|request| resources.permit(request),
+    );
     resources.work = resources
         .work
         .checked_add(work.spent())
         .ok_or_else(|| broken(site, Broken::ValueStack))?;
-    match result {
-        Ok(()) => Ok(()),
-        Err(SuppliedAdmissionError::Limit { requested, .. }) => Err(StepResourceStop {
+    let Err(failure) = result else {
+        return Ok(());
+    };
+    let stop = match failure {
+        SuppliedAdmissionError::Limit { requested, .. } => Some(StepResourceStop {
             resource: StepResource::Work,
             limit: Some(u128::from(resources.limits.work)),
             spent: u128::from(resources.work),
             requested: u128::from(requested),
+        }),
+        SuppliedAdmissionError::Allocation { request, .. }
+        | SuppliedAdmissionError::Capacity { request, .. } => Some(
+            resources
+                .denied
+                .take()
+                .unwrap_or_else(|| StepResourceStop::storage(request.amount())),
+        ),
+        _ => None,
+    };
+    let native = Box::new(MembershipFailure {
+        site,
+        failure,
+        arena,
+    });
+    match stop {
+        Some(stop) => Err(Failure::MembershipStop { stop, native }),
+        None => Err(Failure::Membership(native)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ix_trace_rs::trace;
+    use quire_semantic_value::declaration::{
+        CompositeDeclaration, ObjectTypeDeclaration, TypeEnvironment,
+    };
+
+    fn resources() -> Resources {
+        Resources::new(StepBudget {
+            work: 100,
+            stack_frames: 10,
+            scratch_elements: 100,
+            scratch_bytes: 100_000,
+        })
+    }
+
+    fn check(resources: &mut Resources) -> Result<(), Failure> {
+        let types = TypeEnvironment::new(
+            core::iter::empty::<CompositeDeclaration>(),
+            core::iter::empty::<ObjectTypeDeclaration>(),
+        )
+        .unwrap();
+        admit_value(
+            &types,
+            &quire_exact::OptionValue::from_admitted(
+                ValueType::Boolean,
+                Some(Value::Boolean(true)),
+            ),
+            &ValueType::option(ValueType::Boolean),
+            Site::Function(FunctionId(0)),
+            resources,
+        )
+    }
+
+    #[trace("TC-200", "interface-003-AC-3")]
+    #[test]
+    fn native_membership_work_stop_keeps_its_event_and_arena() {
+        let mut resources = resources();
+        resources.work = 100;
+        match check(&mut resources) {
+            Err(Failure::MembershipStop { stop, native }) => {
+                assert_eq!(stop.resource, StepResource::Work);
+                assert_eq!((stop.spent, stop.requested), (100, 1));
+                let SuppliedAdmissionError::Limit {
+                    ceiling,
+                    spent,
+                    requested,
+                    locus,
+                    ..
+                } = native.failure
+                else {
+                    panic!("native work refusal");
+                };
+                assert_eq!((ceiling, spent, requested), (0, 0, 1));
+                assert!(native.arena.resolve(locus).is_some());
+            }
+            _ => panic!("membership must stop before its first work event"),
         }
-        .into()),
-        Err(
-            SuppliedAdmissionError::Allocation { request, .. }
-            | SuppliedAdmissionError::Capacity { request, .. },
-        ) => Err(resources
+    }
+
+    #[trace("TC-200", "interface-003-AC-3")]
+    #[test]
+    fn native_membership_element_stop_counts_live_operand_addresses() {
+        let mut resources = resources();
+        resources.limits.scratch_elements = 1;
+        resources.live_elements.set(1);
+        match check(&mut resources) {
+            Err(Failure::MembershipStop { stop, native }) => {
+                assert_eq!(stop.resource, StepResource::ScratchElements);
+                assert_eq!((stop.limit, stop.spent, stop.requested), (Some(1), 1, 1));
+                let SuppliedAdmissionError::Allocation { request, locus } = native.failure else {
+                    panic!("native allocation refusal");
+                };
+                assert_eq!(
+                    request,
+                    StorageRequest::new(1, StorageUnit::AdditionalElements)
+                );
+                assert!(native.arena.resolve(locus).is_some());
+            }
+            _ => panic!("native reservation must include the still-live operand slot"),
+        }
+    }
+
+    #[trace("TC-200", "interface-003-AC-3")]
+    #[test]
+    fn byte_reservation_stop_preserves_measured_units_and_cumulative_use() {
+        let mut resources = resources();
+        let amount = core::mem::size_of::<usize>();
+        resources.limits.scratch_bytes = amount;
+        let request = StorageRequest::new(amount, StorageUnit::Bytes);
+        assert!(resources.permit(request));
+        assert!(!resources.permit(request));
+        let stop = resources
             .denied
             .take()
-            .unwrap_or_else(|| StepResourceStop::storage(request.amount()))
-            .into()),
-        Err(failure) => Err(Failure::Membership(Box::new(MembershipFailure {
-            site,
-            failure,
-            arena,
-        }))),
+            .expect("second measured request exceeds the byte ceiling");
+        assert_eq!(stop.resource, StepResource::ScratchBytes);
+        assert_eq!(
+            (stop.limit, stop.spent, stop.requested),
+            (Some(amount as u128), amount as u128, amount as u128)
+        );
+        assert_eq!(
+            resources.bytes.get(),
+            amount,
+            "denied bytes are not committed"
+        );
+        assert_eq!(
+            resources.elements.get(),
+            0,
+            "bytes do not consume element units"
+        );
     }
 }

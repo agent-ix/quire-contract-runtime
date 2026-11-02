@@ -71,7 +71,12 @@ Immutable canonical Arc-backed values may share their underlying storage.
 Failure returns no usable partial monitor. Allocation or budget exhaustion uses the
 resource channel; a broken evaluated program uses the invariant channel; the shared
 conformance boundary retains its native typed failure and resolvable path arena.
-No arbitrary allocator-OOM recovery is promised.
+Native membership resource stops retain both the StepResourceStop and the
+original SuppliedAdmissionError plus its resolvable arena in `admission`; an
+allocation/capacity request therefore retains its native byte/element unit and
+cause. Before an arena exists, `path_capacity` retains the native PathArenaCapacity
+request in arena-identifier units. These resource failures do not become invariant
+failures. No arbitrary allocator-OOM recovery is promised.
 
 | Param | Type | Multiplicity | Constraints |
 | --- | --- | --- | --- |
