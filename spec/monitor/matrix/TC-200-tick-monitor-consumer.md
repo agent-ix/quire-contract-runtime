@@ -51,6 +51,14 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
    operands, false activation, and open/closed interval endpoints. Inject an executor invariant
    failure and offer one further input. Use test-authored expected subject/obligation origins and
    outcomes rather than comparing two RT outputs as the oracle.
+7. On the 16-bit target of Step 3, keep one obligation instance open across the fault and one
+   already decided before it, and start a third after it. Offer the first reading, then readings
+   `65530`, `65500` (the fault), `65510`, recording each `on_event` and `on_gap` call and the
+   delta passed.
+8. Build with a per-step budget too small for one `on_event`; offer an event, then raise the budget
+   and offer the same event; separately run an injected executor invariant failure and offer
+   another input. Compare state before and after each call.
+
 
 ## Expected Results
 
@@ -64,7 +72,7 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
 - Step 3 computes the wrap difference 10 in RT and passes `on_event` that delta (the entry never
   sees a raw wrapping reading), reports
   `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` for the backward-looking pair,
-  and emits no temporal verdict for that fault and calls no entry. The 65536-gap target yields QSL
+  and emits no temporal verdict for that fault; RT calls `on_gap` with 65506 (not `on_event`) and each instance still open across the fault settles `Failed`. The 65536-gap target yields QSL
   `GapExceedsWidth` with no RT monitor constructed. Every foreign or incomplete binding is
   refused before it can settle an obligation; no order is inferred from equal ticks.
 - Step 4 builds two independent monitors without a verdict from initialization; a request in the
@@ -79,3 +87,11 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
   can settle the deadline, while a counter poll cannot. RT execution and the independent QSL
   reference evaluator agree per obligation in all named cases. Executor invariant failure yields
   `Failed` with no verdict; the monitor refuses subsequent input.
+- Step 7 passes delta 0 for the first reading with no gap check and leaves the unwrapped time at
+  `init`'s value; at the fault RT calls `on_gap` with 65506, the open instance settles
+  `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` and is dropped, the decided and the
+  not-yet-started instances are unaffected, and `65510` is differenced from `65500` (delta 10).
+- Step 8 returns `StepResourceStop` with state unchanged and the event unconsumed, the same event
+  then executes under the larger budget, the stop is distinct from a verdict, `Incomplete`,
+  `Failed(ReadingGapExceeded)` and `ExecutorInvariantFailure`, and only the invariant failure
+  terminates the monitor and rejects later input.
