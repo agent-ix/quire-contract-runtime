@@ -3,11 +3,49 @@
 
 use alloc::vec::Vec;
 
+use quire_exact::ValueType;
+
 use super::{ExpressionId, LocalId, Operation, ProgramParts, ProgramRefusal, ProgramRefusalCode};
+
+#[derive(Clone, Copy)]
+pub(super) enum TypeSource {
+    Expression(ExpressionId),
+    SequenceElement(ExpressionId),
+}
+
+impl TypeSource {
+    pub(super) fn value_type(self, parts: &ProgramParts) -> Option<&ValueType> {
+        match self {
+            Self::Expression(id) => Some(&parts.expressions.get(id.0)?.value_type),
+            Self::SequenceElement(id) => match &parts.expressions.get(id.0)?.value_type {
+                ValueType::Collection(value) => Some(value.element()),
+                _ => None,
+            },
+        }
+    }
+}
+
+fn declarations(node: &Operation, id: ExpressionId) -> [Option<(LocalId, TypeSource)>; 2] {
+    match node {
+        Operation::Let { binding, value, .. } => {
+            [Some((*binding, TypeSource::Expression(*value))), None]
+        }
+        Operation::SequenceFold {
+            accumulator,
+            item,
+            sequence,
+            ..
+        } => [
+            Some((*accumulator, TypeSource::Expression(id))),
+            Some((*item, TypeSource::SequenceElement(*sequence))),
+        ],
+        _ => [None, None],
+    }
+}
 
 pub(super) struct Bindings {
     offsets: Vec<usize>,
-    values: Vec<Option<ExpressionId>>,
+    values: Vec<Option<TypeSource>>,
 }
 
 fn invalid(parts: &ProgramParts, expression: usize) -> ProgramRefusal {
@@ -37,7 +75,10 @@ impl Bindings {
             .map_err(|_| storage())?;
         counts.resize(parts.functions.len(), 0_usize);
         for (index, node) in parts.expressions.iter().enumerate() {
-            if let Operation::Let { binding, .. } = node.operation {
+            for (binding, _) in declarations(&node.operation, ExpressionId(index))
+                .into_iter()
+                .flatten()
+            {
                 let count = counts
                     .get_mut(binding.function.0)
                     .ok_or_else(|| invalid(parts, index))?;
@@ -59,7 +100,10 @@ impl Bindings {
         values.resize(total, None);
         let mut result = Self { offsets, values };
         for (index, node) in parts.expressions.iter().enumerate() {
-            if let Operation::Let { binding, value, .. } = node.operation {
+            for (binding, value) in declarations(&node.operation, ExpressionId(index))
+                .into_iter()
+                .flatten()
+            {
                 let slot = result.slot(binding).ok_or_else(|| invalid(parts, index))?;
                 let entry = result
                     .values
@@ -87,7 +131,7 @@ impl Bindings {
         (at < end).then_some(at)
     }
 
-    pub(super) fn resolve(&self, binding: LocalId) -> Option<(usize, ExpressionId)> {
+    pub(super) fn resolve(&self, binding: LocalId) -> Option<(usize, TypeSource)> {
         let slot = self.slot(binding)?;
         Some((slot, self.values.get(slot).copied().flatten()?))
     }
