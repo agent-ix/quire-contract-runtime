@@ -4,7 +4,7 @@
 use alloc::{boxed::Box, rc::Rc, string::String, vec::Vec};
 use core::fmt;
 
-use quire_exact::{NodeKey, Rational, Value, ValueType};
+use quire_exact::{MemberId, NodeKey, Rational, Value, ValueType};
 use quire_semantic_value::declaration::{EnvironmentFailure, TypeEnvironment};
 
 /// An address in the owned expression arena, never a source identity.
@@ -150,6 +150,13 @@ pub enum Operation {
         /// Original declared tuple position, not a record member identity.
         position: usize,
     },
+    /// Read a required field using its original admitted record member identity.
+    RecordField {
+        /// Record-valued expression, evaluated once.
+        value: ExpressionId,
+        /// Original node-owned member, never a physical slot ordinal.
+        member: MemberId,
+    },
     /// Ordinary Boolean negation of one canonical Boolean operand.
     BooleanNot {
         /// The evaluated Boolean operand.
@@ -265,6 +272,7 @@ impl core::error::Error for ProgramRefusal {}
 pub struct Program {
     pub(super) parts: ProgramParts,
     pub(super) bindings: super::bindings::Bindings,
+    pub(super) fields: super::fields::Fields,
 }
 
 impl Program {
@@ -276,7 +284,12 @@ impl Program {
     pub fn try_new(parts: ProgramParts) -> Result<Rc<Self>, ProgramRefusal> {
         super::validation::validate(&parts)?;
         let bindings = super::bindings::Bindings::prepare(&parts)?;
-        Ok(Rc::new(Self { parts, bindings }))
+        let fields = super::fields::Fields::prepare(&parts)?;
+        Ok(Rc::new(Self {
+            parts,
+            bindings,
+            fields,
+        }))
     }
 
     /// Inspect the exact retained selection and root premises.

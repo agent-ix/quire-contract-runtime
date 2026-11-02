@@ -40,13 +40,15 @@ presence are separate ordinary capabilities. They are not inferred here.
 
 Construction refuses a foreign owner, nonrecord receiver, absent or optional
 field, or result type unequal to the declared field type. Relevant record
-requests are grouped before scanning their declarations; repeated reads do not
+requests are grouped before scanning their declarations; reads of the annotated declaration do not
 repeat a package census or a field scan during execution. The retained private
 slot position never replaces the public member identity.
 
 The receiver evaluates once. Execution retains its canonical owner and a slot
 address, using the shared nominal conformance and bounded membership authorities
-at nonidentical type boundaries. It does not copy the selected subtree or
+at nonidentical type boundaries. A conforming dynamic record resolves the same
+field identifier in its own declaration order, charging each inspected field to
+work; it never reuses a supertype storage ordinal. It does not copy the selected subtree or
 reconstruct a record. Temporary projection ownership and scratch charging follow
 the tuple projection contract. No state is committed on a resource stop.
 
