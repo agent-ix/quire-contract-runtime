@@ -17,7 +17,8 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
 
 1. Obtain a QSL-produced plan for `always (holds(req) implies eventually[0 ms, 3 ms]
    holds(ack))` on a 20-bit, 1 MHz counter. Observe `req` at tick 0 and first `ack` at ticks
-   2998, 3000 and 3001 in separate runs. Repeat 2998 with 2 µs uncertainty. Compare each
+   2998, 3000 and 3001 in separate runs; reading `k` covers the half-open `[k, k+1)`. Repeat 2998
+   with 2 µs uncertainty. Compare each
    obligation's complete typed result with the independent expectations below; do not compare
    one runtime output with another runtime output as the oracle.
 2. Obtain the QSL plan for `once[0 ms, 10 ms] holds(p)` at 2 events/ms. Assert its supplied
@@ -32,19 +33,20 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
 4. Admit one QSL-derived closed executable plan against an independently selected checked
    package/clause and target. Drop the driver's preparation objects, then build two RT monitors
    from that plan. Verify the plan retains subject, activation/captures, atom bodies, ordered
-   implication/eventually/always topology, state initializers and executable event/watermark
-   entries; feed a request only to the first monitor. Try rebinding either live monitor to a
+   implication/eventually/always topology, the `State` type and the `init`, `on_event` and
+   `on_watermark` function entries (plan-root node form pending STD-647); feed a request only to the first monitor. Try rebinding either live monitor to a
    changed plan. No source parse, additional clause, atom callback or RT operator translation may
    complete the program.
-5. Before RT initialization, independently replace an atom/operand reference, transition body,
-   state initializer, interval association, buffer owner, activation binding, uncertainty and
+5. Before RT initialization, independently replace an atom/operand reference, entry body,
+   `init` body, interval association, buffer owner, activation binding, uncertainty and
    maximum gap while keeping the original selected subject/target. Also give equal numeric
    subformula IDs from two different subjects. Exercise unsupported executable content and RT
    allocation and initialization failures separately. Record the boundary and typed result for
    every rejection rather than treating them as Boolean property decisions.
 6. Offer an event missing a required admitted value and a progress input lacking QSpec-admitted
    assertion; compare monitor state before and after each. Separately provide an admitted
-   watermark past a deadline and an ordinary counter poll with no watermark. Run the same admitted
+   watermark, whose unwrapped history-boundary tick and scope identities RT passes to
+   `on_watermark`, past a deadline and an ordinary counter poll with no watermark. Run the same admitted
    plan against QSL's reference evaluator on the boundary cases above, reversed implication
    operands, false activation, and open/closed interval endpoints. Inject an executor invariant
    failure and offer one further input. Use test-authored expected subject/obligation origins and
@@ -52,15 +54,17 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
 
 ## Expected Results
 
-- Step 1 yields definite true at 2998, indeterminate at 3000, definite false at 3001, and
-  indeterminate at 2998 with 2 µs uncertainty. Pending remains distinct from indeterminate
+- Step 1 yields definite true at 2998 (difference in `(2997, 2999)`), indeterminate at 3000
+  (`(2999, 3001)`), definite false at 3001 (`(3000, 3002)`), and indeterminate at 2998 with 2 µs
+  uncertainty (`(2993, 3003)`). Pending remains distinct from indeterminate
   when a future observation could still resolve the window.
 - Step 2 uses the producer's 21-slot capacity and settles only affected obligations
   `Incomplete(LimitReached{limit, value, setting})`, naming the event-rate setting 2 events/ms
   on the 22nd event. It never drops an event or changes an unrelated sibling's result.
-- Step 3 computes the wrap difference 10, reports
+- Step 3 computes the wrap difference 10 in RT and passes `on_event` that delta (the entry never
+  sees a raw wrapping reading), reports
   `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` for the backward-looking pair,
-  and emits no temporal verdict for that fault. The 65536-gap target yields QSL
+  and emits no temporal verdict for that fault and calls no entry. The 65536-gap target yields QSL
   `GapExceedsWidth` with no RT monitor constructed. Every foreign or incomplete binding is
   refused before it can settle an obligation; no order is inferred from equal ticks.
 - Step 4 builds two independent monitors without a verdict from initialization; a request in the
