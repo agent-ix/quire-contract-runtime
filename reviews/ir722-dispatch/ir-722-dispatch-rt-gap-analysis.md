@@ -287,3 +287,11 @@ dispositions:
 ```
 
 Current scoped method verdict: **FAIL**. Overall merge/feature readiness remains conditional on the explicitly unresolved external gates.
+
+## Final native evidence carry
+
+Final non-proof RT evidence carry at ad0665ee4120c7efb9ee506ae2ec468f08ebce93: production source remains65bd269 unchanged; only reviewed SRs and merged QSV3129 lock selection differ. The unchanged native test aggregate passes105/0/0ignored across27suites, including both exact-panic controls (real retained-call no-panic probe and injected-panic rejection). Preserved Make fmt-check/lint/test-features/doc/msrv/size/deny/deny-mutations logs pass; fourteen feature configurations, linked footprint973bytes and panic_references0. This is evidence for the RT native lock only, not final compatible integration qualification. Previously supplied own final IR953100001-node long-chain pass and all specific local control fixes remain credited. No new production review or source edit and no Cargo/Kani/backend execution by reviewer.
+
+Whole-PR strict coverage is151unbacked/0contradicted against remeasured baseline114/0:37introduced rows,0removed, equal multiplicity explicitly compared. They span constructor through dispatch (interfaces002..012 plus FR276AC11; interface003AC3 is locally backed). The thirteen findings in this batch are only its newest interface009..012 rows, not the whole-PR delta. Their unresolved external discharge remains FAIL; completion of local controls does not compute accepted cross-repository discharge, and the baseline114 exception does not authorize the37. No blanket exception inferred. Compatible integration cohort still has driver adoption failures; actual temporal producer qualification, full FR276/TC200 acceptance and IEEE proof/backend remain held. Native green is not all mandatory gates green.
+
+Current method verdict: **FAIL**. Overall merge readiness remains **CONDITIONAL** on the recorded holds.
