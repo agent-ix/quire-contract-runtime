@@ -39,7 +39,7 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
    complete the program.
 5. Before RT initialization, independently replace an atom/operand reference, entry body,
    `init` body, interval association, buffer owner, activation binding, uncertainty, counter,
-   tick unit, event rate and maximum gap while keeping the original selected subject/target. Also give equal numeric
+   counter width, tick unit, maximum event rate, buffer capacity and maximum gap while keeping the original selected subject/target. Also give equal numeric
    subformula IDs from two different subjects. Exercise unsupported executable content and RT
    allocation and initialization failures separately. Record the boundary and typed result for
    every rejection rather than treating them as Boolean property decisions.
