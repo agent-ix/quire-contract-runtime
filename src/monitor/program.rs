@@ -143,6 +143,16 @@ pub enum Operation {
         /// Ordered argument expressions.
         arguments: Vec<ExpressionId>,
     },
+    /// Construct all required record members in declaration order.
+    Record {
+        /// Original admitted member identities and their operand expressions.
+        fields: Vec<(MemberId, ExpressionId)>,
+    },
+    /// Construct a canonical tuple in declaration position order.
+    Tuple {
+        /// Ordered operands; the result annotation supplies the admitted tuple key.
+        positions: Vec<ExpressionId>,
+    },
     /// Select a required position from a canonical tuple value.
     TupleElement {
         /// Tuple-valued expression, evaluated once.
@@ -308,6 +318,7 @@ pub struct Program {
     pub(super) parts: ProgramParts,
     pub(super) bindings: super::bindings::Bindings,
     pub(super) fields: super::fields::Fields,
+    pub(super) construction: super::construction::Construction,
 }
 
 impl Program {
@@ -320,10 +331,12 @@ impl Program {
         super::validation::validate(&parts)?;
         let bindings = super::bindings::Bindings::prepare(&parts)?;
         let fields = super::fields::Fields::prepare(&parts)?;
+        let construction = super::construction::Construction::prepare(&parts)?;
         Ok(Rc::new(Self {
             parts,
             bindings,
             fields,
+            construction,
         }))
     }
 
