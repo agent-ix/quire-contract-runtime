@@ -115,8 +115,7 @@ watermark and gap dispatch remain the rest of IR-722; this initializer slice doe
 claim the complete FR-276/TC-200 acceptance.
 
 Outcome values remain canonical shared values, without an RT kind-name allow-list
-or parallel status enum. QSpec #597 (`abe4c25e2c07fa2c8327c37d896d72cc1191a062`,
-FR-487-AC-12) names the missing admitted atom projection outcome
+or parallel status enum. QSpec #597 (FR-487-AC-12) names the missing admitted atom projection outcome
 `Incomplete(LimitReached{limit: atom_projection, value: <AtomId integer>,
 setting: monitor.atom_projection})`. Retaining and returning it requires no new
 carrier, State field, root binding or API. It must not be translated into the
