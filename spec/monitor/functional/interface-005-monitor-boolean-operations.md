@@ -46,7 +46,12 @@ can address its two immutable canonical Boolean constants for a computed result;
 there is no alternate Value, Outcome or type vocabulary.
 
 Execution uses explicit continuations and the same work, stack and scratch
-budgets as the surrounding entry. It introduces no callback, temporal opcode,
+budgets as the surrounding entry. With the required native scalar budget
+(interface-008), each decided connective result delegates its
+`boolean.result-retain` charge to shared Exact `retain_boolean`. A short circuit
+retains its decided result once and makes no right-operand charge. Native
+shortages retain their original typed cause as operating stops. It introduces no
+callback, temporal opcode,
 source identity, State field, root binding or public carrier. Each expression's
 existing original key/body path identifies its operation. These capabilities
 serve Boolean expressions in the admitted ordinary QSL entry/helper closure;
