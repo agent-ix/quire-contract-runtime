@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Executable integrity checks; source-language admission remains upstream.
 
-use alloc::{collections::BTreeSet, vec::Vec};
+use alloc::vec::Vec;
 
 use quire_exact::{CollectionKind, Integer, NodeKey, UnitId, ValueType};
 use quire_semantic_value::{declaration::CompositeShape, quantity::QuantityUnit};
@@ -21,11 +21,20 @@ fn refusal(code: Code, node: Option<&NodeKey>) -> ProgramRefusal {
 
 pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
     validate_layout(parts)?;
-    let mut functions = BTreeSet::new();
-    for function in &parts.functions {
-        if !functions.insert(&function.key) {
-            return Err(refusal(Code::DuplicateKey, Some(&function.key)));
+    let mut functions = Vec::new();
+    functions
+        .try_reserve_exact(parts.functions.len())
+        .map_err(|_| refusal(Code::Storage, None))?;
+    functions.extend(parts.functions.iter().map(|function| &function.key));
+    functions.sort_unstable();
+    for pair in functions.windows(2) {
+        if let [left, right] = pair {
+            if left == right {
+                return Err(refusal(Code::DuplicateKey, Some(left)));
+            }
         }
+    }
+    for function in &parts.functions {
         for value_type in function.parameters.iter().chain([&function.result]) {
             parts
                 .types
@@ -34,11 +43,25 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         }
         expression(parts, function.body, &function.key)?;
     }
-    let mut expressions = BTreeSet::new();
-    for value in &parts.expressions {
-        if !expressions.insert((&value.key, value.body_path.as_slice())) {
-            return Err(refusal(Code::DuplicateKey, Some(&value.key)));
+    let mut expressions = Vec::new();
+    expressions
+        .try_reserve_exact(parts.expressions.len())
+        .map_err(|_| refusal(Code::Storage, None))?;
+    expressions.extend(
+        parts
+            .expressions
+            .iter()
+            .map(|value| (&value.key, value.body_path.as_slice())),
+    );
+    expressions.sort_unstable();
+    for pair in expressions.windows(2) {
+        if let [left, right] = pair {
+            if left == right {
+                return Err(refusal(Code::DuplicateKey, Some(left.0)));
+            }
         }
+    }
+    for value in &parts.expressions {
         parts
             .types
             .check_type(&value.value_type)

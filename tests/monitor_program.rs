@@ -277,7 +277,7 @@ fn assert_state_contents(value: &Value) {
     assert!(activations.elements().is_empty());
 }
 
-#[trace("TC-200", "interface-002-AC-1")]
+#[trace("TC-209", "interface-002-AC-1")]
 #[test]
 fn retained_program_outlives_preparation_and_keeps_four_entry_keys() {
     let program = {
@@ -374,7 +374,7 @@ fn retained_program_outlives_preparation_and_keeps_four_entry_keys() {
     assert!(second.types().composite(key("state")).is_some());
 }
 
-#[trace("TC-200", "interface-002-AC-2")]
+#[trace("TC-209", "interface-002-AC-2")]
 #[test]
 fn missing_and_mistyped_fourth_entry_refuse_before_any_execution() {
     let mut missing = parts();
@@ -385,7 +385,7 @@ fn missing_and_mistyped_fourth_entry_refuse_before_any_execution() {
     refused(wrong, ProgramRefusalCode::TypeMismatch);
 }
 
-#[trace("TC-200", "interface-002-AC-3")]
+#[trace("TC-209", "interface-002-AC-3")]
 #[test]
 fn duplicate_source_keys_invalid_edges_and_cycles_refuse() {
     let mut duplicate = parts();
@@ -416,7 +416,7 @@ fn duplicate_source_keys_invalid_edges_and_cycles_refuse() {
     refused(cycle, ProgramRefusalCode::ExpressionCycle);
 }
 
-#[trace("TC-200", "interface-002-AC-3")]
+#[trace("TC-209", "interface-002-AC-3")]
 #[test]
 fn argument_ownership_is_checked_through_the_expression_closure() {
     let mut wrong = parts();
@@ -432,7 +432,7 @@ fn argument_ownership_is_checked_through_the_expression_closure() {
     refused(wrong, ProgramRefusalCode::ForeignArgument);
 }
 
-#[trace("TC-200", "interface-002-AC-2")]
+#[trace("TC-209", "interface-002-AC-2")]
 #[test]
 fn counter_premises_keep_width_64_and_reject_out_of_width_gap() {
     let mut full_width = parts();
@@ -455,7 +455,7 @@ fn counter_premises_keep_width_64_and_reject_out_of_width_gap() {
     refused(wrong, ProgramRefusalCode::InvalidLayout);
 }
 
-#[trace("TC-200", "interface-002-AC-4")]
+#[trace("TC-209", "interface-002-AC-4")]
 #[test]
 fn compatible_entry_roles_may_share_one_function() {
     let mut input = parts();
@@ -468,7 +468,7 @@ fn compatible_entry_roles_may_share_one_function() {
     );
 }
 
-#[trace("TC-200", "interface-002-AC-3")]
+#[trace("TC-209", "interface-002-AC-3")]
 #[test]
 fn shared_expression_nodes_and_distinct_inline_paths_are_not_cycles_or_duplicate_keys() {
     let mut input = parts();
@@ -495,7 +495,7 @@ fn shared_expression_nodes_and_distinct_inline_paths_are_not_cycles_or_duplicate
     assert_eq!(program.expression(ExpressionId(5)).unwrap().body_path, [2]);
 }
 
-#[trace("TC-200", "interface-002-AC-3")]
+#[trace("TC-209", "interface-002-AC-3")]
 #[test]
 fn deeply_shared_inline_arena_validates_on_a_small_native_stack() {
     std::thread::Builder::new()
@@ -532,7 +532,7 @@ fn deeply_shared_inline_arena_validates_on_a_small_native_stack() {
         .unwrap();
 }
 
-#[trace("TC-200", "interface-002-AC-2")]
+#[trace("TC-209", "interface-002-AC-2")]
 #[test]
 fn exact_activation_capacity_includes_zero_and_values_above_host_width() {
     let zero = Program::try_new(parts()).unwrap();
@@ -547,7 +547,7 @@ fn exact_activation_capacity_includes_zero_and_values_above_host_width() {
     refused(invalid, ProgramRefusalCode::InvalidLayout);
 }
 
-#[trace("TC-200", "interface-002-AC-3")]
+#[trace("TC-209", "interface-002-AC-3")]
 #[test]
 fn duplicate_expression_locations_and_each_call_or_if_child_refuse() {
     let mut duplicate = parts();
