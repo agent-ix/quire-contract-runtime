@@ -30,6 +30,17 @@ Default features are empty and `#![no_std]` is unconditional. Borrowed details a
 Separately named total and short-circuit functions make evaluation behavior visible. Checked integer
 traits are sealed to preserve semantics. Counters saturate because evidence collection must not panic.
 
+## Staged implementation boundary
+
+This description covers the default core. `snapshot-json` adds a bounded allocating
+codec; `exact` adds shared-leaf dependencies and the separately described function
+boundary (AD-002). They do not change the allocation-free default-core claim.
+AD-003 assigns the dependency review and AD-004 records the implemented layout.
+The existing expression port is the temporary staged exception tracked by
+[IR-1009](https://linear.app/agent-ix/issue/IR-1009); it expires at the usable
+shared-evaluator cutover. This architecture acceptance does not close the deferred
+FR-275 end-state criteria or qualify the pending IR-722 monitor executor.
+
 ## Risks
 
 The optional proptest mapping is coupled to an external API. Source size is only a proxy for

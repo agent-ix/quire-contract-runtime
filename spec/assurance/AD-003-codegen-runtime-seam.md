@@ -29,220 +29,113 @@ relationships:
 ---
 # Codegen to runtime seam
 
-AD-001 describes the crate's core and AD-002 the function-application boundary. Neither says who
-consumes the crate or how. This AD states the seam to its one consumer, `quire-contract-codegen`,
-and is one of the seam descriptions of IR-323. It lives here because this crate defines the
-runtime contract, so it is the one repository whose specification can describe the surface without
-naming a downstream. Codegen's own side (the generated text, its manifest and its mirrors) is
-stated as routed gaps. File paths of the form `codegen src/...` are in the codegen repository.
-
 ## System Boundary
 
-The runtime is a leaf library. Codegen uses it in two ways. At generation time codegen links the
-`exact` feature and calls its checking and construction items. In generated output codegen emits
-source that names runtime items, and for three emitters a `Cargo.toml` that depends on this crate.
-Generated code runs later, outside both repositories (a customer build, a codegen test, a Kani
-run).
-
-Out of scope: IR's seam to codegen (`quire-contract-ir` AD-006), the evidence chain and replay
-(codegen's AD-002 and AD-003), and the runtime's relation to QSL beyond what the codegen seam needs
-(decision F and Current state).
+This description covers codegen as a consumer of runtime's public surface. Runtime is
+a leaf relative to codegen, IR and QSL. It owns default-core identity, observations,
+verdicts, campaign accounting and checked operators, plus opt-in scalar negotiation and
+lazy Boolean evaluation. Shared semantic values and operations have their own owners.
+Other consumer seams and the pending monitor executor are outside this description.
 
 ## Views
 
-The seam is described as what crosses it, how identity and versions are asserted, which way
-dependencies point and who reports each failure.
+These views separate runtime-owned behavior, shared semantic ownership, consumer use and
+the dependency-direction check.
 
-### What crosses the seam
+### Current ownership and use
 
-Measured at the `origin/main` of the runtime and codegen repositories on 2026-10-01.
+The implemented RT surface is established by `src/lib.rs`, `src/scalar/mod.rs`,
+`src/exact/mod.rs` and `Cargo.toml`; the codegen view is established by its current
+`Cargo.toml` and source, rather than the earlier pre-cutover path and line-count snapshot.
 
-| Group | Runtime items | Owner | Where codegen uses them (`codegen` paths) |
-| --- | --- | --- | --- |
-| Verdict and identity (default features) | `ContractIdentity`, `RequirementId`, `RevisionId`, `ExecutionPoint`, `ClauseId`, `Observation`, `ClauseKind`, `ClauseOutcome`, `FailureDetail`, `FailureKind`, `Verdict`, `VerdictContext`, `VerdictKind` | runtime (FR-001) | emitted by `codegen src/harness.rs:417-972` and `codegen src/bound_strategy/generation.rs:661-747` |
-| Campaign accounting | `CampaignReport`, `CampaignCounts`, `CampaignSnapshot`, `IdentityMismatch` | runtime (FR-004) | the same emitters; harness runners take `&mut CampaignReport` and derive a summary from a snapshot |
-| Exact operators and values | `Integer`, `IntegerInterval`, `IeeeWidth`, `RoundingMode`, `TextProfile`, `QuantityTarget`, `Meter`, `ScalarLimits`, `Outcome`, the operator and comparison enums | runtime (FR-006 to FR-008) | linked by the generator for parameter checks (`codegen src/exact_scalar.rs:58`); emitted as `rt::` calls (`:2344`) |
-| Composite and equality checking | `TypeEnvironment::check_equality`, `CheckedEquality`, `CompositeDeclaration`, `ValueType`, `NodeKey`, `IllTypedCause`, `DeclarationCause` | runtime (FR-008, FR-012) | linked at `codegen src/composite_equality.rs:802`; emitted at `:1396` |
-| Function application | `PackageDeclarations::check`, `CheckedPackage::call`, `Value`, `ObjectEnvironment`, `InputRefusal`, `Origin`, `Location` | runtime (FR-273, AD-002) | linked at `codegen src/exact_function.rs:952`; emitted at `:1277` and `:1353` |
-| Backend negotiation | `negotiate_ieee`, `negotiate_integer_division` and their disposition types | runtime (FR-009) | no codegen source calls either (grep of `codegen src/`) |
-| Snapshot wire | `runtime.campaign-snapshot/v1`, feature `snapshot-json` | runtime (FR-004) | not consumed: codegen's interface document says so (`codegen spec/core/functional/interface-001-codegen-api.md:304`) |
-| Generated manifest text | `quire-contract-runtime = { git, branch, features }` and the `[package.metadata.kani]` flags | codegen writes it | codegen's generated crate emitters |
-| Spelling of runtime paths in generated text | `quire_contract_runtime::ContractIdentity`, `::ClauseId` | codegen's schema asserts the text | `codegen schemas/generated-rust-oracle-v1.schema.json:9-10` |
-| Serializable copies of runtime enums | `IllTypedCause`, `RecursionEdges`, `DeclarationCause`, `Origin`, `Location` | codegen | `codegen src/composite_equality.rs:201-330`, `codegen src/exact_function.rs:374-400`; each has a `From` impl over a runtime enum |
-| A trusted flag | `FunctionDeclaration::measure_discharged` | runtime reads it, codegen sets it | codegen sets `true` unconditionally (`codegen src/exact_function.rs:935`, and in emitted source at `:1303`) |
-
-Features: only the three exact emitters write a manifest into generator output, and it requests
-`exact`. The harness crates (`proptest`) and the Kani crates (`exact`) are built by codegen's tests
-with manifests the tests write (for example `codegen tests/it/harness_generation.rs:223` and
-`codegen tests/it/kani_generation.rs:304`), not by the generator. RT's own `#[cfg(kani)]`
-verification module imports `crate::exact` unconditionally (`verification/kani.rs:1`), so a crate
-checked with `cargo kani` must enable `exact` even when it uses nothing from it (codegen's test
-records the same, and it is runtime's coupling).
-
-### Identity and versions on this seam
-
-- This crate is unpublished. Its features (`default`, `alloc`, `std`,
-  `proptest`, `snapshot-json`, `exact`) are the opt-in surface. There is no semantic version to
-  negotiate, and none is proposed.
-- The assertion on the Rust surface is that generated source compiles against this crate, and
-  codegen's tests build every generator's output against it (for example
-  `codegen tests/it/exact_scalar_generation.rs:1424`).
-- Codegen's own dependency and generated manifests must select the runtime through their Cargo
-  manifests. Codegen's compile tests establish that generated source builds against that
-  selection (T-2).
-- Wire versions this crate owns: `runtime.campaign-snapshot/v1` (decoder refuses another
-  version, `UnsupportedVersion`), the node-key domain `quire.checked-semantic-node/v1` and the
-  accounting version `quire.value.accounting/v1`, carried verbatim; IEEE definition
-  `quire.value.ieee754-2019-default/v1`. None is a digest. The runtime computes no node key and no
-  digest (FR-012); a `NodeKey` is an opaque value the compiler supplies.
-- The enumerations are `#[non_exhaustive]` (72 sites) and the crate's documentation tells
-  consumers to retain unknown future states rather than convert them to success (`src/lib.rs`,
-  Compatibility). Codegen's side of that rule is in Current state.
-
-### Dependency direction and what enforces it
-
-| Edge | Allowed | Held by | Gap |
-| --- | --- | --- | --- |
-| codegen to runtime | yes (normal, `exact`; dev adds `proptest`) | `codegen Cargo.toml:18`, `:31` | none |
-| runtime to codegen or IR | no | `deny.toml` has `unknown-git = "deny"` with no `allow-git`, and every first-party dependency is a git source, so `make deny` fails on any such edge. The retired lock-entry checker did not block dependency edges | the rule is implicit in the sources policy; no test or comment says it is the guard; a path dependency would not be caught; `make ci` stops at `spec` (failing on `main`) before it reaches `deny`, so run `make deny` directly |
-| runtime to any other QSL crate (`qsl-eval`, `qsl-replay`, the QSL root) | no | this repository's own `deny.toml`: a per-crate `[bans]` `deny` entry for each of those crates (each repository guards its own edges); the sources policy alone cannot do it once `allow-git` admits the QSL repository for `quire-exact`, because `allow-git` names a repository | the entries do not exist yet; they are added in the RT layout work (IR-349, "Refactor RT to its layout AD"). This does not rely on QSL's lint (QSL-356) |
-| runtime to `quire-exact` | yes (accepted, decision F) | QSL ADR-011 lists "RT to `quire-exact`" as a new edge. QSL's `arch-lint` classifies a dependency whose source names the QSL repository as QSL and exempts every normal CG edge into QSL, which is not the RT edge | QSL fixes FB-05 and its lint (QSL-356, as relayed); RT's `deny.toml` then needs `allow-git` for that one source |
-| any cycle among the four repositories | no | QSL `arch-lint direction` (FB-05, FB-11), run on request with the clones and outside QSL's `make ci` | manual; QSL gives no CI option (as relayed) |
-| generated crate to runtime | yes, by manifest | codegen's compile tests | covers the selected runtime dependency |
-
-### Failure outcomes and who reports them
-
-| Condition | Reported by | Outcome |
+| Surface | Owner | Current consumer seam |
 | --- | --- | --- |
-| A clause passes, fails or its precondition excludes the case | the oracle, through `Verdict` | `Passed`, `FailedPostcondition`, `RejectedPrecondition`; no Boolean conversion, rejection is not failure |
-| A verdict names another campaign | `CampaignReport::record` | `IdentityMismatch` carrying both identities, no counter moves |
-| Counters reach `u64::MAX` | the report | saturate, `at_limit` is true; never a panic |
-| An exact operation has no value, is refused, or a charge is unavailable | the operator | `Outcome::Undefined`, `Refused` or `Incomplete`; the oracle returns it unchanged to its caller |
-| A function call has a bad argument | `CheckedPackage::call` | `InputRefusal` (`Arity`, `WrongValueKind`, `DanglingReference`, `UnknownFunction`), before any charge |
-| A package is not admissible | `PackageDeclarations::check` | `CheckRefusal` with a typed cause |
-| A backend lacks a capability | the negotiators | one disposition per item (`Supported`, `RequiresBound`, `Unsupported`); not an `Outcome` |
-| A runtime enum gains a variant | the generator for an arm in generator code, the generated crate for the two arms emitted into it | a typed `UnknownRuntimeVariant` in one path, and a panic at every other `unreachable!` arm (Current state) |
-| A limit is reached inside a Kani proof | not reported | proof harnesses meter at `u64::MAX` for every limit (`codegen src/kani_obligations.rs:2060-2071`), so exhaustion paths are not exercised by them |
+| Contract identity, observations, verdicts and campaign accounting | RT default core | CG `src/strategy/harness.rs`, `src/strategy/v2_numeric.rs` and `src/strategy/bound/generation.rs` emit the RT paths |
+| Lazy Boolean and backend negotiation | RT `scalar`, feature `exact` | CG `src/core/profile.rs` tests the lazy connective; scalar emitters use the owner module |
+| Exact scalars, values, outcomes and metering | `quire-exact` | CG imports the owner directly; RT imports the same owner for its kept scalar and expression code |
+| Type environment, equality and object closure | `quire-semantic-value` | CG `src/oracle/equality/` and `src/oracle/function/owner_path.rs` name the shared owner directly |
+| Function application remaining in RT | RT's temporary expression port | AD-002 and the IR-1009 exception govern this existing public surface; shared-owner CG paths do not make RT's port a second semantic authority |
+| Generated manifest and emitted source compilation | CG | CG owns manifest generation and compilation against its selected Cargo dependencies; runtime keeps no consumer-version record |
+| Snapshot wire | RT `snapshot-json` | `runtime.campaign-snapshot/v1`; decoder failures are RT's typed outcomes |
+
+The RT `exact` feature enables `alloc` and optional `quire-exact` and
+`quire-semantic-value`; it is not a module reexport of their values. Its remaining
+`exact` module exposes expression items only. CG's normal runtime dependency does
+not enable that feature; its development dependency enables `exact` and `proptest`.
+Generated crates select the features their emitted source uses. CG also depends
+on the shared owners, IR root/model, `qsl-replay` and the evaluation leaf; those
+are CG's edges, never reverse dependencies from RT.
+
+### Identity and outcomes
+
+Authored contract identity and revision values identify the governed contract. Shared
+node keys remain opaque owner values; RT does not reconstruct them or keep a file,
+consumer-version or digest ledger. Cargo manifests and lockfiles carry dependency
+selection. Default-core enum compatibility and shared-owner exhaustive matches remain
+separate contracts.
+
+| Scenario | Owner and result |
+| --- | --- |
+| Oracle pass, failed postcondition or excluded precondition | RT verdict vocabulary; rejection is not failure |
+| Verdict from another campaign | `IdentityMismatch`, with no counter change |
+| Counter at its bound | saturation and the existing at-limit observation |
+| Shared semantic undefinedness, refusal or resource stop | the shared `Outcome`, retained by the caller |
+| Invalid function argument or foreign checked expression | AD-002 planning/refusal path before charging or running that body |
+| Missing backend capability | RT scalar provider disposition, separate from semantic evaluation |
+| Unknown future RT enum state at a CG boundary | CG's typed refusal/unknown handling; it may not turn the state into success or an unreachable panic |
+
+### Dependency direction and reviewed owner
+
+| Edge | Current policy | Enforcement or review owner |
+| --- | --- | --- |
+| CG to RT | allowed | CG's manifest and generated-source compile controls |
+| RT to shared exact/semantic-value leaves | allowed, optional under `exact` | RT manifest, lock and cargo-deny; canonical support is transitive |
+| RT to CG, IR or the QSL monorepo | forbidden | Git-source policy plus runtime-maintainers' manifest/resolved-graph review; a path edge must not bypass that review |
+| A cycle returning to RT, IR, CG or QSL | forbidden | reviewed all-feature normal/build dependency closure described below |
+| Generated crate to RT or a shared owner | selected by the emitted manifest | CG's generated-crate compile controls |
+
+Runtime-maintainers own the manual cross-repository direction check. It is required
+when an RT manifest, lock, optional-feature graph or first-party dependency boundary
+changes, and at architecture acceptance. The reviewer obtains locked, all-feature
+`cargo metadata --format-version 1` for RT and selected main checkouts of IR, CG and
+QSL. Starting from each root, the review follows normal and build edges, separates dev
+edges, identifies workspace/package owners, and checks for forbidden RT edges and a
+path returning to any of the four roots. It also inspects dev/path declarations for
+an owner-dependency bypass. Unknown source or missing metadata is an unavailable check,
+not a clean result.
+
+The IR-1293 check covers RT/IR/CG application version 0.1.0 and QSL 0.2.0. It found
+RT's direct production first-party edges to `quire-exact` and `quire-semantic-value`,
+with canonical support transitively, no RT edge to IR/CG/QSL, and no cycle involving
+those four roots. Package identities, not a collapsed repository name alone, decide
+actual Cargo cycles: the wider metadata has separate packages that produce a
+`filament-core-data`/`quire-rs` repository-name loop. This is not asserted to be a
+Cargo package cycle, an RT edge or an all-repository DAG. The independent architecture
+review records this bounded manual check and its owner; this is not a CI automation claim.
 
 ## Decisions
 
-- A. The runtime is the one authority for the spelling and meaning of its items. Generated text
-  names them by path and codegen defines no second spelling.
-- B. Codegen reports a runtime variant it does not know as a typed refusal of the whole
-  generation, never as a panic at generation time and never as a panic inside generated source.
-- C. Emitted manifests name this crate by the same Git URL and branch as codegen's own
-  Cargo manifest. Codegen's compile tests build generated crates with that dependency selection.
-- D. The runtime computes no digest and keeps no version record about codegen, and codegen keeps
-  none about the runtime beyond its lock.
-- E. Provider dispositions stay outside the evaluation path (AD-002, FR-009).
-- F. `exact` is a copy of QSL's kernel, which is vendoring and not allowed to stand. Its own
-  header says it is "a `no_std + alloc` port" that "keeps the authority's name and order"
-  (`src/exact/mod.rs:5-11`), and QSL's kernel now lives in `quire-exact`. The decision is to
-  delete `exact` and depend on `quire-exact`. QSL-357 has landed: `quire-exact` is `no_std` plus
-  `alloc` and builds for `thumbv7em-none-eabi` in QSL's own gate. This crate takes one floor, Rust
-  1.98.1, for all features (the owner's decision of 2026-10-01, FR-275). No shared-corpus agreement test is kept between two
-  copies, because there will be one. Pointing this crate's conformance at `qsl-eval` (the idea
-  recorded under IR-355) is rejected: `qsl-eval` is QSL layer 5 and an FB-05 violation even as a
-  dev edge. FR-275 states this decision as a requirement, and its end state is no ported QSL code in this
-  crate: QSL says (as relayed) that QSL-358 moves the residue (function application, checking
-  environments, containment and unit graphs, enumeration declarations, compiler vocabulary) into a
-  QSL-owned `no_std` plus `alloc` leaf crate, `quire-semantic-value`, so `src/exact` is deleted
-  except the backend negotiators, which are runtime-owned (QSL deleted its own on purpose, as
-  relayed), in two steps. The residue is not authorized: it is vendored code, with no exception, no
-  expiry and no approval (the owner: "no vendoring ... Absolutely not allowed"), and it is to be
-  deleted. How this crate handles its copy until QSL-358 delivers the shared crate is an open owner
-  decision. While the copy exists, the exact rows of the seam above describe this crate's own
-  `exact`; after deletion they describe `quire-exact`, and the items SR-623 FND-002 lists as absent from
-  `quire-exact` (cross-unit quantity, the equality-conversion table) are for the code move to
-  resolve, not re-measured here. No compatibility layer carries the old copy.
-
-No compatibility layer is proposed. A runtime item that changes is changed in codegen in the
-same step.
-
-### Invariants a test can check
-
-Local labels; the repository assigns requirement ids when one is authored.
-
-- T-1. This crate declares no dependency on codegen or IR, and its only first-party edge is
-  `quire-exact` once decision F lands (enforced by the sources policy today; add a direct
-  assertion).
-- T-2. Generated manifests select the same runtime Git URL and branch as codegen's own
-  Cargo manifest, and codegen's compile tests build the generated crates.
-- T-3. No `unreachable!` arm names a runtime enum in generator code or in emitted source (a count
-  a test can take; not true today).
-- T-4. `Verdict` has exactly three kinds and none converts to `bool` (existing: FR-001).
-- T-5. A rejected precondition increments rejected and not failed; a mismatched identity moves no
-  counter (existing: FR-004).
-- T-6. A negotiator returns one disposition per item in input order, and permuting the input
-  permutes the result (existing: FR-009-AC-1); an `InputRefusal` leaves the meter unchanged
-  (existing: FR-273).
-- T-7. For the same input the oracle's `Outcome` equals QSL's replay outcome. As relayed, this
-  belongs in codegen's parity comparator (`quire-contract-codegen#50`, QSL ADR-011 section 7.1), not here;
-  it is trivial once both sides call one kernel (decision F).
-
-Stated but not testable today: `measure_discharged` is set only for a function read from an
-admitted package that carries the authority's discharge (as relayed, admission carries it; no
-carrier is measured on the wire yet).
+- Each public semantic surface has one owner. CG names RT's kept items and the shared
+  owners' items directly, rather than defining another spelling or mirrored evaluator.
+- Provider dispositions remain outside semantic evaluation. Unknown states must retain
+  their distinct failure meaning at the consuming boundary.
+- Generated manifests and compile controls belong to CG. This crate adds no consumer
+  version record, compatibility alias, fallback or second copy of a shared owner.
+- The expression port is retained only as the temporary staged exception tracked in
+  [IR-1009](https://linear.app/agent-ix/issue/IR-1009). It expires at the usable shared
+  `no_std` evaluator cutover described by AD-002/AD-004. The no_std rewrite remains
+  deferred and is not staffed by this acceptance.
+- The current verification configuration still imports `exact` under `cfg(kani)`.
+  This acceptance changes no proof configuration and grants no core-only or backend
+  proof claim. Architecture acceptance and implementation/proof qualification differ.
 
 ## Risks
 
-What is measured today, what is open and with whom, and what is routed.
+The shared-evaluator cutover and deferred FR-273/FR-275 end-state acceptance stay with
+IR-1009 and its predecessor IR-590. The temporary exception is not a fulfilled
+one-owner end state. Changes in shared payloads or CG emission need coordinated source
+and compile review; accepting this AD does not claim every CG obligation is delivered.
 
-### Current state and gaps
-
-- The audit SR-623 (`reviews/ir-319-code-review.md`) covers the runtime's own design. This AD
-  adds only what it does not: the consumer's side. Its findings that touch this seam are not
-  restated: FND-001 and FND-002 (the kernel is a copy of QSL's, the agreement evidence was deleted
-  and the shared kernel is not adopted; tracked there as IR-342, IR-345 and IR-355). IR-355 is
-  superseded by decision F, which keeps no agreement test and rejects its `qsl-eval` idea. The
-  interim gap is that RT has no agreement evidence at all until the copy is deleted (QSL-357 has
-  landed). Also FND-003 (`CheckedInvariant` merges at least ten conditions; IR-356) and FND-007
-  (one Kani harness reaches `exact`; IR-340).
-- The copy of QSL's kernel (decision F) puts two kernels in codegen's build graph
-  (`rt::ScalarLimits` and `qsl_replay::ScalarLimits`, `codegen src/spine_replay.rs:16`), so the
-  oracle codegen emits and the replay QSL runs can disagree (T-7).
-- Panics at the seam: codegen has 37 `unreachable!` arms over runtime `#[non_exhaustive]` enums
-  (`codegen src/exact_scalar.rs` 26, `codegen src/composite_equality.rs` 9,
-  `codegen src/exact_function.rs` 2). Most are lowering matches that choose the `rt::` path to
-  emit; a few in `composite_equality.rs` are the `From` conversions to serializable mirrors. The
-  two in `exact_function.rs` (`:1331`, `:1363`) are text inside the emitted source and run in the
-  generated crate on a future `Outcome` variant, so the generator is not what reports them. The 37
-  include those two. One path already returns the typed `UnknownRuntimeVariant`
-  (`codegen src/generation.rs`; `check_parameters` in `exact_scalar.rs`). Tracked as IR-352.
-- The `measure_discharged` flag is trusted: FR-273 states that nothing links a runtime package to
-  the authority's proof and that a body is arbitrary host Rust. Codegen sets the flag to `true`
-  for every function it assembles.
-- No codegen source calls the FR-009 negotiators, so the `unsupported` and `requires-bound`
-  dispositions are decided elsewhere or not at all on this seam. Not measured: whether QSL or
-  another consumer calls them.
-- `Evaluation.location` and `.losses` are public but no producer fills them (SR-623 FND-011), and
-  codegen mirrors `Location` (`RecordedLocation`) with a path that is always empty.
-
-### Open questions
-
-| Question | Owner | Recommendation | Cost of the alternative |
-| --- | --- | --- | --- |
-| Replace codegen's `unreachable!` arms with `UnknownRuntimeVariant`, and the two emitted ones with a typed stop | codegen (IR-352) | yes | a runtime variant crashes generation or generated code |
-| Where does the discharge of a function's `decreases` measure travel to codegen? | QSL and codegen | admission carries it (QSL's answer, as relayed); codegen sets the flag only for functions read from an admitted package | the flag stays a constant codegen asserts |
-| Should RT's Kani module stop importing `exact` unconditionally? | runtime | gate the import so a core-only crate verifies without `exact`; moot for the kernel once decision F lands | every Kani crate pulls in the large kernel |
-
-### Routed gaps
-
-Needs stated to owners, not decisions. Ids are routing ids of IR-323; they are not requirement
-ids. Runtime-owned items are the decisions and invariants above and SR-623's findings and need no
-routing.
-
-To codegen:
-
-| Id | Stated need |
-| --- | --- |
-| R3-C6 | Replace the 37 `unreachable!` arms over runtime enums (35 in generator code, 2 emitted into generated source) with a typed refusal; `UnknownRuntimeVariant` already exists. Tracked as IR-352. |
-| R3-C7 | Set `measure_discharged` only for functions read from an admitted package that carries the discharge, not as the constant `true`. |
-| R3-C8 | State whether the serializable mirrors of runtime enums stay, or the kernel exposes a serialization the generator reuses (a stated need, not a request to copy). |
-
-To QSL, answered as relayed and no longer open: the runtime edge to `quire-exact` is accepted and
-QSL fixes FB-05 and its lint (QSL-356, QSL #554, in review); the T-7 comparison belongs in codegen's
-parity comparator (`quire-contract-codegen#50`, QSL ADR-011 section 7.1); admission carries the
-discharge (R3-Q7); `quire-exact` is `no_std` plus `alloc` (QSL-357, landed; decision F).
-
-To QSpec: none added by this AD.
+Manual direction checks need a maintainer review on changes; existing source policy
+alone does not classify a path dependency or prove the cross-repository boundary.
+A missing peer checkout or unresolved dependency graph must be reported explicitly.

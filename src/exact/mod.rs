@@ -5,8 +5,9 @@
 //!
 //! Exact scalar values, operations, outcomes and metering belong to `quire-exact` (FR-275).
 //! Consumers import those directly from the kernel. This module still defines the
-//! ported QSL expression code pending replacement by the shared evaluator. That
-//! residue is an open FR-275 defect. It is built over kernel scalars and metering.
+//! ported QSL expression code retained under the staged exception in AD-002/AD-004
+//! and IR-1009. The exception expires at the usable shared no_std evaluator cutover;
+//! the full FR-275 end state remains open. It is built over shared scalars and metering.
 //!
 //! Trace: interface-001-AC-2, interface-001-AC-4
 //!

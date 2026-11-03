@@ -13,52 +13,67 @@ relationships:
 
 ## System Boundary
 
-FR-273 extends the `exact` feature's boundary to include `quire_contract_runtime::exact::CheckedPackage`
-as the call surface for total pure functions: a port of the quire-spec-language authority's own type,
-carrying its name and order, the shape FR-006 through FR-008 already establish for scalar, composite,
-collection and equality operators. The runtime is no second semantic authority for function bodies:
-the authority's `PackageDeclarations::check` proves purity, termination and definedness once, statically, and
-`CheckedPackage::{call, evaluate}` alone run checked code under a `Meter`. That port is not
-authorized: FR-275 records it as residue, vendored code that violates the no-vendoring rule, with no
-exception, no expiry and no approval. It is to be deleted; QSL is to own it in `quire-semantic-value`
-(QSL-358, as relayed) and this crate is to consume it. How this crate handles its copy until then is an open owner
-decision.
+The optional `exact` feature retains the existing function-application implementation
+in `src/exact/expression.rs`, exposed by `src/exact/mod.rs`. Exact values, operations,
+outcomes and metering belong to `quire-exact`; type environments, object closures and
+stop conversion belong to `quire-semantic-value`. RT is not a second semantic authority
+for those shared values.
+
+The remaining expression implementation is a temporary staged exception under
+[IR-1009](https://linear.app/agent-ix/issue/IR-1009), recorded by IR-1293. It preserves
+existing function application while the usable shared `no_std + alloc` evaluator is
+deferred. IR-590 and IR-584 are not newly planned or staffed by this decision. This
+exception authorizes no new evaluator copy, semantic expansion or compatibility layer.
 
 ## Views
 
-The evaluation view gains one call path: a checked package and a function name or checked expression,
-argument values, an `ObjectEnvironment` and a `Meter`, in, one `Result<Evaluation, InputRefusal>` out.
-No new stored state, allocator use or I/O crosses the boundary; the call is metered exactly as every
-other exact operator is.
+The caller supplies declarations and generated resumable body states. Admission through
+`PackageDeclarations::check` refuses unsupported checking mode, duplicate names and
+undischarged measure declarations before publishing a callable package. RT does not
+inspect an upstream AST or prove an arbitrary host body pure, terminating or defined;
+those are the upstream admission obligations. `CheckingLimits::nodes` is carried but
+cannot count a generated body that exposes no AST.
+
+`plan_call` and `plan_evaluation` validate arguments and the checked-expression/package
+association without taking a meter. `CheckedPackage::call` validates first, charges one
+`function.call` work unit, then starts the generated body. `evaluate` starts its root
+without that call charge and charges requested child calls. Both retain typed
+`InputRefusal` before execution and the shared `Outcome` after execution.
+
+Execution owns suspended body states in an explicit heap vector and resumes one
+transition at a time. A body transition requests a child call or returns an outcome;
+it does not synchronously invoke another checked body. The shared meter is borrowed
+through `RefCell`; package reentry or an incompatible borrow is a typed invariant
+refusal. Heap allocation is part of this opt-in `alloc` feature. There is no promise
+that allocator exhaustion becomes a recoverable result. RT introduces no ambient I/O.
 
 ## Decisions
 
-Function application is total, never short-circuiting, so it is a separately visible path from the
-short-circuit Boolean connectives AD-001 already names. A function whose declared operator
-requirements no registered backend can discharge is negotiated by FR-009's own negotiators, before
-any application, and reported as the `unsupported` provider disposition FR-009 already defines: one
-closed vocabulary for "no registered backend can discharge this," and one negotiation seam for it,
-whether the requirement is declared by a bare operator or by a function that reaches one. Provider
-dispositions stay outside the evaluation path, as AD-005 and FR-009 keep them. `CheckMode::Kernel`
-application stays out of scope, matching FR-008's own deferral of the unlinked evaluation path.
+Function calls are distinct from the runtime-owned lazy Boolean connective. Backend
+negotiation remains in `scalar` under FR-009 and outside function evaluation. Only
+`CheckMode::Linked` admits a callable package; `Kernel` is refused. Caller-supplied
+upstream-discharge markers are admission inputs, not proofs reconstructed by RT.
+
+The existing port and its public path remain only within IR-1009's recorded exception.
+The exception expires when the shared evaluator implementation/ownership lands and
+passes RT's governed `no_std` target acceptance for checked-input and generated-body
+execution. The RT/paired-CG adoption removes the local expression implementation and
+old public path in that cutover. An interface alone does not satisfy this expiry.
+The end state has one shared owner; it introduces no alias, fallback or compatibility
+wrapper. FR-273 and FR-275's deferred end-state criteria retain their meaning and
+remain open until their actual evidence lands.
+
+Runtime-maintainers own the exception review when this source, a dependency or shared
+evaluator availability changes. AD-003 defines the reviewed dependency-direction check.
 
 ## Risks
 
-The termination and definedness proof burden for every applied function lives entirely in
-`PackageDeclarations::check`, outside this crate's own Kani proof surface; this crate
-depends on that upstream proof rather than reproducing it. The call surface follows
-quire-spec-language, so a later quire-spec-language release that changes
-`CheckedPackage`'s signature requires a coordinated re-port, the same dependency FR-008
-already carries for composite, collection and equality evaluation. `Value` and `ValueType` retain
-explicit tags, but `quire-exact` changed the scalar payload layouts and IR-349 part 1, slice 1
-removed their compile-time size assertions from `src/exact/composite.rs`. No current Kani harness
-reads either enum from heap storage (`verification/kani.rs`); a future proof must measure the
-current representation rather than assume the former inline-size bound.
+A generated host body is not an admitted source AST, so the runtime cannot independently
+establish its semantic proof obligations. The current `Evaluation` paths return no
+location and an empty losses list; this architecture acceptance does not claim otherwise.
+The package-instance counter is finite and wraps at its integer width; it is not a
+permanent content identity. These limits remain visible during the IR-1009 staged period.
 
-`CheckedPackage::enter` retains one CBMC-oriented representation rule with no owning FR or NFR:
-it returns `Option<DepthGuard>` rather than
-`Result<DepthGuard, Stop>`, because `Stop`'s niche is where CBMC cannot fold a written discriminant
-back (`src/exact/expression.rs`); a signature check next to `enter` pins its exact return type.
-`evaluate_integer_arithmetic` also built its `Outcome<Integer>` directly rather than through an
-inner `Result<Integer, Stop>` round-trip, for the same reason. That operator now belongs to
-`quire-exact` (IR-349 part 1, slice 1), which owns any corresponding representation rule.
+The explicit scheduler and shared payloads have native controls under FR-273/FR-278;
+architecture review is not a Kani or IEEE qualification. Former CBMC-oriented
+`DepthGuard` and inline-value-size descriptions do not describe the current source.
