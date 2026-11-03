@@ -2,9 +2,9 @@
 id: AD-004
 title: "Runtime crate layout: modules of this crate and the shared exact kernel it consumes"
 type: ArchitectureDescription
-status: proposed
+status: accepted
 owner: runtime-maintainers
-system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the exact feature's 23 files), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps assigned to IR-349 and IR-1009
+system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the kept scalar modules and remaining expression port), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps assigned to IR-349 and IR-1009
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AD-001
     type: references
@@ -63,43 +63,28 @@ IR-582; this crate follows, see the end state).
 The layout is described as it is, as the shared names classify, as it ends, and as the dependency
 edges and the consumer's paths follow from that.
 
-### Current layout
+### Current accepted-stage layout
 
-Measured: 34 files and 13,791 lines under `src/`; `exact/` is 23 files and 12,080 lines. Outside
-`src/`: `verification/kani.rs` 295, `measurement/footprint` 124 (`wc -l` over its `.rs` files; 137 with the manifest), `tests/` 16 files and 9,591 lines
-(12 `exact_*` files, 8,686 lines).
+The current implementation has the following ownership. The subsequent shared-name
+classification is the historical migration analysis, not a claim that its old files
+or line counts remain in the tree. Target-layout and end-state invariants are the
+remaining migration contract, not present conformance claims.
 
-Core, accounting, snapshot, adapter (no `exact` dependency; unchanged by this AD):
+| Surface | Files | Feature and owner |
+| --- | --- | --- |
+| Default core | `identity`, `observation`, `verdict`, `operators`, `accounting` and the crate root | RT; fixed-size/borrowed core, unconditional `no_std`, no unsafe code |
+| Optional adapters | `snapshot_json`, `proptest_adapter` | RT `snapshot-json` allocating codec and `proptest` development adapter |
+| Runtime-owned scalar behavior | `scalar/{mod,boolean,division,ieee}.rs` | `exact`; backend negotiation and lazy Boolean connective |
+| Existing expression implementation | `exact/{mod,expression}.rs` | `exact`; temporary staged exception IR-1009, expiry below |
+| Shared value and operation kernel | `quire-exact` | imported directly; no RT scalar/value/meter copy |
+| Shared type, equality, closure and vocabulary support | `quire-semantic-value` | imported directly; canonical support is transitive |
 
-| File | Lines | Feature | Owns |
-| --- | --- | --- | --- |
-| `lib.rs` | 81 | none | feature gates, core re-exports, `exact` module declaration |
-| `identity.rs`, `observation.rs`, `verdict.rs` | 74, 176, 170 | none | FR-001 identity, observation, failure and verdict types |
-| `operators.rs` | 217 | none | FR-002 panic-free checked and short-circuit helpers over `bool` and integers |
-| `accounting.rs` (+ `accounting_tests.rs` 53) | 297 | none | FR-004 `CampaignReport`, `CampaignCounts`, `CampaignSnapshot`, `IdentityMismatch` |
-| `snapshot_json.rs` | 351 | `snapshot-json` | `runtime.campaign-snapshot/v1` codec |
-| `proptest_adapter.rs` | 37 | `proptest` | FR-003 adapter |
+`src/exact` no longer contains the old scalar, quantity, unit, enum, collection,
+equality, identity or definition implementations. `IR-349`'s independent cutovers
+have landed. The remaining expression removal and final empty-residue criteria are
+IR-1009, blocked by the usable evaluator; this acceptance does not reopen that rewrite.
 
-`exact/` (feature `exact`; target module per the split asked for in IR-345; owner after is who defines the
-item once this AD is realized):
-
-| Target | File (lines) | Owns today | Owner after |
-| --- | --- | --- | --- |
-| scalar | `integer` 700, `rational` 327, `decimal` 1,103, `numeric` 468, `division` 233, `ieee` 1,792, `comparison` 143 | exact integer, rational, decimal, IEEE values and operation tables, comparison and ill-typed vocabulary, I13 negotiators, lazy Boolean connective | `quire-exact`; this crate keeps the negotiators (`division` 180-233, `ieee` 760-857) and the connective (`numeric` 408-468), about 210 lines |
-| scalar | `quantity` 588, `unit` 491 | quantity arithmetic, unit graph, compound units | `quire-semantic-value` (`quantity`, `unit`) and `quire-exact` (`quantity`) |
-| text | `text` 539 | text admission, normalization, comparison | `quire-exact` (`text`) |
-| text | `enumeration` 189 | enumeration declarations and values | `quire-semantic-value` (`enumeration`) |
-| composite | `composite` 1,585, `collection` 387, `equality` 573, `key` 125 | `Value`, `ValueType`, declarations, `TypeEnvironment`, collections, canonical key, equality plan, `CheckedEquality` | `quire-exact` (`value`, `collection`, `equality`, `key`) and `quire-semantic-value` (`declaration`) |
-| composite | `containment` 226, `reference` 253, `node` 170, `definition` 144 | value graph, object references and environment, `NodeKey`, graph and package refusal vocabulary | `quire-semantic-value` (`containment`, `object_closure`, `semantic_node`, `definition`) and `quire-exact` (`reference`, `identity`, `node`) |
-| expression | `expression` 978 | function application (AD-002, FR-273) | vocabulary (about 215 lines) to `quire-semantic-value` (`checking`, `call`, `loss`, `location`); the call mechanism (about 760 lines) is a port by its own header and has no home in a crate this one may depend on: Q-1 |
-| outcome | `outcome` 222, `accounting` 685 | `Outcome`, `Undefined`, `Refusal`, `Meter`, charge points, limits | `quire-exact` (`outcome`, `accounting`) |
-| (root) | `mod.rs` 159 | the `pub use` list of every item above | deleted |
-
-The five line sums by target are 5,845 (scalar), 728 (text), 3,463 (composite), 978 (expression)
-and 907 (outcome), plus `mod.rs`: 12,080. `src/exact_accounting_tests.rs` (232) and
-`src/exact_integer_tests.rs` (23) test the deleted `Meter` and `Integer` and are not counted in it.
-
-### Shared names: classification
+### Historical shared-name classification
 
 Method. Every `pub struct` and `pub enum` name in `src/exact` (151) was compared with the same
 names in `quire-exact` (102) and `quire-semantic-value` (72). 124 names exist in at least one (the
@@ -151,29 +136,27 @@ Modules of this crate after the steps below (one feature `exact`; no `exact` mod
 | core, accounting, snapshot, adapter, `verification/kani.rs`, footprint crate | not QSL code |
 | the 11 `scalar` items | absent from both shared crates (measured: no `negotiate_*` and no lazy-right connective in either); QSL deleted its negotiators on purpose (FR-275, as relayed by QSL) |
 
-Not kept by this AD: the 15 `expression` items. Absence from both shared crates does not make them
+Not kept by this AD: the expression items. Absence from both shared crates does not make them
 runtime-owned. `src/exact/mod.rs` calls the module "a `no_std + alloc` port ... every type, field and variant
 keeps the authority's name and order" and `expression.rs` says it ports the authority's call surface;
 FR-275-AC-13 defines a port as code that keeps the QSL authority's item names, FR-275's residue list names
-function application as vendored code with no exception, no expiry and no approval, and AD-003
-decision F says the same. QSL defines the same names in `qsl-package`, `qsl-semantics` and `qsl-eval`,
+function application as residue. The earlier no-interim-policy description is superseded
+by the bounded IR-1293 exception below; the one-owner end state is unchanged. QSL defines the same names in `qsl-package`, `qsl-semantics` and `qsl-eval`,
 which this crate may not depend on. Their end is the evaluation leaf crate QSL provides in its own
 repository (Q-1): IR-583 defines its shared interface, while IR-590 supplies the usable `no_std`
 evaluator. This crate depends on that implementation after target acceptance, deletes the items and
 keeps no second version.
 
-Interim. What this crate does with these items before the usable IR-590 implementation is accepted by
-RT is not ruled by the owner: FR-275's Open questions record no interim policy, and the owner's Q-1
-answer (option (a): QSL provides
-evaluation, this crate depends on it and deletes its copy) says nothing about interim handling or early
-deletion. The rest of this paragraph is this AD's inference from that answer, not a ruling. Inference:
-the items stay in the tree until IR-590 passes the RT target acceptance checks, only as the defect
-FR-275 already records (AC-13 unmet,
-residue list non-empty); no step adds behaviour to them; steps 3 and 4 only repoint what they must to keep
-the crate compiling; no consumer is given a new use of them; they are deleted in step 5, in the PR that
-adds the dependency on the leaf. This AD grants no exception, sets no expiry, and asks for none.
-Alternative, if the owner rules otherwise: delete them early (in step 3 or 4), at the cost that CG's
-function oracles lose their runtime call surface until the IR-590 implementation passes those checks.
+Interim decision (IR-1293). The existing expression implementation is retained as
+one bounded temporary staged exception in [IR-1009](https://linear.app/agent-ix/issue/IR-1009).
+Runtime-maintainers own the exception. Its scope is the existing expression source and
+public path; it authorizes no new copy, semantic expansion or consumer use. The
+standing no_std evaluator deferral remains: IR-590/IR-584 are not planned or staffed here.
+The exception expires when the shared evaluator implementation/ownership lands and
+passes RT's governed no_std checked-input and generated-body acceptance. IR-1009's
+RT/paired-CG cutover then removes the local implementation and old path, with no alias,
+fallback or compatibility layer. An interface-only delivery is not the usable owner.
+The full end-state criteria retain their meaning and stay open until actual evidence.
 
 Deleted outright: everything else in `src/exact`, `mod.rs` included (`CHARGE_LOG_CAPACITY` and
 `charge_log_truncated` have no counterpart and go with `Meter`; R-4), with its tests (`src/exact_*_tests.rs` and the
@@ -194,7 +177,7 @@ records the gap.
   former `expression` items, once each, optional, enabled only by `exact`. It contains no second
   implementation of any item they define, and its `expression` bucket is deleted only after the
   IR-590 implementation passes RT's `no_std` target acceptance:
-  no keep, no exception, no copy without an expiry.
+  no permanent keep, no compatibility copy, and no extension of the staged exception beyond that cutover.
 - No re-export shim: there is no `quire_contract_runtime::exact` module, no `pub use` of any of the
   three shared crates (`quire-exact`, `quire-semantic-value`, the evaluation leaf), no alias, wrapper,
   feature or legacy reader. Consumers import the owner crates' own paths (`quire_exact::`,
@@ -202,7 +185,7 @@ records the gap.
   signature, which is a dependency, not a re-export.
 - Merged statements this AD contradicts, in three groups. Each statement is amended, relied on, or
   amended conditionally, as stated; none is left to a step that does not name it.
-- Group 1, the no-shim and kernel statements (Q-2, decided; hold today; amended in step 1):
+- Group 1, the historical no-shim and kernel amendment scope (Q-2, decided in step 1):
   FR-275 Description ("Its `exact` module is a re-export of those QSL-owned crates at the
   `quire_contract_runtime::exact` path"), Outputs ("a runtime `exact` module that defines only the
   runtime-owned negotiators and otherwise only re-exports QSL-owned crates"), Behavior "The residue"
@@ -218,6 +201,9 @@ records the gap.
   `dependencies` line "generated oracles -> quire_contract_runtime::exact"), and interface-001-AC-1,
   AC-2, AC-3, AC-4, AC-5 and AC-6, which name the `exact` module and become vacuous without it; AC-10
   (names the `exact` module and the `outside_exact` block).
+- The historical quotations above do not describe current acceptance. In particular, current
+  FR-275-AC-17 remains unmet while the IR-1009 exception exists; acceptance of this staged
+  architecture neither changes nor closes it.
 - Group 2, the shared crates' repository sources and source guard (Q-6, decided):
   `quire-exact` already uses its own repository. The dependency step adds the optional
   own-repository `quire-semantic-value` edge and transitive `quire-canonical` graph, then
@@ -236,7 +222,7 @@ records the gap.
   implementation and RT target acceptance. These amendments land with or before step 5.
 - Merged statements this AD relies on and must not weaken: FR-275-AC-13 (no port of QSL code, a port
   being code that keeps the authority's item names), the owner ruling the residue list quotes, AC-18
-  (the residue list is empty), AD-003 decision F, and interface-001-AC-7 (the runtime defines none
+  (the residue list is empty), AD-003 single-owner decision, and interface-001-AC-7 (the runtime defines none
   of the call-surface items), which option (a) already satisfies and which needs no change unless the
   leaf's surface turns out to reuse one of its names.
 - The scalar source cutover left no runtime use of the direct dependencies `num-bigint`,
@@ -279,17 +265,20 @@ the charge log, `charge_log_truncated` nor `CHARGE_LOG_CAPACITY` (grep). The har
 (`quire_contract_runtime::{Verdict, CampaignReport, ...}` in `src/strategy/` and
 `src/oracle/boolean_v1.rs`) name the core, not `exact`, and do not change.
 
-### QSL pieces (verified; the relayed notice on IR-349 is untrusted text)
+### Historical QSL handoff audit
 
-| Piece | Verified at QSL `origin/main` | Result |
+These rows retain the migration audit, not a fresh absence or delivery claim. The
+accepted current layout and dependency graph are stated above.
+
+| Piece | Source in the migration audit | Result at that audit |
 | --- | --- | --- |
 | H3, `NodeKey` constructors (QSL-479, #590) | `quire-exact/src/node.rs` exposed public digest constructors at the measured cutover | RT holds shared identities through `quire_exact::Value` but constructs none in library or test fixtures. CG constructs none; only the checked-package producer resolves generated identities through its admitted-node table. RT tests obtain their identities from admitted package values and preserve foreign and cross-domain controls (FR-012-AC-2/8). |
 | H2, `ObjectClosure` (QSL-478, #608) | `quire-semantic-value/src/object_closure.rs`; PR state MERGED | present; signatures differ from RT's `ObjectEnvironment` (above) |
 | QSL-358 residue slices | `quire-semantic-value` holds `stop`, `quantity`, `unit`, `declaration`, `containment`, `enumeration`, `definition`, `semantic_node`, `checking`, `call`, `loss`, `location`, `object_closure` | present; QSL-358 is Done |
-| FR-275 step 2 (the residue) | the 15 `expression` items and the lazy connective | not delivered, although interface-001 and FR-275 expect QSL-358 to move function application: no QSL crate this crate may depend on defines it. QSL-358 is Done. The lazy connective is absent from both crates |
+| FR-275 step 2 (the residue) | the expression items and the lazy connective | not delivered, although interface-001 and FR-275 expect QSL-358 to move function application: no QSL crate this crate may depend on defines it. QSL-358 is Done. The lazy connective is absent from both crates |
 
-Still missing for this crate, as stated to QSL below: the evaluation leaf's IR-583 interface and
-IR-590 usable `no_std` implementation (Q-1).
+The remaining RT cutover requires the usable IR-590 `no_std` implementation and target
+acceptance. The historical interface request is not a current interface-absence claim.
 
 The removed `CheckingLimits::depth`, `DepthAboveMaximum` and `MAX_CALL_DEPTH` followed QSL FR-262's
 work-fuel-only call rule.
@@ -310,7 +299,7 @@ QSL lane), so the end state names those repositories, not the QSL repository.
 | Edge | Kind | Today | End |
 | --- | --- | --- | --- |
 | RT to `quire-exact` | normal, optional (`exact`), git `branch = "main"` on its own repository | declared on the `agent-ix/quire-exact` repository and used by `src/exact` | retained; one lock entry |
-| RT to `quire-semantic-value` | same, own repository | added as an unused optional edge under `exact`; one lock entry | consumed after owner API/evidence work |
+| RT to `quire-semantic-value` | same, own repository | consumed by scalar stop handling and the expression implementation; one lock entry | retained shared owner |
 | RT to the evaluation leaf crate | same, own repository (Q-1: IR-583 interface, IR-590 implementation) | absent | added in step 5 after the usable `no_std` implementation passes RT target acceptance, with deletion of the `expression` items; one lock entry |
 | RT to `quire-canonical` | transitive, through `quire-semantic-value` (git, own repository, adds `sha2`, `ryu-js`, `serde`, `thiserror`) | resolved under `exact`; own-repository source and licence exceptions admitted | retained while semantic-value is consumed |
 | RT to the QSL repository | none | none: its `allow-git` entry and 14 name bans were removed in step 2; `unknown-git = "deny"` is the guard | none |
@@ -320,11 +309,11 @@ QSL lane), so the end state names those repositories, not the QSL repository.
 ## Decisions
 
 - A. Every `exact` item has one owner (AD-007 decision A). This crate owns the items in What this crate
-  keeps and none other.
+  keeps and none other in the end state; the current expression retention is only the IR-1009 exception.
 - B. No re-export shim and no compatibility layer, at any step: a step that deletes an item changes its CG
   users in the same step.
 - C. The module for the kept scalar items is `scalar`; there is no `expression` module (Q-1);
-  the feature stays `exact`, because the feature is what pulls in the shared crates and generated manifests
+  this is the target layout after IR-1009, not the present exception. The feature stays `exact`, because the feature is what pulls in the shared crates and generated manifests
   already request it. The module names `text`, `composite` and `outcome` are not created: nothing is left to
   put in them.
 - D. Dependency spelling is FR-275's, applied to each of the three direct shared crates and naming that crate's own
@@ -345,40 +334,32 @@ Local labels; the repository assigns requirement ids when one is authored.
 - L-3. The footprint graph holds none of the direct shared crates or their transitive canonical crates
   (extends the `make size` check).
 - L-4. Every public item defined under the `exact` feature is in the keep table.
-- L-5. CG's compile tests build every generator's output against this crate's head (AD-003 T-2).
+- L-5. CG's compile tests build every generator's output against this crate's head (AD-003 generated-source compilation boundary).
 
 ## Risks
 
 What is measured today, the migration that removes it, what is open and with whom, and what is routed.
 
-### Current state and gaps
+### Current state and deferred acceptance
 
-- The kernel is two implementations today, and `quire-exact` is declared but unused. The draft PR #95
-  (slice 1, open) is the first move; see Migration.
-- `#[non_exhaustive]` leaves with the kernel: this crate has 66 `#[non_exhaustive]` sites in `src/exact`; the two QSL crates have no such
-  attribute (their one textual hit is a `finish_non_exhaustive()` call).
-  AD-003 states 72 sites for the whole crate. A kernel enum gaining a variant then breaks CG's
-  `match` arms (compile error, not a silent default), and CG's `unreachable!` arms over `non_exhaustive`
-  enums (IR-352) become dead patterns for the shared enums. The owner answered Q-4: follow the shared
-  crate, so this crate drops its attributes and its matches are exhaustive (step 3).
-- `Refusal` is no longer `Copy` and carries payloads, and `Outcome<bool>` is not `From<bool>`: the 14
-  different-declaration names CG uses may need use-site edits in an emitter, not only path edits (not
-  measured beyond the `CheckedInvariant` site).
-- Kani. RT's `Integer`, `Value` and `ValueType` were laid out for CBMC (`verification/kani.rs`, and CG's
-  generated Kani crates carry the field-sensitivity flag for the same reason). The shared `Integer` wraps
-  `BigInt` and `Value` holds `Arc`. Whether the existing proof harness and CG's generated Kani harnesses
-  still discharge is not measured; `make kani` and `make kani-mutations` decide it per step. The owner
-  answered Q-3: the proofs run against the shared `Integer`, with no RT-local shadow type.
-  PR #95 removes two mutation rows because their target file left.
-- This crate's `make spec` baseline at `origin/main` on 2026-10-04: `quire validate` exits 0 (93 of 93
-  documents grammar-clean, 0 findings); `quire coverage --strict` exits non-zero with 56 unbacked rows and 5
-  contradicted statuses (IR-499). The same two counts are this change's pre-existing baseline.
+The shared scalar/value/compound ownership cutovers are implemented; the historical
+classification and staged steps below explain their constraints. They do not assert
+that a second scalar kernel, unused QSV dependency or the former inline layouts remain.
+The only local evaluator residue is the expression implementation, governed by the
+IR-1009 exception and AD-002. Manual dependency-direction review is owned by
+runtime-maintainers and recorded under AD-003.
+
+Shared payload/proof behavior is not established by architecture acceptance. Full
+end-state FR-273/FR-275 criteria, the evaluation-leaf target acceptance and final residue
+removal remain open under their named deferred work. Existing strict-spec debt is not
+closed by changing an AD's lifecycle status, and no inspection tag is added in place
+of a real control.
 
 ### Migration
 
 #### Delivery scope after the no_std evaluator deferral
 
-IR-349 remains the live implementation owner of independent steps 1 through 4. Its step 3
+IR-349 delivered the independent ownership cutovers of steps 1 through 4. Its step 3
 creates the `scalar` module, moves all 11 runtime-owned items out of `src/exact`, repoints
 their Kani proofs, and changes paired CG consumers. Step 4 is complete only when its RT
 and CG consumers and its gate pass. The dependency on the usable QSL `no_std` evaluation
@@ -391,7 +372,7 @@ inspection follows step 5 in IR-1009. IR-349 still performs any cleanup and matr
 for the source and tests it changes in steps 1 through 4. This assignment changes no end-state
 criterion or test procedure: FR-273-AC-12/13, FR-275-AC-1/13/16/18/29/30, TC-194,
 TC-197 and TC-199 remain planned where their full end-state evidence depends on step 5.
-There is no interim copy approval, fallback, alias or compatibility layer.
+The IR-1293 staged exception permits only the retained expression scope until the stated expiry; it adds no fallback, alias or compatibility layer.
 
 The depth redesign tracked by IR-497 can be specified and verified in the existing `std`
 system: explicit scheduler frames, one active generated-body transition, exact work-unit
@@ -410,7 +391,7 @@ IR-1009. The distinction is about evidence and ownership, not a reduced depth or
 Each step is one coherent PR with its gate. Gate G for a step: `make fmt-check lint test-features doc
 msrv size deny deny-mutations test kani kani-mutations` (`make ci` stops at `spec`, so run them as the
 foundation slice did), plus `make spec` with no more than 56 unbacked and 5 contradicted. CG gate: CG's tests
-build every generator's output against the RT head (T-2). A step that deletes an item has a paired CG
+build every generator's output against the RT head (AD-003 generated-source compilation boundary). A step that deletes an item has a paired CG
 PR for the same item, and the order is forced, not chosen. CG builds `--locked` against this crate's
 `branch = "main"` unless a local patch is active (its Makefile drops `--locked` when `.cargo/config.toml`
 exists), so a CG PR cannot lock to an RT commit that is not yet on RT main. The RT PR therefore merges
@@ -421,7 +402,7 @@ CG PR that adopts the new paths.
 
 | Step | RT change | CG, same step | Gate |
 | --- | --- | --- | --- |
-| 1 | Spec only; needs no ticket. Amend Group 1 only, the statements that hold today: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim-copy Open question stays open (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
+| 1 | Spec only; needs no ticket. Historical step-1 scope: amend Group 1 only: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim retention decision is the bounded IR-1009 exception (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
 | 2 | IR-582 delivered the repositories and `quire-exact` already uses its own repository. Add optional `quire-semantic-value` under `exact` (`Cargo.toml`, lock); admit the three own-repository Git sources and their scoped licences in `deny.toml`; remove the QSL-repository `allow-git` and the 14 name bans; amend Group 2, TC-197 through TC-199 and `CLAUDE.md`; require the QSL source rejection in `make deny-mutations` and keep the footprint graph free of the shared crates. No runtime source deletion or semantic behavior claim | none | G, with `deny-mutations` green; the Rust gate proves the QSL Git source is rejected |
 | 3 (IR-349) | Create the `scalar` module and move all 11 runtime-owned items there from `src/exact/{boolean,division,ieee}.rs`; scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `tools/runtime-gates/` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4), and interface-001's `compatibility.enums: non-exhaustive` statement is amended in this step to match | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
 | 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration`; use QSV's compound-unit identity path described below; retire the original FR-012-AC-1 at this step and remove TC-033's local parser/round-trip tests; inspect the deletion under FR-012-AC-6 | the different-declaration use sites, the three serializable mirrors and paired CG changes: generated `WireNodeId` literals are resolved only by the checked-package producer's admitted-node table. RT holds shared identities in `quire_exact::Value` but constructs none in library code or test fixtures; CG constructs none. RT tests consume admitted package values | G; Q-5 answered |
@@ -440,7 +421,7 @@ operations. Containment and enumeration construct and carry the same kernel
 values. No conversion layer, alias, old-`Value` re-export or second pair
 traversal is a step-4 output. The value and equality portion of step 4 now
 consumes the locked QSV evaluator through TC-203; the quantity, unit,
-enumeration and definition portion remains open.
+enumeration and definition portion has also left RT; expression removal remains deferred.
 
 Compound-unit identity in step 4 has one owner: `quire-semantic-value` (QSV).
 Its `QuantityUnit::Compound` holds QSV's `CompoundUnit`, whose normalized
@@ -520,12 +501,11 @@ cutover removes `src/exact/quantity.rs` and `unit.rs` and consumes QSV's FR-124 
 The evaluation-leaf dependency remains. The independent stop slice removed RT's private
 `src/exact/stop.rs` carrier and conversion trait; Boolean and function application code use
 QSV's `Stop`, `outcome_from_stop` and `outcome_into_stop` directly. The definition code cutover
-follows the R-3 decision below and has now landed.
+follows the R-3 decision below and has now landed. The quantity/unit source has also left RT.
 
-CG's scalar oracle still emits quantity and unit calls against RT. CG's quantity source is
-allocated to IR-853: the evaluation leaf and T12-A facade amendment must settle those calls
-before CG consumes the updated RT interface. This is the remaining
-cross-repository step-4 dependency, not a reason to retain RT's duplicate quantity code.
+The historical quantity/unit consumer handoff was allocated to IR-853. Current CG
+imports the shared owners, and RT does not restore its deleted quantity/unit code.
+Future evaluation-leaf calls remain subject to the paired-consumer cutover contract.
 
 R-3 is decided from an RT source/test/spec use audit: `RevisionMismatch`,
 `DigestDomainMismatch` and `ByteDigestMismatch` had no RT producer, consumer or test in the
@@ -555,14 +535,14 @@ RT holds `NodeKey` at type level through `quire_exact::ValueType::Composite(Node
 and `CompositeValue.declaration`, and constructs none in library code.
 Q-5 is the QSL lane's technical answer (`draco:QSL:code`), relayed by
 `luna:IR:plan` on 2026-10-19; it is not a first-hand owner ruling, and IR-882
-tracks it without a separate owning QSL ticket. QSL ADR-012 lines 875 and 1099
-still say RT holds no `NodeKey`; QSL draft PR #1070 must correct both rows with
-or before this PR merges. The RT-side contract is recorded here for the paired
+tracks it without a separate owning QSL ticket. The IR-882 migration review routed contrary QSL ADR-012 text through QSL PR #1070.
+This is a historical handoff; current RT ownership and the no-construction rule
+are the contract stated here, not a fresh claim about that PR's state. The RT-side contract is recorded here for the paired
 CG and RT value-bearing cutover (IR-882).
 
 | Question | Owner | Answer (source) | Consequence in this AD |
 | --- | --- | --- | --- |
-| Q-1. What replaces the ported function-application call mechanism (the 15 `expression` items)? | owner; QSL FR-262 | QSL provides a shared `core` plus `alloc` interface and std reference seam in IR-583, followed by a usable `no_std` plus `alloc` implementation in IR-590; RT and CG consume the interface, not evaluator internals. An interface alone cannot replace RT's evaluator copy | the `expression` bucket is deleted in step 5 only after IR-590 implementation passes RT's governed `no_std` target acceptance for checked-input and generated-body evaluation. No keep, exception, interim-copy approval or shim follows from the interface; step 1 and other independent IR-349 steps remain available |
+| Q-1. What replaces the ported function-application call mechanism (the expression items)? | owner; QSL FR-262 | QSL provides a shared `core` plus `alloc` interface and std reference seam in IR-583, followed by a usable `no_std` plus `alloc` implementation in IR-590; RT and CG consume the interface, not evaluator internals. An interface alone cannot replace RT's evaluator copy | the `expression` bucket is deleted in step 5 only after IR-590 implementation passes RT's governed `no_std` target acceptance for checked-input and generated-body evaluation. The interface alone does not satisfy the usable-owner cutover. IR-1293 separately records the temporary IR-1009 exception; it grants no shim or permanent keep |
 | Q-2. No `exact` re-export path | owner | decided: confirmed (IR-349 answer): step 1 amends FR-275 and interface-001, and CG changes in the same step | Decision B stands; the Group 1 amendments under the end state are decided and land in step 1 |
 | Q-3. Kani against the shared `Integer` | owner | decided: prove against the shared type (IR-349 answer) | the proofs run against the shared `Integer`, with no RT-local shadow type; stated in step 3 |
 | Q-4. `#[non_exhaustive]` on shared enums | owner | decided: follow the shared crate, none (IR-349 answer): this crate drops its 66 attributes in `src/exact` and matches are exhaustive | stated in step 3; the five kept `scalar` enums that carry it drop it; the 6 sites outside `exact` are not part of this answer |
@@ -576,7 +556,7 @@ To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldD
 with RT FR-273 correction owned by IR-512; R-3 decided above (retire RT's three extra
 `PackageCause` variants, then consume QSV directly); R-4 the injected denial
 single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
-behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and QSL ADR-012's contrary RT rows requiring QSL draft PR #1070 to land with or before this PR; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
+behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and the historical QSL ADR-012 discrepancy routed through QSL PR #1070; this audit does not assert a new prerequisite or its current PR state; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
 
 To CG: the paired PR for each of steps 3 to 5 (the table above); mirrors of `DeclarationCause`, `Origin` and
-`Location` follow the shared definitions (AD-003 R3-C8).
+`Location` follow the shared definitions (AD-003 identity and outcomes view).

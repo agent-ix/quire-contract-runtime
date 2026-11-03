@@ -30,8 +30,9 @@ The runtime has no `quire_contract_runtime::exact` module: it re-exports
 no item of those QSL-owned crates (no `pub use`, alias, wrapper, feature or compatibility layer), and
 generated oracles and the code generator name the owning crates' own paths. Under the `exact` feature
 the runtime's own code is only the `scalar` module: the backend negotiators and the lazy Boolean
-connective, which are runtime-owned (below; AD-004). The rest of its `src/exact` source copy (23 files,
-about 12,000 lines) is deleted. This is the end state; the criteria below that assert it are planned
+connective, which are runtime-owned (below; AD-004). The remaining expression port
+is deleted; the larger source population described by the historical migration has
+already lost its other copied modules. This is the end state; the criteria below that assert it are planned
 until the owning IR-349 and IR-1009 code steps land.
 
 The end state is delivered in two steps:
@@ -57,16 +58,18 @@ The end state is delivered in two steps:
    runtime's own code, not a port, and stay in the runtime in the end state (FR-009,
    interface-001-AC-8). QSL-358 does not move them.
 
-The residue in the runtime's `src/exact` is ported QSL code. It is **not authorized**: it is vendored
-code that violates the no-vendoring rule. There is no exception, no expiry and no approval for it. The
-owner (Peter) ruled directly: "no vendoring. i didnt realize you had tried to approve vendoring 3000
-lines of corpus. Absolutely not allowed." The end state is that the runtime holds no ported QSL code,
-and the residue is to be deleted. How the runtime handles its function-application copy until the
-usable IR-590 `no_std` evaluator passes RT target acceptance is an open decision with the owner
-(see Open questions); this requirement states no interim policy.
+The remaining function-application port in `src/exact/expression.rs` is retained under
+IR-1293's bounded staged exception, tracked by IR-1009 and described in AD-002 and AD-004.
+The exception expires when the shared evaluator implementation passes RT's governed
+`no_std` target acceptance and the paired consumer cutover removes this port. An interface
+alone does not satisfy that condition. It permits no new copies, semantic expansion or
+compatibility layer and does not staff the deferred IR-590 work.
 
+The end state remains a runtime with no ported QSL code. This interim decision does not
+amend or satisfy the acceptance criteria below. In particular, AC-13, AC-17 and AC-18
+remain unmet while the port and its temporary exception remain.
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
-steps IR-349 and IR-1009 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
+steps IR-349 and IR-1009 implement. It follows AD-003 single-owner decision. It adds no behaviour: every behaviour the
 kernel owns stays specified by FR-006 to FR-008 and FR-010 to FR-012, now as behaviour of QSL's
 crates that the runtime consumes.
 
@@ -98,17 +101,12 @@ crates that the runtime consumes.
   quantity, enum and reference payloads to those owner types directly, with no
   RT-owned `UnitId` resolver, `EnumShape` registry, `EffectiveId` registry, second
   value representation or adapter.
-- **The residue (not authorized).** The `exact` items retained in the runtime's source beyond the
-  runtime-owned `scalar` items (the negotiators and their types, `evaluate_boolean_short_circuit` and
-  `ShortCircuitConnective`) are function application (FR-273, AD-002), quantity and unit graphs,
-  and the carried definition vocabulary (FR-012). RT's checking environments, containment and
-  enumeration declarations have been removed by IR-882 slices. The retained items are ports of QSL
-  code: vendored code that violates the
-  no-vendoring rule, with no exception, no expiry and no approval. Each is a defect against
-  FR-275-AC-1's end state, recorded in the residue list below, and is to be deleted. Where they
-  consume `quire-exact`, they use its `Value`, `Meter`, `Outcome` and `ScalarLimits` and define no
-  second one. Nothing replaces them under an `exact` path: consumers name the owning crates' own
-  paths (interface-001-AC-4).
+- **The remaining residue.** Function application (FR-273, AD-002) remains in
+  `src/exact/expression.rs` under the bounded IR-1009 exception above. Quantity and unit
+  graphs, checking environments, containment, enumeration declarations and carried
+  definition vocabulary have already moved to their shared owners through IR-882.
+  The remaining port consumes shared `Value`, `Meter` and `Outcome` types. Its deletion
+  remains required; no alias or wrapper may retain it after the shared evaluator cutover.
 - **The end state.** There is no `exact` module. The runtime defines under the `exact` feature only the
   runtime-owned `scalar` items (the negotiators and their types, and `evaluate_boolean_short_circuit`
   with `ShortCircuitConnective`): the rest of `src/exact` is deleted, no `pub use`, alias or wrapper
@@ -129,7 +127,7 @@ crates that the runtime consumes.
 - **One copy.** `Cargo.lock` holds one entry each for `quire-exact` and `quire-semantic-value`;
   `quire-canonical` and `quire-canonical-derive` enter transitively. Inspect the committed
   `Cargo.lock` for the shared-crate entries. `make deny` runs cargo-deny's source and licence
-  policy checks; it does not run a separate lock-coherence checker. `deny.toml` admits their three
+  policy checks and the released `quire check-lock Cargo.lock` coherence command. `deny.toml` admits their three
   own-repository Git sources plus the dev-only `ix-trace-rs` tooling source, and carries scoped
   licence exceptions for the four shared crates.
 - **Guarded edges.** No normal, build or dev dependency may resolve from the QSL workspace repository.
@@ -202,17 +200,17 @@ crates that the runtime consumes.
 ## Lockfile and Dependency Policy
 
 AC-5 retains direct inspection of the committed lockfile's shared-crate entries.
-The separate `quire check-lock` invocation and its scratch lock controls are removed
-without a runtime-owned replacement. Cargo-deny's source, licence and ban checks
-remain active under AC-7 and AC-8; TC-198 still exercises the QSL source refusal.
+IR-1293 carries the IR-581 residual gate: `make deny` invokes the released, owned
+`quire check-lock Cargo.lock` command before cargo-deny. RT does not restore a copied
+lock scanner or maintain a second implementation. Cargo-deny's source, licence and
+ban checks remain active under AC-7 and AC-8; TC-198 still exercises the QSL source refusal.
 
-## Residue list (not authorized; to be deleted)
+## Residue list (to be deleted)
 
-Every item below is vendored QSL code that violates the no-vendoring rule. There is no exception,
-no expiry and no approval. The order and mechanism of deletion are tracked by QSL-358 and IR-349;
-function-application deletion is assigned to IR-1009 and needs IR-583, IR-590 and RT target acceptance.
-Classified against what `quire-exact` exports; IR-349 part 1 re-measures it. Where a source file holds both an exported item and a residue item, only the
-residue item is listed: the exported item is deleted in step 1. The negotiators are not on this list: they are runtime-owned.
+The remaining function-application port is covered by the bounded IR-1009 exception
+above; this list does not establish end-state conformance. Deletion needs the usable
+shared evaluator and RT target acceptance, not merely its interface. The other rows
+record completed removals. Runtime-owned negotiators are outside this residue list.
 
 | Residue or disposition | Requirement | Source status |
 |---|---|---|
@@ -228,9 +226,10 @@ and is deleted in step 1.
 
 - **MSRV authority.** The root `Cargo.toml` `rust-version` is the one compiler floor for all
   features and the footprint measurement (FR-275-AC-20/21, NFR-001-AC-3).
-- **Interim function-application residue (open, owner decision).** The owner ruled there is no
-  exception, no expiry and no approval for the copy. What the runtime does before the IR-590
-  implementation passes RT target acceptance is not decided here; no interim policy is stated.
+- **Interim function-application residue (decided for the staged state).** IR-1293
+  records the bounded IR-1009 exception and expiry above. The single-owner end state
+  and all acceptance criteria remain unchanged; deferred evaluator implementation is
+  not assigned by this decision.
 - **Status for rows whose evidence lives upstream (planner question).** The matrix has no "verified
   upstream" status; leaving rows stay "planned" with a reason (FR-275-AC-15).
 - **`quire-semantic-value`.** The owner ruled FB-05 YES (relayed via the planner): a shared `no_std`
@@ -248,7 +247,7 @@ and is deleted in step 1.
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
   [interface-001](../../core/functional/interface-001-runtime-api.md);
-  [AD-003](../../assurance/AD-003-codegen-runtime-seam.md) decision F; QSL-357 (merged);
+  [AD-003](../../assurance/AD-003-codegen-runtime-seam.md) single-owner decision; QSL-357 (merged);
   [NFR-001](../../core/non-functional/NFR-001-no-std-footprint.md).
 - **Downstream**: IR-349 keeps the independent AD-004 steps 1 through 4, including the
   runtime-owned `scalar` items and paired CG consumers. The foundation slice (floor,
