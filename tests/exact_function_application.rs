@@ -493,7 +493,7 @@ fn tc_194_a_moved_package_still_evaluates_its_own_expression() {
 /// fields, so the same size class) to make address reuse likely on this
 /// allocator; the monotonic id must refuse regardless of whether reuse
 /// actually happens.
-#[trace("TC-194")]
+#[trace("TC-194", "FR-278-AC-1")]
 #[test]
 fn tc_194_an_expression_from_a_dropped_package_is_refused_by_a_new_one() {
     let objects = ObjectClosure::default();
@@ -641,7 +641,7 @@ fn tc_194_child_call_charges_before_callee_body() {
 
 /// The generated body returns a request, then receives the child's value in
 /// a later transition. The runtime owns every suspended state on its heap.
-#[trace("TC-194", "FR-273-AC-7", "FR-273-AC-9", "FR-273-AC-11")]
+#[trace("TC-194", "FR-273-AC-7", "FR-273-AC-9", "FR-273-AC-11", "FR-278-AC-1")]
 #[test]
 fn tc_194_explicit_frames_reach_4096_calls_on_64_kib_stack_with_exact_fuel() {
     std::thread::Builder::new()
@@ -910,7 +910,7 @@ fn tc_194_nested_arguments_charge_before_enclosing_body_and_stop_at_one_less() {
 }
 
 /// Re-entering the same mutable meter borrow is a typed checked invariant.
-#[trace("TC-194", "FR-273-AC-8")]
+#[trace("TC-194", "FR-273-AC-8", "FR-278-AC-1")]
 #[test]
 fn tc_194_reentrant_meter_borrow_has_typed_cause() {
     let package = PackageDeclarations {
@@ -947,7 +947,7 @@ fn tc_194_reentrant_meter_borrow_has_typed_cause() {
 }
 
 /// Child arity and kind faults stop before the child body or charge.
-#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-11")]
+#[trace("TC-194", "FR-273-AC-2", "FR-273-AC-11", "FR-278-AC-1")]
 #[test]
 fn tc_194_invalid_child_arguments_refuse_before_child_charge_or_body() {
     for arguments in [Vec::new(), vec![Value::Integer(Integer::one())]] {
@@ -1078,7 +1078,7 @@ fn tc_194_stopped_child_does_not_resume_parent() {
 
 /// A generated child request for a missing checked function preserves its
 /// distinct invariant cause and the already admitted parent's charge.
-#[trace("TC-194", "FR-273-AC-8", "FR-273-AC-11")]
+#[trace("TC-194", "FR-273-AC-8", "FR-273-AC-11", "FR-278-AC-1")]
 #[test]
 fn tc_194_missing_child_has_typed_cause_and_does_not_resume_parent() {
     let resumed = Rc::new(Cell::new(false));
@@ -1128,7 +1128,7 @@ fn tc_194_missing_child_has_typed_cause_and_does_not_resume_parent() {
 
 /// A generated transition cannot open another scheduler on the same checked
 /// package while it is active, even if host code captures the package.
-#[trace("TC-194", "FR-273-AC-7", "FR-273-AC-8")]
+#[trace("TC-194", "FR-273-AC-7", "FR-273-AC-8", "FR-278-AC-1")]
 #[test]
 fn tc_194_direct_host_reentry_is_refused_before_nested_charge() {
     let holder: Rc<RefCell<Option<Rc<CheckedPackage>>>> = Rc::new(RefCell::new(None));
