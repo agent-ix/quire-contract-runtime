@@ -56,6 +56,9 @@ pub mod accounting;
 pub mod exact;
 // Implements: FR-001
 pub mod identity;
+/// Retained executable programs for admitted tick monitors.
+#[cfg(feature = "exact")]
+pub mod monitor;
 // Implements: FR-001
 pub mod observation;
 // Implements: FR-002

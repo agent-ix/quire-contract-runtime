@@ -109,6 +109,16 @@ The interface's features in declaration order: every operation the contract abov
 | decode_campaign_snapshot | operation |
 | adapt_to_proptest_and_record | operation |
 
+## Monitor program construction
+
+The `exact` feature exposes the RT-owned `monitor` construction contract in
+[interface-002](../../monitor/functional/interface-002-monitor-program.md).
+Its immutable owner consumes shared leaf keys/values/declarations directly. It
+adds no IR/QSL dependency or callback-based body route. Monitor execution and
+real-producer qualification remain the obligations of FR-276. The bounded initializer
+and operating-budget API are specified in
+[interface-003](../../monitor/functional/interface-003-monitor-executor.md).
+
 ## Exact kernel surface
 
 Today generated oracles and `quire-contract-codegen` reach exact semantic values through
@@ -252,3 +262,7 @@ features, and `compatibility.msrv` refers to that field. The end state (no porte
 | interface-001-AC-13 | While the `exact` feature is enabled and the `std` feature is disabled, the runtime shall build for `thumbv7em-none-eabi` at the Rust version that `compatibility.msrv` declares. | Test (feature matrix row `build-exact-no-std-msrv`) |
 | interface-001-AC-14 | The runtime's normal, build and dev dependency graphs shall include no crate from the `agent-ix/quire-spec-language` Git repository. | Inspection |
 | interface-001-AC-15 | Where the `exact` feature is disabled, the runtime's `cfg(kani)` verification module shall reference no `quire_exact` item, so that a default-feature dependent compiles under Kani; the `quire_exact`-dependent IEEE harness and its imports are compiled only under `exact`. | Test (TC-208) |
+
+Ordinary function-qualified lexical slots extend that same arena through
+[interface-004](../../monitor/functional/interface-004-monitor-lexical-bindings.md).
+They add no source identity or alternate executable representation.

@@ -108,9 +108,10 @@ size: require-msrv
 
 .PHONY: spec
 spec:
+	python3 -m unittest discover -s tools/tests
 	$(QUIRE) validate --scope . 'spec/**/*.md' 'plan/**/*.md' \
 		'reviews/**/*.md' --summary
-	$(QUIRE) coverage --scope . --strict
+	python3 tools/coverage_refs.py --quire "$(QUIRE)" $(if $(INTEGRATION_DIR),--integration-dir "$(INTEGRATION_DIR)",)
 
 .PHONY: exact-panic-probe
 exact-panic-probe: require-msrv

@@ -60,6 +60,12 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
    another input. Compare state before and after each call.
 
 
+9. Observe the shared State's event_position throughout the AC-9 counter sequence.
+   Build starts at 0; the baseline on_event(0) changes it to 1. Insert an admitted
+   watermark and a clock poll: both preserve 1. The gap-faulting reading calls on_gap
+   and preserves 1; the next admitted event changes it to 2. Inspect the final required
+   Integer field after activations; no host-width mirror supplies the observation.
+
 ## Expected Results
 
 - Step 1 yields definite true at 2998 (difference in `(2997, 2999)`), indeterminate at 3000
@@ -95,3 +101,6 @@ outcomes. This case is planned; no monitor implementation or test binder exists 
   then executes under the larger budget, the stop is distinct from a verdict, `Incomplete`,
   `Failed(ReadingGapExceeded)` and `ExecutorInvariantFailure`, and only the invariant failure
   terminates the monitor and rejects later input.
+- Step 9 observes event positions 0, 1, 1, 1 and 2 at build, baseline event,
+  watermark/poll, gap fault and following admitted event respectively. The baseline
+  event increments the count despite delta 0; the faulting reading does not increment it.
