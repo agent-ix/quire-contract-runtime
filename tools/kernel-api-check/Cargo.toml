@@ -7,3 +7,6 @@ publish = false
 
 [dependencies]
 quire-exact = { git = "https://github.com/agent-ix/quire-exact", branch = "main", default-features = false }
+
+[dev-dependencies]
+ix-trace-rs = { version = "=0.1.0", git = "https://github.com/agent-ix/ix-trace-rs", branch = "main" }
