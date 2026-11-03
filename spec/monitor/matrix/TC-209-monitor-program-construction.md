@@ -14,6 +14,13 @@ Exercise the public construction boundary of interface-002. These are constructi
 controls, not the event, watermark, gap or real-producer qualification of TC-200.
 The latter remains the complete FR-276 acceptance procedure.
 
+## Evidence Status
+
+**Planned: pending integration evidence.** All controls in this procedure remain
+pending until the complete 86-test `monitor_program` target passes on the coherent
+producer/reader/runtime cohort. Source tags, earlier interim-cohort results and
+native runtime checks do not confer a status upgrade.
+
 ## Test Procedure
 
 Run the complete `monitor_program` target in `quire-integration` (IT-018 / TC-098).
