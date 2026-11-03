@@ -39,4 +39,16 @@ The runtime SHALL use the quire-exact FR-369 cause table for the producer sites 
 
 ## Status
 
-PLANNED for FR-278 tags: RT tests already assert overlapping function producer paths under FR-273-AC-8/TC-194. Collection and composite producer controls need their own RT evidence while those producers remain. Equality and quantity causes are owned by quire-semantic-value FR-122-AC-1 and AC-4, not by deleted RT tests. The kernel-owned no-`CallDepthExceeded` carrier gate remains quire-exact FR-369-AC-1 at IR-497.
+PARTIAL: FR-278-AC-1 has direct tags on the retained TC-194 function controls
+for foreign expressions, missing children, meter reborrows, host re-entry,
+invalid child arguments and explicit-frame work-fuel exhaustion. The kernel
+API package adds a successful public-cause import and a failing
+`CallDepthExceeded` import, executed by the existing MSRV doctest gate against
+the same resolved kernel. Together these controls cover the function/fuel and
+final-carrier clauses without replacing a native refusal with a vocabulary grep.
+
+FR-278-AC-2 remains planned: moving a producer out of RT does not make the
+former equality/quantity assertions into collection or composite evidence.
+Its complete owner-evidence mapping is still required. No collection/composite
+criterion or TC-204-wide completion is claimed here, and the deferred evaluator
+cutover is unchanged.
