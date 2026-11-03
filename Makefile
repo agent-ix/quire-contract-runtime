@@ -32,7 +32,7 @@ help:
 	@echo "  make exact-panic      - Inspect retained exact-profile RT panic relocations"
 	@echo "  make spec             - Validate and cover the specification with Quire"
 	@echo "  make clean            - cargo clean"
-	@echo "  make deny             - cargo-deny licenses, bans and sources"
+	@echo "  make deny             - cargo-deny policy and owned lock coherence"
 	@echo "  make deny-mutations   - Require QSL Git dependencies to fail cargo-deny in a scratch copy"
 	@echo "  make use-local        - patch first-party git deps to sibling checkouts"
 	@echo "  make use-remote       - Remove the local patch file and restore Cargo.lock; build from GitHub"
@@ -198,6 +198,7 @@ use-remote:
 
 .PHONY: deny
 deny:
+	$(QUIRE) check-lock Cargo.lock
 	$(CARGO) deny --workspace check licenses bans sources
 
 # Mutation check of the QSL Git source policy (FR-275-AC-8, TC-198): each scratch dependency

@@ -4,7 +4,7 @@ title: "Runtime crate layout: modules of this crate and the shared exact kernel 
 type: ArchitectureDescription
 status: proposed
 owner: runtime-maintainers
-system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the exact feature's 23 files), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps assigned to IR-349 and IR-1009
+system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the kept scalar modules and remaining expression port), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps assigned to IR-349 and IR-1009
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/AD-001
     type: references
@@ -222,7 +222,7 @@ records the gap.
   implementation and RT target acceptance. These amendments land with or before step 5.
 - Merged statements this AD relies on and must not weaken: FR-275-AC-13 (no port of QSL code, a port
   being code that keeps the authority's item names), the owner ruling the residue list quotes, AC-18
-  (the residue list is empty), AD-003 decision F, and interface-001-AC-7 (the runtime defines none
+  (the residue list is empty), AD-003 single-owner decision, and interface-001-AC-7 (the runtime defines none
   of the call-surface items), which option (a) already satisfies and which needs no change unless the
   leaf's surface turns out to reuse one of its names.
 - The scalar source cutover left no runtime use of the direct dependencies `num-bigint`,
@@ -334,7 +334,7 @@ Local labels; the repository assigns requirement ids when one is authored.
 - L-3. The footprint graph holds none of the direct shared crates or their transitive canonical crates
   (extends the `make size` check).
 - L-4. Every public item defined under the `exact` feature is in the keep table.
-- L-5. CG's compile tests build every generator's output against this crate's head (AD-003 T-2).
+- L-5. CG's compile tests build every generator's output against this crate's head (AD-003 generated-source compilation boundary).
 
 ## Risks
 
@@ -391,7 +391,7 @@ IR-1009. The distinction is about evidence and ownership, not a reduced depth or
 Each step is one coherent PR with its gate. Gate G for a step: `make fmt-check lint test-features doc
 msrv size deny deny-mutations test kani kani-mutations` (`make ci` stops at `spec`, so run them as the
 foundation slice did), plus `make spec` with no more than 56 unbacked and 5 contradicted. CG gate: CG's tests
-build every generator's output against the RT head (T-2). A step that deletes an item has a paired CG
+build every generator's output against the RT head (AD-003 generated-source compilation boundary). A step that deletes an item has a paired CG
 PR for the same item, and the order is forced, not chosen. CG builds `--locked` against this crate's
 `branch = "main"` unless a local patch is active (its Makefile drops `--locked` when `.cargo/config.toml`
 exists), so a CG PR cannot lock to an RT commit that is not yet on RT main. The RT PR therefore merges
@@ -556,7 +556,7 @@ To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldD
 with RT FR-273 correction owned by IR-512; R-3 decided above (retire RT's three extra
 `PackageCause` variants, then consume QSV directly); R-4 the injected denial
 single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
-behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and QSL ADR-012's contrary RT rows requiring QSL draft PR #1070 to land with or before this PR; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
+behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and the historical QSL ADR-012 discrepancy routed through QSL PR #1070; this audit does not assert a new prerequisite or its current PR state; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
 
 To CG: the paired PR for each of steps 3 to 5 (the table above); mirrors of `DeclarationCause`, `Origin` and
-`Location` follow the shared definitions (AD-003 R3-C8).
+`Location` follow the shared definitions (AD-003 identity and outcomes view).

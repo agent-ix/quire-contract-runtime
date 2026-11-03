@@ -30,8 +30,9 @@ The runtime has no `quire_contract_runtime::exact` module: it re-exports
 no item of those QSL-owned crates (no `pub use`, alias, wrapper, feature or compatibility layer), and
 generated oracles and the code generator name the owning crates' own paths. Under the `exact` feature
 the runtime's own code is only the `scalar` module: the backend negotiators and the lazy Boolean
-connective, which are runtime-owned (below; AD-004). The rest of its `src/exact` source copy (23 files,
-about 12,000 lines) is deleted. This is the end state; the criteria below that assert it are planned
+connective, which are runtime-owned (below; AD-004). The remaining expression port
+is deleted; the larger source population described by the historical migration has
+already lost its other copied modules. This is the end state; the criteria below that assert it are planned
 until the owning IR-349 and IR-1009 code steps land.
 
 The end state is delivered in two steps:
@@ -68,7 +69,7 @@ The end state remains a runtime with no ported QSL code. This interim decision d
 amend or satisfy the acceptance criteria below. In particular, AC-13, AC-17 and AC-18
 remain unmet while the port and its temporary exception remain.
 This requirement states the end state of IR-342 (AD-016 owner decision 2) and the rule the code
-steps IR-349 and IR-1009 implement. It follows AD-003 decision F. It adds no behaviour: every behaviour the
+steps IR-349 and IR-1009 implement. It follows AD-003 single-owner decision. It adds no behaviour: every behaviour the
 kernel owns stays specified by FR-006 to FR-008 and FR-010 to FR-012, now as behaviour of QSL's
 crates that the runtime consumes.
 
@@ -126,7 +127,7 @@ crates that the runtime consumes.
 - **One copy.** `Cargo.lock` holds one entry each for `quire-exact` and `quire-semantic-value`;
   `quire-canonical` and `quire-canonical-derive` enter transitively. Inspect the committed
   `Cargo.lock` for the shared-crate entries. `make deny` runs cargo-deny's source and licence
-  policy checks; it does not run a separate lock-coherence checker. `deny.toml` admits their three
+  policy checks and the released `quire check-lock Cargo.lock` coherence command. `deny.toml` admits their three
   own-repository Git sources plus the dev-only `ix-trace-rs` tooling source, and carries scoped
   licence exceptions for the four shared crates.
 - **Guarded edges.** No normal, build or dev dependency may resolve from the QSL workspace repository.
@@ -199,9 +200,10 @@ crates that the runtime consumes.
 ## Lockfile and Dependency Policy
 
 AC-5 retains direct inspection of the committed lockfile's shared-crate entries.
-The separate `quire check-lock` invocation and its scratch lock controls are removed
-without a runtime-owned replacement. Cargo-deny's source, licence and ban checks
-remain active under AC-7 and AC-8; TC-198 still exercises the QSL source refusal.
+IR-1293 carries the IR-581 residual gate: `make deny` invokes the released, owned
+`quire check-lock Cargo.lock` command before cargo-deny. RT does not restore a copied
+lock scanner or maintain a second implementation. Cargo-deny's source, licence and
+ban checks remain active under AC-7 and AC-8; TC-198 still exercises the QSL source refusal.
 
 ## Residue list (to be deleted)
 
@@ -245,7 +247,7 @@ and is deleted in step 1.
 
 - **Upstream**: [FR-006](./FR-006-exact-outcomes-and-accounting.md);
   [interface-001](../../core/functional/interface-001-runtime-api.md);
-  [AD-003](../../assurance/AD-003-codegen-runtime-seam.md) decision F; QSL-357 (merged);
+  [AD-003](../../assurance/AD-003-codegen-runtime-seam.md) single-owner decision; QSL-357 (merged);
   [NFR-001](../../core/non-functional/NFR-001-no-std-footprint.md).
 - **Downstream**: IR-349 keeps the independent AD-004 steps 1 through 4, including the
   runtime-owned `scalar` items and paired CG consumers. The foundation slice (floor,
