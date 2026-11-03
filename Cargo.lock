@@ -319,6 +319,7 @@ dependencies = [
 name = "quire-contract-runtime-kernel-api-check"
 version = "0.0.0"
 dependencies = [
+ "ix-trace-rs",
  "quire-exact",
 ]
 
