@@ -2,7 +2,7 @@
 id: AD-003
 title: "Codegen to runtime seam: what generated crates and the generator use from this crate"
 type: ArchitectureDescription
-status: proposed
+status: accepted
 owner: runtime-maintainers
 system: quire-contract-runtime v0.1 public items that quire-contract-codegen links at generation time and emits into generated crates, the manifest text codegen writes for them, and the outcome vocabularies that cross back
 relationships:

@@ -2,7 +2,7 @@
 id: AD-002
 title: Function application boundary
 type: ArchitectureDescription
-status: proposed
+status: accepted
 owner: runtime-maintainers
 system: quire-contract-runtime v0.1
 relationships:

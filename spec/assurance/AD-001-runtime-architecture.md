@@ -2,7 +2,7 @@
 id: AD-001
 title: Quire contract runtime architecture
 type: ArchitectureDescription
-status: proposed
+status: accepted
 owner: runtime-maintainers
 system: quire-contract-runtime v0.1
 relationships:

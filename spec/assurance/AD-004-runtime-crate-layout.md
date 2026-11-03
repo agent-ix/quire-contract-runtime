@@ -2,7 +2,7 @@
 id: AD-004
 title: "Runtime crate layout: modules of this crate and the shared exact kernel it consumes"
 type: ArchitectureDescription
-status: proposed
+status: accepted
 owner: runtime-maintainers
 system: quire-contract-runtime v0.1 source layout under src/ (the core, accounting and snapshot, the proptest adapter, and the kept scalar modules and remaining expression port), the dependency edges it ends with, what it keeps against what quire-exact and quire-semantic-value own, and the migration steps assigned to IR-349 and IR-1009
 relationships:
