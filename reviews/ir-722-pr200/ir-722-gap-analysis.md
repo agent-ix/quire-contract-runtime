@@ -13,7 +13,7 @@ The computed matrix recognizes the new AC-5 and AC-6 construction controls, and 
 
 ## Verdict
 
-**PASS for the PR diff after disposition.** FND-001 was fixed on d1943d0142decce43256caceeddd4464e4f27443. The repository-wide matrix retains historical uncovered criteria outside this PR.
+**FAIL for current-head acceptance evidence.** FND-001 remains fixed, but removing the direct tests leaves AC-5 and AC-6 untagged and unverified on this PR head. Their real producer-to-reader-to-runtime controls are assigned to the IR-722 integration owner; no passing result is claimed here.
 
 ## Findings
 
@@ -23,7 +23,7 @@ The computed matrix recognizes the new AC-5 and AC-6 construction controls, and 
 
 ## Coverage
 
-`quoin matrix --repo . --json` reports 221 criteria: 59 tagged, 42 method-without-symbol, and 120 untagged. AC-3 has one new binder, the partial foreign-argument/local test. AC-5 has the accepted two-function provenance test; AC-6 has the duplicate-context and foreign-binding tests. The latter two assertions can fail for an incorrect validator. The 120 pre-existing untagged criteria are a repository baseline, not new PR findings. No reverse ownership gap, stub, copied upstream fixture, or hand-written matrix row was found in this diff. Optional semantic review was not selected.
+At the initial 799063023e00c81a748775c36b8b8eea9a7b92c9 head, `quoin matrix --repo . --json` reported 221 criteria: 59 tagged, 42 method-without-symbol, and 120 untagged. AC-3 then had one new binder, the partial foreign-argument/local test. AC-5 has the accepted two-function provenance test; AC-6 has the duplicate-context and foreign-binding tests. The latter two assertions can fail for an incorrect validator. The 120 pre-existing untagged criteria are a repository baseline, not new PR findings. No reverse ownership gap, stub, copied upstream fixture, or hand-written matrix row was found in this diff. Optional semantic review was not selected.
 
 Plan completion: not assessed
 
@@ -75,11 +75,20 @@ scope:
     and checks reachable foreign ownership.
 ```
 
+## New findings (disposition pass 2)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-002 | medium | The current PR head changes duplicate-location admission but has no behavioral test for AC-5's shared State, delta and IntegerAdd source locations across distinct function owners. The earlier synthetic test was deleted; matrix AC-5 is untagged. | src/monitor/validation.rs:286-318 |
+| FND-003 | medium | The current PR head has no behavioral test for AC-6's same-context, neutral, mixed, foreign-argument and foreign-local refusal cases. The earlier synthetic test was deleted; matrix AC-6 is untagged. | src/monitor/validation.rs:286-331 |
+
 ## Dispositions
 
 | FND | outcome | reason |
 | --- | --- | --- |
 | FND-001 | fixed | The AC-3 tag was removed from the partial foreign-binding test while TC-209 and AC-6 remain; the computed matrix now reports AC-3 untagged and AC-5/AC-6 tagged. |
+| FND-002 | deferred | IR-722 remains open; the integration owner is assigned real QSL to IR to RT AC-5 controls. No direct RT pass is claimed on this head. |
+| FND-003 | deferred | IR-722 remains open; the integration owner is assigned real QSL to IR to RT AC-6 controls. No direct RT pass is claimed on this head. |
 
 After excerpt from `src/monitor/validation.rs:1155`:
 
@@ -88,3 +97,7 @@ After excerpt from `src/monitor/validation.rs:1155`:
 ```
 
 No new issue appears in the one-line fix diff. The untagged AC-3 state is an existing whole-criterion evidence gap, not a new claim of coverage by this PR.
+
+## Current-head evidence update
+
+At dcbdb342141fd1b3a7d0f492373073ebebbff6c9, the synthetic test module has been removed; the production validator is unchanged from the first review. `quire matrix --scope . --format json` reports 221 criteria: 56 tagged, 42 method-without-symbol and 123 untagged. AC-3, AC-5 and AC-6 each have zero binders. The old focused three-test pass belongs only to the earlier head and is not current-head qualification. No new dependency, source key or body path was introduced by the deletion. Plan completion: not assessed.

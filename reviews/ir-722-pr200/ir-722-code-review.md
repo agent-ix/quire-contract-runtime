@@ -13,7 +13,7 @@ Reviewed the complete Rust diff and direct construction tests for the RT source-
 
 ## Verdict
 
-**PASS for production code and direct behavior.** No code defect found. Trace completeness is assessed separately in the gap-analysis artifact. Final aggregate gates belong to the lead.
+**PASS for production code inspection at the current head.** No production defect was found. Direct RT behavioral tests were removed after the initial review; AC-5/AC-6 evidence remains Planned in the gap-analysis artifact. Final aggregate gates belong to the lead.
 
 ## Findings
 
@@ -23,7 +23,7 @@ Reviewed the complete Rust diff and direct construction tests for the RT source-
 
 ## Coverage
 
-Examined `src/monitor/program.rs`, all changed production and test lines in `src/monitor/validation.rs`, the merged interface-002 AC-3/5/6 text, the TC-209 procedure, `Program::try_new`, lexical binding preparation and the existing BindingOwner merge. No CI workflow, lockfile, copied artifact, source-key synthesis, unsafe code, or compatibility path changed. The comparator makes same-location rows adjacent, including any neutral or mixed row and repeated function owner; three distinct focused tests passed on the frozen head. Scoped Clippy passed; this reviewer did not rerun the aggregate gate. No applicable AssuranceProfile was found. Optional semantic gap review was not selected.
+At the initial 799063023e00c81a748775c36b8b8eea9a7b92c9 head, examined `src/monitor/program.rs`, all changed production and test lines in `src/monitor/validation.rs`, the merged interface-002 AC-3/5/6 text, the TC-209 procedure, `Program::try_new`, lexical binding preparation and the existing BindingOwner merge. No CI workflow, lockfile, copied artifact, source-key synthesis, unsafe code, or compatibility path changed. The comparator makes same-location rows adjacent, including any neutral or mixed row and repeated function owner; three distinct focused tests passed on that earlier head. Scoped Clippy passed there; this reviewer did not rerun the aggregate gate. No applicable AssuranceProfile was found. Optional semantic gap review was not selected.
 
 Plan completion: not assessed
 
@@ -74,3 +74,7 @@ scope:
     locations with their owners, rejects same-context, neutral and mixed collisions,
     and checks reachable foreign ownership.
 ```
+
+## Current-head update
+
+At dcbdb342141fd1b3a7d0f492373073ebebbff6c9, the 420-line synthetic NodeKey test module is removed. The changed production validator and refusal documentation are byte-identical to the previously reviewed code. The three direct construction tests reported in the initial review ran on an earlier head only; they are not evidence on this head. No direct RT behavioral test or dependency change remains in this PR. Real QSL to IR to RT controls are assigned to the IR-722 integration owner; the code review does not claim their result.
