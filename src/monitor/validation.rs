@@ -1152,7 +1152,7 @@ mod tests {
         refused(mixed, Code::DuplicateKey, key(43));
     }
 
-    #[trace("TC-209", "interface-002-AC-6", "interface-002-AC-3")]
+    #[trace("TC-209", "interface-002-AC-6")]
     #[test]
     fn foreign_argument_and_local_keep_their_typed_refusals() {
         let mut argument = parts();
