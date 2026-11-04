@@ -10,8 +10,22 @@ relationships:
 
 ## Description
 
-Exercise the future RT monitor against QSL-produced plans and independent, test-authored expected
-outcomes. This case is planned; no monitor implementation or test binder exists in RT today.
+Qualify the RT monitor against complete QSL-produced plans and independent, test-authored
+expected outcomes. This complete temporal acceptance case remains Planned. The implemented
+construction and ordinary-executor controls do not establish this procedure.
+
+## Evidence Status
+
+**Planned.** The 86/0 `monitor_program` result recorded in
+[quire-integration PR #41](https://github.com/agent-ix/quire-integration/pull/41)
+backs the component criteria identified in the monitor evidence matrix. The evaluated
+source is now published on integration main; the guarded reference scan completed
+with 161 unbacked rows and zero contradicted statuses (strict exit 1), not a passing
+global coverage result. Neither fact establishes the remaining behavior. The run does not
+execute a QSL-emitted FR-487 plan through the complete lowerer and independent
+QSL tick-reference comparison required here. The source-body provenance finding
+also prevents treating the diagnostic event-position sequence as full AC-11 evidence.
+No complete temporal criterion is upgraded by the retained run, publication or reference scan.
 
 ## Test Procedure
 

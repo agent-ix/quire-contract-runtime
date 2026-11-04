@@ -16,10 +16,25 @@ The latter remains the complete FR-276 acceptance procedure.
 
 ## Evidence Status
 
-**Planned: pending integration evidence.** All controls in this procedure remain
-pending until the complete 86-test `monitor_program` target passes on the coherent
-producer/reader/runtime cohort. Source tags, earlier interim-cohort results and
-native runtime checks do not confer a status upgrade.
+**Planned: incomplete whole-case evidence.** The retained complete `monitor_program`
+run in [quire-integration PR #41](https://github.com/agent-ix/quire-integration/pull/41)
+reports 86 passed, zero failed and zero ignored against the coherent
+producer/reader/runtime cohort (quire-contract-runtime 0.1.0). The named controls
+back procedures 2 through 4 and interface-002-AC-2 through AC-4. Procedure 1 and
+interface-002-AC-1 remain partial: the retained-program test independently checks
+package lock and occurrence, but not the original clock, admitted-order and
+progress selection bytes. Expected context values derived from returned Layout
+are not an independent oracle for those original bytes. No native rerun was needed
+for this evidence update.
+
+PR #41 is now published on integration main with the evaluated source unchanged.
+The unchanged main-only guard accepted the clean owner main checkout, and the
+completed strict reference scan reports 161 unbacked rows and zero contradicted
+statuses (exit 1). This is a completed scan, not a passing global coverage gate.
+It does not fill the missing retention assertions or accept every IT-018 intention:
+the source-body provenance finding in IT-018-SC-15 also remains open. TC-200 and
+all FR-276 temporal criteria remain Planned independently. No source tag,
+diagnostic literal arena or landing sequence supplies that missing evidence.
 
 ## Test Procedure
 
