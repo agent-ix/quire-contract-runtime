@@ -79,8 +79,9 @@ The Rust result is `Result<Rc<Program>, ProgramRefusal>`: failure takes the type
 ProgramRefusal channel and returns no Program. The table describes the successful value.
 
 The source-language reader and driver own semantic admission and independent selection.
-Construction checks arena addresses, duplicate source locations, expression cycles,
-argument ownership, shared type membership and the four entry signatures. It does not
+Construction checks arena addresses, duplicate source locations within their validated
+execution contexts, expression cycles, argument ownership, shared type membership and
+the four entry signatures. It does not
 replace source admission or prove that generated bodies implement temporal meaning.
 Generic call/result conformance remains the shared value-admission boundary when the
 executor applies a function; this interface does not introduce a second type checker.
@@ -90,6 +91,25 @@ at #595 (75508820b5003a342b2af8782dc400bdc9080403). They retain the actual sourc
 one function; no distinct-function premise is invented. Expression arena addresses are
 not semantic IDs. Inline terms can share one source node key and differ by their
 body-child paths. No runtime code mints a NodeKey or substitutes a digest for a key.
+
+An expression's source location is its exact admitted `(key, body_path)` pair.
+Construction derives its binding owner from `Argument`, `Local`, `Let` and fold
+bindings and from their transitive operands. When that derivation identifies exactly
+one function without mixed ownership, its `FunctionId` qualifies the expression's
+execution context for duplicate-location validation only. Copies of one admitted
+parameter-dependent node may therefore keep the same source location in two
+different function contexts. The context does not alter either source field, mint a
+source identity, or become a substitute provenance path.
+
+An expression with no binding owner has one global source location. One such
+expression may be shared by arena address across function bodies; two neutral
+copies at the same location do not become distinct merely because callers differ.
+Two expressions in one function context, or a neutral and a bound expression, may
+not claim the same source location. Mixed binding ownership does not qualify for
+the cross-function exception. A reachable foreign argument or local still returns
+its typed ownership refusal rather than being admitted by a duplicate-location
+rule. These checks also apply to expressions outside an entry body's reachable
+closure where the existing construction checks already inspect the full arena.
 
 `Layout.tick_unit` refers to the unit retained in the shared TypeEnvironment's unit
 table. Its Time dimension and scale are read there; no copied unit definition or
@@ -186,8 +206,10 @@ Returns: Expression[0..1]
 | --- | --- | --- |
 | interface-002-AC-1 | After construction consumes the preparation parts and one Rc owner drops, another owner retains the complete root key with nested operand keys, selection bytes, all four entry associations, literal bodies and shared nominal declarations. Invalid arena lookups return absent. No monitor execution credit is granted by this construction control. | Test (TC-209) |
 | interface-002-AC-2 | Missing, extra, optional, mistyped or misordered outer State fields (including final required Integer event_position), missing or mistyped on_gap, invalid counter width, a gap outside the declared width, negative uncertainty and a tick unit under another dimension yield the typed construction refusal before any entry executes; width64 with maximum gap u64::MAX remains representable. Activation capacity zero and a positive value above u64::MAX remain retained exactly, while a negative value refuses without a host-width truncation. | Test (TC-209) |
-| interface-002-AC-3 | Duplicate source locations, invalid expression edges, direct expression cycles including unreachable arena nodes, and a reachable argument of another function refuse with their distinct typed codes. A finite shared subexpression and distinct inline body paths under the same source node remain admissible; a 20,000-level shared inline arena validates on a 512 KiB native stack without recursive graph descent. | Test (TC-209) |
+| interface-002-AC-3 | Duplicate function keys and duplicate expression source locations in one validated execution context refuse `DuplicateKey`; invalid expression edges, direct expression cycles including unreachable arena nodes, and a reachable argument of another function refuse with their distinct typed codes. A finite shared neutral subexpression and distinct inline body paths under the same source node remain admissible; a 20,000-level shared inline arena validates on a 512 KiB native stack without recursive graph descent. | Test (TC-209) |
 | interface-002-AC-4 | Two compatible entry roles may reference the same retained function; construction does not add a distinct-function premise to FR-487. | Test (TC-209) |
+| interface-002-AC-5 | Two functions using the same admitted State parameter node, delta parameter node and parameter-dependent IntegerAdd node admit distinct expression arena addresses when each copy's transitive binding owner is its own `FunctionId`. Both copies retain the original, equal `key` and `body_path` through `Program::expression`; the functions retain their distinct original keys and operand associations. | Test (TC-209) |
+| interface-002-AC-6 | Two copies of one source location with the same derived function owner, two neutral copies, or a neutral and a bound copy refuse `DuplicateKey`. Mixed binding owners do not gain a duplicate-location exception; a reachable foreign argument refuses `ForeignArgument`, and a reachable foreign local or mixed local binding refuses `InvalidBinding`, without changing the source key or body path. | Test (TC-209) |
 
 ## Delivery boundary
 

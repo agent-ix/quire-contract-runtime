@@ -20,7 +20,10 @@ The latter remains the complete FR-276 acceptance procedure.
 run in [quire-integration PR #41](https://github.com/agent-ix/quire-integration/pull/41)
 reports 86 passed, zero failed and zero ignored against the coherent
 producer/reader/runtime cohort (quire-contract-runtime 0.1.0). The named controls
-back procedures 2 through 4 and interface-002-AC-2 through AC-4. Procedure 1 and
+back the original procedures 2 through 4 and interface-002-AC-2 through AC-4. The
+cross-function source-location controls in procedure 3 and interface-002-AC-5/AC-6
+remain Planned until the RT representation change and a direct RT construction
+test land. Procedure 1 and
 interface-002-AC-1 remain partial: the retained-program test independently checks
 package lock and occurrence, but not the original clock, admitted-order and
 progress selection bytes. Expected context values derived from returned Layout
@@ -38,11 +41,14 @@ diagnostic literal arena or landing sequence supplies that missing evidence.
 
 ## Test Procedure
 
-Run the complete `monitor_program` target in `quire-integration` (IT-018 / TC-098).
-Its live QSL producer and strict IR reader provide semantic identities and their
-matching declaration/unit meanings. RT carries no local semantic identity fixture.
-The derived layout-key probe and ordinary diagnostic record shapes test construction
-storage; they do not claim an emitted temporal plan or FR-487 activation/result schema.
+Run direct `Program::try_new` construction controls in RT for the source-location
+rule and the complete `monitor_program` target in `quire-integration` (IT-018 / TC-098)
+for the existing producer/reader boundary. The latter's live QSL producer and strict
+IR reader provide semantic identities and their matching declaration/unit meanings.
+The direct RT control uses original `NodeKey` values as inputs, not a copied QSL
+fixture or reminted key. The derived layout-key probe and ordinary diagnostic record
+shapes test construction storage; they do not claim an emitted temporal plan or
+FR-487 activation/result schema.
 
 1. Move owned function/expression arenas and the shared declaration/unit environment
    into Program, drop preparation storage and one Rc owner, then inspect the surviving
@@ -55,10 +61,17 @@ storage; they do not claim an emitted temporal plan or FR-487 activation/result 
    capacities zero and above u64::MAX; refuse a negative activation capacity. Keep
    the actually emitted negative-scale and affine Time units without adding an
    upstream admission restriction.
-3. Inject duplicate function keys and duplicate expression source locations; inject
-   invalid function/body/Call/If addresses, a direct expression cycle and a foreign
-   function argument. Keep valid shared DAG nodes and distinct inline body paths.
-   Validate a 20,000-level shared inline arena on a 512 KiB native stack.
+3. Inject duplicate function keys and duplicate expression source locations within
+   one derived function context, between two neutral copies, and between a neutral
+   and a bound copy. Inject invalid function/body/Call/If addresses, a direct
+   expression cycle, mixed binding ownership, a foreign function argument and a
+   foreign local. Keep valid shared neutral DAG nodes and distinct inline body
+   paths. Construct two functions whose State and delta parameter expressions and
+   parameter-dependent IntegerAdd expressions share their exact admitted source
+   keys and body paths, but whose transitive owners are distinct FunctionIds.
+   Inspect both retained expressions and functions to confirm the original source
+   locations and separate operand associations. Validate a 20,000-level shared
+   inline arena on a 512 KiB native stack.
 4. Bind two signature-compatible entry roles to one retained function.
 
 ## Expected Results
@@ -67,8 +80,10 @@ storage; they do not claim an emitted temporal plan or FR-487 activation/result 
   executing init or allocating monitor state.
 - Invalid construction returns the precise typed code before execution; exact premises
   are not silently truncated to host integers or replaced by defaults.
-- Each malformed closure is refused; finite sharing, deep flat arenas and distinct
-  inline locations remain accepted without recursive graph descent.
+- Each malformed closure is refused by its typed duplicate-location or binding
+  code. The two function-scoped copies are admitted with unchanged original source
+  locations; finite neutral sharing, deep flat arenas and distinct inline locations
+  remain accepted without recursive graph descent.
 - Compatible role aliases remain valid. No distinct-function premise is invented.
 - No construction result is reported as FR-276 build/step acceptance. TC-200 and
   FR-276-AC-1 through AC-11 remain required independently.
