@@ -43,24 +43,6 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         }
         expression(parts, function.body, &function.key)?;
     }
-    let mut expressions = Vec::new();
-    expressions
-        .try_reserve_exact(parts.expressions.len())
-        .map_err(|_| refusal(Code::Storage, None))?;
-    expressions.extend(
-        parts
-            .expressions
-            .iter()
-            .map(|value| (&value.key, value.body_path.as_slice())),
-    );
-    expressions.sort_unstable();
-    for pair in expressions.windows(2) {
-        if let [left, right] = pair {
-            if left == right {
-                return Err(refusal(Code::DuplicateKey, Some(left.0)));
-            }
-        }
-    }
     for value in &parts.expressions {
         parts
             .types
@@ -303,6 +285,38 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         }
     }
     let owners = validate_expression_graph(parts)?;
+    let mut expressions = Vec::new();
+    expressions
+        .try_reserve_exact(parts.expressions.len())
+        .map_err(|_| refusal(Code::Storage, None))?;
+    expressions.extend(
+        parts
+            .expressions
+            .iter()
+            .zip(&owners)
+            .map(|(value, owner)| (&value.key, value.body_path.as_slice(), *owner)),
+    );
+    expressions.sort_unstable_by(|left, right| {
+        (left.0, left.1, left.2.function.map(|id| id.0)).cmp(&(
+            right.0,
+            right.1,
+            right.2.function.map(|id| id.0),
+        ))
+    });
+    for pair in expressions.windows(2) {
+        if let [left, right] = pair {
+            if left.0 == right.0
+                && left.1 == right.1
+                && (left.2.mixed
+                    || right.2.mixed
+                    || left.2.function.is_none()
+                    || right.2.function.is_none()
+                    || left.2.function == right.2.function)
+            {
+                return Err(refusal(Code::DuplicateKey, Some(left.0)));
+            }
+        }
+    }
     for (index, function) in parts.functions.iter().enumerate() {
         let owner = owners
             .get(function.body.0)
@@ -747,4 +761,413 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, 
         }
     }
     Ok(owners)
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::{collections::BTreeMap, vec};
+
+    use ix_trace_rs::trace;
+    use quire_exact::{CollectionKind, CollectionType, MemberId, MemberOwner, Rational, Value};
+    use quire_semantic_value::{
+        declaration::{
+            CompositeDeclaration, FieldDeclaration, ObjectTypeDeclaration, TypeEnvironment,
+        },
+        quantity::UnitTable,
+        unit::{DimensionNode, NominalDeclaration, UnitGraph, UnitNode},
+    };
+
+    use super::*;
+    use crate::monitor::{Entries, Function, Layout, LocalId, Program, TypeBinding};
+
+    fn key(byte: u8) -> NodeKey {
+        NodeKey::from_digest([byte; 32])
+    }
+
+    fn member(owner: NodeKey, name: &str) -> MemberId {
+        MemberId::new(MemberOwner::Node(owner), name).unwrap()
+    }
+
+    fn expression(byte: u8, value_type: ValueType, operation: Operation) -> Expression {
+        Expression {
+            key: key(byte),
+            body_path: vec![],
+            value_type,
+            operation,
+        }
+    }
+
+    fn parts() -> ProgramParts {
+        let state = key(10);
+        let inputs = key(11);
+        let scope = key(12);
+        let step = key(13);
+        let time = key(20);
+        let tick = key(21);
+        let sequence = ValueType::collection(CollectionType::new(
+            CollectionKind::Sequence,
+            ValueType::Boolean,
+            None,
+        ));
+        let state_type = ValueType::Composite(state);
+        let inputs_type = ValueType::Composite(inputs);
+        let scope_type = ValueType::Composite(scope);
+        let step_type = ValueType::Composite(step);
+        let fields = vec![
+            FieldDeclaration::new("now", ValueType::Integer, Presence::Required),
+            FieldDeclaration::new("history_start", ValueType::Integer, Presence::Required),
+            FieldDeclaration::new("activations", sequence.clone(), Presence::Required),
+            FieldDeclaration::new("event_position", ValueType::Integer, Presence::Required),
+        ];
+        let dimensions = BTreeMap::from([(
+            time,
+            DimensionNode::checked(vec![], NominalDeclaration::default()).unwrap(),
+        )]);
+        let units = BTreeMap::from([(
+            tick,
+            UnitNode::checked(
+                *time.as_bytes(),
+                None,
+                Rational::from_integer(Integer::one()),
+                Rational::from_integer(Integer::zero()),
+                NominalDeclaration::default(),
+            )
+            .unwrap(),
+        )]);
+        let graph = UnitGraph::from_checked_nodes(&dimensions, &units).unwrap();
+        let types = TypeEnvironment::new(
+            [
+                CompositeDeclaration::new(state, "State", CompositeShape::Record(fields)),
+                CompositeDeclaration::new(inputs, "Inputs", CompositeShape::Record(vec![])),
+                CompositeDeclaration::new(scope, "Scope", CompositeShape::Record(vec![])),
+                CompositeDeclaration::new(
+                    step,
+                    "Step",
+                    CompositeShape::Tuple(vec![state_type.clone(), sequence.clone()]),
+                ),
+            ],
+            core::iter::empty::<ObjectTypeDeclaration>(),
+        )
+        .unwrap()
+        .with_units(UnitTable::declared(&graph));
+        let state_fields = |now| {
+            vec![
+                (member(state, "now"), now),
+                (member(state, "history_start"), ExpressionId(0)),
+                (member(state, "activations"), ExpressionId(1)),
+                (member(state, "event_position"), ExpressionId(0)),
+            ]
+        };
+        let expressions = vec![
+            expression(
+                30,
+                ValueType::Integer,
+                Operation::Literal(Value::Integer(Integer::zero())),
+            ),
+            expression(
+                31,
+                sequence.clone(),
+                Operation::Sequence { elements: vec![] },
+            ),
+            expression(
+                32,
+                state_type.clone(),
+                Operation::Record {
+                    fields: state_fields(ExpressionId(0)),
+                },
+            ),
+            expression(
+                40,
+                state_type.clone(),
+                Operation::Argument {
+                    function: FunctionId(1),
+                    position: 0,
+                },
+            ),
+            expression(
+                41,
+                ValueType::Integer,
+                Operation::Argument {
+                    function: FunctionId(1),
+                    position: 1,
+                },
+            ),
+            expression(
+                42,
+                ValueType::Integer,
+                Operation::RecordField {
+                    value: ExpressionId(3),
+                    member: member(state, "now"),
+                },
+            ),
+            expression(
+                43,
+                ValueType::Integer,
+                Operation::IntegerAdd {
+                    left: ExpressionId(5),
+                    right: ExpressionId(4),
+                },
+            ),
+            expression(
+                44,
+                state_type.clone(),
+                Operation::Record {
+                    fields: state_fields(ExpressionId(6)),
+                },
+            ),
+            expression(
+                45,
+                sequence.clone(),
+                Operation::Sequence { elements: vec![] },
+            ),
+            expression(
+                46,
+                step_type.clone(),
+                Operation::Tuple {
+                    positions: vec![ExpressionId(7), ExpressionId(8)],
+                },
+            ),
+            expression(
+                40,
+                state_type.clone(),
+                Operation::Argument {
+                    function: FunctionId(3),
+                    position: 0,
+                },
+            ),
+            expression(
+                41,
+                ValueType::Integer,
+                Operation::Argument {
+                    function: FunctionId(3),
+                    position: 1,
+                },
+            ),
+            expression(
+                47,
+                ValueType::Integer,
+                Operation::RecordField {
+                    value: ExpressionId(10),
+                    member: member(state, "now"),
+                },
+            ),
+            expression(
+                43,
+                ValueType::Integer,
+                Operation::IntegerAdd {
+                    left: ExpressionId(12),
+                    right: ExpressionId(11),
+                },
+            ),
+            expression(
+                48,
+                state_type.clone(),
+                Operation::Record {
+                    fields: state_fields(ExpressionId(13)),
+                },
+            ),
+            expression(
+                49,
+                step_type.clone(),
+                Operation::Tuple {
+                    positions: vec![ExpressionId(14), ExpressionId(8)],
+                },
+            ),
+            expression(
+                50,
+                state_type.clone(),
+                Operation::Argument {
+                    function: FunctionId(2),
+                    position: 0,
+                },
+            ),
+            expression(
+                51,
+                step_type.clone(),
+                Operation::Tuple {
+                    positions: vec![ExpressionId(16), ExpressionId(8)],
+                },
+            ),
+        ];
+        ProgramParts {
+            layout: Layout {
+                root: key(1),
+                clause: key(2),
+                package_lock: vec![1].into_boxed_slice(),
+                subject: "subject".into(),
+                occurrence: vec![1].into_boxed_slice(),
+                profile: "profile".into(),
+                clock_binding: vec![1].into_boxed_slice(),
+                admitted_order: vec![1].into_boxed_slice(),
+                progress_context: vec![1].into_boxed_slice(),
+                state: TypeBinding {
+                    key: state,
+                    value_type: state_type.clone(),
+                },
+                inputs: TypeBinding {
+                    key: inputs,
+                    value_type: inputs_type.clone(),
+                },
+                scope: TypeBinding {
+                    key: scope,
+                    value_type: scope_type.clone(),
+                },
+                results: TypeBinding {
+                    key: key(14),
+                    value_type: sequence.clone(),
+                },
+                step_result: TypeBinding {
+                    key: step,
+                    value_type: step_type.clone(),
+                },
+                entries: Entries {
+                    init: FunctionId(0),
+                    on_event: FunctionId(1),
+                    on_watermark: FunctionId(2),
+                    on_gap: FunctionId(3),
+                },
+                counter: "counter".into(),
+                tick_unit: tick,
+                time_dimension: time,
+                counter_width_bits: 8,
+                max_reading_gap: 10,
+                max_event_rate: Rational::from_integer(Integer::one()),
+                uncertainty: Rational::from_integer(Integer::zero()),
+                buffers: vec![],
+                activation_capacity: Integer::zero(),
+            },
+            types,
+            functions: vec![
+                Function {
+                    key: key(80),
+                    parameters: vec![],
+                    result: state_type.clone(),
+                    body: ExpressionId(2),
+                },
+                Function {
+                    key: key(81),
+                    parameters: vec![state_type.clone(), ValueType::Integer, inputs_type],
+                    result: step_type.clone(),
+                    body: ExpressionId(9),
+                },
+                Function {
+                    key: key(82),
+                    parameters: vec![state_type.clone(), ValueType::Integer, scope_type],
+                    result: step_type.clone(),
+                    body: ExpressionId(17),
+                },
+                Function {
+                    key: key(83),
+                    parameters: vec![state_type, ValueType::Integer],
+                    result: step_type,
+                    body: ExpressionId(15),
+                },
+            ],
+            expressions,
+        }
+    }
+
+    fn refused(parts: ProgramParts, code: Code, node: NodeKey) {
+        match Program::try_new(parts) {
+            Err(failure) => {
+                assert_eq!(failure.code, code);
+                assert_eq!(failure.node, Some(node));
+            }
+            Ok(_) => panic!("malformed source location was admitted"),
+        }
+    }
+
+    #[trace("TC-209", "interface-002-AC-5")]
+    #[test]
+    fn shared_source_nodes_keep_original_locations_in_distinct_functions() {
+        let program = Program::try_new(parts()).unwrap();
+        for (left, right) in [(3, 10), (4, 11), (6, 13)] {
+            let first = program.expression(ExpressionId(left)).unwrap();
+            let second = program.expression(ExpressionId(right)).unwrap();
+            assert_eq!(first.key, second.key);
+            assert_eq!(first.body_path, second.body_path);
+        }
+        assert_eq!(program.function(FunctionId(1)).unwrap().key, key(81));
+        assert_eq!(program.function(FunctionId(3)).unwrap().key, key(83));
+        assert!(matches!(
+            program.expression(ExpressionId(6)).unwrap().operation,
+            Operation::IntegerAdd {
+                left: ExpressionId(5),
+                right: ExpressionId(4)
+            }
+        ));
+        assert!(matches!(
+            program.expression(ExpressionId(13)).unwrap().operation,
+            Operation::IntegerAdd {
+                left: ExpressionId(12),
+                right: ExpressionId(11)
+            }
+        ));
+    }
+
+    #[trace("TC-209", "interface-002-AC-6")]
+    #[test]
+    fn source_location_copies_without_distinct_single_owners_refuse() {
+        let mut same = parts();
+        same.expressions.push(expression(
+            43,
+            ValueType::Integer,
+            Operation::IntegerAdd {
+                left: ExpressionId(5),
+                right: ExpressionId(4),
+            },
+        ));
+        refused(same, Code::DuplicateKey, key(43));
+
+        let mut neutral = parts();
+        neutral.expressions.push(expression(
+            30,
+            ValueType::Integer,
+            Operation::Literal(Value::Integer(Integer::one())),
+        ));
+        refused(neutral, Code::DuplicateKey, key(30));
+
+        let mut neutral_and_bound = parts();
+        neutral_and_bound.expressions[4].key = key(30);
+        refused(neutral_and_bound, Code::DuplicateKey, key(30));
+
+        let mut mixed = parts();
+        mixed.expressions.push(expression(
+            43,
+            ValueType::Integer,
+            Operation::IntegerAdd {
+                left: ExpressionId(4),
+                right: ExpressionId(11),
+            },
+        ));
+        refused(mixed, Code::DuplicateKey, key(43));
+    }
+
+    #[trace("TC-209", "interface-002-AC-6", "interface-002-AC-3")]
+    #[test]
+    fn foreign_argument_and_local_keep_their_typed_refusals() {
+        let mut argument = parts();
+        argument.expressions[13].key = key(60);
+        argument.expressions[13].operation = Operation::IntegerAdd {
+            left: ExpressionId(5),
+            right: ExpressionId(11),
+        };
+        refused(argument, Code::ForeignArgument, key(83));
+
+        let mut local = parts();
+        local.expressions.push(expression(
+            61,
+            ValueType::Integer,
+            Operation::Local(LocalId {
+                function: FunctionId(1),
+                position: 0,
+            }),
+        ));
+        local.expressions[13].key = key(60);
+        local.expressions[13].operation = Operation::IntegerAdd {
+            left: ExpressionId(18),
+            right: ExpressionId(11),
+        };
+        refused(local, Code::InvalidBinding, key(83));
+    }
 }
