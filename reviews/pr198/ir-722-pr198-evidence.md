@@ -88,3 +88,22 @@ This review used the retained owner full-target run and the exact evaluated PR #
 Quire structural validation passes for the three changed Markdown artifacts. No applicable AssuranceProfile is declared in the reviewed spec tree. Runtime application is quire-contract-runtime 0.1.0; review tooling is Quire CLI 0.38.1 / engine 0.51.0 and Quoin 0.29.1. User scope is lifecycle/evidence only: unchanged normative requirements, test intent, verification methods, implementation and trace markers are not rewritten. QSpec #606 is merged and is not an open blocker.
 
 Plan completion: not assessed
+
+## Disposition pass 1
+
+**PASS for the corrected lifecycle/evidence slice.** All four original findings are fixed. The original finding table and review comments above remain unchanged as the historical record. No new finding.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | All lifecycle sections now state that PR #41 is published and the main-only guard/scan completed with strict exit 1, 161 unbacked and zero contradicted; no globally passing coverage claim remains. |
+| FND-002 | fixed | interface-002-AC-1 is excluded from the 29 complete criteria, listed as partial with the missing original clock/order/progress-byte oracle, and full TC-209/procedure 1 remain Planned. Normative criteria and test procedures are unchanged. |
+| FND-003 | fixed | interface-003-AC-3 is no longer promoted; the evidence section preserves the unexercised native storage/path-capacity failure and distinguishes the unrelated outer stack reservation. |
+| FND-004 | fixed | interface-004-AC-1 is no longer promoted; its lexical refusal and functional observations are retained as partial evidence while the original Let/Local source-key/body-path oracle remains explicitly absent. |
+
+## Disposition validation
+
+Read the complete fix diff and the three retained original review reports. Only lifecycle prose, component-status lists/counts and review custody documents changed. The 37-row audit now agrees: 29 whole-backed and eight partial. TC-209 procedures 2 through 4 are supported, but procedure 1 and the complete case remain Planned. All FR-276-AC-1..11 and TC-200 stay Planned. The previously identified QSL witness/driver lowering/source-body constraints are not hidden or represented as delivered.
+
+Publication and the main-only reference scan are correctly described as complete, with 161 unbacked/zero contradicted and strict exit 1, not passing global coverage. Both pre-existing test procedures and Expected Results sections are byte-unchanged from main. Existing owner execution and reference receipts are reused; no Cargo, native/build/proof/scan rerun, new assertion, new ticket, source copy or guard modification was performed. The corrected subject documents and latest external review artifacts validate; Git whitespace checks pass. The remaining gaps are explicit Planned evidence work, not waived criteria.
