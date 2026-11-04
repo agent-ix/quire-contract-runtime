@@ -16,18 +16,25 @@ The latter remains the complete FR-276 acceptance procedure.
 
 ## Evidence Status
 
-**Executed on the integration candidate.** The existing complete `monitor_program`
+**Planned: incomplete whole-case evidence.** The retained complete `monitor_program`
 run in [quire-integration PR #41](https://github.com/agent-ix/quire-integration/pull/41)
 reports 86 passed, zero failed and zero ignored against the coherent
-producer/reader/runtime cohort (quire-contract-runtime 0.1.0). The named construction
-controls back all four procedures below and interface-002-AC-1 through AC-4.
-No native rerun was needed for this evidence update.
+producer/reader/runtime cohort (quire-contract-runtime 0.1.0). The named controls
+back procedures 2 through 4 and interface-002-AC-2 through AC-4. Procedure 1 and
+interface-002-AC-1 remain partial: the retained-program test independently checks
+package lock and occurrence, but not the original clock, admitted-order and
+progress selection bytes. Expected context values derived from returned Layout
+are not an independent oracle for those original bytes. No native rerun was needed
+for this evidence update.
 
-Owner publication on integration main and the guarded reference-coverage scan
-remain pending. This candidate result does not imply acceptance of every IT-018
-intention: the source-body provenance finding in IT-018-SC-15 remains open.
-TC-200 and all FR-276 temporal criteria remain Planned independently. No source
-tag, diagnostic literal arena or landing sequence supplies that missing evidence.
+PR #41 is now published on integration main with the evaluated source unchanged.
+The unchanged main-only guard accepted the clean owner main checkout, and the
+completed strict reference scan reports 161 unbacked rows and zero contradicted
+statuses (exit 1). This is a completed scan, not a passing global coverage gate.
+It does not fill the missing retention assertions or accept every IT-018 intention:
+the source-body provenance finding in IT-018-SC-15 also remains open. TC-200 and
+all FR-276 temporal criteria remain Planned independently. No source tag,
+diagnostic literal arena or landing sequence supplies that missing evidence.
 
 ## Test Procedure
 

@@ -30,15 +30,15 @@ type: TestMatrix
 
 ## Component Execution Evidence
 
-**Executed on the integration candidate:** the authoritative owner's complete
+**Executed owner controls, now published on integration main:** the retained complete
 `monitor_program` run in [quire-integration PR #41](https://github.com/agent-ix/quire-integration/pull/41)
 reports 86 passed, zero failed and zero ignored against the coherent
 producer/reader/runtime cohort (quire-contract-runtime 0.1.0). Inspection of the
 named passing controls backs these complete construction or ordinary-executor criteria:
 
-- interface-002-AC-1 through AC-4;
-- interface-003-AC-1 through AC-4;
-- interface-004-AC-1 through AC-4;
+- interface-002-AC-2 through AC-4;
+- interface-003-AC-1, AC-2 and AC-4;
+- interface-004-AC-2 through AC-4;
 - interface-005-AC-1 through AC-3;
 - interface-006-AC-1 and AC-2;
 - interface-007-AC-1 and AC-2;
@@ -48,11 +48,22 @@ named passing controls backs these complete construction or ordinary-executor cr
 - interface-011-AC-1 and AC-2;
 - interface-012-AC-2 through AC-4.
 
-These are 32 component criteria. TC-209's four construction procedures are
-backed by that run. The observed 86/0 harness result does not establish every
-stated test intention or accept the whole IT-018/TC-098 contract.
+These are 29 component criteria. TC-209's procedures 2 through 4 are backed,
+but procedure 1 lacks independent retained-selection-byte assertions, so the
+complete TC-209 case remains Planned. The observed 86/0 harness result does not
+establish every stated test intention or accept the whole IT-018/TC-098 contract.
 
-**Planned: incomplete whole-criterion evidence:**
+**Planned: incomplete whole-criterion evidence (eight criteria):**
+
+- interface-002-AC-1: root, entries, literal contents, package lock and occurrence
+  retention are checked, but original clock, admitted-order and progress selection
+  bytes have no independent expected-value oracle. Dispatch expectations derived
+  from the returned Layout do not supply that missing retention observation.
+- interface-003-AC-3: invalid membership and native Work-limit channels are observed;
+  native shared-conformance storage/path-capacity failure is not. An outer stack
+  reservation failure during budget replacement is a different channel.
+- interface-004-AC-1: lexical refusal and functional controls pass, but no positive
+  retained Let/Local source-key/body-path assertion establishes the location clause.
 
 - interface-006-AC-3 and interface-007-AC-3: scratch, continuation, original-value
   ownership and declaration-scan controls pass, but no projection-specific assertion
@@ -74,11 +85,15 @@ count sequence alone does not grant FR-276-AC-11 qualification.
 
 ## Published Reference Qualification
 
-The execution evidence above is from the evaluated PR #41 candidate. Owner
-publication on integration main and the subsequent guarded reference scan remain
-pending. The existing main-only reference guard is unchanged; no candidate file
-is substituted for main and no passing main scan is claimed. Native tests and
-source tags alone do not upgrade the remaining Planned criteria.
+The evaluated PR #41 controls are now published on integration main. The owner
+monitor source, helpers, manifest and lock are unchanged from the evaluated run;
+no native rerun is inferred from publication. The unchanged main-only reference
+guard accepted the genuine clean owner main checkout. The completed strict scan
+reports 161 unbacked rows and zero contradicted statuses, with exit 1: acquisition
+and scanning succeeded, but repository-wide strict coverage is not passing.
+No source copy, candidate substitution or guard modification was used. This
+reference result does not supply missing behavioral assertions or upgrade any
+remaining Planned criterion.
 
 ## Evidence Locations
 
@@ -87,8 +102,8 @@ source tags alone do not upgrade the remaining Planned criteria.
 - TC-209 describes retained-program construction controls. TC-200 independently
   owns complete producer/build/event/watermark/gap acceptance; construction and
   native operating checks do not replace it.
-- After the runtime and integration changes land, rerun the main-only reference
-  coverage scan. Keep IR-722 open until complete admitted-plan execution and the independently
+- The completed main-only reference scan is separate from runtime acceptance.
+  Keep IR-722 open until complete admitted-plan execution and the independently
   required TC-200 qualification are backed. The former QSL-1570 producer refusal
-  no longer explains the passing candidate run; the landing sequence alone grants
+  no longer explains the passing owner run; the landing sequence alone grants
   no additional acceptance credit.
