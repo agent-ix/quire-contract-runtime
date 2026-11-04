@@ -768,7 +768,9 @@ mod tests {
     use alloc::{collections::BTreeMap, vec};
 
     use ix_trace_rs::trace;
-    use quire_exact::{CollectionKind, CollectionType, MemberId, MemberOwner, Rational, Value};
+    use quire_exact::{
+        CollectionKind, CollectionType, MemberId, MemberOwner, PathSegment, Rational, Value,
+    };
     use quire_semantic_value::{
         declaration::{
             CompositeDeclaration, FieldDeclaration, ObjectTypeDeclaration, TypeEnvironment,
@@ -781,11 +783,16 @@ mod tests {
     use crate::monitor::{Entries, Function, Layout, LocalId, Program, TypeBinding};
 
     fn key(byte: u8) -> NodeKey {
-        NodeKey::from_digest([byte; 32])
+        NodeKey::new(
+            "test:rt-monitor",
+            vec![PathSegment::Text(alloc::format!("node_{byte}"))],
+            0,
+        )
+        .unwrap()
     }
 
-    fn member(owner: NodeKey, name: &str) -> MemberId {
-        MemberId::new(MemberOwner::Node(owner), name).unwrap()
+    fn member(owner: &NodeKey, name: &str) -> MemberId {
+        MemberId::new(MemberOwner::Node(owner.clone()), name).unwrap()
     }
 
     fn expression(byte: u8, value_type: ValueType, operation: Operation) -> Expression {
@@ -809,10 +816,10 @@ mod tests {
             ValueType::Boolean,
             None,
         ));
-        let state_type = ValueType::Composite(state);
-        let inputs_type = ValueType::Composite(inputs);
-        let scope_type = ValueType::Composite(scope);
-        let step_type = ValueType::Composite(step);
+        let state_type = ValueType::Composite(state.clone());
+        let inputs_type = ValueType::Composite(inputs.clone());
+        let scope_type = ValueType::Composite(scope.clone());
+        let step_type = ValueType::Composite(step.clone());
         let fields = vec![
             FieldDeclaration::new("now", ValueType::Integer, Presence::Required),
             FieldDeclaration::new("history_start", ValueType::Integer, Presence::Required),
@@ -820,13 +827,13 @@ mod tests {
             FieldDeclaration::new("event_position", ValueType::Integer, Presence::Required),
         ];
         let dimensions = BTreeMap::from([(
-            time,
+            time.clone(),
             DimensionNode::checked(vec![], NominalDeclaration::default()).unwrap(),
         )]);
         let units = BTreeMap::from([(
-            tick,
+            tick.clone(),
             UnitNode::checked(
-                *time.as_bytes(),
+                time.clone(),
                 None,
                 Rational::from_integer(Integer::one()),
                 Rational::from_integer(Integer::zero()),
@@ -837,11 +844,11 @@ mod tests {
         let graph = UnitGraph::from_checked_nodes(&dimensions, &units).unwrap();
         let types = TypeEnvironment::new(
             [
-                CompositeDeclaration::new(state, "State", CompositeShape::Record(fields)),
-                CompositeDeclaration::new(inputs, "Inputs", CompositeShape::Record(vec![])),
-                CompositeDeclaration::new(scope, "Scope", CompositeShape::Record(vec![])),
+                CompositeDeclaration::new(state.clone(), "State", CompositeShape::Record(fields)),
+                CompositeDeclaration::new(inputs.clone(), "Inputs", CompositeShape::Record(vec![])),
+                CompositeDeclaration::new(scope.clone(), "Scope", CompositeShape::Record(vec![])),
                 CompositeDeclaration::new(
-                    step,
+                    step.clone(),
                     "Step",
                     CompositeShape::Tuple(vec![state_type.clone(), sequence.clone()]),
                 ),
@@ -852,10 +859,10 @@ mod tests {
         .with_units(UnitTable::declared(&graph));
         let state_fields = |now| {
             vec![
-                (member(state, "now"), now),
-                (member(state, "history_start"), ExpressionId(0)),
-                (member(state, "activations"), ExpressionId(1)),
-                (member(state, "event_position"), ExpressionId(0)),
+                (member(&state, "now"), now),
+                (member(&state, "history_start"), ExpressionId(0)),
+                (member(&state, "activations"), ExpressionId(1)),
+                (member(&state, "event_position"), ExpressionId(0)),
             ]
         };
         let expressions = vec![
@@ -897,7 +904,7 @@ mod tests {
                 ValueType::Integer,
                 Operation::RecordField {
                     value: ExpressionId(3),
-                    member: member(state, "now"),
+                    member: member(&state, "now"),
                 },
             ),
             expression(
@@ -948,7 +955,7 @@ mod tests {
                 ValueType::Integer,
                 Operation::RecordField {
                     value: ExpressionId(10),
-                    member: member(state, "now"),
+                    member: member(&state, "now"),
                 },
             ),
             expression(
@@ -1001,15 +1008,15 @@ mod tests {
                 admitted_order: vec![1].into_boxed_slice(),
                 progress_context: vec![1].into_boxed_slice(),
                 state: TypeBinding {
-                    key: state,
+                    key: state.clone(),
                     value_type: state_type.clone(),
                 },
                 inputs: TypeBinding {
-                    key: inputs,
+                    key: inputs.clone(),
                     value_type: inputs_type.clone(),
                 },
                 scope: TypeBinding {
-                    key: scope,
+                    key: scope.clone(),
                     value_type: scope_type.clone(),
                 },
                 results: TypeBinding {
@@ -1017,7 +1024,7 @@ mod tests {
                     value_type: sequence.clone(),
                 },
                 step_result: TypeBinding {
-                    key: step,
+                    key: step.clone(),
                     value_type: step_type.clone(),
                 },
                 entries: Entries {
