@@ -16,10 +16,18 @@ The latter remains the complete FR-276 acceptance procedure.
 
 ## Evidence Status
 
-**Planned: pending integration evidence.** All controls in this procedure remain
-pending until the complete 86-test `monitor_program` target passes on the coherent
-producer/reader/runtime cohort. Source tags, earlier interim-cohort results and
-native runtime checks do not confer a status upgrade.
+**Executed on the integration candidate.** The existing complete `monitor_program`
+run in [quire-integration PR #41](https://github.com/agent-ix/quire-integration/pull/41)
+reports 86 passed, zero failed and zero ignored against the coherent
+producer/reader/runtime cohort (quire-contract-runtime 0.1.0). The named construction
+controls back all four procedures below and interface-002-AC-1 through AC-4.
+No native rerun was needed for this evidence update.
+
+Owner publication on integration main and the guarded reference-coverage scan
+remain pending. This candidate result does not imply acceptance of every IT-018
+intention: the source-body provenance finding in IT-018-SC-15 remains open.
+TC-200 and all FR-276 temporal criteria remain Planned independently. No source
+tag, diagnostic literal arena or landing sequence supplies that missing evidence.
 
 ## Test Procedure
 
