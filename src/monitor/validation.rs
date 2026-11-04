@@ -43,24 +43,6 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         }
         expression(parts, function.body, &function.key)?;
     }
-    let mut expressions = Vec::new();
-    expressions
-        .try_reserve_exact(parts.expressions.len())
-        .map_err(|_| refusal(Code::Storage, None))?;
-    expressions.extend(
-        parts
-            .expressions
-            .iter()
-            .map(|value| (&value.key, value.body_path.as_slice())),
-    );
-    expressions.sort_unstable();
-    for pair in expressions.windows(2) {
-        if let [left, right] = pair {
-            if left == right {
-                return Err(refusal(Code::DuplicateKey, Some(left.0)));
-            }
-        }
-    }
     for value in &parts.expressions {
         parts
             .types
@@ -303,6 +285,38 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         }
     }
     let owners = validate_expression_graph(parts)?;
+    let mut expressions = Vec::new();
+    expressions
+        .try_reserve_exact(parts.expressions.len())
+        .map_err(|_| refusal(Code::Storage, None))?;
+    expressions.extend(
+        parts
+            .expressions
+            .iter()
+            .zip(&owners)
+            .map(|(value, owner)| (&value.key, value.body_path.as_slice(), *owner)),
+    );
+    expressions.sort_unstable_by(|left, right| {
+        (left.0, left.1, left.2.function.map(|id| id.0)).cmp(&(
+            right.0,
+            right.1,
+            right.2.function.map(|id| id.0),
+        ))
+    });
+    for pair in expressions.windows(2) {
+        if let [left, right] = pair {
+            if left.0 == right.0
+                && left.1 == right.1
+                && (left.2.mixed
+                    || right.2.mixed
+                    || left.2.function.is_none()
+                    || right.2.function.is_none()
+                    || left.2.function == right.2.function)
+            {
+                return Err(refusal(Code::DuplicateKey, Some(left.0)));
+            }
+        }
+    }
     for (index, function) in parts.functions.iter().enumerate() {
         let owner = owners
             .get(function.body.0)

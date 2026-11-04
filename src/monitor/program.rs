@@ -342,7 +342,7 @@ pub struct ProgramParts {
 pub enum ProgramRefusalCode {
     /// A required selection or exact premise is absent or out of range.
     InvalidLayout,
-    /// Two retained source nodes have the same key.
+    /// Two function keys or two expression locations in one execution context collide.
     DuplicateKey,
     /// A resolved arena address does not exist.
     InvalidReference,
