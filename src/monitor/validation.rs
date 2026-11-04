@@ -1088,10 +1088,12 @@ mod tests {
     #[test]
     fn shared_source_nodes_keep_original_locations_in_distinct_functions() {
         let program = Program::try_new(parts()).unwrap();
-        for (left, right) in [(3, 10), (4, 11), (6, 13)] {
+        for (left, right, source) in [(3, 10, key(40)), (4, 11, key(41)), (6, 13, key(43))] {
             let first = program.expression(ExpressionId(left)).unwrap();
             let second = program.expression(ExpressionId(right)).unwrap();
-            assert_eq!(first.key, second.key);
+            assert_eq!(first.key, source);
+            assert_eq!(second.key, source);
+            assert!(first.body_path.is_empty());
             assert_eq!(first.body_path, second.body_path);
         }
         assert_eq!(program.function(FunctionId(1)).unwrap().key, key(81));
@@ -1135,7 +1137,7 @@ mod tests {
         refused(neutral, Code::DuplicateKey, key(30));
 
         let mut neutral_and_bound = parts();
-        neutral_and_bound.expressions[4].key = key(30);
+        neutral_and_bound.expressions.get_mut(4).unwrap().key = key(30);
         refused(neutral_and_bound, Code::DuplicateKey, key(30));
 
         let mut mixed = parts();
@@ -1154,8 +1156,9 @@ mod tests {
     #[test]
     fn foreign_argument_and_local_keep_their_typed_refusals() {
         let mut argument = parts();
-        argument.expressions[13].key = key(60);
-        argument.expressions[13].operation = Operation::IntegerAdd {
+        let changed = argument.expressions.get_mut(13).unwrap();
+        changed.key = key(60);
+        changed.operation = Operation::IntegerAdd {
             left: ExpressionId(5),
             right: ExpressionId(11),
         };
@@ -1170,8 +1173,9 @@ mod tests {
                 position: 0,
             }),
         ));
-        local.expressions[13].key = key(60);
-        local.expressions[13].operation = Operation::IntegerAdd {
+        let changed = local.expressions.get_mut(13).unwrap();
+        changed.key = key(60);
+        changed.operation = Operation::IntegerAdd {
             left: ExpressionId(18),
             right: ExpressionId(11),
         };
