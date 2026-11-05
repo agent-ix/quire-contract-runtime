@@ -225,7 +225,10 @@ fn membership_prefix(kind: CollectionKind) -> Vec<ChargePoint> {
     if kind != CollectionKind::Sequence {
         // The five supplied occurrences compare 0, 1, 2, 1, 2 times.
         for _ in 0..6 {
-            points.extend([ChargePoint::CollectionMemberWalk, ChargePoint::CollectionMemberTest]);
+            points.extend([
+                ChargePoint::CollectionMemberWalk,
+                ChargePoint::CollectionMemberTest,
+            ]);
         }
     }
     points
@@ -239,7 +242,10 @@ fn late_type_mismatch_precedes_membership_bound_and_zero_work_denial() {
             let mut values = input();
             values[3] = Value::Integer(Integer::one());
             values[4] = Value::Boolean(true);
-            let mut meter = Meter::new(ScalarLimits { work_units, ..UNLIMITED });
+            let mut meter = Meter::new(ScalarLimits {
+                work_units,
+                ..UNLIMITED
+            });
             let ty = bounded_type(kind, CardinalityBound::new(0, 0).unwrap());
             assert_eq!(
                 form_collection(&ty, values, &mut meter),
@@ -261,22 +267,56 @@ fn late_type_mismatch_precedes_membership_bound_and_zero_work_denial() {
 fn decimal_bound_refusals_report_distinct_or_occurrence_count_after_membership() {
     let bound = CardinalityBound::new(3, 3).unwrap();
     for (kind, count, violation, cause, work) in [
-        (CollectionKind::Sequence, 5, BoundViolation::AboveMaximum, "above-maximum", 1),
-        (CollectionKind::Bag, 5, BoundViolation::AboveMaximum, "above-maximum", 19),
-        (CollectionKind::Set, 2, BoundViolation::BelowMinimum, "below-minimum", 19),
-        (CollectionKind::OrderedSet, 2, BoundViolation::BelowMinimum, "below-minimum", 19),
+        (
+            CollectionKind::Sequence,
+            5,
+            BoundViolation::AboveMaximum,
+            "above-maximum",
+            1,
+        ),
+        (
+            CollectionKind::Bag,
+            5,
+            BoundViolation::AboveMaximum,
+            "above-maximum",
+            19,
+        ),
+        (
+            CollectionKind::Set,
+            2,
+            BoundViolation::BelowMinimum,
+            "below-minimum",
+            19,
+        ),
+        (
+            CollectionKind::OrderedSet,
+            2,
+            BoundViolation::BelowMinimum,
+            "below-minimum",
+            19,
+        ),
     ] {
         let mut meter = Meter::new(UNLIMITED);
         let outcome = form_collection(&bounded_type(kind, bound), input(), &mut meter).unwrap();
-        let expected = Refusal::CardinalityOutOfBound { violation, kind, bound, count };
+        let expected = Refusal::CardinalityOutOfBound {
+            violation,
+            kind,
+            bound,
+            count,
+        };
         assert_eq!(outcome, Outcome::Refused(expected.clone()), "{kind:?}");
-        let Outcome::Refused(refusal) = outcome else { panic!("expected cardinality refusal"); };
+        let Outcome::Refused(refusal) = outcome else {
+            panic!("expected cardinality refusal");
+        };
         assert_eq!(refusal.code(), Some("cardinality_out_of_bound"));
         assert_eq!(refusal.cause(), Some(cause));
         let mut points = membership_prefix(kind);
         points.push(ChargePoint::CollectionBound);
         assert_eq!(meter.admitted_charge_points(), points);
-        assert_eq!(meter.admitted_charges().last().unwrap().value_occurrences, Some(count));
+        assert_eq!(
+            meter.admitted_charges().last().unwrap().value_occurrences,
+            Some(count)
+        );
         assert_consumption(&meter, work, count, 0);
 
         // The same numeric count succeeds at both inclusive endpoints.
@@ -284,8 +324,12 @@ fn decimal_bound_refusals_report_distinct_or_occurrence_count_after_membership()
         let exact_type = bounded_type(kind, exact_bound);
         let mut boundary_meter = Meter::new(UNLIMITED);
         let value = form_collection(&exact_type, input(), &mut boundary_meter)
-            .unwrap().completed().expect("exact cardinality boundary must complete");
-        let Value::Collection(collection) = &value else { panic!("expected collection"); };
+            .unwrap()
+            .completed()
+            .expect("exact cardinality boundary must complete");
+        let Value::Collection(collection) = &value else {
+            panic!("expected collection");
+        };
         assert_eq!(collection.collection_type(), &exact_type);
         assert_eq!(collection.elements().len(), usize::try_from(count).unwrap());
         assert_eq!(value.occ(), Integer::from(count + 1));
@@ -306,9 +350,17 @@ fn natural_bound_charge_denial_precedes_cardinality_refusal_without_retention() 
     ] {
         // Each scalar comparison pays two walk units and one test unit:
         // six comparisons consume 18. The bound requests one more work unit.
-        let mut meter = Meter::new(ScalarLimits { work_units: work, ..UNLIMITED });
+        let mut meter = Meter::new(ScalarLimits {
+            work_units: work,
+            ..UNLIMITED
+        });
         assert_eq!(
-            form_collection(&bounded_type(kind, CardinalityBound::new(3, 3).unwrap()), input(), &mut meter).unwrap(),
+            form_collection(
+                &bounded_type(kind, CardinalityBound::new(3, 3).unwrap()),
+                input(),
+                &mut meter
+            )
+            .unwrap(),
             Outcome::Incomplete(Incomplete {
                 limit_kind: LimitKind::WorkUnits,
                 limit: work,
@@ -336,32 +388,127 @@ fn deferred_collection_stops_before_later_callbacks_or_formation() {
         ] {
             let calls = Cell::new(0);
             let first = |meter: &mut Meter| {
-                assert_eq!(meter.admitted_charge_points(), [ChargePoint::CollectionElement]);
+                assert_eq!(
+                    meter.admitted_charge_points(),
+                    [ChargePoint::CollectionElement]
+                );
                 calls.set(1);
                 Outcome::Completed(Value::Decimal(Decimal::new(Integer::from(20_i128), 1)))
             };
             let second = |meter: &mut Meter| {
                 assert_eq!(calls.get(), 1);
-                assert_eq!(meter.admitted_charge_points(), [ChargePoint::CollectionElement; 2]);
+                assert_eq!(
+                    meter.admitted_charge_points(),
+                    [ChargePoint::CollectionElement; 2]
+                );
                 calls.set(2);
                 Outcome::Completed(Value::Decimal(Decimal::new(Integer::from(2_i128), 0)))
             };
             let expected = if matches!(stop, Outcome::Completed(_)) {
-                Outcome::Refused(Refusal::CheckedInvariant { cause: CheckedInvariantCause::CollectionElementNotAdmitted })
-            } else { stop.clone() };
+                Outcome::Refused(Refusal::CheckedInvariant {
+                    cause: CheckedInvariantCause::CollectionElementNotAdmitted,
+                })
+            } else {
+                stop.clone()
+            };
             let third = |meter: &mut Meter| {
                 assert_eq!(calls.get(), 2);
-                assert_eq!(meter.admitted_charge_points(), [ChargePoint::CollectionElement; 3]);
+                assert_eq!(
+                    meter.admitted_charge_points(),
+                    [ChargePoint::CollectionElement; 3]
+                );
                 calls.set(3);
                 stop
             };
             let later = |_: &mut Meter| -> Outcome<Value> { panic!("later callback must not run") };
-            let elements: Vec<Deferred<'_>> = vec![Box::new(first), Box::new(second), Box::new(third), Box::new(later)];
+            let elements: Vec<Deferred<'_>> = vec![
+                Box::new(first),
+                Box::new(second),
+                Box::new(third),
+                Box::new(later),
+            ];
             let mut meter = Meter::new(UNLIMITED);
-            assert_eq!(construct_collection(&collection_type(kind), elements, &mut meter), expected);
+            assert_eq!(
+                construct_collection(&collection_type(kind), elements, &mut meter),
+                expected
+            );
             assert_eq!(calls.get(), 3);
-            assert_eq!(meter.admitted_charge_points(), [ChargePoint::CollectionElement; 3]);
+            assert_eq!(
+                meter.admitted_charge_points(),
+                [ChargePoint::CollectionElement; 3]
+            );
             assert_consumption(&meter, 3, 0, 0);
+        }
+    }
+}
+
+// Partial FR-008-AC-3: the real element charge can stop before invoking a callback;
+// the generous control reaches formation only after every callback completes.
+#[test]
+fn deferred_element_work_denial_preserves_completed_prefix_and_successful_control() {
+    use std::cell::Cell;
+
+    for kind in KINDS {
+        for work_units in [2, u64::MAX] {
+            let calls = Cell::new(0);
+            let elements: Vec<Deferred<'_>> = input()
+                .into_iter()
+                .enumerate()
+                .map(|(index, value)| {
+                    let calls = &calls;
+                    Box::new(move |meter: &mut Meter| {
+                        assert_eq!(calls.get(), index);
+                        assert_eq!(
+                            meter.admitted_charge_points(),
+                            vec![ChargePoint::CollectionElement; index + 1],
+                        );
+                        calls.set(index + 1);
+                        Outcome::Completed(value)
+                    }) as Deferred<'_>
+                })
+                .collect();
+            let mut meter = Meter::new(ScalarLimits {
+                work_units,
+                ..UNLIMITED
+            });
+            let outcome = construct_collection(&collection_type(kind), elements, &mut meter);
+            if work_units == 2 {
+                assert_eq!(
+                    outcome,
+                    Outcome::Incomplete(Incomplete {
+                        limit_kind: LimitKind::WorkUnits,
+                        limit: 2,
+                        consumed: 2,
+                        next_charge: Integer::one(),
+                        charge_point: ChargePoint::CollectionElement,
+                    })
+                );
+                assert_eq!(calls.get(), 2);
+                assert_eq!(
+                    meter.admitted_charge_points(),
+                    [ChargePoint::CollectionElement; 2]
+                );
+                assert_consumption(&meter, 2, 0, 0);
+            } else {
+                let value = outcome
+                    .completed()
+                    .expect("all admitted callbacks complete");
+                assert_eq!(calls.get(), 5);
+                let (occurrences, work) = match kind {
+                    CollectionKind::Sequence => (6_u64, 7),
+                    CollectionKind::Bag => (6, 25),
+                    CollectionKind::Set | CollectionKind::OrderedSet => (3, 25),
+                };
+                assert_eq!(value.occ(), Integer::from(occurrences));
+                let mut points = vec![ChargePoint::CollectionElement; 5];
+                points.extend(membership_prefix(kind));
+                points.extend([
+                    ChargePoint::CollectionBound,
+                    ChargePoint::CollectionResultRetain,
+                ]);
+                assert_eq!(meter.admitted_charge_points(), points);
+                assert_consumption(&meter, work, occurrences, occurrences);
+            }
         }
     }
 }
