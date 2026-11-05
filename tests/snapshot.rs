@@ -71,6 +71,63 @@ mod json {
         );
     }
 
+    // Partial identity/transport clauses of FR-004-AC-4/5; no whole-criterion claim.
+    #[test]
+    fn independent_wire_preserves_identity_bytes() {
+        let wires = [
+            (
+                r#"{"schemaVersion":"runtime.campaign-snapshot/v1","requirement":"\ud83d\ude80é","revision":"007","counterSemantics":"saturating-u64-v1","counts":{"accepted":2,"rejected":3,"failed":1,"discarded":4}}"#,
+                "🚀é",
+            ),
+            (
+                r#"{"schemaVersion":"runtime.campaign-snapshot/v1","requirement":"\ud83d\ude80e\u0301","revision":"007","counterSemantics":"saturating-u64-v1","counts":{"accepted":2,"rejected":3,"failed":1,"discarded":4}}"#,
+                "🚀e\u{301}",
+            ),
+        ];
+        let mut requirements = Vec::new();
+        for (wire, expected) in wires {
+            let imported = decode(wire.as_bytes()).unwrap();
+            let snapshot = imported.snapshot();
+            assert_eq!(
+                snapshot.identity().requirement.as_str().as_bytes(),
+                expected.as_bytes()
+            );
+            assert_eq!(snapshot.identity().revision.as_str().as_bytes(), b"007");
+            let counts = snapshot.counts();
+            assert_eq!(counts.accepted(), 2);
+            assert_eq!(counts.rejected(), 3);
+            assert_eq!(counts.failed(), 1);
+            assert_eq!(counts.discarded(), 4);
+            assert_eq!(counts.total(), 9);
+            requirements.push(snapshot.identity().requirement.as_str().to_owned());
+        }
+        assert_ne!(requirements[0].as_bytes(), requirements[1].as_bytes());
+    }
+
+    // The independent parser checks escaping without prescribing a JSON escape spelling.
+    // Partial transport clauses of FR-004-AC-5/9; exact member order is checked above.
+    #[test]
+    fn encoder_escapes_controls_without_changing_identity() {
+        let requirement = "quote\" backslash\\ \0\u{8}\t\n\u{c}\r\u{1f}/🚀";
+        let revision = "007\\\"\n🚀";
+        let encoded = encode(&report(requirement, revision).snapshot()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_slice(&encoded).unwrap();
+        assert_eq!(
+            parsed["requirement"].as_str().unwrap().as_bytes(),
+            requirement.as_bytes()
+        );
+        assert_eq!(
+            parsed["revision"].as_str().unwrap().as_bytes(),
+            revision.as_bytes()
+        );
+        assert_eq!(parsed["schemaVersion"], "runtime.campaign-snapshot/v1");
+        assert_eq!(parsed["counterSemantics"], "saturating-u64-v1");
+        assert_eq!(
+            parsed["counts"],
+            serde_json::json!({"accepted":0,"rejected":0,"failed":0,"discarded":0})
+        );
+    }
+
     #[trace("TC-015", "FR-004-AC-5")]
     #[test]
     fn tc_015_every_member_is_required_unique_closed_and_typed() {
