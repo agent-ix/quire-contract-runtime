@@ -75,14 +75,23 @@ mod json {
     #[test]
     fn independent_wire_preserves_identity_bytes() {
         let wires = [
-            (r#"{"schemaVersion":"runtime.campaign-snapshot/v1","requirement":"\ud83d\ude80é","revision":"007","counterSemantics":"saturating-u64-v1","counts":{"accepted":2,"rejected":3,"failed":1,"discarded":4}}"#, "🚀é"),
-            (r#"{"schemaVersion":"runtime.campaign-snapshot/v1","requirement":"\ud83d\ude80e\u0301","revision":"007","counterSemantics":"saturating-u64-v1","counts":{"accepted":2,"rejected":3,"failed":1,"discarded":4}}"#, "🚀e\u{301}"),
+            (
+                r#"{"schemaVersion":"runtime.campaign-snapshot/v1","requirement":"\ud83d\ude80é","revision":"007","counterSemantics":"saturating-u64-v1","counts":{"accepted":2,"rejected":3,"failed":1,"discarded":4}}"#,
+                "🚀é",
+            ),
+            (
+                r#"{"schemaVersion":"runtime.campaign-snapshot/v1","requirement":"\ud83d\ude80e\u0301","revision":"007","counterSemantics":"saturating-u64-v1","counts":{"accepted":2,"rejected":3,"failed":1,"discarded":4}}"#,
+                "🚀e\u{301}",
+            ),
         ];
         let mut requirements = Vec::new();
         for (wire, expected) in wires {
             let imported = decode(wire.as_bytes()).unwrap();
             let snapshot = imported.snapshot();
-            assert_eq!(snapshot.identity().requirement.as_str().as_bytes(), expected.as_bytes());
+            assert_eq!(
+                snapshot.identity().requirement.as_str().as_bytes(),
+                expected.as_bytes()
+            );
             assert_eq!(snapshot.identity().revision.as_str().as_bytes(), b"007");
             let counts = snapshot.counts();
             assert_eq!(counts.accepted(), 2);
@@ -103,11 +112,20 @@ mod json {
         let revision = "007\\\"\n🚀";
         let encoded = encode(&report(requirement, revision).snapshot()).unwrap();
         let parsed: serde_json::Value = serde_json::from_slice(&encoded).unwrap();
-        assert_eq!(parsed["requirement"].as_str().unwrap().as_bytes(), requirement.as_bytes());
-        assert_eq!(parsed["revision"].as_str().unwrap().as_bytes(), revision.as_bytes());
+        assert_eq!(
+            parsed["requirement"].as_str().unwrap().as_bytes(),
+            requirement.as_bytes()
+        );
+        assert_eq!(
+            parsed["revision"].as_str().unwrap().as_bytes(),
+            revision.as_bytes()
+        );
         assert_eq!(parsed["schemaVersion"], "runtime.campaign-snapshot/v1");
         assert_eq!(parsed["counterSemantics"], "saturating-u64-v1");
-        assert_eq!(parsed["counts"], serde_json::json!({"accepted":0,"rejected":0,"failed":0,"discarded":0}));
+        assert_eq!(
+            parsed["counts"],
+            serde_json::json!({"accepted":0,"rejected":0,"failed":0,"discarded":0})
+        );
     }
 
     #[trace("TC-015", "FR-004-AC-5")]

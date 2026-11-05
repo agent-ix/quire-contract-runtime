@@ -72,4 +72,16 @@ invalid deferred element carries `CollectionElementNotAdmitted`.
 
 PARTIAL: retained under FR-275-AC-14 after removal of RT's duplicate implementation.
 The producer-origin foreign-reference control supplies one consumer case;
-the other procedures remain planned. No deleted RT test is counted as evidence.
+`tests/exact_collection_consumer.rs` supplies native Decimal controls for all four
+kinds' retained coefficient/scale representations, first-supplied coalescence,
+per-comparison membership charges, sequence exemption, bound-before-retain order,
+and exact retained occurrence charges (including empty input). It also re-forms
+an ordered set from each public retained slice, checking order and repeated
+occurrences; the caller explicitly enumerates that slice, so this does not
+establish equality-planner visiting order.
+Deferred-element execution, type refusals, bound violations, denial prefixes,
+option/composite canonical keys, deep iteration and equality visiting order remain
+planned under IR-499 and their existing kernel/integration owners. The
+identity-dependent integration evidence boundary remains with IR-669. These
+controls do not establish whole TC-025 or FR-008-AC-12 acceptance. No deleted RT
+test is counted as evidence.

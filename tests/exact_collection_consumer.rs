@@ -27,8 +27,14 @@ fn collection_type(kind: CollectionKind) -> CollectionType {
     CollectionType::new(
         kind,
         ValueType::Decimal(
-            DecimalType::new(Integer::from(-10000), Integer::from(10000), 0, 3, RoundingMode::Exact)
-                .unwrap(),
+            DecimalType::new(
+                Integer::from(-10000),
+                Integer::from(10000),
+                0,
+                3,
+                RoundingMode::Exact,
+            )
+            .unwrap(),
         ),
         None,
     )
@@ -42,7 +48,7 @@ fn input() -> Vec<Value> {
 }
 
 fn form(kind: CollectionKind, input: Vec<Value>, meter: &mut Meter) -> Value {
-    let Outcome::Complete(value) = form_collection(&collection_type(kind), input, meter).unwrap()
+    let Outcome::Completed(value) = form_collection(&collection_type(kind), input, meter).unwrap()
     else {
         panic!("collection must complete for {kind:?}");
     };
@@ -58,7 +64,10 @@ fn assert_representations(value: &Value, expected: &[(i128, u32)]) {
         let Value::Decimal(decimal) = value else {
             panic!("expected decimal member");
         };
-        assert_eq!(decimal.representation().coefficient(), &Integer::from(coefficient));
+        assert_eq!(
+            decimal.representation().coefficient(),
+            &Integer::from(coefficient)
+        );
         assert_eq!(decimal.representation().scale(), scale);
     }
 }
@@ -67,10 +76,16 @@ fn assert_representations(value: &Value, expected: &[(i128, u32)]) {
 #[test]
 fn retained_decimal_representations_follow_each_collection_kind() {
     for (kind, expected) in [
-        (CollectionKind::Sequence, &[(20, 1), (110, 2), (11, 1), (2, 0), (1100, 3)][..]),
+        (
+            CollectionKind::Sequence,
+            &[(20, 1), (110, 2), (11, 1), (2, 0), (1100, 3)][..],
+        ),
         (CollectionKind::OrderedSet, &[(20, 1), (110, 2)][..]),
         (CollectionKind::Set, &[(110, 2), (20, 1)][..]),
-        (CollectionKind::Bag, &[(110, 2), (110, 2), (110, 2), (20, 1), (20, 1)][..]),
+        (
+            CollectionKind::Bag,
+            &[(110, 2), (110, 2), (110, 2), (20, 1), (20, 1)][..],
+        ),
     ] {
         let value = form(kind, input(), &mut Meter::new(UNLIMITED));
         assert_representations(&value, expected);
@@ -80,19 +95,32 @@ fn retained_decimal_representations_follow_each_collection_kind() {
 #[trace("FR-008-AC-10")]
 #[test]
 fn coalescence_charges_each_comparison_before_bound_and_retention() {
-    use ChargePoint::{CollectionBound, CollectionMemberTest, CollectionMemberWalk, CollectionResultRetain};
+    use ChargePoint::{
+        CollectionBound, CollectionMemberTest, CollectionMemberWalk, CollectionResultRetain,
+    };
     // Candidate comparisons are independently 0, 1, 2, 1, 2.
     let coalescing = [
-        CollectionMemberWalk, CollectionMemberTest,
-        CollectionMemberWalk, CollectionMemberTest,
-        CollectionMemberWalk, CollectionMemberTest,
-        CollectionMemberWalk, CollectionMemberTest,
-        CollectionMemberWalk, CollectionMemberTest,
-        CollectionMemberWalk, CollectionMemberTest,
-        CollectionBound, CollectionResultRetain,
+        CollectionMemberWalk,
+        CollectionMemberTest,
+        CollectionMemberWalk,
+        CollectionMemberTest,
+        CollectionMemberWalk,
+        CollectionMemberTest,
+        CollectionMemberWalk,
+        CollectionMemberTest,
+        CollectionMemberWalk,
+        CollectionMemberTest,
+        CollectionMemberWalk,
+        CollectionMemberTest,
+        CollectionBound,
+        CollectionResultRetain,
     ];
     for (kind, expected_points, expected_occ) in [
-        (CollectionKind::Sequence, &[CollectionBound, CollectionResultRetain][..], 6),
+        (
+            CollectionKind::Sequence,
+            &[CollectionBound, CollectionResultRetain][..],
+            6,
+        ),
         (CollectionKind::OrderedSet, &coalescing[..], 3),
         (CollectionKind::Set, &coalescing[..], 3),
         (CollectionKind::Bag, &coalescing[..], 6),
@@ -101,13 +129,68 @@ fn coalescence_charges_each_comparison_before_bound_and_retention() {
         let value = form(kind, input(), &mut meter);
         assert_eq!(meter.admitted_charge_points(), expected_points, "{kind:?}");
         assert_eq!(value.occ(), Integer::from(expected_occ));
-        assert_eq!(meter.admitted_charges().last().unwrap().value_occurrences, Some(expected_occ));
+        assert_eq!(
+            meter.admitted_charges().last().unwrap().value_occurrences,
+            Some(expected_occ)
+        );
 
         let mut empty_meter = Meter::new(UNLIMITED);
         let empty = form(kind, Vec::new(), &mut empty_meter);
         assert_representations(&empty, &[]);
         assert_eq!(empty.occ(), Integer::from(1));
-        assert_eq!(empty_meter.admitted_charge_points(), [CollectionBound, CollectionResultRetain]);
-        assert_eq!(empty_meter.admitted_charges().last().unwrap().value_occurrences, Some(1));
+        assert_eq!(
+            empty_meter.admitted_charge_points(),
+            [CollectionBound, CollectionResultRetain]
+        );
+        assert_eq!(
+            empty_meter
+                .admitted_charges()
+                .last()
+                .unwrap()
+                .value_occurrences,
+            Some(1)
+        );
+    }
+}
+
+// Partial formation-visiting clause of FR-008-AC-12: callers explicitly enumerate
+// the public retained slice. This does not observe equality-planner visitation.
+#[test]
+fn further_formation_consumes_retained_order_and_repeated_occurrences() {
+    use ChargePoint::{
+        CollectionBound, CollectionMemberTest, CollectionMemberWalk, CollectionResultRetain,
+    };
+    for (source_kind, expected, comparisons) in [
+        (CollectionKind::Sequence, &[(20, 1), (110, 2)][..], 6),
+        (CollectionKind::OrderedSet, &[(20, 1), (110, 2)][..], 1),
+        (CollectionKind::Set, &[(110, 2), (20, 1)][..], 1),
+        (CollectionKind::Bag, &[(110, 2), (20, 1)][..], 5),
+    ] {
+        let source = form(source_kind, input(), &mut Meter::new(UNLIMITED));
+        let Value::Collection(collection) = &source else {
+            panic!("expected collection");
+        };
+        let mut meter = Meter::new(UNLIMITED);
+        let target = form(
+            CollectionKind::OrderedSet,
+            collection.elements().to_vec(),
+            &mut meter,
+        );
+        assert_representations(&target, expected);
+        let mut expected_points = Vec::new();
+        for _ in 0..comparisons {
+            expected_points.extend([CollectionMemberWalk, CollectionMemberTest]);
+        }
+        expected_points.extend([CollectionBound, CollectionResultRetain]);
+        assert_eq!(
+            meter.admitted_charge_points(),
+            expected_points,
+            "{source_kind:?}"
+        );
+        assert_eq!(target.occ(), Integer::from(3));
+        assert_eq!(
+            meter.admitted_charges().last().unwrap().value_occurrences,
+            Some(3)
+        );
     }
 }
