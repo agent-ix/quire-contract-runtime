@@ -135,6 +135,8 @@ fn cargo_deny(directory: &Path) -> io::Result<std::process::Output> {
         .args([
             "deny",
             "--workspace",
+            "--color",
+            "never",
             "check",
             "licenses",
             "bans",
@@ -148,14 +150,19 @@ fn rejects_qsl_source(exit_success: bool, output: &str) -> bool {
     if exit_success {
         return false;
     }
-    let lines = output.lines().collect::<Vec<_>>();
-    lines.iter().enumerate().any(|(index, line)| {
-        line.contains("error[source-not-allowed]")
-            && lines[index..]
-                .iter()
-                .take(7)
-                .any(|next| next.contains(QSL_SOURCE))
-    })
+    let mut source_error = false;
+    for line in output.lines() {
+        if ["error[", "warning[", "error:", "warning:", "note:"]
+            .iter()
+            .any(|prefix| line.starts_with(prefix))
+        {
+            source_error = line.starts_with("error[source-not-allowed]:");
+        }
+        if source_error && line.split_whitespace().any(|field| field == QSL_SOURCE) {
+            return true;
+        }
+    }
+    false
 }
 
 fn crate_names() -> Result<Vec<String>, GateError> {
@@ -248,6 +255,35 @@ mod tests {
     use ix_trace_rs::trace;
 
     use super::rejects_qsl_source;
+
+    /// Nearby diagnostics cannot supply the source for another rejection.
+    #[trace("TC-198")]
+    #[test]
+    fn source_rejection_does_not_borrow_a_later_diagnostics_source() {
+        let other = "error[source-not-allowed]: detected 'git' source not explicitly allowed\n1 │ other 0.1.0 git+https://github.com/agent-ix/other?branch=main\n";
+        for severity in ["error[unlicensed]", "warning[source-not-allowed]"] {
+            let report = format!("{other}{severity}: another diagnostic\n2 │ qsl-eval 0.1.0 git+https://github.com/agent-ix/quire-spec-language?branch=main\n");
+            assert!(
+                !rejects_qsl_source(false, &report),
+                "the QSL source belongs to {severity}, not the preceding error"
+            );
+        }
+    }
+
+    /// Source matching requires the complete source token, not a URL prefix.
+    #[trace("TC-198")]
+    #[test]
+    fn source_rejection_requires_the_exact_injected_source() {
+        for source in [
+            "git+https://github.com/agent-ix/quire-spec-language?branch=main-other",
+            "git+https://github.com/agent-ix/quire-spec-language?branch=main&other=value",
+        ] {
+            let report = format!("error[source-not-allowed]: detected 'git' source not explicitly allowed\n1 │ qsl-eval 0.1.0 {source}\n");
+            assert!(!rejects_qsl_source(false, &report), "source: {source}");
+        }
+        let actual_shape = "error[source-not-allowed]: detected 'git' source not explicitly allowed\n    ┌─ Cargo.lock:136:16\n    │\n136 │ qsl-eval 0.1.0 git+https://github.com/agent-ix/quire-spec-language?branch=main\n    │                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ source\n";
+        assert!(rejects_qsl_source(false, actual_shape));
+    }
 
     /// A policy check passes only for cargo-deny's refusal of the QSL Git source.
     #[trace("TC-198", "FR-275-AC-8")]
