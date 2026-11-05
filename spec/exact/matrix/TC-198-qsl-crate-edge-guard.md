@@ -29,6 +29,12 @@ dependency graph. The negative cases run in a scratch copy of the workspace that
 4. Repeat step 3 with each of those crates as a dev dependency and as a build dependency; expect
    the same source error. `make deny-mutations` (Rust `check_deny_source`) runs steps 2 to 4
    in scratch copies and requires the QSL source diagnostic for each case.
+5. Run `cargo test --locked --bin check_deny_source`. The diagnostic controls
+   require a nonzero exit and the exact injected source token within its own
+   `error[source-not-allowed]` diagnostic. A similarly prefixed source or a QSL
+   source appearing only in a later licence error or warning must not qualify.
+   These are partial discriminator controls, not execution of the dependency
+   injections in steps 2 through 4.
 
 ## Expected Results
 
