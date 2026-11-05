@@ -50,7 +50,9 @@ impl fmt::Display for GateError {
 }
 
 fn included_object(name: &str) -> bool {
-    name.contains("quire_contract_runtime") && !name.contains(".core-")
+    name.split(['.', '-']).any(|component| {
+        component == "quire_contract_runtime" || component == "quire_contract_runtime_footprint"
+    }) && !name.contains(".core-")
 }
 
 fn section_name(name: &str) -> bool {
@@ -102,9 +104,10 @@ fn linked_section_bytes(report: &str) -> Result<u64, GateError> {
     Ok(bytes)
 }
 
-fn panic_references(report: &str) -> Vec<String> {
+fn panic_references(report: &str) -> Result<Vec<String>, GateError> {
     let mut include = false;
     let mut references = Vec::new();
+    let mut inspected = false;
     for line in report.lines() {
         if line.contains(":     file format") {
             include = line
@@ -112,6 +115,7 @@ fn panic_references(report: &str) -> Vec<String> {
                 .next()
                 .and_then(|name| name.strip_suffix(':'))
                 .is_some_and(included_object);
+            inspected |= include;
             continue;
         }
         let panic_symbol = line.contains("rust_begin_unwind")
@@ -122,7 +126,12 @@ fn panic_references(report: &str) -> Vec<String> {
             references.push(line.to_owned());
         }
     }
-    references
+    if !inspected {
+        return Err(GateError::Unavailable(
+            "could not inspect runtime/harness footprint relocations",
+        ));
+    }
+    Ok(references)
 }
 
 fn in_order(mut text: &str, parts: &[&str]) -> bool {
@@ -137,7 +146,7 @@ fn in_order(mut text: &str, parts: &[&str]) -> bool {
 
 fn evaluate_reports(size_report: &str, relocation_report: &str) -> Result<u64, GateError> {
     let bytes = linked_section_bytes(size_report)?;
-    let references = panic_references(relocation_report);
+    let references = panic_references(relocation_report)?;
     if !references.is_empty() {
         return Err(GateError::PanicPath(references));
     }
@@ -229,6 +238,52 @@ mod tests {
             evaluate_reports(SIZE_IN_BAND, &relocations),
             Err(GateError::PanicPath(_))
         ));
+    }
+
+    /// Missing runtime/harness object headers cannot establish absence of panic paths.
+    #[trace("TC-199")]
+    #[test]
+    fn missing_relocation_population_is_unavailable() {
+        for report in [
+            "",
+            "not an objdump relocation report\n",
+            "foreign-abc.o:     file format elf32-littlearm\n",
+            "not_quire_contract_runtime-abc.o:     file format elf32-littlearm\n",
+            "quire_contract_runtime_footprint-abc.core-def.o:     file format elf32-littlearm\n",
+        ] {
+            let error = evaluate_reports(SIZE_IN_BAND, report)
+                .expect_err("a size report alone must not establish panic inspection");
+            assert_eq!(
+                error,
+                GateError::Unavailable("could not inspect runtime/harness footprint relocations"),
+                "report: {report:?}"
+            );
+            assert_eq!(error.exit_code(), 2);
+        }
+    }
+
+    /// A foreign object's panic is outside the inspected runtime/harness population.
+    #[trace("TC-199")]
+    #[test]
+    fn foreign_panic_relocations_do_not_contaminate_runtime_objects() {
+        let foreign = "not_quire_contract_runtime-abc.o:     file format elf32-littlearm\n00000000 UNKNOWN rust_begin_unwind\n";
+        for report in [
+            format!("{foreign}{RELOC_HEADER}"),
+            format!("{RELOC_HEADER}{foreign}"),
+        ] {
+            assert_eq!(evaluate_reports(SIZE_IN_BAND, &report), Ok(700));
+        }
+    }
+
+    /// A similarly named foreign crate contributes neither size nor panic evidence.
+    #[trace("TC-199")]
+    #[test]
+    fn foreign_crate_name_does_not_contribute_linked_bytes() {
+        let foreign = "not_quire_contract_runtime-abc.o (ex libquire_contract_runtime_footprint.a):\n.text 9000 0\n";
+        assert_eq!(
+            evaluate_reports(&format!("{SIZE_IN_BAND}{foreign}"), RELOC_HEADER),
+            Ok(700)
+        );
     }
 
     /// The fixed population must remain within the declared linked section band.

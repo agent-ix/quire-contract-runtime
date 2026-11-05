@@ -31,7 +31,14 @@ do not resolve either shared crate or transitive `quire-canonical` crates.
    report that the graph holds no shared exact dependency (FR-275-AC-10). Enabling `exact` on the
    footprint dependency in a scratch copy makes that listing contain those crates.
 3. Run `make size`; expect `.text` plus `.rodata` inside NFR-001-AC-3's 500 byte to 4 KiB band and no
-   panic relocation (FR-275-AC-11).
+   panic relocation (FR-275-AC-11). Run `cargo test --locked --bin
+   check_linked_footprint` for the report-parser controls: empty, malformed,
+   foreign-only and core-only relocation populations fail as unavailable even
+   with an in-band size report; recognized runtime/harness headers with no panic
+   relocation pass. A similarly named foreign crate contributes neither linked
+   bytes nor panic references. The retained-panic and both size-bound controls
+   must also pass. These parser controls are partial evidence for this step;
+   they do not establish the target build, compiler selection or dependency graph.
 4. After AD-004 step 5, repeat the no-std MSRV target build with the shared
    evaluation leaf and one generated-body consumer. Check the lock has one
    evaluation-leaf entry, and neither target graph resolves the QSL workspace
