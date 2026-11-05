@@ -28,8 +28,8 @@ fn collection_type(kind: CollectionKind) -> CollectionType {
         kind,
         ValueType::Decimal(
             DecimalType::new(
-                Integer::from(-10000),
-                Integer::from(10000),
+                Integer::from(-10000_i128),
+                Integer::from(10000_i128),
                 0,
                 3,
                 RoundingMode::Exact,
@@ -41,7 +41,7 @@ fn collection_type(kind: CollectionKind) -> CollectionType {
 }
 
 fn input() -> Vec<Value> {
-    [(20, 1), (110, 2), (11, 1), (2, 0), (1100, 3)]
+    [(20_i128, 1), (110, 2), (11, 1), (2, 0), (1100, 3)]
         .into_iter()
         .map(|(coefficient, scale)| Value::Decimal(Decimal::new(Integer::from(coefficient), scale)))
         .collect()
@@ -137,7 +137,7 @@ fn coalescence_charges_each_comparison_before_bound_and_retention() {
         let mut empty_meter = Meter::new(UNLIMITED);
         let empty = form(kind, Vec::new(), &mut empty_meter);
         assert_representations(&empty, &[]);
-        assert_eq!(empty.occ(), Integer::from(1));
+        assert_eq!(empty.occ(), Integer::from(1_i128));
         assert_eq!(
             empty_meter.admitted_charge_points(),
             [CollectionBound, CollectionResultRetain]
@@ -187,7 +187,7 @@ fn further_formation_consumes_retained_order_and_repeated_occurrences() {
             expected_points,
             "{source_kind:?}"
         );
-        assert_eq!(target.occ(), Integer::from(3));
+        assert_eq!(target.occ(), Integer::from(3_i128));
         assert_eq!(
             meter.admitted_charges().last().unwrap().value_occurrences,
             Some(3)
