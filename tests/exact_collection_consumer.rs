@@ -603,40 +603,62 @@ fn late_membership_work_denials_preserve_exact_prefix_and_counters() {
 
 // A successful bound charge remains admitted when result retention cannot run.
 #[test]
-fn result_retention_work_denial_keeps_bound_count_without_a_partial_value() {
-    for (kind, work, count) in [
-        (CollectionKind::Sequence, 1, 5),
-        (CollectionKind::OrderedSet, 19, 2),
-        (CollectionKind::Set, 19, 2),
-        (CollectionKind::Bag, 19, 5),
+fn result_retention_denials_keep_bound_count_without_a_partial_value() {
+    for (kind, work, count, retain_occ) in [
+        (CollectionKind::Sequence, 1, 5, 6_u64),
+        (CollectionKind::OrderedSet, 19, 2, 3),
+        (CollectionKind::Set, 19, 2, 3),
+        (CollectionKind::Bag, 19, 5, 6),
     ] {
-        let mut meter = Meter::new(ScalarLimits {
-            work_units: work,
-            ..UNLIMITED
-        });
-        let ty = bounded_type(kind, CardinalityBound::new(count, count).unwrap());
-        assert_stopped(
-            form_collection(&ty, input(), &mut meter).unwrap(),
-            Outcome::Incomplete(Incomplete {
-                limit_kind: LimitKind::WorkUnits,
-                limit: work,
-                consumed: work,
-                next_charge: Integer::one(),
-                charge_point: ChargePoint::CollectionResultRetain,
-            }),
-        );
-        let mut prefix = membership_prefix(kind);
-        prefix.push(ChargePoint::CollectionBound);
-        assert_eq!(meter.admitted_charge_points(), prefix);
-        assert_eq!(
-            meter.admission_count(),
-            u64::try_from(prefix.len()).unwrap()
-        );
-        assert_eq!(
-            meter.admitted_charges().last().unwrap().value_occurrences,
-            Some(count)
-        );
-        assert_consumption(&meter, work, count, 0);
+        for (limits, limit_kind, limit, consumed, next) in [
+            (
+                ScalarLimits {
+                    work_units: work,
+                    ..UNLIMITED
+                },
+                LimitKind::WorkUnits,
+                work,
+                work,
+                1,
+            ),
+            (
+                ScalarLimits {
+                    result_units: 0,
+                    ..UNLIMITED
+                },
+                LimitKind::ResultUnits,
+                0,
+                0,
+                retain_occ,
+            ),
+        ] {
+            let mut meter = Meter::new(limits);
+            let ty = bounded_type(kind, CardinalityBound::new(count, count).unwrap());
+            assert_stopped(
+                form_collection(&ty, input(), &mut meter).unwrap(),
+                Outcome::Incomplete(Incomplete {
+                    limit_kind,
+                    limit,
+                    consumed,
+                    next_charge: Integer::from(next),
+                    charge_point: ChargePoint::CollectionResultRetain,
+                }),
+            );
+            let mut prefix = membership_prefix(kind);
+            prefix.push(ChargePoint::CollectionBound);
+            assert_eq!(meter.admitted_charge_points(), prefix);
+            assert_eq!(
+                meter.admission_count(),
+                u64::try_from(prefix.len()).unwrap()
+            );
+            assert_eq!(
+                meter.admitted_charges().last().unwrap().value_occurrences,
+                Some(count)
+            );
+            // A denied mixed charge must not raise the size high-water to retain_occ,
+            // even when only its later-scanned result-units counter is unavailable.
+            assert_consumption(&meter, work, count, 0);
+        }
     }
 }
 

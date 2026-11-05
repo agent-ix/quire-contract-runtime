@@ -93,8 +93,9 @@ These are partial FR-008-AC-3/7 contributions, not claims for their shared-corpu
 or closed-vocabulary clauses. The supplied callback terminal fixtures establish
 propagation, not the operations producing those terminal payloads.
 Late natural member-walk/member-test denials preserve the admitted comparison
-prefix and every counter. Natural result-retention denial preserves the successful
-bound's distinct/occurrence count with no retained value or result units. Injected
+prefix and every counter. Natural work-unit and result-unit retention denials preserve the successful
+bound's distinct/occurrence count with no retained value or result units; a
+result-unit denial does not raise the earlier-scanned size high-water. Injected
 denials exercise all five collection charge points, including later element and
 membership occurrences, against independent expected counters and schedules and
 the successful control's full admitted-charge prefix. These are partial
