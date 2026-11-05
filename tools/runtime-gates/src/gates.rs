@@ -4,7 +4,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use users::os::unix::UserExt;
+use uzers::os::unix::UserExt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandOutput {
@@ -371,7 +371,7 @@ pub const NO_STD_BUILDS: &[NoStdBuild] = &[
 ];
 
 pub fn trusted_home() -> io::Result<PathBuf> {
-    users::get_user_by_uid(users::get_current_uid())
+    uzers::get_user_by_uid(uzers::get_current_uid())
         .map(|user| user.home_dir().to_path_buf())
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "current user has no passwd home"))
 }
@@ -635,6 +635,40 @@ mod tests {
     use super::*;
     use ix_trace_rs::trace;
     use std::collections::VecDeque;
+
+    /// Provenance: IR-1314, preserve trusted tool selection across dependency replacement.
+    #[test]
+    #[trace("TC-210", "NFR-002-AC-11")]
+    fn trusted_home_ignores_caller_home() {
+        const EXPECTED: &str = "RUNTIME_GATES_TEST_PASSWD_HOME";
+        if let Some(expected) = std::env::var_os(EXPECTED) {
+            let home = trusted_home().expect("current test user must have a passwd entry");
+            assert_eq!(home, PathBuf::from(expected));
+            assert_ne!(Some(home.as_os_str()), std::env::var_os("HOME").as_deref());
+            assert_eq!(cargo(&home), home.join(".cargo/bin/cargo"));
+            return;
+        }
+
+        let expected = trusted_home().expect("current test user must have a passwd entry");
+        let misleading_home = tempfile::tempdir().expect("create misleading home");
+        assert_ne!(expected, misleading_home.path());
+        let output = Command::new(std::env::current_exe().expect("locate test executable"))
+            .args([
+                "--exact",
+                "gates::tests::trusted_home_ignores_caller_home",
+                "--nocapture",
+            ])
+            .env(EXPECTED, &expected)
+            .env("HOME", misleading_home.path())
+            .output()
+            .expect("run isolated home lookup regression");
+        assert!(
+            output.status.success(),
+            "home lookup regression failed: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 
     struct FakeRunner(VecDeque<io::Result<CommandOutput>>);
     impl CommandRunner for FakeRunner {

@@ -19,7 +19,8 @@ remaining expression-residue data enums retain their non-exhaustive compatibilit
 
 ## Scope
 
-Public v0.1 runtime APIs and optional dependency surfaces.
+Public v0.1 runtime APIs and optional dependency surfaces. The host-only
+`quire-contract-runtime-gates` trusted tool selection is included only for AC-11.
 
 The optional bounded snapshot codec returns structured limit and malformed-input errors.
 Its allocating dependency paths can abort on allocator exhaustion; the Result API and
@@ -59,11 +60,19 @@ must be explicit to downstream users.
 | NFR-002-AC-8 | On the declared MSRV and `thumbv7em-none-eabi`, the `exact`-enabled, `std`-disabled TC-206 probe retains calls into the runtime-owned `scalar` negotiators and Boolean connective and the runtime's remaining exact expression surface. The gate reports its artifact and inspected runtime-owned object population and fails if that population is empty, a required call is absent, or any retained runtime-owned object has a relocation to a recognized Rust panic entry point. This is a separate gate from the default NFR-001 footprint and imposes no 4 KiB ceiling on exact. | Test (TC-206) |
 | NFR-002-AC-9 | A scratch probe with a reachable runtime-owned panic call produces a recognized panic relocation and makes the exact-profile gate fail; the same gate passes its unmodified probe when no recognized panic relocation is present. Missing build or inspection tools, missing artifacts, and an unparseable relocation report fail closed. | Test (TC-206) |
 | NFR-002-AC-10 | The resolved `quire-exact` dependency exposes `NonZeroInteger::try_from(&Integer)` with typed zero-divisor refusal, and its public `exact_div`, `div_rem_truncating` and `div_mod_floor` require an admitted `NonZeroInteger`, not a plain `&Integer`. Direct zero-divisor admission returns `Err`; all three plain-borrow calls fail to compile. An older locked kernel without this contract does not qualify. | compile-time-check (TC-206) |
+| NFR-002-AC-11 | For a current UID with an OS account entry, the host gate selects its tool home from that account even when caller `HOME` names a different directory. | Test (TC-210) |
 
 ## Verification
 
 CI runs Clippy, unit/property tests, and cargo-deny. Inspect the package fields in
 `Cargo.toml` for NFR-002-AC-5 and NFR-002-AC-6; run `make deny` for NFR-002-AC-7.
+The workspace supply-chain qualification also includes the host-only
+`quire-contract-runtime-gates` executable. Its Unix account lookup dependency
+must preserve OS account home lookup rather than trust the caller's `HOME` when
+selecting tool binaries. This tool dependency is outside the runtime library
+and linked-footprint dependency populations. Use `cargo audit` for advisory
+qualification in addition to the license check.
+
 Run the exact-profile probe and its injected panic control in TC-206 for
 NFR-002-AC-8 and AC-9, and compile the direct public-kernel API controls for
 AC-10. This gate supplements the existing exact no-std build in TC-199; a
