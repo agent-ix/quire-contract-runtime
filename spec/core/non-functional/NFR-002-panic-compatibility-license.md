@@ -64,6 +64,13 @@ must be explicit to downstream users.
 
 CI runs Clippy, unit/property tests, and cargo-deny. Inspect the package fields in
 `Cargo.toml` for NFR-002-AC-5 and NFR-002-AC-6; run `make deny` for NFR-002-AC-7.
+The workspace supply-chain qualification also includes the host-only
+`quire-contract-runtime-gates` executable. Its Unix account lookup dependency
+must preserve OS account home lookup rather than trust the caller's `HOME` when
+selecting tool binaries. This tool dependency is outside the runtime library
+and linked-footprint dependency populations. Use `cargo audit` for advisory
+qualification in addition to the license check.
+
 Run the exact-profile probe and its injected panic control in TC-206 for
 NFR-002-AC-8 and AC-9, and compile the direct public-kernel API controls for
 AC-10. This gate supplements the existing exact no-std build in TC-199; a

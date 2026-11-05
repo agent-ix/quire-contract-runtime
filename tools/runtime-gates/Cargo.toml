@@ -9,7 +9,7 @@ publish = false
 serde_json = "1.0.151"
 tempfile = "3"
 toml = "0.8"
-users = "0.11"
+uzers = "0.12"
 
 [dev-dependencies]
 ix-trace-rs = { version = "=0.1.0", git = "https://github.com/agent-ix/ix-trace-rs", branch = "main" }
