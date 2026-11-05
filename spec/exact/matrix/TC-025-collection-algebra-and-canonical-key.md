@@ -91,10 +91,20 @@ before the callback, and the generous completed control. Later callbacks do not
 run on those stops, and completed prefix elements do not coalesce early.
 These are partial FR-008-AC-3/7 contributions, not claims for their shared-corpus
 or closed-vocabulary clauses. The supplied callback terminal fixtures establish
-propagation, not the operations producing those terminal payloads. Remaining
-charge-denial prefixes, option/composite canonical keys, deep iteration
-and equality visiting order remain planned under IR-499 and their existing
-kernel/integration owners. The
+propagation, not the operations producing those terminal payloads.
+Late natural member-walk/member-test denials preserve the admitted comparison
+prefix and every counter. Natural result-retention denial preserves the successful
+bound's distinct/occurrence count with no retained value or result units. Injected
+denials exercise all five collection charge points, including later element and
+membership occurrences, against independent expected counters and schedules and
+the successful control's full admitted-charge prefix. These are partial
+FR-008-AC-3/8 contributions, not twelve-point vocabulary or shared-corpus acceptance.
+Native option controls check None-before-Present and integer payload order for
+all ordered pairs, directly and inside singleton sequences; outer set/bag formation
+checks literal retained order and multiplicities. This is a partial FR-008-AC-4
+contribution: options have no composite-slot Null state. Composite Absent/Null/Present
+ranking, other keyed types, deep iteration and equality visiting order remain
+planned under IR-499 and their existing kernel/integration owners. The
 identity-dependent integration evidence boundary remains with IR-669. These
 controls do not establish whole TC-025 or FR-008-AC-12 acceptance. No deleted RT
 test is counted as evidence.
