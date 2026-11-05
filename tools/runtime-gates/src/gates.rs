@@ -638,6 +638,7 @@ mod tests {
 
     /// Provenance: IR-1314, preserve trusted tool selection across dependency replacement.
     #[test]
+    #[trace("TC-210", "NFR-002-AC-11")]
     fn trusted_home_ignores_caller_home() {
         const EXPECTED: &str = "RUNTIME_GATES_TEST_PASSWD_HOME";
         if let Some(expected) = std::env::var_os(EXPECTED) {
