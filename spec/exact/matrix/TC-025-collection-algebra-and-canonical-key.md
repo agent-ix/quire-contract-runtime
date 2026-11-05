@@ -79,9 +79,22 @@ and exact retained occurrence charges (including empty input). It also re-forms
 an ordered set from each public retained slice, checking order and repeated
 occurrences; the caller explicitly enumerates that slice, so this does not
 establish equality-planner visiting order.
-Deferred-element execution, type refusals, bound violations, denial prefixes,
-option/composite canonical keys, deep iteration and equality visiting order remain
-planned under IR-499 and their existing kernel/integration owners. The
+Additional native controls exercise a late completed-input type mismatch before
+any charge even with zero work budget; numeric Decimal coalescence followed by
+both cardinality refusal directions with exact kind/bound/count and code/cause;
+inclusive count boundaries; and natural bound-work denial before the otherwise
+violated cardinality check, with the complete admitted prefix and counters.
+Public `construct_collection` callbacks check element-charge-before-run, exact
+propagation of supplied undefined/refused/incomplete terminal payloads, a late
+non-admitted result's invariant cause, element-work denial
+before the callback, and the generous completed control. Later callbacks do not
+run on those stops, and completed prefix elements do not coalesce early.
+These are partial FR-008-AC-3/7 contributions, not claims for their shared-corpus
+or closed-vocabulary clauses. The supplied callback terminal fixtures establish
+propagation, not the operations producing those terminal payloads. Remaining
+charge-denial prefixes, option/composite canonical keys, deep iteration
+and equality visiting order remain planned under IR-499 and their existing
+kernel/integration owners. The
 identity-dependent integration evidence boundary remains with IR-669. These
 controls do not establish whole TC-025 or FR-008-AC-12 acceptance. No deleted RT
 test is counted as evidence.
