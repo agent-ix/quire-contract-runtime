@@ -6,10 +6,11 @@ mod charge_points;
 use charge_points::ChargePoints;
 use ix_trace_rs::trace;
 use quire_exact::{
-    compare_keys, construct_collection, form_collection, BoundViolation, CardinalityBound, ChargePoint,
-    CheckedInvariantCause, CollectionKind, CollectionType, Component, ConstructionCause,
-    ConstructionRefusal, Decimal, DecimalType, Deferred, Incomplete, InjectedDenial, Integer, LimitKind, Meter,
-    OptionValue, Outcome, Refusal, RoundingMode, ScalarLimits, Undefined, Value, ValueType,
+    compare_keys, construct_collection, form_collection, BoundViolation, CardinalityBound,
+    ChargePoint, CheckedInvariantCause, CollectionKind, CollectionType, Component,
+    ConstructionCause, ConstructionRefusal, Decimal, DecimalType, Deferred, Incomplete,
+    InjectedDenial, Integer, LimitKind, Meter, OptionValue, Outcome, Refusal, RoundingMode,
+    ScalarLimits, Undefined, Value, ValueType,
 };
 
 const UNLIMITED: ScalarLimits = ScalarLimits {
@@ -542,12 +543,40 @@ fn assert_stopped(actual: Outcome<Value>, expected: Outcome<Value>) {
 #[test]
 fn late_membership_work_denials_preserve_exact_prefix_and_counters() {
     use ChargePoint::{CollectionMemberTest, CollectionMemberWalk};
-    for kind in [CollectionKind::Set, CollectionKind::Bag, CollectionKind::OrderedSet] {
+    for kind in [
+        CollectionKind::Set,
+        CollectionKind::Bag,
+        CollectionKind::OrderedSet,
+    ] {
         for (work, point, next, prefix) in [
-            (6, CollectionMemberWalk, 2_i128, &[CollectionMemberWalk, CollectionMemberTest, CollectionMemberWalk, CollectionMemberTest][..]),
-            (8, CollectionMemberTest, 1, &[CollectionMemberWalk, CollectionMemberTest, CollectionMemberWalk, CollectionMemberTest, CollectionMemberWalk][..]),
+            (
+                6,
+                CollectionMemberWalk,
+                2_i128,
+                &[
+                    CollectionMemberWalk,
+                    CollectionMemberTest,
+                    CollectionMemberWalk,
+                    CollectionMemberTest,
+                ][..],
+            ),
+            (
+                8,
+                CollectionMemberTest,
+                1,
+                &[
+                    CollectionMemberWalk,
+                    CollectionMemberTest,
+                    CollectionMemberWalk,
+                    CollectionMemberTest,
+                    CollectionMemberWalk,
+                ][..],
+            ),
         ] {
-            let mut meter = Meter::new(ScalarLimits { work_units: work, ..UNLIMITED });
+            let mut meter = Meter::new(ScalarLimits {
+                work_units: work,
+                ..UNLIMITED
+            });
             assert_stopped(
                 form_collection(&collection_type(kind), input(), &mut meter).unwrap(),
                 Outcome::Incomplete(Incomplete {
@@ -558,8 +587,15 @@ fn late_membership_work_denials_preserve_exact_prefix_and_counters() {
                     charge_point: point,
                 }),
             );
-            assert_eq!(meter.admitted_charge_points(), prefix, "{kind:?}, {point:?}");
-            assert_eq!(meter.admission_count(), u64::try_from(prefix.len()).unwrap());
+            assert_eq!(
+                meter.admitted_charge_points(),
+                prefix,
+                "{kind:?}, {point:?}"
+            );
+            assert_eq!(
+                meter.admission_count(),
+                u64::try_from(prefix.len()).unwrap()
+            );
             assert_consumption(&meter, work, 1, 0);
         }
     }
@@ -574,7 +610,10 @@ fn result_retention_work_denial_keeps_bound_count_without_a_partial_value() {
         (CollectionKind::Set, 19, 2),
         (CollectionKind::Bag, 19, 5),
     ] {
-        let mut meter = Meter::new(ScalarLimits { work_units: work, ..UNLIMITED });
+        let mut meter = Meter::new(ScalarLimits {
+            work_units: work,
+            ..UNLIMITED
+        });
         let ty = bounded_type(kind, CardinalityBound::new(count, count).unwrap());
         assert_stopped(
             form_collection(&ty, input(), &mut meter).unwrap(),
@@ -589,19 +628,32 @@ fn result_retention_work_denial_keeps_bound_count_without_a_partial_value() {
         let mut prefix = membership_prefix(kind);
         prefix.push(ChargePoint::CollectionBound);
         assert_eq!(meter.admitted_charge_points(), prefix);
-        assert_eq!(meter.admission_count(), u64::try_from(prefix.len()).unwrap());
-        assert_eq!(meter.admitted_charges().last().unwrap().value_occurrences, Some(count));
+        assert_eq!(
+            meter.admission_count(),
+            u64::try_from(prefix.len()).unwrap()
+        );
+        assert_eq!(
+            meter.admitted_charges().last().unwrap().value_occurrences,
+            Some(count)
+        );
         assert_consumption(&meter, work, count, 0);
     }
 }
 
-fn construct_decimal_input(kind: CollectionKind, meter: &mut Meter, calls: &std::cell::Cell<usize>) -> Outcome<Value> {
-    let elements: Vec<Deferred<'_>> = input().into_iter().map(|value| {
-        Box::new(move |_: &mut Meter| {
-            calls.set(calls.get() + 1);
-            Outcome::Completed(value)
-        }) as Deferred<'_>
-    }).collect();
+fn construct_decimal_input(
+    kind: CollectionKind,
+    meter: &mut Meter,
+    calls: &std::cell::Cell<usize>,
+) -> Outcome<Value> {
+    let elements: Vec<Deferred<'_>> = input()
+        .into_iter()
+        .map(|value| {
+            Box::new(move |_: &mut Meter| {
+                calls.set(calls.get() + 1);
+                Outcome::Completed(value)
+            }) as Deferred<'_>
+        })
+        .collect();
     construct_collection(&collection_type(kind), elements, meter)
 }
 
@@ -610,13 +662,17 @@ fn construct_decimal_input(kind: CollectionKind, meter: &mut Meter, calls: &std:
 #[test]
 fn injected_collection_denials_admit_only_the_generous_controls_prefix() {
     use std::{cell::Cell, num::NonZeroU64};
-    use ChargePoint::{CollectionBound, CollectionElement, CollectionMemberTest, CollectionMemberWalk, CollectionResultRetain};
+    use ChargePoint::{
+        CollectionBound, CollectionElement, CollectionMemberTest, CollectionMemberWalk,
+        CollectionResultRetain,
+    };
 
     for kind in KINDS {
         let calls = Cell::new(0);
         let mut generous = Meter::new(UNLIMITED);
         let value = construct_decimal_input(kind, &mut generous, &calls)
-            .completed().expect("generous control completes");
+            .completed()
+            .expect("generous control completes");
         let (retained_occ, bound_count, full_work) = match kind {
             CollectionKind::Sequence => (6_u64, 5, 7),
             CollectionKind::Bag => (6, 5, 25),
@@ -630,15 +686,37 @@ fn injected_collection_denials_admit_only_the_generous_controls_prefix() {
         assert_eq!(generous.admitted_charge_points(), complete_points);
         assert_consumption(&generous, full_work, retained_occ, retained_occ);
 
-        let (bound_prefix, bound_work, bound_occ) = if kind == CollectionKind::Sequence { (5, 5, 0) } else { (17, 23, 1) };
+        let (bound_prefix, bound_work, bound_occ) = if kind == CollectionKind::Sequence {
+            (5, 5, 0)
+        } else {
+            (17, 23, 1)
+        };
         for (point, occurrence, prefix_len, work, occurrences, next, expected_calls) in [
             (CollectionElement, 3, 2, 2, 0, 1_i128, 2),
             (CollectionMemberWalk, 3, 9, 11, 1, 2, 5),
             (CollectionMemberTest, 3, 10, 13, 1, 1, 5),
-            (CollectionBound, 1, bound_prefix, bound_work, bound_occ, 1, 5),
-            (CollectionResultRetain, 1, bound_prefix + 1, bound_work + 1, bound_count, 1, 5),
+            (
+                CollectionBound,
+                1,
+                bound_prefix,
+                bound_work,
+                bound_occ,
+                1,
+                5,
+            ),
+            (
+                CollectionResultRetain,
+                1,
+                bound_prefix + 1,
+                bound_work + 1,
+                bound_count,
+                1,
+                5,
+            ),
         ] {
-            if kind == CollectionKind::Sequence && matches!(point, CollectionMemberWalk | CollectionMemberTest) {
+            if kind == CollectionKind::Sequence
+                && matches!(point, CollectionMemberWalk | CollectionMemberTest)
+            {
                 continue; // Sequences perform no membership comparisons.
             }
             calls.set(0);
@@ -657,8 +735,14 @@ fn injected_collection_denials_admit_only_the_generous_controls_prefix() {
                 }),
             );
             assert_eq!(calls.get(), expected_calls, "{kind:?}, {point:?}");
-            assert_eq!(meter.admitted_charge_points(), complete_points[..prefix_len]);
-            assert_eq!(meter.admitted_charges(), &generous.admitted_charges()[..prefix_len]);
+            assert_eq!(
+                meter.admitted_charge_points(),
+                complete_points[..prefix_len]
+            );
+            assert_eq!(
+                meter.admitted_charges(),
+                &generous.admitted_charges()[..prefix_len]
+            );
             assert_eq!(meter.admission_count(), u64::try_from(prefix_len).unwrap());
             assert_consumption(&meter, work, occurrences, 0);
         }
@@ -668,29 +752,52 @@ fn injected_collection_denials_admit_only_the_generous_controls_prefix() {
 fn integer_option(payload: Option<i128>) -> Value {
     match payload {
         None => OptionValue::none(ValueType::Integer),
-        Some(value) => OptionValue::present(ValueType::Integer, Value::Integer(Integer::from(value))).unwrap(),
+        Some(value) => {
+            OptionValue::present(ValueType::Integer, Value::Integer(Integer::from(value))).unwrap()
+        }
     }
 }
 
 fn wrap_singleton(value: Value) -> Value {
-    let ty = CollectionType::new(CollectionKind::Sequence, ValueType::option(ValueType::Integer), None);
+    let ty = CollectionType::new(
+        CollectionKind::Sequence,
+        ValueType::option(ValueType::Integer),
+        None,
+    );
     form_collection(&ty, vec![value], &mut Meter::new(UNLIMITED))
-        .unwrap().completed().expect("singleton option sequence completes")
+        .unwrap()
+        .completed()
+        .expect("singleton option sequence completes")
 }
 
 // This ranks None/Present, including payload order, without claiming a composite Null slot.
 #[test]
 fn option_keys_rank_none_before_present_directly_and_inside_sequences() {
     use std::cmp::Ordering::{Equal, Greater, Less};
-    let expected = [[Equal, Less, Less], [Greater, Equal, Less], [Greater, Greater, Equal]];
+    let expected = [
+        [Equal, Less, Less],
+        [Greater, Equal, Less],
+        [Greater, Greater, Equal],
+    ];
     for nested in [false, true] {
-        let values: Vec<Value> = [None, Some(-1), Some(2)].into_iter().map(|payload| {
-            let value = integer_option(payload);
-            if nested { wrap_singleton(value) } else { value }
-        }).collect();
+        let values: Vec<Value> = [None, Some(-1), Some(2)]
+            .into_iter()
+            .map(|payload| {
+                let value = integer_option(payload);
+                if nested {
+                    wrap_singleton(value)
+                } else {
+                    value
+                }
+            })
+            .collect();
         for (left_index, left) in values.iter().enumerate() {
             for (right_index, right) in values.iter().enumerate() {
-                assert_eq!(compare_keys(left, right), Some(expected[left_index][right_index]), "nested={nested}, pair={left_index}/{right_index}");
+                assert_eq!(
+                    compare_keys(left, right),
+                    Some(expected[left_index][right_index]),
+                    "nested={nested}, pair={left_index}/{right_index}"
+                );
             }
         }
     }
@@ -701,33 +808,61 @@ fn set_and_bag_sort_direct_and_nested_options_with_literal_multiplicities() {
     for nested in [false, true] {
         for (kind, expected) in [
             (CollectionKind::Set, &[None, Some(-1_i128), Some(2)][..]),
-            (CollectionKind::Bag, &[None, None, Some(-1), Some(2), Some(2)][..]),
+            (
+                CollectionKind::Bag,
+                &[None, None, Some(-1), Some(2), Some(2)][..],
+            ),
         ] {
             let options = [Some(2), None, Some(-1), None, Some(2)];
-            let values = options.into_iter().map(|payload| {
-                let value = integer_option(payload);
-                if nested { wrap_singleton(value) } else { value }
-            }).collect();
+            let values = options
+                .into_iter()
+                .map(|payload| {
+                    let value = integer_option(payload);
+                    if nested {
+                        wrap_singleton(value)
+                    } else {
+                        value
+                    }
+                })
+                .collect();
             let element = ValueType::option(ValueType::Integer);
-            let element = if nested { ValueType::collection(CollectionType::new(CollectionKind::Sequence, element, None)) } else { element };
+            let element = if nested {
+                ValueType::collection(CollectionType::new(CollectionKind::Sequence, element, None))
+            } else {
+                element
+            };
             let ty = CollectionType::new(kind, element, None);
             let value = form_collection(&ty, values, &mut Meter::new(UNLIMITED))
-                .unwrap().completed().expect("option collection completes");
-            let Value::Collection(collection) = value else { panic!("expected outer collection"); };
+                .unwrap()
+                .completed()
+                .expect("option collection completes");
+            let Value::Collection(collection) = value else {
+                panic!("expected outer collection");
+            };
             assert_eq!(collection.elements().len(), expected.len());
             for (member, expected_payload) in collection.elements().iter().zip(expected) {
                 let member = if nested {
-                    let Value::Collection(singleton) = member else { panic!("expected singleton sequence"); };
+                    let Value::Collection(singleton) = member else {
+                        panic!("expected singleton sequence");
+                    };
                     assert_eq!(singleton.collection_type().kind(), CollectionKind::Sequence);
                     assert_eq!(singleton.elements().len(), 1);
                     &singleton.elements()[0]
-                } else { member };
-                let Value::Option(option) = member else { panic!("expected option member"); };
+                } else {
+                    member
+                };
+                let Value::Option(option) = member else {
+                    panic!("expected option member");
+                };
                 assert_eq!(option.payload_type(), &ValueType::Integer);
                 match (option.payload(), expected_payload) {
-                    (None, None) => {},
-                    (Some(Value::Integer(actual)), Some(expected)) => assert_eq!(actual, &Integer::from(*expected)),
-                    (actual, expected) => panic!("expected option payload {expected:?}, got {actual:?}"),
+                    (None, None) => {}
+                    (Some(Value::Integer(actual)), Some(expected)) => {
+                        assert_eq!(actual, &Integer::from(*expected))
+                    }
+                    (actual, expected) => {
+                        panic!("expected option payload {expected:?}, got {actual:?}")
+                    }
                 }
             }
         }
