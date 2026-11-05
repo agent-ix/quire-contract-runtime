@@ -155,7 +155,7 @@ fn coalescence_charges_each_comparison_before_bound_and_retention() {
     }
 }
 
-// Partial formation-visiting clause of FR-008-AC-12: callers explicitly enumerate
+// Callers explicitly enumerate
 // the public retained slice. This does not observe equality-planner visitation.
 #[test]
 fn further_formation_consumes_retained_order_and_repeated_occurrences() {
@@ -234,7 +234,7 @@ fn membership_prefix(kind: CollectionKind) -> Vec<ChargePoint> {
     points
 }
 
-// Partial FR-008-AC-3: completed input validation precedes all formation work.
+// Completed input validation precedes all formation work.
 #[test]
 fn late_type_mismatch_precedes_membership_bound_and_zero_work_denial() {
     for kind in KINDS {
@@ -262,7 +262,7 @@ fn late_type_mismatch_precedes_membership_bound_and_zero_work_denial() {
     }
 }
 
-// Partial FR-008-AC-3/7: cardinality uses numeric coalescence, not Decimal representation.
+// Cardinality uses numeric coalescence, not Decimal representation.
 #[test]
 fn decimal_bound_refusals_report_distinct_or_occurrence_count_after_membership() {
     let bound = CardinalityBound::new(3, 3).unwrap();
@@ -339,7 +339,7 @@ fn decimal_bound_refusals_report_distinct_or_occurrence_count_after_membership()
     }
 }
 
-// Partial FR-008-AC-3: denial at the bound charge wins over an otherwise certain refusal.
+// Denial at the bound charge wins over an otherwise certain refusal.
 #[test]
 fn natural_bound_charge_denial_precedes_cardinality_refusal_without_retention() {
     for (kind, work, occurrences) in [
@@ -374,7 +374,7 @@ fn natural_bound_charge_denial_precedes_cardinality_refusal_without_retention() 
     }
 }
 
-// Partial FR-008-AC-3: actual public Deferred callbacks observe charge-before-run,
+// Actual public Deferred callbacks observe charge-before-run,
 // first-stopped propagation, and no eager coalescence of completed prefix elements.
 #[test]
 fn deferred_collection_stops_before_later_callbacks_or_formation() {
@@ -383,6 +383,21 @@ fn deferred_collection_stops_before_later_callbacks_or_formation() {
     for kind in KINDS {
         for stop in [
             Outcome::Undefined(Undefined::DivisionByZero),
+            // Independently supplied callback terminal payloads: these measure
+            // unchanged propagation, not the operation that produces each stop.
+            Outcome::Refused(Refusal::CardinalityOutOfBound {
+                violation: BoundViolation::AboveMaximum,
+                kind: CollectionKind::Bag,
+                bound: CardinalityBound::at_most(1),
+                count: 2,
+            }),
+            Outcome::Incomplete(Incomplete {
+                limit_kind: LimitKind::WorkUnits,
+                limit: 8,
+                consumed: 7,
+                next_charge: Integer::from(2_i128),
+                charge_point: ChargePoint::CollectionMemberWalk,
+            }),
             Outcome::Completed(Value::Boolean(true)),
         ] {
             let calls = Cell::new(0);
@@ -441,7 +456,7 @@ fn deferred_collection_stops_before_later_callbacks_or_formation() {
     }
 }
 
-// Partial FR-008-AC-3: the real element charge can stop before invoking a callback;
+// The real element charge can stop before invoking a callback;
 // the generous control reaches formation only after every callback completes.
 #[test]
 fn deferred_element_work_denial_preserves_completed_prefix_and_successful_control() {
