@@ -248,11 +248,11 @@ fn late_type_mismatch_precedes_membership_bound_and_zero_work_denial() {
             });
             let ty = bounded_type(kind, CardinalityBound::new(0, 0).unwrap());
             assert_eq!(
-                form_collection(&ty, values, &mut meter),
-                Err(ConstructionRefusal {
+                form_collection(&ty, values, &mut meter).unwrap_err(),
+                ConstructionRefusal {
                     component: Component::Element(3),
                     cause: ConstructionCause::TypeMismatch,
-                }),
+                },
                 "{kind:?}, budget {work_units}",
             );
             assert!(meter.admitted_charges().is_empty());
@@ -304,10 +304,10 @@ fn decimal_bound_refusals_report_distinct_or_occurrence_count_after_membership()
             bound,
             count,
         };
-        assert_eq!(outcome, Outcome::Refused(expected.clone()), "{kind:?}");
         let Outcome::Refused(refusal) = outcome else {
             panic!("expected cardinality refusal");
         };
+        assert_eq!(refusal, expected, "{kind:?}");
         assert_eq!(refusal.code(), Some("cardinality_out_of_bound"));
         assert_eq!(refusal.cause(), Some(cause));
         let mut points = membership_prefix(kind);
@@ -354,11 +354,11 @@ fn natural_bound_charge_denial_precedes_cardinality_refusal_without_retention() 
             work_units: work,
             ..UNLIMITED
         });
-        assert_eq!(
+        assert_stopped(
             form_collection(
                 &bounded_type(kind, CardinalityBound::new(3, 3).unwrap()),
                 input(),
-                &mut meter
+                &mut meter,
             )
             .unwrap(),
             Outcome::Incomplete(Incomplete {
@@ -368,7 +368,6 @@ fn natural_bound_charge_denial_precedes_cardinality_refusal_without_retention() 
                 next_charge: Integer::one(),
                 charge_point: ChargePoint::CollectionBound,
             }),
-            "{kind:?}",
         );
         assert_eq!(meter.admitted_charge_points(), membership_prefix(kind));
         assert_consumption(&meter, work, occurrences, 0);
@@ -428,9 +427,9 @@ fn deferred_collection_stops_before_later_callbacks_or_formation() {
                 Box::new(later),
             ];
             let mut meter = Meter::new(UNLIMITED);
-            assert_eq!(
+            assert_stopped(
                 construct_collection(&collection_type(kind), elements, &mut meter),
-                expected
+                expected,
             );
             assert_eq!(calls.get(), 3);
             assert_eq!(
@@ -473,7 +472,7 @@ fn deferred_element_work_denial_preserves_completed_prefix_and_successful_contro
             });
             let outcome = construct_collection(&collection_type(kind), elements, &mut meter);
             if work_units == 2 {
-                assert_eq!(
+                assert_stopped(
                     outcome,
                     Outcome::Incomplete(Incomplete {
                         limit_kind: LimitKind::WorkUnits,
@@ -481,7 +480,7 @@ fn deferred_element_work_denial_preserves_completed_prefix_and_successful_contro
                         consumed: 2,
                         next_charge: Integer::one(),
                         charge_point: ChargePoint::CollectionElement,
-                    })
+                    }),
                 );
                 assert_eq!(calls.get(), 2);
                 assert_eq!(
@@ -510,5 +509,16 @@ fn deferred_element_work_denial_preserves_completed_prefix_and_successful_contro
                 assert_consumption(&meter, work, occurrences, occurrences);
             }
         }
+    }
+}
+
+fn assert_stopped(actual: Outcome<Value>, expected: Outcome<Value>) {
+    match (actual, expected) {
+        (Outcome::Undefined(actual), Outcome::Undefined(expected)) => assert_eq!(actual, expected),
+        (Outcome::Refused(actual), Outcome::Refused(expected)) => assert_eq!(actual, expected),
+        (Outcome::Incomplete(actual), Outcome::Incomplete(expected)) => {
+            assert_eq!(actual, expected)
+        }
+        (actual, expected) => panic!("expected stop {expected:?}, got {actual:?}"),
     }
 }
