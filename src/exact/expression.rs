@@ -22,9 +22,9 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use quire_exact::{
     Charge, ChargePoint, CheckedInvariantCause, DecimalLoss, FieldValue, IeeeExactLoss, IeeeFlags,
-    IllTyped, IllTypedCause, Integer, Meter, Outcome, Refusal, Value, ValueType,
+    IllTypedCause, Integer, Meter, Outcome, Refusal, Value, ValueType,
 };
-use quire_semantic_value::declaration::TypeEnvironment;
+use quire_semantic_value::declaration::{TypeCheckError, TypeEnvironment};
 use quire_semantic_value::object_closure::ObjectClosure;
 use quire_semantic_value::stop::{outcome_from_stop, Stop};
 
@@ -212,8 +212,8 @@ fn location_at(origin: Origin) -> Location {
 /// accessors, covering every definedness, purity and termination obligation
 /// its `Typer`/checker proves. AD-002 keeps that whole proof out of this
 /// crate, so only what a generated package can itself carry as an admitted
-/// fact survives here — four variants, two of which this crate invented
-/// rather than carried over: `UndischargedMeasure` trusts an
+/// fact survives here, alongside native type-walk storage failures. Two variants
+/// were invented rather than carried over: `UndischargedMeasure` trusts an
 /// upstream-discharged flag instead of proving termination itself, and
 /// `UnsupportedCheckMode` gates the [`CheckMode`] this port *moved*, not
 /// added: the authority threads a `CheckMode` through its own per-expression
@@ -230,6 +230,9 @@ pub enum CheckCause {
     /// A declared parameter or result type is not admitted by the package's
     /// [`TypeEnvironment`].
     IllTyped(IllTypedCause),
+    /// Native reservation failure from the shared declared-type walk.
+    /// Semantic `Refused` errors are projected to [`Self::IllTyped`].
+    TypeCheck(TypeCheckError),
     /// Two functions share one name: `call` could not tell which is meant.
     AmbiguousName {
         /// The ambiguous name.
@@ -245,6 +248,17 @@ pub enum CheckCause {
     UnsupportedCheckMode,
 }
 
+impl From<TypeCheckError> for CheckCause {
+    fn from(error: TypeCheckError) -> Self {
+        match error {
+            TypeCheckError::Refused(refusal) => Self::IllTyped(refusal.cause),
+            native @ (TypeCheckError::Allocation(_) | TypeCheckError::Capacity(_)) => {
+                Self::TypeCheck(native)
+            }
+        }
+    }
+}
+
 /// A single refusal `check` produced, located at its origin.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CheckRefusal {
@@ -257,7 +271,10 @@ pub struct CheckRefusal {
 impl PackageDeclarations {
     /// Admit this package under `mode`, or refuse every violation found.
     /// Admission never charges: this happens once, before any package is
-    /// callable (FR-273-AC-1).
+    /// callable (FR-273-AC-1). A native type-walk reservation failure stops
+    /// checking immediately, after any earlier semantic refusals, without
+    /// allocating its diagnostic. Preparing ordinary diagnostics before that
+    /// walk retains the existing allocation contract.
     pub fn check(
         self,
         mode: CheckMode,
@@ -308,19 +325,27 @@ impl PackageDeclarations {
                     index,
                 })
             };
-            for (_, value_type) in &function.parameters {
-                if let Err(IllTyped { cause }) = self.types.check_type(value_type) {
+            for value_type in function
+                .parameters
+                .iter()
+                .map(|(_, value_type)| value_type)
+                .chain([&function.result])
+            {
+                // Prepare the diagnostic before the fallible owner walk. Reporting
+                // its denied reservation then needs neither a vector growth nor
+                // a copy of the function name.
+                refusals.reserve(1);
+                let location = location();
+                if let Err(error) = self.types.try_check_type(value_type) {
+                    let native = !matches!(error, TypeCheckError::Refused(_));
                     refusals.push(CheckRefusal {
-                        location: location(),
-                        cause: CheckCause::IllTyped(cause),
+                        location,
+                        cause: error.into(),
                     });
+                    if native {
+                        return Err(refusals);
+                    }
                 }
-            }
-            if let Err(IllTyped { cause }) = self.types.check_type(&function.result) {
-                refusals.push(CheckRefusal {
-                    location: location(),
-                    cause: CheckCause::IllTyped(cause),
-                });
             }
             if !function.measure_discharged {
                 refusals.push(CheckRefusal {
@@ -678,12 +703,12 @@ impl CheckedPackage {
             cause,
         };
         for (_, value_type) in &parameters {
-            if let Err(IllTyped { cause }) = self.0.types.check_type(value_type) {
-                return Err(refuse(CheckCause::IllTyped(cause)));
+            if let Err(error) = self.0.types.try_check_type(value_type) {
+                return Err(refuse(error.into()));
             }
         }
-        if let Err(IllTyped { cause }) = self.0.types.check_type(&result) {
-            return Err(refuse(CheckCause::IllTyped(cause)));
+        if let Err(error) = self.0.types.try_check_type(&result) {
+            return Err(refuse(error.into()));
         }
         Ok(CheckedExpression {
             parameters,

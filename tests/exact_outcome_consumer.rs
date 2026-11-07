@@ -5,11 +5,12 @@
 use ix_trace_rs::trace;
 use quire_contract_runtime::scalar::{evaluate_boolean_short_circuit, ShortCircuitConnective};
 use quire_exact::{
-    ChargePoint, CheckedInvariantCause, Incomplete, Integer, LimitKind, Meter, Outcome, Refusal,
-    ScalarLimits, Undefined,
+    admit_quantity_result, ChargePoint, CheckedInvariantCause, Incomplete, Integer, LimitKind,
+    Meter, Outcome, Quantity, QuantityResultInterval, Rational, Refusal, ScalarLimits, Undefined,
 };
+use quire_semantic_value::unit::UnitGraph;
 use quire_specification::VALUE_ACCOUNTING_CHARGE_POINT_VECTORS;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 fn closed_refusal(reason: &Refusal) {
     match reason {
@@ -21,6 +22,7 @@ fn closed_refusal(reason: &Refusal) {
         | Refusal::TextLengthOutOfDomain { .. }
         | Refusal::IntegerOutOfDomain { .. }
         | Refusal::RationalOutOfDomain { .. }
+        | Refusal::BoundedQuantityOutOfDomain { .. }
         | Refusal::IeeeNotExact { .. }
         | Refusal::IeeeNanPayloadNotRepresentable { .. }
         | Refusal::IeeeRationalOutOfDomain { .. }
@@ -264,6 +266,40 @@ fn consumed_exact_outcomes_keep_false_distinct_from_all_stops() {
     for stopped in &outcomes[2..] {
         assert_eq!(stopped.clone().completed(), None);
     }
+
+    let graph = UnitGraph::from_checked_nodes(&BTreeMap::new(), &BTreeMap::new())
+        .expect("an empty graph admits the dimensionless unit");
+    let unit = graph.compound_unit(&[]).unwrap().id().unwrap();
+    let target = QuantityResultInterval::new(
+        unit.clone(),
+        Rational::from_integer(Integer::zero()),
+        Rational::from_integer(Integer::one()),
+    );
+    let quantity_outcome = admit_quantity_result(
+        Quantity::new(Rational::from_integer(Integer::from(2_u64)), unit),
+        &target,
+        &mut Meter::new(limits),
+    )
+    .expect("the result and target use the same dimensionless unit");
+    let Outcome::Refused(quantity_reason) = quantity_outcome else {
+        panic!("quantity outside the bounded result target was not refused");
+    };
+    assert_eq!(
+        quantity_reason,
+        Refusal::BoundedQuantityOutOfDomain {
+            target: Box::new(target)
+        }
+    );
+    let mut stopped_meter = Meter::new(limits);
+    let forwarded = evaluate_boolean_short_circuit(
+        ShortCircuitConnective::And,
+        true,
+        || Outcome::Refused(quantity_reason.clone()),
+        &mut stopped_meter,
+    );
+    assert_eq!(forwarded, Outcome::Refused(quantity_reason.clone()));
+    assert_eq!(stopped_meter.consumed(LimitKind::WorkUnits), 0);
+    closed_refusal(&quantity_reason);
 
     closed_undefined(&undefined_reason);
     closed_refusal(&refusal_reason);

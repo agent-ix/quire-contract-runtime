@@ -92,6 +92,22 @@ The seven identity-dependent cases removed by IR-1162 run in
     `100000`. Compare the ordered log for every run to QSL's std reference;
     assert no depth refusal or stack overflow (FR-273-AC-13).
 
+17. For FR-273-AC-14, RT-local tests validate identity-free ordinary and nested declared
+    types through both package admission and standalone-expression checking. Include nested
+    populations and IEEE-bearing set/bag elements; compare semantic cause, location and
+    declaration order. The linked `quire-integration` consumer PR adds unknown-composite
+    controls using identities obtained from a genuine producer-admitted package, preserving
+    first-refusal order without RT-minted identity fixtures or RT dependencies on QSL or IR.
+    In RT's dedicated failing-allocator binary, construct fixtures before arming denial and
+    deny an actual shared type-check worklist allocation separately at the package parameter,
+    package result, expression parameter and expression result calls. Assert the typed native
+    cause and its owner request unit and amount, no checked output, and successful completion.
+    Inspect the prepared diagnostic capacity and location to verify that refusal projection
+    allocates no storage. Retry the same fixture with allocation enabled. Separately project
+    owner `Allocation` and `Capacity` errors with distinct request units and amounts; assert
+    their native distinction and no configured ceiling, without counting those projection
+    controls as real allocator denials.
+
 ## Expected Results
 
 Every call against a package `check` admitted is either a well-formed `Evaluation` or a named
@@ -105,3 +121,7 @@ depth; the first denied charge returns `Incomplete` on `work_units` without reco
 and nested argument, call and body charges remain in evaluation order. A yielded parent resumes with
 its owned locals and its child's completed value; a stopped child propagates without a parent resume.
 The foreign-expression and checked-body faults retain their distinct typed invariant causes.
+
+Declared-type semantic failures keep their cause, locus and precedence; native type-check
+reservation failures retain the owner error and request without being recast as semantic
+or input refusals. Allocator denials publish no checked output and a sufficient retry succeeds.

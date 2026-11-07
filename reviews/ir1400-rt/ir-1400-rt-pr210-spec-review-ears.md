@@ -1,0 +1,60 @@
+---
+id: SR-2026110705000811
+title: "spec-review-ears of RT fallible declared-type adoption"
+type: SpecReview
+analysis: ears-conformance
+scope: "agent-ix/quire-contract-runtime; IR-1400; Cargo.lock, Cargo.toml, spec/exact/functional/FR-273-exact-function-application.md, spec/exact/matrix/TC-194-function-application.md, spec/monitor/functional/FR-276-consume-timed-monitor-plan.md, spec/monitor/matrix/TC-200-tick-monitor-consumer.md, src/exact/expression.rs, src/monitor/program.rs, src/monitor/validation.rs, tests/exact_type_check_allocation.rs"
+review_set: subset
+---
+
+## Summary
+
+Ticket: IR-1400. Reviewed the final RT slice under the explicit Option A split. RT retains the seven production fallible-type consumers, six identity-free exact controls, the private native-error projection control and the existing identity guard. Producer-admitted Program construction, first-Layout allocator denial, unknown-composite controls and public monitor retry remain PENDING in linked quire-integration PR 89. IR-1400 is not complete until both legs land.
+
+## Verdict
+
+**PASS for the authorized RT slice; integration acceptance PENDING.** No open finding remains in the identity-free RT adoption. This verdict does not discharge public Program/first-Layout denial or complete IR-1400; those cells remain linked to integration PR 89. No aggregate gate pass is claimed.
+
+## Scope
+
+- `FR-273-AC-14` (`spec/exact/functional/FR-273-exact-function-application.md`), examined: | FR-273-AC-14 | Package function parameter/result checks and standalone-expression parameter/result checks preserve admitted types and the original semantic refusal cause, location and order through `try_check_type`. A dedicated allocator test denies actual owner worklist allocation after fixture construction at each of these four consumer positions; the result is the typed native reservation cause, retains `Allocation` with the owner's request unit and amount, publishes no checked result, and returns without aborting or allocating to project the error. An identical retry with allocation enab
+- `FR-276-AC-13` (`spec/monitor/functional/FR-276-consume-timed-monitor-plan.md`), examined: | FR-276-AC-13 | `Program::try_new` takes only `ProgramParts`. In a dedicated test binary whose failing global allocator refuses the first allocation inside `try_new` (the first Layout type check's worklist), construction returns `ProgramRefusal` code `Membership` with the native reservation cause and no Program; refusing the first RT-owned scratch reservation returns code `Storage`; refusing an allocation inside a literal's membership walk returns `Membership` with the native `EnvironmentFailure`. An expression arena nested 20,000 levels deep constructs on a 512 KiB native stack. For build an
+- `FR-276-AC-14` (`spec/monitor/functional/FR-276-consume-timed-monitor-plan.md`), examined: | FR-276-AC-14 | Actual allocator denials inside Layout, function parameter/result and expression type checks return `Membership` with the original native allocation class and `StorageRequest`, without allocating to construct the refusal or returning a Program; allocation-enabled retries admit the same valid parts. Semantic unknown-type and operator-ineligible controls retain the existing `TypeMismatch` behavior and validation precedence. Explicit native-error projection controls preserve `Allocation` versus `Capacity` and the original request unit and amount, with no synthetic configured limi
+- `TC-194` (`spec/exact/matrix/TC-194-function-application.md`), examined: 17. For FR-273-AC-14, validate ordinary and nested declared types through both package
+- `TC-200` (`spec/monitor/matrix/TC-200-tick-monitor-consumer.md`), examined: 12. For FR-276-AC-14, deny actual allocations inside the owner type-check walk at each
+
+## Findings
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-001 | low | The new retry statement starts its wrapped line with SHALL after placing RT on the preceding line. Quire reports missing-subject and unclassifiable for this statement; keep the actor and SHALL together in the requirement statement. | spec/monitor/functional/FR-276-consume-timed-monitor-plan.md:176 |
+
+## Initial review verification (historical)
+
+Inspected actual frozen source, owner TypeCheckError/StorageRequest/EnvironmentFailure and thread-local failing allocator implementation. The fixture denies one real allocation and then automatically disarms; it is not persistent allocator exhaustion. Read actual successful focused logs: `/tmp/ir1400-rt-check.log`, `/tmp/ir1400-rt-clippy.log`, and `/tmp/ir1400-rt-focused.log` (native projection 1, allocator/semantic controls 8, existing function-application 25). No reviewer Cargo gate was run; the lead owns the one final combined-tree gate. No CI workflow was changed. No applicable AssuranceProfile was found under this repository's spec. Capacity controls are explicit owner-error projection tests, not real overflow evidence. The resolved quire-exact NodeKey shallow-clones its Arc-backed NodeData and native request moves allocate no storage; exact diagnostic locus/vector capacity are prepared before the owner call. This does not claim recovery from arbitrary RT allocator exhaustion.
+
+## Engine results
+
+Changed-file validation passed with a baseline line-91 non-singular warning and new line-176 missing-subject/unclassifiable warnings. Only the new retry statement is a finding.
+
+## Round 1 verification (historical)
+
+Inspected fix head `949cdaf0cc54c8b26cda671a232349322b3e5bd6` and the actual resolved Arc-backed NodeKey implementation. Read passing focused round-1 evidence: ten allocator/semantic tests, one private projection test, touched Clippy, formatting and diff checks. Fresh actual matrix declares 226 criteria (62 tagged, 122 baseline untagged, 42 method-without-symbol); new FR-273-AC-14 and FR-276-AC-14 are declared and tagged with six and five binders respectively. Existing FR-276-AC-13 remains tagged by three local controls. The old line-91 EARS warning remains baseline; the new warnings are gone. No reviewer aggregate Cargo gate ran.
+
+## Dispositions
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | The retry statement keeps RT and SHALL together; fresh changed-file validation reports only the pre-existing line-91 non-singular warning. |
+
+## Current Option A disposition
+
+**PASS for the authorized RT slice; integration acceptance PENDING.** At inspected head `0c91358440f64b2b13d7e5a585adb5f0e7c5d864`, RT-local identity constructors, identity-returning helper fixtures and the fabricated ProgramParts controls are removed. The unchanged TC-033 production/fixture guard and its mutation controls pass. The outcome control obtains its dimensionless unit from the shared checked UnitGraph API; it does not construct UnitId directly. No QSL/IR dependency, compatibility shim, disguised identity constructor or guard exception is introduced.
+
+All three production monitor type-refusal calls still pass `Some(&source_key)`; the private projection test alone uses `None`, and claims no public Program construction or allocator-denial evidence. Native Allocation/Capacity requests still move unchanged into EnvironmentFailure, distinct from RT-owned Storage. Exact checking still preserves the original semantic refusal and native owner reservation cause without an allocation after the denied owner walk.
+
+The current six exact tests cover actual owner-worklist denial separately at package parameter/result and expression parameter/result positions, retry, request class/unit/amount, nested admitted types, nested Population refusal, IEEE-bearing sets/bags and declaration/source ordering. The removed unknown-composite and identity-bearing monitor controls belong to [quire-integration PR 89](https://github.com/agent-ix/quire-integration/pull/89), whose posted contract explicitly keeps IR-1400 open until both legs land.
+
+Read actual final focused evidence `/tmp/ir1400-rt-option-a-focused.log`: outcome controls 2 PASS, identity-free exact controls 6 PASS, unchanged vocabulary/identity guards 7 PASS, private projection 1 PASS; touched Clippy, fmt, changed-spec validation and diff check passed. No additional aggregate gate ran, and no aggregate PASS is claimed. Prior full gate attempts failed; the broader baseline coverage and deferred lock-tooling policy are outside this RT slice under the explicit owner ruling.
+
+Current actual matrix `/tmp/ir1400-rt-option-a-matrix.json`: FR-273-AC-14 tagged by six RT tests; FR-276-AC-14 tagged by ONE PRIVATE PROJECTION TEST ONLY, not complete public acceptance; FR-276-AC-13 untagged with zero RT binders, pending the genuine producer-admitted integration leg. The earlier round-1 counts and monitor denial statements above are historical and superseded by this Option A split. No criterion tag is credited as proving its unexecuted cells. Plan completion: not assessed.

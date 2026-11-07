@@ -90,8 +90,26 @@ No complete temporal criterion is upgraded by the retained run, publication or r
     `StepBudget` field one below its measured use, then refuse one allocation under the failing
     allocator; inspect the `PathArenaCapacity` mapping.
 
-Steps 1 to 9 run in `quire-integration` on the genuine QSL plan root prepared by the driver from
-the same emission; steps 10 and 11 are RT-local controls over the same representation.
+12. In the linked `quire-integration` consumer PR for FR-276-AC-14, obtain valid
+    `ProgramParts` identities from genuine producer-admitted checked-package values through
+    QSL's read-only lookup. Deny actual allocations inside the owner type-check walk separately
+    at Layout, function parameter, function result and expression type validation. Check
+    `Membership`, retained native allocation class, exact original request unit and amount,
+    and no Program. The reused owner allocator denies one real request and then automatically
+    disarms; these tests prove recovery from that denied request, not persistent allocator
+    exhaustion. Inspect refusal projection separately to verify that it only moves the native
+    request and shallow-clones the source key without allocating. Retry the same valid parts
+    with allocation enabled. Check unknown-type and IEEE-ineligible semantic cases for unchanged
+    `TypeMismatch` and first-refusal order. Retain Step 11's independent RT scratch and
+    literal-membership denial controls in that producer-admitted integration binary. RT-local
+    private projection tests use no source identity and project actual owner-error values for
+    `Allocation` versus `Capacity` with different units and amounts. These projection controls
+    do not claim real capacity exhaustion, Program construction or allocator-denial coverage.
+
+Steps 1 to 12 requiring identities run in `quire-integration` on genuine producer-admitted
+values. RT-local tests retain identity-free exact checks and private native-error projection;
+no RT-owned identity fixture or QSL/IR dependency supplies this evidence. The linked consumer
+PR must land before the combined IR-1400 adoption is considered complete.
 
 ## Expected Results
 
@@ -140,3 +158,8 @@ the same emission; steps 10 and 11 are RT-local controls over the same represent
   arena constructs; `try_new` takes only `ProgramParts`; each field returns its `StepResource`
   with exact `limit`, `spent` and `requested`; the refused allocation returns `Storage` with no
   `limit`; `PathArenaCapacity` reaches `path_capacity` with code `Resource`.
+
+- Step 12 preserves the owner native error class, unit and amount at `Membership`, performs
+  no allocation during refusal projection, publishes no Program on failure, and permits
+  identical valid-parts retry. Semantic validation remains `TypeMismatch`; RT scratch is
+  `Storage`, and literal membership retains `EnvironmentFailure`.
