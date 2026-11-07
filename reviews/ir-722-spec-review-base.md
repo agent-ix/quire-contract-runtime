@@ -36,3 +36,12 @@ Not mergeable as written: FND-001 to FND-003 must be fixed in this PR. The bound
 text still meets IR-722 acceptance 1 ("fresh bounded state"): it bounds element counts at
 every commit, including `init`, without narrowing any existing AC. It bounds counts, not
 per-element bytes. Entry size follows the admitted input types.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | e0baa2b names `ExecutorInvariantCode::StateBound`, `MonitorFailure` code `Invariant` and the entry or `init` `ExecutionSite::Function` site, and AC-12 asserts them |
+| FND-002 | fixed | AC-13 and TC-200 step 11 now require an arena nested 20,000 levels deep |
+| FND-003 | fixed | AC-13 and the new stop table name the governing bound and an observable oracle for each stop; `path_capacity` is checked by inspection, and its owner exercises exhaustion |
+| FND-004 | fixed | Each bound case now runs on a fresh monitor; the `init` case is a separate build with no further input |

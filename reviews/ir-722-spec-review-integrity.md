@@ -28,3 +28,9 @@ carries tests/monitor_program.rs as a regular blob. It is not a #209 trace defec
 ## Verdict
 
 No structural or cross-repo contradiction. FND-001 is wording only.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Both bullets now say the monitor's current `StepBudget`, supplied at build and replaceable through `Monitor::set_step_budget` |

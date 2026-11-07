@@ -32,3 +32,16 @@ their reservation refusal code, or narrow the claim to RT-owned scratch and say 
 plan with a large literal sequence is currently constructed at a cost the stated part
 counts do not bound, and a literal-walk reservation failure returns `Membership`, which
 contradicts AC-13's `Storage`.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | high | AC-13's control cannot pass. `validate_layout`, the first walk, calls `check_type` (infallible `vec!` in semantic-value) before any RT `try_reserve`, so a failing allocator refusing the first `try_new` allocation aborts and never returns `Storage`. The table row "Layout premises ... none allocated" is false, and "sweep covers only allocations before the first check_type" covers none | spec/monitor/functional/FR-276-consume-timed-monitor-plan.md:154-168, spec/monitor/functional/FR-276-consume-timed-monitor-plan.md:220, src/monitor/validation.rs:428-436 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | still-open | The walk table, the literal `Membership` mapping and the RT `Storage` scratch rows fix the enumeration. The `check_type` gap is still open: RT FR-276 places a SHALL on semantic-value and adds an "until the owner provides it ... aborts" carve-out. Semantic-value must expose a public fallible type check that returns a typed reservation failure; its private `type_refusal_admission` already uses a `ReservationPolicy`. RT must route every `check_type` call through it. The dependency belongs in Dependencies as a real cross-owner requirement, without the transitional clause |
+| FND-002 | fixed | A forced failure is now produced only by a failing global allocator in a dedicated integration test binary, after the `measurement/exact-panic` precedent; `forbid(unsafe_code)` applies to the library only |

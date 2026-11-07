@@ -151,21 +151,20 @@ This is a planned consumer contract, not an implemented monitor.
 
   | Walk | Bound | Reservation failure |
   | --- | --- | --- |
-  | Layout premises, State fields and buffers | O(S + U) | none allocated |
+  | Layout premises, State fields and buffers, excluding the type checks below | O(S + U) | none allocated |
   | Function-key uniqueness scratch | O(F log F) work, F elements | `ProgramRefusal` `Storage` |
-  | `TypeEnvironment::check_type` of each parameter, result and expression type | O((F + E) x (T + C)) | owned by semantic-value (below) |
+  | Fallible `TypeEnvironment::check_type` of the five Layout type bindings, then of each parameter, result and expression type | O((5 + F + E) x (T + C)) | `ProgramRefusal` `Membership` with the native reservation cause retained in `membership_failure` |
   | Expression graph, ownership and cycle walk | O(E + D) work, E elements per scratch vector | `ProgramRefusal` `Storage` |
   | `TypeEnvironment::admits` of each literal | O(L + T + C) | `ProgramRefusal` `Membership` with the native `EnvironmentFailure` retained |
   | Bindings, fields and construction tables | O(F + E + B + S) | `ProgramRefusal` `Storage` |
 
 - `Program::try_new` SHALL reserve its own validation scratch fallibly, sized from these counts,
   before use.
-- **Cross-owner seam (quire-semantic-value).** The semantic-value owner's
-  `TypeEnvironment::check_type` SHALL reserve its worklist fallibly and return a typed reservation
-  failure instead of aborting.
-- `Program::try_new` SHALL report that check-type reservation failure as `ProgramRefusal` `Membership` with the native cause retained. Until
-  the owner provides it, a check-type allocation failure aborts rather than refusing, and the
-  forced-failure sweep of AC-13 covers only allocations made before the first `check_type` call.
+- `Program::try_new` SHALL make every type check, including the Layout bindings checked first,
+  through quire-semantic-value's fallible check-type entry, and SHALL report its reservation failure
+  as `ProgramRefusal` `Membership` with the native cause retained in `membership_failure`. A
+  failure inside a walk owned by semantic-value (type check or literal membership) is `Membership`;
+  a failure of RT-owned scratch is `Storage`.
 - The runtime SHALL bound build and every event, watermark, gap and poll step by the monitor's
   current `StepBudget` (supplied at build, replaceable through `Monitor::set_step_budget`) and by
   the native stops below; neither budget changes a plan capacity:
@@ -217,10 +216,14 @@ This is a planned consumer contract, not an implemented monitor.
 | FR-276-AC-10 | With a per-step budget too small for one `on_event`, the call returns `StepResourceStop`, the monitor state is unchanged and the event unconsumed, and the same event under a sufficient budget then executes and gives the outcome it would have given; the result is distinct from a verdict, `Incomplete(LimitReached)`, `Failed(ReadingGapExceeded)` and `ExecutorInvariantFailure` (after which the monitor rejects input), and the monitor accepts the next input after a stop. No test relies on recovery from an allocator out-of-memory. | Test |
 | FR-276-AC-11 | Build observes event_position 0 from init. With width 16 and maximum gap 100, the baseline event reading 65530 calls on_event(0) and leaves event_position 1; a watermark and poll leave it 1; reading 65500 faults through on_gap and leaves it 1; admitted reading 65510 calls on_event(10) and leaves it 2. The unwrapped exact Integer count is independent of tick time, and State keeps it after activations with no extra field. | Test |
 | FR-276-AC-12 | For a plan with one bounded buffer of capacity 22 and activation capacity 2, each case on a fresh monitor: an `on_event` returning 23 buffer elements and 2 activations commits; one returning 24 elements, and one returning 3 activations, each return `MonitorFailure` code `Invariant` with `ExecutorInvariantCode::StateBound` at that entry's function site, commit nothing, and the next input returns code `Terminated`. An `init` returning 3 activations makes `build` return `MonitorFailure` code `Invariant` with `StateBound` at the `init` function site and no monitor. | Test |
-| FR-276-AC-13 | `Program::try_new` takes only `ProgramParts`. In a dedicated test binary whose failing global allocator refuses the first allocation inside `try_new`, construction returns `ProgramRefusal` code `Storage` and no Program; refusing an allocation inside a literal's membership walk returns code `Membership` with the native `EnvironmentFailure`. An expression arena nested 20,000 levels deep constructs on a 512 KiB native stack. For build and a step, each `StepBudget` field set one below its measured use returns the stated `StepResource` with exact `limit`, `spent` and `requested`; a refused allocation returns `StepResource::Storage` with no `limit`; source inspection shows `PathArenaCapacity` surfaced in `path_capacity`. | Test, Inspection |
+| FR-276-AC-13 | `Program::try_new` takes only `ProgramParts`. In a dedicated test binary whose failing global allocator refuses the first allocation inside `try_new` (the first Layout type check's worklist), construction returns `ProgramRefusal` code `Membership` with the native reservation cause and no Program; refusing the first RT-owned scratch reservation returns code `Storage`; refusing an allocation inside a literal's membership walk returns `Membership` with the native `EnvironmentFailure`. An expression arena nested 20,000 levels deep constructs on a 512 KiB native stack. For build and a step, each `StepBudget` field set one below its measured use returns the stated `StepResource` with exact `limit`, `spent` and `requested`; a refused allocation returns `StepResource::Storage` with no `limit`; source inspection shows `PathArenaCapacity` surfaced in `path_capacity`. | Test, Inspection |
 
 ## Dependencies
 
+- quire-semantic-value SHALL provide a public fallible `TypeEnvironment` check-type entry that
+  reserves its worklist with `try_reserve` and returns a typed reservation error carried as an
+  `EnvironmentFailure` cause, so construction can refuse instead of aborting; RT FR-276-AC-13
+  depends on it.
 - QSL ADR-026 MN-1 to MN-7 and FR-251 own the complete executable plan, temporal meaning,
   rounding and capacities; QSpec
   FR-160 owns uncertainty and QSpec FR-252 owns clock binding identity and admitted order.

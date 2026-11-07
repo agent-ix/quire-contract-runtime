@@ -84,8 +84,8 @@ No complete temporal criterion is upgraded by the retained run, publication or r
     elements; one returning 3 activations. After each failing case offer one further input. Build
     separately with an `init` returning 3 activations.
 11. Construct a Program from complete parts. In a dedicated test binary with a failing global
-    allocator, refuse the first allocation inside `try_new`, then an allocation inside a
-    literal's membership walk. Construct an expression arena nested 20,000 levels deep on a
+    allocator, refuse the first allocation inside `try_new`, then the first RT-owned scratch
+    reservation, then an allocation inside a literal's membership walk. Construct an expression arena nested 20,000 levels deep on a
     512 KiB stack. Inspect the `try_new` signature. For build and one event step, set each
     `StepBudget` field one below its measured use, then refuse one allocation under the failing
     allocator; inspect the `PathArenaCapacity` mapping.
@@ -135,7 +135,8 @@ the same emission; steps 10 and 11 are RT-local controls over the same represent
   `MonitorFailure` code `Invariant` with `StateBound` at the `on_event` function site, commit
   nothing, and the further input returns `Terminated`. The `init` case returns `MonitorFailure`
   code `Invariant` with `StateBound` at the `init` site and no monitor.
-- Step 11 returns a Program, then `Storage` and `Membership` refusals with no Program; the deep
+- Step 11 returns a Program, then `Membership` (first allocation, a type check), `Storage`
+  (RT scratch) and `Membership` (literal walk) refusals with no Program; the deep
   arena constructs; `try_new` takes only `ProgramParts`; each field returns its `StepResource`
   with exact `limit`, `spent` and `requested`; the refused allocation returns `Storage` with no
   `limit`; `PathArenaCapacity` reaches `path_capacity` with code `Resource`.
