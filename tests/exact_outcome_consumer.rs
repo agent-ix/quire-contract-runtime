@@ -7,10 +7,10 @@ use quire_contract_runtime::scalar::{evaluate_boolean_short_circuit, ShortCircui
 use quire_exact::{
     admit_quantity_result, ChargePoint, CheckedInvariantCause, Incomplete, Integer, LimitKind,
     Meter, Outcome, Quantity, QuantityResultInterval, Rational, Refusal, ScalarLimits, Undefined,
-    UnitId,
 };
+use quire_semantic_value::unit::UnitGraph;
 use quire_specification::VALUE_ACCOUNTING_CHARGE_POINT_VECTORS;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 fn closed_refusal(reason: &Refusal) {
     match reason {
@@ -267,7 +267,9 @@ fn consumed_exact_outcomes_keep_false_distinct_from_all_stops() {
         assert_eq!(stopped.clone().completed(), None);
     }
 
-    let unit = UnitId::compound(vec![]);
+    let graph = UnitGraph::from_checked_nodes(&BTreeMap::new(), &BTreeMap::new())
+        .expect("an empty graph admits the dimensionless unit");
+    let unit = graph.compound_unit(&[]).unwrap().id().unwrap();
     let target = QuantityResultInterval::new(
         unit.clone(),
         Rational::from_integer(Integer::zero()),
