@@ -13,7 +13,7 @@ Ticket: IR-1400. The owning native failure contracts and references are concrete
 
 ## Verdict
 
-**FAIL** — The owning native failure contracts and references are concrete, but blank-line table separation prevents both new acceptance criteria from entering the declared model.
+**PASS (scoped PR, disposition round 1)** — Every original finding is fixed at the inspected head. The native type-check adoption and actual denial controls are ready for the lead's final combined-tree gate; no whole-runtime acceptance claim.
 
 ## Scope
 
@@ -32,4 +32,15 @@ Ticket: IR-1400. The owning native failure contracts and references are concrete
 
 ## Verification
 
-Inspected actual frozen source, owner TypeCheckError/StorageRequest/EnvironmentFailure and thread-local failing allocator implementation. The fixture denies one real allocation and then automatically disarms; it is not persistent allocator exhaustion. Read actual successful focused logs: `/tmp/ir1400-rt-check.log`, `/tmp/ir1400-rt-clippy.log`, and `/tmp/ir1400-rt-focused.log` (native projection 1, allocator/semantic controls 8, existing function-application 25). No reviewer Cargo gate was run; the lead owns the one final combined-tree gate. No CI workflow was changed. No applicable AssuranceProfile was found under this repository's spec. Capacity controls are explicit owner-error projection tests, not real overflow evidence. Fixed-width NodeKey copying and native request moves allocate no storage; exact diagnostic locus/vector capacity are prepared before the owner call. This does not claim recovery from arbitrary RT allocator exhaustion.
+Inspected actual frozen source, owner TypeCheckError/StorageRequest/EnvironmentFailure and thread-local failing allocator implementation. The fixture denies one real allocation and then automatically disarms; it is not persistent allocator exhaustion. Read actual successful focused logs: `/tmp/ir1400-rt-check.log`, `/tmp/ir1400-rt-clippy.log`, and `/tmp/ir1400-rt-focused.log` (native projection 1, allocator/semantic controls 8, existing function-application 25). No reviewer Cargo gate was run; the lead owns the one final combined-tree gate. No CI workflow was changed. No applicable AssuranceProfile was found under this repository's spec. Capacity controls are explicit owner-error projection tests, not real overflow evidence. The resolved quire-exact NodeKey shallow-clones its Arc-backed NodeData and native request moves allocate no storage; exact diagnostic locus/vector capacity are prepared before the owner call. This does not claim recovery from arbitrary RT allocator exhaustion.
+
+## Disposition verification
+
+Inspected fix head `949cdaf0cc54c8b26cda671a232349322b3e5bd6` and the actual resolved Arc-backed NodeKey implementation. Read passing focused round-1 evidence: ten allocator/semantic tests, one private projection test, touched Clippy, formatting and diff checks. Fresh actual matrix declares 226 criteria (62 tagged, 122 baseline untagged, 42 method-without-symbol); new FR-273-AC-14 and FR-276-AC-14 are declared and tagged with six and five binders respectively. Existing FR-276-AC-13 remains tagged by three local controls. The old line-91 EARS warning remains baseline; the new warnings are gone. No reviewer aggregate Cargo gate ran.
+
+## Dispositions
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | FR-273-AC-14 is declared and tagged in the actual fresh matrix after removing the table-separating blank line. |
+| FND-002 | fixed | FR-276-AC-14 is declared and tagged in the actual fresh matrix after removing the table-separating blank line. |

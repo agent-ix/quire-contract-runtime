@@ -13,7 +13,7 @@ Ticket: IR-1400. Real first-Layout, late function/expression and exact consumer 
 
 ## Verdict
 
-**FAIL** — Real first-Layout, late function/expression and exact consumer denials have focused passing evidence, but two new criterion rows are not declared by the engine and the prescribed nested/IEEE semantic controls are missing.
+**PASS (scoped PR, disposition round 1)** — Every original finding is fixed at the inspected head. The native type-check adoption and actual denial controls are ready for the lead's final combined-tree gate; no whole-runtime acceptance claim.
 
 ## Scope
 
@@ -39,7 +39,7 @@ Ticket: IR-1400. Real first-Layout, late function/expression and exact consumer 
 
 ## Verification
 
-Inspected actual frozen source, owner TypeCheckError/StorageRequest/EnvironmentFailure and thread-local failing allocator implementation. The fixture denies one real allocation and then automatically disarms; it is not persistent allocator exhaustion. Read actual successful focused logs: `/tmp/ir1400-rt-check.log`, `/tmp/ir1400-rt-clippy.log`, and `/tmp/ir1400-rt-focused.log` (native projection 1, allocator/semantic controls 8, existing function-application 25). No reviewer Cargo gate was run; the lead owns the one final combined-tree gate. No CI workflow was changed. No applicable AssuranceProfile was found under this repository's spec. Capacity controls are explicit owner-error projection tests, not real overflow evidence. Fixed-width NodeKey copying and native request moves allocate no storage; exact diagnostic locus/vector capacity are prepared before the owner call. This does not claim recovery from arbitrary RT allocator exhaustion.
+Inspected actual frozen source, owner TypeCheckError/StorageRequest/EnvironmentFailure and thread-local failing allocator implementation. The fixture denies one real allocation and then automatically disarms; it is not persistent allocator exhaustion. Read actual successful focused logs: `/tmp/ir1400-rt-check.log`, `/tmp/ir1400-rt-clippy.log`, and `/tmp/ir1400-rt-focused.log` (native projection 1, allocator/semantic controls 8, existing function-application 25). No reviewer Cargo gate was run; the lead owns the one final combined-tree gate. No CI workflow was changed. No applicable AssuranceProfile was found under this repository's spec. Capacity controls are explicit owner-error projection tests, not real overflow evidence. The resolved quire-exact NodeKey shallow-clones its Arc-backed NodeData and native request moves allocate no storage; exact diagnostic locus/vector capacity are prepared before the owner call. This does not claim recovery from arbitrary RT allocator exhaustion.
 
 ## Coverage
 
@@ -48,3 +48,19 @@ Inspected actual frozen source, owner TypeCheckError/StorageRequest/EnvironmentF
 - Plan completion: not assessed
 - Semantic review: optional repository-wide semantic review skipped; ordinary scoped code/test intent review ran.
 - Reverse-gap/stub check: no new unowned implementation or stub; the adoption is owned by the changed FR-273/FR-276 contracts.
+
+## Disposition verification
+
+Inspected fix head `949cdaf0cc54c8b26cda671a232349322b3e5bd6` and the actual resolved Arc-backed NodeKey implementation. Read passing focused round-1 evidence: ten allocator/semantic tests, one private projection test, touched Clippy, formatting and diff checks. Fresh actual matrix declares 226 criteria (62 tagged, 122 baseline untagged, 42 method-without-symbol); new FR-273-AC-14 and FR-276-AC-14 are declared and tagged with six and five binders respectively. Existing FR-276-AC-13 remains tagged by three local controls. The old line-91 EARS warning remains baseline; the new warnings are gone. No reviewer aggregate Cargo gate ran.
+
+## Current scoped coverage
+
+Reconciliation: fresh quire matrix `/tmp/ir1400-rt-round1-matrix.json`; no fresh run evidence store read. Both added criteria are declared/tagged; source-reviewed test intent now matches the specified nested/IEEE and native-denial boundary. Baseline unrelated criteria retain their prior statuses. This is a scoped PR verdict, not full repository assurance. Plan completion: not assessed.
+
+## Dispositions
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | The new tests exercise admitted nested options/sequences, nested unknown composites and IEEE-bearing set/bag types in both parameter/result positions for package and standalone-expression admission, asserting semantic cause, locus and ordering. Focused 10-test binary passed. |
+| FND-002 | fixed | FR-273-AC-14 is now contiguous with its acceptance table; the actual fresh matrix declares it tagged with six binders. |
+| FND-003 | fixed | FR-276-AC-14 is now contiguous with its acceptance table; the actual fresh matrix declares it tagged with five binders. |
