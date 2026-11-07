@@ -90,6 +90,17 @@ No complete temporal criterion is upgraded by the retained run, publication or r
     `StepBudget` field one below its measured use, then refuse one allocation under the failing
     allocator; inspect the `PathArenaCapacity` mapping.
 
+12. For FR-276-AC-14, deny actual allocations inside the owner type-check walk at each
+    of Layout, function parameter, function result and expression type validation after
+    constructing valid `ProgramParts`. Check `Membership`, retained
+    `TypeCheckError::Allocation`, exact request unit and amount, and no Program. Keep denial
+    armed through refusal projection so an allocating source-key clone cannot pass unnoticed.
+    Retry the same valid parts after disarming denial. Check unknown-type and IEEE-ineligible
+    semantic cases for unchanged `TypeMismatch` and first-refusal order. Separately project
+    actual owner-error values for `Allocation` versus `Capacity` with different units and
+    amounts, without claiming those controls exercise real capacity exhaustion or allocator
+    denial. Retain Step 11's independent RT scratch and literal-membership controls.
+
 Steps 1 to 9 run in `quire-integration` on the genuine QSL plan root prepared by the driver from
 the same emission; steps 10 and 11 are RT-local controls over the same representation.
 
@@ -140,3 +151,8 @@ the same emission; steps 10 and 11 are RT-local controls over the same represent
   arena constructs; `try_new` takes only `ProgramParts`; each field returns its `StepResource`
   with exact `limit`, `spent` and `requested`; the refused allocation returns `Storage` with no
   `limit`; `PathArenaCapacity` reaches `path_capacity` with code `Resource`.
+
+- Step 12 preserves the owner native error class, unit and amount at `Membership`, performs
+  no allocation during refusal projection, publishes no Program on failure, and permits
+  identical valid-parts retry. Semantic validation remains `TypeMismatch`; RT scratch is
+  `Storage`, and literal membership retains `EnvironmentFailure`.
