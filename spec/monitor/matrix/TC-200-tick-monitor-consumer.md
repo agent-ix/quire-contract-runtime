@@ -79,6 +79,19 @@ No complete temporal criterion is upgraded by the retained run, publication or r
    watermark and a clock poll: both preserve 1. The gap-faulting reading calls on_gap
    and preserves 1; the next admitted event changes it to 2. Inspect the final required
    Integer field after activations; no host-width mirror supplies the observation.
+10. With the plan of Step 2 (capacity 22) and activation capacity 2, build a fresh monitor for
+    each case: an `on_event` returning 23 buffer elements and 2 activations; one returning 24
+    elements; one returning 3 activations. After each failing case offer one further input. Build
+    separately with an `init` returning 3 activations.
+11. Construct a Program from complete parts. In a dedicated test binary with a failing global
+    allocator, refuse the first allocation inside `try_new`, then the first RT-owned scratch
+    reservation, then an allocation inside a literal's membership walk. Construct an expression arena nested 20,000 levels deep on a
+    512 KiB stack. Inspect the `try_new` signature. For build and one event step, set each
+    `StepBudget` field one below its measured use, then refuse one allocation under the failing
+    allocator; inspect the `PathArenaCapacity` mapping.
+
+Steps 1 to 9 run in `quire-integration` on the genuine QSL plan root prepared by the driver from
+the same emission; steps 10 and 11 are RT-local controls over the same representation.
 
 ## Expected Results
 
@@ -118,3 +131,12 @@ No complete temporal criterion is upgraded by the retained run, publication or r
 - Step 9 observes event positions 0, 1, 1, 1 and 2 at build, baseline event,
   watermark/poll, gap fault and following admitted event respectively. The baseline
   event increments the count despite delta 0; the faulting reading does not increment it.
+- Step 10 commits the first case. The 24-element and 3-activation cases each return
+  `MonitorFailure` code `Invariant` with `StateBound` at the `on_event` function site, commit
+  nothing, and the further input returns `Terminated`. The `init` case returns `MonitorFailure`
+  code `Invariant` with `StateBound` at the `init` site and no monitor.
+- Step 11 returns a Program, then `Membership` (first allocation, a type check), `Storage`
+  (RT scratch) and `Membership` (literal walk) refusals with no Program; the deep
+  arena constructs; `try_new` takes only `ProgramParts`; each field returns its `StepResource`
+  with exact `limit`, `spent` and `requested`; the refused allocation returns `Storage` with no
+  `limit`; `PathArenaCapacity` reaches `path_capacity` with code `Resource`.

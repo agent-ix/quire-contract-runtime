@@ -21,12 +21,14 @@ type: TestMatrix
 | FR-276 | FR-276-AC-9 | TC-200 | 🚧 Planned: pending coherent integration evidence |
 | FR-276 | FR-276-AC-10 | TC-200 | 🚧 Planned: pending coherent integration evidence |
 | FR-276 | FR-276-AC-11 | TC-200 | 🚧 Planned: pending coherent integration evidence |
+| FR-276 | FR-276-AC-12 | TC-200 | 🚧 Planned: bounded State commit check |
+| FR-276 | FR-276-AC-13 | TC-200 | 🚧 Planned: construction scratch bound and budget boundary |
 
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 | --- | --- | --- | --- | --- | --- |
-| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11 | 🚧 Planned |
+| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13 | 🚧 Planned |
 
 ## Component Execution Evidence
 
