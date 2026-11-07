@@ -356,7 +356,7 @@ pub enum ProgramRefusalCode {
     InvalidBinding,
     /// Validation scratch could not be reserved.
     Storage,
-    /// The shared value-membership walk stopped; its native cause is retained.
+    /// A shared type or value-membership walk stopped; its native cause is retained.
     Membership,
 }
 
@@ -367,7 +367,8 @@ pub struct ProgramRefusal {
     pub code: ProgramRefusalCode,
     /// Source node that failed validation.
     pub node: Option<NodeKey>,
-    /// Native shared membership failure, when that walk stopped.
+    /// Native shared membership failure, including a declared-type walk
+    /// reservation projected to the same allocation/capacity request variants.
     pub membership_failure: Option<EnvironmentFailure>,
 }
 

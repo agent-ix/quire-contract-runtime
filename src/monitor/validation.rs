@@ -4,7 +4,10 @@
 use alloc::vec::Vec;
 
 use quire_exact::{CollectionKind, Integer, MemberOwner, NodeKey, Presence, ValueType};
-use quire_semantic_value::{declaration::CompositeShape, quantity::QuantityUnit};
+use quire_semantic_value::{
+    declaration::{CompositeShape, EnvironmentFailure, TypeCheckError},
+    quantity::QuantityUnit,
+};
 
 use super::program::{
     Expression, ExpressionId, FunctionId, Operation, ProgramParts, ProgramRefusal,
@@ -16,6 +19,18 @@ fn refusal(code: Code, node: Option<&NodeKey>) -> ProgramRefusal {
         code,
         node: node.cloned(),
         membership_failure: None,
+    }
+}
+
+fn type_refusal(error: TypeCheckError, node: &NodeKey) -> ProgramRefusal {
+    let membership_failure = match error {
+        TypeCheckError::Refused(_) => return refusal(Code::TypeMismatch, Some(node)),
+        TypeCheckError::Allocation(request) => EnvironmentFailure::Allocation(request),
+        TypeCheckError::Capacity(request) => EnvironmentFailure::Capacity(request),
+    };
+    ProgramRefusal {
+        membership_failure: Some(membership_failure),
+        ..refusal(Code::Membership, Some(node))
     }
 }
 
@@ -38,16 +53,16 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         for value_type in function.parameters.iter().chain([&function.result]) {
             parts
                 .types
-                .check_type(value_type)
-                .map_err(|_| refusal(Code::TypeMismatch, Some(&function.key)))?;
+                .try_check_type(value_type)
+                .map_err(|error| type_refusal(error, &function.key))?;
         }
         expression(parts, function.body, &function.key)?;
     }
     for value in &parts.expressions {
         parts
             .types
-            .check_type(&value.value_type)
-            .map_err(|_| refusal(Code::TypeMismatch, Some(&value.key)))?;
+            .try_check_type(&value.value_type)
+            .map_err(|error| type_refusal(error, &value.key))?;
         match &value.operation {
             Operation::Literal(literal) => {
                 if !parts
@@ -432,8 +447,8 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
     ] {
         parts
             .types
-            .check_type(&binding.value_type)
-            .map_err(|_| refusal(Code::TypeMismatch, Some(&binding.key)))?;
+            .try_check_type(&binding.value_type)
+            .map_err(|error| type_refusal(error, &binding.key))?;
     }
     for binding in [&layout.state, &layout.inputs, &layout.scope] {
         if binding.value_type != ValueType::Composite(binding.key.clone())
@@ -761,4 +776,52 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, 
         }
     }
     Ok(owners)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ix_trace_rs::trace;
+    use quire_exact::{IllTyped, IllTypedCause, PathSegment};
+    use quire_semantic_value::declaration::{StorageRequest, StorageUnit};
+
+    #[trace("TC-200", "FR-276-AC-14")]
+    #[test]
+    fn native_type_projection_preserves_class_unit_and_amount() {
+        let node = NodeKey::new(
+            "rt-native-control",
+            vec![PathSegment::Text("fixture".into())],
+            0,
+        )
+        .unwrap();
+        for request in [
+            StorageRequest::new(7, StorageUnit::Bytes),
+            StorageRequest::new(19, StorageUnit::AdditionalElements),
+        ] {
+            for (error, expected) in [
+                (
+                    TypeCheckError::Allocation(request),
+                    EnvironmentFailure::Allocation(request),
+                ),
+                (
+                    TypeCheckError::Capacity(request),
+                    EnvironmentFailure::Capacity(request),
+                ),
+            ] {
+                let refusal = type_refusal(error, &node);
+                assert_eq!(refusal.code, Code::Membership);
+                assert_eq!(refusal.node.as_ref(), Some(&node));
+                assert_eq!(refusal.membership_failure, Some(expected));
+            }
+        }
+        for cause in [
+            IllTypedCause::TypeMismatch,
+            IllTypedCause::OperatorIneligible,
+        ] {
+            let refusal = type_refusal(TypeCheckError::Refused(IllTyped { cause }), &node);
+            assert_eq!(refusal.code, Code::TypeMismatch);
+            assert_eq!(refusal.node.as_ref(), Some(&node));
+            assert_eq!(refusal.membership_failure, None);
+        }
+    }
 }

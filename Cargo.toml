@@ -41,6 +41,7 @@ serde = { version = "1.0.228", optional = true, default-features = false, featur
 serde_json = { version = "1.0.151", optional = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
+qsv-failing-allocator = { git = "https://github.com/agent-ix/quire-semantic-value", branch = "main" }
 # The kernel's ordered charge log (`Meter::admitted_charges`) exists only under its
 # `test-support` feature, which only a dev dependency may enable: the residue tests assert the
 # charge sequences of the operations the runtime still defines.
