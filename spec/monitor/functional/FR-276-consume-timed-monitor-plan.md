@@ -125,6 +125,25 @@ This is a planned consumer contract, not an implemented monitor.
   `ExecutorInvariantFailure`; allocation or resource failure is not an invariant defect and not a
   property result. The runtime SHALL NOT promise recovery from an arbitrary allocator
   out-of-memory.
+- **Bounded state.** Before committing the State returned by `init`, `on_event`, `on_watermark`
+  or `on_gap`, the runtime SHALL check that each `buffer_<n>` sequence holds at most its plan
+  capacity plus one element (the single summary cell an unbounded past operator keeps first,
+  QSL FR-251) and that `activations` holds at most `activation_capacity` elements.
+- When a step returns a State outside these bounds, the runtime SHALL return
+  `ExecutorInvariantFailure`, commit nothing and terminate the monitor.
+- When `init` returns a State outside these bounds, the runtime SHALL return a typed build
+  failure with no monitor.
+- The bound check SHALL read sequence lengths only, without interpreting entries, inferring which
+  subformula is unbounded or settling an obligation; RT keeps no State store besides the
+  canonical State value.
+- **Preparation and operating budgets.** The driver's preparation budget ends when it hands the
+  complete `ProgramParts` to `Program::try_new`, which SHALL take no budget parameter.
+- `Program::try_new` SHALL visit each supplied function, expression, operand edge, lexical
+  binding, State field and buffer a fixed number of times through iterative walks.
+- `Program::try_new` SHALL reserve each validation scratch vector fallibly, sized from those part
+  counts, before use, and SHALL refuse `Storage` when a reservation fails.
+- The runtime SHALL bound build and every event, watermark, gap and poll step only by the caller's
+  `StepBudget`; neither budget changes a plan capacity.
 - The runtime SHALL use the plan's capacities as fixed upper bounds. If an event would exceed a
   buffered subformula's capacity, the runtime SHALL retain the event or stop before consuming it,
   and SHALL settle the affected obligations `Incomplete(LimitReached{limit, value, setting})`
@@ -158,6 +177,8 @@ This is a planned consumer contract, not an implemented monitor.
 | FR-276-AC-9 | On the 16-bit target of AC-3 the first admitted reading, whatever its value, passes `on_event` the delta 0 with no gap check and leaves the unwrapped time at `init`'s value; after readings `65530` then `65500` fault, a following reading `65510` is differenced from `65500` (delta 10), not from `65530`. RT calls `on_gap` with the gap 65506: the instance still open across the gap settles `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` and is dropped from the state, while an instance already decided before the fault and an instance not yet started are unaffected and settle normally afterwards. | Test |
 | FR-276-AC-10 | With a per-step budget too small for one `on_event`, the call returns `StepResourceStop`, the monitor state is unchanged and the event unconsumed, and the same event under a sufficient budget then executes and gives the outcome it would have given; the result is distinct from a verdict, `Incomplete(LimitReached)`, `Failed(ReadingGapExceeded)` and `ExecutorInvariantFailure` (after which the monitor rejects input), and the monitor accepts the next input after a stop. No test relies on recovery from an allocator out-of-memory. | Test |
 | FR-276-AC-11 | Build observes event_position 0 from init. With width 16 and maximum gap 100, the baseline event reading 65530 calls on_event(0) and leaves event_position 1; a watermark and poll leave it 1; reading 65500 faults through on_gap and leaves it 1; admitted reading 65510 calls on_event(10) and leaves it 2. The unwrapped exact Integer count is independent of tick time, and State keeps it after activations with no extra field. | Test |
+| FR-276-AC-12 | For a plan with one bounded buffer of capacity 22 and activation capacity 2, a step whose returned State holds 23 elements in that buffer and 2 activations commits; a returned State with 24 buffer elements, or with 3 activations, returns `ExecutorInvariantFailure`, commits nothing and makes the monitor refuse later input; an `init` returning such a State yields a typed build failure and no monitor. | Test |
+| FR-276-AC-13 | `Program::try_new` takes only `ProgramParts`; a forced validation scratch reservation failure returns `ProgramRefusal` with code `Storage` and no Program; construction of a 20,000-expression arena completes iteratively on a 512 KiB stack. Build and steps with the same parts stop only through `StepBudget` resources. | Test, Inspection |
 
 ## Dependencies
 

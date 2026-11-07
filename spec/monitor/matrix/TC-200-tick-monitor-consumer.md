@@ -79,6 +79,16 @@ No complete temporal criterion is upgraded by the retained run, publication or r
    watermark and a clock poll: both preserve 1. The gap-faulting reading calls on_gap
    and preserves 1; the next admitted event changes it to 2. Inspect the final required
    Integer field after activations; no host-width mirror supplies the observation.
+10. With the plan of Step 2 (capacity 22) and activation capacity 2, run the admitted program
+    with entries whose returned State holds 23 buffer elements and 2 activations, then 24
+    elements, then 3 activations, and an `init` returning 3 activations. Offer one further input
+    after each failure.
+11. Construct a Program from complete parts, then with a forced validation scratch reservation
+    failure, and a 20,000-expression arena on a 512 KiB stack. Inspect the `try_new` signature.
+    Build and step under `StepBudget` limits only.
+
+Steps 1 to 9 run in `quire-integration` on the genuine QSL plan root prepared by the driver from
+the same emission; steps 10 and 11 are RT-local controls over the same representation.
 
 ## Expected Results
 
@@ -118,3 +128,7 @@ No complete temporal criterion is upgraded by the retained run, publication or r
 - Step 9 observes event positions 0, 1, 1, 1 and 2 at build, baseline event,
   watermark/poll, gap fault and following admitted event respectively. The baseline
   event increments the count despite delta 0; the faulting reading does not increment it.
+- Step 10 commits the first State; the 24-element, 3-activation and `init` cases return
+  `ExecutorInvariantFailure` or a typed build failure, commit nothing and refuse later input.
+- Step 11 returns a Program, then `ProgramRefusal` `Storage` with no Program; the deep arena
+  completes; `try_new` takes only `ProgramParts`, and only `StepBudget` stops build and steps.
