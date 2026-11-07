@@ -16,8 +16,8 @@ use quire_contract_runtime::monitor::{
     ProgramParts, ProgramRefusalCode, TypeBinding,
 };
 use quire_exact::{
-    CollectionKind, CollectionType, IllTypedCause, Integer, MemberId, MemberOwner, NodeKey,
-    OptionValue, Outcome, PathSegment, Presence, Rational, Value, ValueType,
+    CollectionKind, CollectionType, FloatType, IeeeWidth, IllTypedCause, Integer, MemberId,
+    MemberOwner, NodeKey, OptionValue, Outcome, PathSegment, Presence, Rational, Value, ValueType,
 };
 use quire_semantic_value::declaration::{
     CompositeDeclaration, CompositeShape, EnvironmentFailure, FieldDeclaration, StorageRequest,
@@ -487,6 +487,8 @@ fn monitor_semantic_type_refusals_keep_locus_and_layout_precedence() {
     for (which, value_type, source) in [
         (0, ValueType::Composite(key(90)), 1),
         (0, ValueType::Population(None), 1),
+        (0, ieee_collection(CollectionKind::Set), 1),
+        (1, ieee_collection(CollectionKind::Bag), 40),
         (1, ValueType::Population(None), 40),
         (2, ValueType::Composite(key(90)), 50),
     ] {
@@ -520,4 +522,142 @@ fn monitor_semantic_type_refusals_keep_locus_and_layout_precedence() {
     assert_eq!(refusal.code, ProgramRefusalCode::InvalidLayout);
     assert_eq!(refusal.node, Some(key(30)));
     assert_eq!(refusal.membership_failure, None);
+}
+
+fn ieee_collection(kind: CollectionKind) -> ValueType {
+    ValueType::collection(CollectionType::new(
+        kind,
+        ValueType::option(ValueType::Float(FloatType::exact(IeeeWidth::Binary64))),
+        None,
+    ))
+}
+
+#[trace("TC-194", "FR-273-AC-14")]
+#[test]
+fn nested_declared_types_and_ieee_sets_and_bags_keep_semantic_parity() {
+    let nested = ValueType::option(sequence(ValueType::option(ValueType::Boolean)));
+    let mut input = declarations(true);
+    input.functions[0].parameters[0].1 = nested.clone();
+    input.functions[0].result = nested.clone();
+    assert!(input
+        .check(CheckMode::Linked, CheckingLimits::default())
+        .is_ok());
+    let package = checked();
+    assert!(package
+        .check_expression(
+            vec![("nested".into(), nested.clone())],
+            nested.clone(),
+            body()
+        )
+        .is_ok());
+
+    for refused in [
+        (
+            ValueType::option(sequence(ValueType::Composite(key(90)))),
+            IllTypedCause::TypeMismatch,
+        ),
+        (
+            ieee_collection(CollectionKind::Set),
+            IllTypedCause::OperatorIneligible,
+        ),
+        (
+            ieee_collection(CollectionKind::Bag),
+            IllTypedCause::OperatorIneligible,
+        ),
+    ] {
+        let (value_type, expected) = refused;
+        for parameter in [true, false] {
+            let mut input = declarations(parameter);
+            if parameter {
+                input.functions[0].parameters[0].1 = value_type.clone();
+            } else {
+                input.functions[0].result = value_type.clone();
+            }
+            let refusals = match input.check(CheckMode::Linked, CheckingLimits::default()) {
+                Err(refusals) => refusals,
+                Ok(_) => panic!("ineligible nested type admitted"),
+            };
+            assert_eq!(refusals.len(), 1);
+            assert_eq!(refusals[0].cause, CheckCause::IllTyped(expected));
+            assert_eq!(
+                refusals[0].location.origin,
+                Origin::Body {
+                    function: "identity".into(),
+                    index: 0
+                }
+            );
+            assert!(refusals[0].location.path.is_empty());
+            let (parameters, result) = if parameter {
+                (vec![("nested".into(), value_type.clone())], nested.clone())
+            } else {
+                (vec![("nested".into(), nested.clone())], value_type.clone())
+            };
+            let refusal = match package.check_expression(parameters, result, body()) {
+                Err(refusal) => refusal,
+                Ok(_) => panic!("ineligible nested expression type admitted"),
+            };
+            assert_eq!(refusal.cause, CheckCause::IllTyped(expected));
+            assert_eq!(refusal.location.origin, Origin::Expression);
+            assert!(refusal.location.path.is_empty());
+        }
+    }
+}
+
+#[trace("TC-194", "FR-273-AC-14")]
+#[test]
+fn nested_and_ieee_refusals_keep_parameter_before_result_order() {
+    let unknown = ValueType::option(sequence(ValueType::Composite(key(90))));
+    let set = ieee_collection(CollectionKind::Set);
+    let bag = ieee_collection(CollectionKind::Bag);
+    let mut input = declarations(true);
+    input.functions[0].parameters = vec![
+        ("unknown".into(), unknown.clone()),
+        ("ieee".into(), set.clone()),
+    ];
+    input.functions[0].result = bag.clone();
+    input.functions[0].measure_discharged = false;
+    let refusals = match input.check(CheckMode::Linked, CheckingLimits::default()) {
+        Err(refusals) => refusals,
+        Ok(_) => panic!("invalid declarations admitted"),
+    };
+    assert_eq!(
+        refusals.iter().map(|r| r.cause.clone()).collect::<Vec<_>>(),
+        vec![
+            CheckCause::IllTyped(IllTypedCause::TypeMismatch),
+            CheckCause::IllTyped(IllTypedCause::OperatorIneligible),
+            CheckCause::IllTyped(IllTypedCause::OperatorIneligible),
+            CheckCause::UndischargedMeasure
+        ]
+    );
+    for refusal in refusals {
+        assert_eq!(
+            refusal.location.origin,
+            Origin::Body {
+                function: "identity".into(),
+                index: 0
+            }
+        );
+        assert!(refusal.location.path.is_empty());
+    }
+    let package = checked();
+    for (parameters, result, expected) in [
+        (
+            vec![("unknown".into(), unknown), ("ieee".into(), set.clone())],
+            bag.clone(),
+            IllTypedCause::TypeMismatch,
+        ),
+        (
+            vec![("ieee".into(), set)],
+            bag,
+            IllTypedCause::OperatorIneligible,
+        ),
+    ] {
+        let refusal = match package.check_expression(parameters, result, body()) {
+            Err(refusal) => refusal,
+            Ok(_) => panic!("invalid expression admitted"),
+        };
+        assert_eq!(refusal.cause, CheckCause::IllTyped(expected));
+        assert_eq!(refusal.location.origin, Origin::Expression);
+        assert!(refusal.location.path.is_empty());
+    }
 }

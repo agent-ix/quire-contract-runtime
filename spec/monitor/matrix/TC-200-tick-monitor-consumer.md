@@ -93,10 +93,12 @@ No complete temporal criterion is upgraded by the retained run, publication or r
 12. For FR-276-AC-14, deny actual allocations inside the owner type-check walk at each
     of Layout, function parameter, function result and expression type validation after
     constructing valid `ProgramParts`. Check `Membership`, retained
-    native allocation class, exact original request unit and amount, and no Program. Keep denial
-    armed through refusal projection so an allocating source-key clone cannot pass unnoticed.
-    Retry the same valid parts after disarming denial. Check unknown-type and IEEE-ineligible
-    semantic cases for unchanged `TypeMismatch` and first-refusal order. Separately project
+    native allocation class, exact original request unit and amount, and no Program. The reused
+    owner allocator denies one real request and then automatically disarms; these tests prove
+    recovery from that denied request, not persistent allocator exhaustion. Inspect refusal
+    projection separately to verify that it only moves the native request and shallow-clones
+    the source key without allocating. Retry the same valid parts with allocation enabled.
+    Check unknown-type and IEEE-ineligible semantic cases for unchanged `TypeMismatch` and first-refusal order. Separately project
     actual owner-error values for `Allocation` versus `Capacity` with different units and
     amounts, without claiming those controls exercise real capacity exhaustion or allocator
     denial. Retain Step 11's independent RT scratch and literal-membership controls.
