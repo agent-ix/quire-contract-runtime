@@ -3,7 +3,7 @@ id: SR-2026110705000808
 title: "code-review of RT fallible declared-type adoption"
 type: SpecReview
 analysis: code-review
-scope: "agent-ix/quire-contract-runtime; IR-1400; Cargo.lock, Cargo.toml, spec/exact/functional/FR-273-exact-function-application.md, spec/exact/matrix/TC-194-function-application.md, spec/monitor/functional/FR-276-consume-timed-monitor-plan.md, spec/monitor/matrix/TC-200-tick-monitor-consumer.md, src/exact/expression.rs, src/monitor/program.rs, src/monitor/validation.rs, tests/exact_type_check_allocation.rs"
+scope: "agent-ix/quire-contract-runtime; IR-1400; tests/exact_outcome_consumer.rs, Cargo.lock, Cargo.toml, spec/exact/functional/FR-273-exact-function-application.md, spec/exact/matrix/TC-194-function-application.md, spec/monitor/functional/FR-276-consume-timed-monitor-plan.md, spec/monitor/matrix/TC-200-tick-monitor-consumer.md, src/exact/expression.rs, src/monitor/program.rs, src/monitor/validation.rs, tests/exact_type_check_allocation.rs"
 review_set: subset
 ---
 
@@ -48,3 +48,7 @@ Inspected fix head `949cdaf0cc54c8b26cda671a232349322b3e5bd6` and the actual res
 | FND | Outcome | Reason |
 | --- | --- | --- |
 | FND-001 | fixed | TC-200 now explicitly states the owner allocator is one-shot and separates recovery evidence from allocation-free source inspection. Inspected actual native projection: it moves the request and shallow-clones the resolved Arc-backed NodeKey; no allocation follows the denied walk. |
+
+## Dependency compatibility delta
+
+Inspected the sole post-disposition compatibility delta at `a026835bbe1cd44f79de6307b7c9ba6ec8011d7d`: `tests/exact_outcome_consumer.rs` explicitly accepts the owner's new `BoundedQuantityOutOfDomain` variant without a wildcard. Its behavioral control obtains the actual refusal from shared `admit_quantity_result` for magnitude 2 outside the same-unit interval [0, 1], checks the exact target payload, and forwards that native refusal unchanged through RT short-circuit evaluation with zero additional RT work. Focused Clippy, formatting, two outcome tests, and workspace all-targets/all-features checks passed in `/tmp/ir1400-rt-owner-compat-focused.log`. No production behavior or previous type-check adoption changed. No new finding; scoped PASS remains valid. The earlier aggregate gate failed before this compatibility fix and is not recorded as a pass.

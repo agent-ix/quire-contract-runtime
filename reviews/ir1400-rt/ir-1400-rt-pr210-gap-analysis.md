@@ -3,7 +3,7 @@ id: SR-2026110705000809
 title: "gap-analysis of RT fallible declared-type adoption"
 type: SpecReview
 analysis: gap-analysis
-scope: "agent-ix/quire-contract-runtime; IR-1400; Cargo.lock, Cargo.toml, spec/exact/functional/FR-273-exact-function-application.md, spec/exact/matrix/TC-194-function-application.md, spec/monitor/functional/FR-276-consume-timed-monitor-plan.md, spec/monitor/matrix/TC-200-tick-monitor-consumer.md, src/exact/expression.rs, src/monitor/program.rs, src/monitor/validation.rs, tests/exact_type_check_allocation.rs"
+scope: "agent-ix/quire-contract-runtime; IR-1400; tests/exact_outcome_consumer.rs, Cargo.lock, Cargo.toml, spec/exact/functional/FR-273-exact-function-application.md, spec/exact/matrix/TC-194-function-application.md, spec/monitor/functional/FR-276-consume-timed-monitor-plan.md, spec/monitor/matrix/TC-200-tick-monitor-consumer.md, src/exact/expression.rs, src/monitor/program.rs, src/monitor/validation.rs, tests/exact_type_check_allocation.rs"
 review_set: subset
 ---
 
@@ -64,3 +64,7 @@ Reconciliation: fresh quire matrix `/tmp/ir1400-rt-round1-matrix.json`; no fresh
 | FND-001 | fixed | The new tests exercise admitted nested options/sequences, nested unknown composites and IEEE-bearing set/bag types in both parameter/result positions for package and standalone-expression admission, asserting semantic cause, locus and ordering. Focused 10-test binary passed. |
 | FND-002 | fixed | FR-273-AC-14 is now contiguous with its acceptance table; the actual fresh matrix declares it tagged with six binders. |
 | FND-003 | fixed | FR-276-AC-14 is now contiguous with its acceptance table; the actual fresh matrix declares it tagged with five binders. |
+
+## Dependency compatibility delta
+
+Inspected the sole post-disposition compatibility delta at `a026835bbe1cd44f79de6307b7c9ba6ec8011d7d`: `tests/exact_outcome_consumer.rs` explicitly accepts the owner's new `BoundedQuantityOutOfDomain` variant without a wildcard. Its behavioral control obtains the actual refusal from shared `admit_quantity_result` for magnitude 2 outside the same-unit interval [0, 1], checks the exact target payload, and forwards that native refusal unchanged through RT short-circuit evaluation with zero additional RT work. Focused Clippy, formatting, two outcome tests, and workspace all-targets/all-features checks passed in `/tmp/ir1400-rt-owner-compat-focused.log`. No production behavior or previous type-check adoption changed. No new finding; scoped PASS remains valid. The earlier aggregate gate failed before this compatibility fix and is not recorded as a pass.
