@@ -781,6 +781,7 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
     use ix_trace_rs::trace;
     use quire_exact::{IllTyped, IllTypedCause, PathSegment};
     use quire_semantic_value::declaration::{StorageRequest, StorageUnit};

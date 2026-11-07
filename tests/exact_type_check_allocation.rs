@@ -305,7 +305,10 @@ fn parts() -> ProgramParts {
                 key: key(40),
                 body_path: vec![],
                 value_type: ValueType::option(ValueType::Integer),
-                operation: Operation::Literal(OptionValue::present(ValueType::Integer, Value::Integer(Integer::zero())).unwrap()),
+                operation: Operation::Literal(
+                    OptionValue::present(ValueType::Integer, Value::Integer(Integer::zero()))
+                        .unwrap(),
+                ),
             },
             Expression {
                 key: key(41),
@@ -348,7 +351,12 @@ fn parts() -> ProgramParts {
                     positions: vec![ExpressionId(2), ExpressionId(3)],
                 },
             },
-            Expression {key:key(45), body_path:vec![], value_type:ValueType::Integer, operation:Operation::Literal(Value::Integer(Integer::zero()))},
+            Expression {
+                key: key(45),
+                body_path: vec![],
+                value_type: ValueType::Integer,
+                operation: Operation::Literal(Value::Integer(Integer::zero())),
+            },
         ],
     }
 }
