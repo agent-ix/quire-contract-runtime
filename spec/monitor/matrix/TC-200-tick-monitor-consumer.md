@@ -93,7 +93,7 @@ No complete temporal criterion is upgraded by the retained run, publication or r
 12. For FR-276-AC-14, deny actual allocations inside the owner type-check walk at each
     of Layout, function parameter, function result and expression type validation after
     constructing valid `ProgramParts`. Check `Membership`, retained
-    `TypeCheckError::Allocation`, exact request unit and amount, and no Program. Keep denial
+    native allocation class, exact original request unit and amount, and no Program. Keep denial
     armed through refusal projection so an allocating source-key clone cannot pass unnoticed.
     Retry the same valid parts after disarming denial. Check unknown-type and IEEE-ineligible
     semantic cases for unchanged `TypeMismatch` and first-refusal order. Separately project

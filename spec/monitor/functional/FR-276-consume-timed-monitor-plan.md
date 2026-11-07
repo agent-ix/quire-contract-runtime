@@ -165,11 +165,12 @@ This is a planned consumer contract, not an implemented monitor.
   as `ProgramRefusal` `Membership` with the native cause retained in `membership_failure`. A
   failure inside a walk owned by semantic-value (type check or literal membership) is `Membership`;
   a failure of RT-owned scratch is `Storage`.
-  The type-check failure SHALL retain the actual owner's `TypeCheckError`: semantic
+  RT SHALL retain the native type-check error class and original request: semantic
   `Refused(IllTyped)` keeps the existing `TypeMismatch` behavior, whereas `Allocation` and
   `Capacity` remain distinct native failures with their original `StorageRequest` unit and
-  amount. Literal membership retains its own `EnvironmentFailure`; RT SHALL NOT convert
-  a type-check failure into that different owner error. Projecting native failure SHALL
+  amount. RT MAY carry an allocation or capacity failure in the corresponding existing
+  `EnvironmentFailure` variant only by moving the original `StorageRequest` unchanged.
+  Literal membership retains its own `EnvironmentFailure`. Projecting native failure SHALL
   allocate no new storage and perform no allocating clone, including of a source `NodeKey`.
   RT SHALL return no partially validated Program on failure. With allocation enabled, RT
   SHALL admit the same valid parts on retry after an allocator-denied attempt.
@@ -226,7 +227,7 @@ This is a planned consumer contract, not an implemented monitor.
 | FR-276-AC-12 | For a plan with one bounded buffer of capacity 22 and activation capacity 2, each case on a fresh monitor: an `on_event` returning 23 buffer elements and 2 activations commits; one returning 24 elements, and one returning 3 activations, each return `MonitorFailure` code `Invariant` with `ExecutorInvariantCode::StateBound` at that entry's function site, commit nothing, and the next input returns code `Terminated`. An `init` returning 3 activations makes `build` return `MonitorFailure` code `Invariant` with `StateBound` at the `init` function site and no monitor. | Test |
 | FR-276-AC-13 | `Program::try_new` takes only `ProgramParts`. In a dedicated test binary whose failing global allocator refuses the first allocation inside `try_new` (the first Layout type check's worklist), construction returns `ProgramRefusal` code `Membership` with the native reservation cause and no Program; refusing the first RT-owned scratch reservation returns code `Storage`; refusing an allocation inside a literal's membership walk returns `Membership` with the native `EnvironmentFailure`. An expression arena nested 20,000 levels deep constructs on a 512 KiB native stack. For build and a step, each `StepBudget` field set one below its measured use returns the stated `StepResource` with exact `limit`, `spent` and `requested`; a refused allocation returns `StepResource::Storage` with no `limit`; source inspection shows `PathArenaCapacity` surfaced in `path_capacity`. | Test, Inspection |
 
-| FR-276-AC-14 | Actual allocator denials inside Layout, function parameter/result and expression type checks return `Membership` with the native `TypeCheckError::Allocation` request, without allocating to construct the refusal or returning a Program; allocation-enabled retries admit the same valid parts. Semantic unknown-type and operator-ineligible controls retain the existing `TypeMismatch` behavior and validation precedence. Explicit native-error projection controls preserve `Allocation` versus `Capacity` and the original request unit and amount, with no synthetic configured limit; a separately denied RT-owned scratch reservation remains `Storage` and literal membership retains its `EnvironmentFailure`. | Test |
+| FR-276-AC-14 | Actual allocator denials inside Layout, function parameter/result and expression type checks return `Membership` with the original native allocation class and `StorageRequest`, without allocating to construct the refusal or returning a Program; allocation-enabled retries admit the same valid parts. Semantic unknown-type and operator-ineligible controls retain the existing `TypeMismatch` behavior and validation precedence. Explicit native-error projection controls preserve `Allocation` versus `Capacity` and the original request unit and amount, with no synthetic configured limit; a separately denied RT-owned scratch reservation remains `Storage` and literal membership retains its `EnvironmentFailure`. | Test |
 
 ## Dependencies
 
