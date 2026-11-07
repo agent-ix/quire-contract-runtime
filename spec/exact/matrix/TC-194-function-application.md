@@ -92,17 +92,21 @@ The seven identity-dependent cases removed by IR-1162 run in
     `100000`. Compare the ordered log for every run to QSL's std reference;
     assert no depth refusal or stack overflow (FR-273-AC-13).
 
-17. For FR-273-AC-14, validate ordinary and nested declared types through both package
-    admission and standalone-expression checking. Include an unknown composite and an
-    IEEE-bearing set/bag element; compare the exact existing semantic cause, location and
-    first-refusal order. In a dedicated failing-allocator binary, construct fixtures before
-    arming denial and deny an actual shared type-check worklist allocation separately at the
-    package parameter, package result, expression parameter and expression result calls.
-    Assert the typed native cause and its owner request unit and amount, no checked output,
-    and successful completion without an allocation in refusal projection. Disarm denial and
-    retry the same fixture successfully. Separately project owner `Allocation` and `Capacity`
-    errors with distinct request units and amounts; assert their native distinction and no
-    configured ceiling, without counting those projection controls as real allocator denials.
+17. For FR-273-AC-14, RT-local tests validate identity-free ordinary and nested declared
+    types through both package admission and standalone-expression checking. Include nested
+    populations and IEEE-bearing set/bag elements; compare semantic cause, location and
+    declaration order. The linked `quire-integration` consumer PR adds unknown-composite
+    controls using identities obtained from a genuine producer-admitted package, preserving
+    first-refusal order without RT-minted identity fixtures or RT dependencies on QSL or IR.
+    In RT's dedicated failing-allocator binary, construct fixtures before arming denial and
+    deny an actual shared type-check worklist allocation separately at the package parameter,
+    package result, expression parameter and expression result calls. Assert the typed native
+    cause and its owner request unit and amount, no checked output, and successful completion.
+    Inspect the prepared diagnostic capacity and location to verify that refusal projection
+    allocates no storage. Retry the same fixture with allocation enabled. Separately project
+    owner `Allocation` and `Capacity` errors with distinct request units and amounts; assert
+    their native distinction and no configured ceiling, without counting those projection
+    controls as real allocator denials.
 
 ## Expected Results
 

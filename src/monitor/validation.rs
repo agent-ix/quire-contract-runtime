@@ -22,15 +22,15 @@ fn refusal(code: Code, node: Option<&NodeKey>) -> ProgramRefusal {
     }
 }
 
-fn type_refusal(error: TypeCheckError, node: &NodeKey) -> ProgramRefusal {
+fn type_refusal(error: TypeCheckError, node: Option<&NodeKey>) -> ProgramRefusal {
     let membership_failure = match error {
-        TypeCheckError::Refused(_) => return refusal(Code::TypeMismatch, Some(node)),
+        TypeCheckError::Refused(_) => return refusal(Code::TypeMismatch, node),
         TypeCheckError::Allocation(request) => EnvironmentFailure::Allocation(request),
         TypeCheckError::Capacity(request) => EnvironmentFailure::Capacity(request),
     };
     ProgramRefusal {
         membership_failure: Some(membership_failure),
-        ..refusal(Code::Membership, Some(node))
+        ..refusal(Code::Membership, node)
     }
 }
 
@@ -54,7 +54,7 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
             parts
                 .types
                 .try_check_type(value_type)
-                .map_err(|error| type_refusal(error, &function.key))?;
+                .map_err(|error| type_refusal(error, Some(&function.key)))?;
         }
         expression(parts, function.body, &function.key)?;
     }
@@ -62,7 +62,7 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         parts
             .types
             .try_check_type(&value.value_type)
-            .map_err(|error| type_refusal(error, &value.key))?;
+            .map_err(|error| type_refusal(error, Some(&value.key)))?;
         match &value.operation {
             Operation::Literal(literal) => {
                 if !parts
@@ -448,7 +448,7 @@ fn validate_layout(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
         parts
             .types
             .try_check_type(&binding.value_type)
-            .map_err(|error| type_refusal(error, &binding.key))?;
+            .map_err(|error| type_refusal(error, Some(&binding.key)))?;
     }
     for binding in [&layout.state, &layout.inputs, &layout.scope] {
         if binding.value_type != ValueType::Composite(binding.key.clone())
@@ -781,20 +781,13 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     use ix_trace_rs::trace;
-    use quire_exact::{IllTyped, IllTypedCause, PathSegment};
+    use quire_exact::{IllTyped, IllTypedCause};
     use quire_semantic_value::declaration::{StorageRequest, StorageUnit};
 
     #[trace("TC-200", "FR-276-AC-14")]
     #[test]
     fn native_type_projection_preserves_class_unit_and_amount() {
-        let node = NodeKey::new(
-            "rt-native-control",
-            vec![PathSegment::Text("fixture".into())],
-            0,
-        )
-        .unwrap();
         for request in [
             StorageRequest::new(7, StorageUnit::Bytes),
             StorageRequest::new(19, StorageUnit::AdditionalElements),
@@ -809,9 +802,9 @@ mod tests {
                     EnvironmentFailure::Capacity(request),
                 ),
             ] {
-                let refusal = type_refusal(error, &node);
+                let refusal = type_refusal(error, None);
                 assert_eq!(refusal.code, Code::Membership);
-                assert_eq!(refusal.node.as_ref(), Some(&node));
+                assert_eq!(refusal.node, None);
                 assert_eq!(refusal.membership_failure, Some(expected));
             }
         }
@@ -819,9 +812,9 @@ mod tests {
             IllTypedCause::TypeMismatch,
             IllTypedCause::OperatorIneligible,
         ] {
-            let refusal = type_refusal(TypeCheckError::Refused(IllTyped { cause }), &node);
+            let refusal = type_refusal(TypeCheckError::Refused(IllTyped { cause }), None);
             assert_eq!(refusal.code, Code::TypeMismatch);
-            assert_eq!(refusal.node.as_ref(), Some(&node));
+            assert_eq!(refusal.node, None);
             assert_eq!(refusal.membership_failure, None);
         }
     }
