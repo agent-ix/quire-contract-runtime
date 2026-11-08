@@ -5,7 +5,7 @@ use alloc::rc::Rc;
 use quire_exact::{FieldValue, Value};
 
 use super::{
-    executor::{build_failure, state_within_bounds},
+    executor::{build_failure, state_defect},
     input, vm, Event, FunctionId, InputRefusal, Monitor, MonitorFailure, MonitorFailureCode,
     MonitorStep, Reading, Watermark,
 };
@@ -143,11 +143,10 @@ impl Monitor {
                 Some(FieldValue::Present(results @ Value::Collection(_))),
             ) = (tuple.slots().first(), tuple.slots().get(1))
             {
-                let layout = self.program.layout();
-                if !state_within_bounds(&layout.buffers, &layout.activation_capacity, state) {
+                if let Some(cause) = state_defect(self.program.layout(), state) {
                     return Err(self.failed(vm::Failure::Invariant {
                         site: vm::Site::Function(function),
-                        cause: vm::Broken::StateBound,
+                        cause,
                     }));
                 }
                 return Ok((state.clone(), results.clone()));

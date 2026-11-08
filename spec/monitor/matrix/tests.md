@@ -21,7 +21,7 @@ type: TestMatrix
 | FR-276 | FR-276-AC-9 | TC-200 | 🚧 Planned: pending coherent integration evidence |
 | FR-276 | FR-276-AC-10 | TC-200 | 🚧 Planned: pending coherent integration evidence |
 | FR-276 | FR-276-AC-11 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-12 | TC-200 | 🚧 Planned: the bound predicate is implemented and unit-tested in RT (build and step enforcement); the build/step failure and terminated-next-input cells need producer-admitted integration controls |
+| FR-276 | FR-276-AC-12 | TC-200 | 🚧 Planned: the bound predicate is unit-tested in RT; the build and step enforcement cells are integration-owned and pending producer-admitted controls |
 | FR-276 | FR-276-AC-13 | TC-200 | 🚧 Planned: construction scratch bound and budget boundary |
 
 ## Test Case Summary

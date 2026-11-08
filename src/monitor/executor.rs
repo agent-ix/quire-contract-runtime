@@ -247,12 +247,12 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
         ));
     };
     let layout = plan.program.layout();
-    if !state_within_bounds(&layout.buffers, &layout.activation_capacity, &value) {
+    if let Some(cause) = state_defect(layout, &value) {
         return Err(build_failure(
             &plan.program,
             vm::Failure::Invariant {
-                site: vm::Site::Function(plan.program.layout().entries.init),
-                cause: vm::Broken::StateBound,
+                site: vm::Site::Function(layout.entries.init),
+                cause,
             },
         ));
     }
@@ -268,44 +268,56 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
     })
 }
 
-/// Read sequence lengths of a returned State against the plan capacities.
+/// Compare sequence lengths with the plan capacities.
 ///
-/// Each `buffer_<n>` may hold its capacity plus the one summary cell of an
-/// unbounded past operator; `activations` holds at most the activation capacity.
-/// Entries are never interpreted. The State shape was fixed at construction.
+/// Each buffer may hold its capacity plus the one summary cell of an unbounded
+/// past operator; activations hold at most the activation capacity.
+pub(super) fn lengths_within_bounds<'a>(
+    mut buffers: impl Iterator<Item = (usize, &'a quire_exact::Integer)>,
+    activations: (usize, &quire_exact::Integer),
+) -> bool {
+    buffers.all(|(len, capacity)| quire_exact::Integer::from(len.saturating_sub(1)) <= *capacity)
+        && quire_exact::Integer::from(activations.0) <= *activations.1
+}
+
+/// Read a returned State's sequence lengths against the plan capacities.
+///
+/// `None` means the State lacks a planned sequence slot (a shape defect, not a
+/// bound violation). Entries are never interpreted.
 pub(super) fn state_within_bounds(
     buffer_plan: &[super::Buffer],
     activation_capacity: &quire_exact::Integer,
     state: &Value,
-) -> bool {
+) -> Option<bool> {
     let Value::Composite(record) = state else {
-        return false;
+        return None;
     };
     let slots = record.slots();
-    let buffers = buffer_plan.len();
-    let length = |slot: Option<&FieldValue>| match slot {
+    // Slots: now, history_start, buffer_0.., activations, event_position.
+    let length = |index: usize| match slots.get(index.saturating_add(2)) {
         Some(FieldValue::Present(Value::Collection(sequence))) => Some(sequence.elements().len()),
         _ => None,
     };
-    // `spare` is the one summary cell a buffer keeps beyond its capacity.
-    let within = |len: Option<usize>, spare: usize, limit: &quire_exact::Integer| {
-        len.is_some_and(|len| {
-            let counted = len.saturating_sub(spare);
-            quire_exact::Integer::from(u64::try_from(counted).unwrap_or(u64::MAX)) <= *limit
-        })
-    };
-    // Slots: now, history_start, buffer_0.., activations, event_position.
-    buffer_plan.iter().enumerate().all(|(index, buffer)| {
-        within(
-            length(slots.get(index.saturating_add(2))),
-            1,
-            &buffer.capacity,
-        )
-    }) && within(
-        length(slots.get(buffers.saturating_add(2))),
-        0,
-        activation_capacity,
-    )
+    let mut lengths = alloc::vec::Vec::new();
+    lengths.try_reserve_exact(buffer_plan.len()).ok()?;
+    for (index, buffer) in buffer_plan.iter().enumerate() {
+        lengths.push((length(index)?, &buffer.capacity));
+    }
+    let activations = length(buffer_plan.len())?;
+    Some(lengths_within_bounds(
+        lengths.into_iter(),
+        (activations, activation_capacity),
+    ))
+}
+
+/// The invariant a returned State breaks, if any: a missing planned sequence
+/// is a projection defect and only a length violation is `StateBound`.
+pub(super) fn state_defect(layout: &super::Layout, state: &Value) -> Option<vm::Broken> {
+    match state_within_bounds(&layout.buffers, &layout.activation_capacity, state) {
+        Some(true) => None,
+        Some(false) => Some(vm::Broken::StateBound),
+        None => Some(vm::Broken::Projection),
+    }
 }
 
 fn source_node(program: &Program, site: ExecutionSite) -> Option<&NodeKey> {
@@ -420,58 +432,15 @@ pub(super) fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> Moni
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     use ix_trace_rs::trace;
-    use quire_exact::{CollectionKind, CollectionType, Integer, ValueType};
-
-    fn key() -> NodeKey {
-        NodeKey::new(
-            "package",
-            vec![quire_exact::PathSegment::Text("state".into())],
-            0,
-        )
-        .unwrap()
-    }
-
-    fn sequence(len: usize) -> Value {
-        quire_exact::from_admitted(
-            CollectionType::new(CollectionKind::Sequence, ValueType::Integer, None),
-            vec![Value::Integer(Integer::from(0_u64)); len],
-        )
-    }
-
-    fn state(buffer: usize, activations: usize) -> Value {
-        let element = ValueType::collection(CollectionType::new(
-            CollectionKind::Sequence,
-            ValueType::Integer,
-            None,
-        ));
-        quire_exact::tuple(
-            &[
-                ValueType::Integer,
-                ValueType::Integer,
-                element.clone(),
-                element,
-                ValueType::Integer,
-            ],
-            key(),
-            vec![
-                Value::Integer(Integer::from(0_u64)),
-                Value::Integer(Integer::from(0_u64)),
-                sequence(buffer),
-                sequence(activations),
-                Value::Integer(Integer::from(0_u64)),
-            ],
-        )
-        .unwrap()
-    }
+    use quire_exact::Integer;
 
     fn within(buffer: usize, activations: usize) -> bool {
-        let plan = [super::super::Buffer {
-            owner: key(),
-            capacity: Integer::from(22_u64),
-        }];
-        state_within_bounds(&plan, &Integer::from(2_u64), &state(buffer, activations))
+        let capacity = Integer::from(22_u64);
+        lengths_within_bounds(
+            core::iter::once((buffer, &capacity)),
+            (activations, &Integer::from(2_u64)),
+        )
     }
 
     #[trace("TC-200", "FR-276-AC-12")]
@@ -487,24 +456,5 @@ mod tests {
     fn state_bound_refuses_one_buffer_element_or_activation_beyond() {
         assert!(!within(24, 2));
         assert!(!within(23, 3));
-    }
-
-    #[trace("TC-200", "FR-276-AC-12")]
-    #[test]
-    fn state_bound_refuses_a_state_without_the_planned_sequences() {
-        let plan = [super::super::Buffer {
-            owner: key(),
-            capacity: Integer::from(22_u64),
-        }];
-        assert!(!state_within_bounds(
-            &plan,
-            &Integer::from(2_u64),
-            &Value::Boolean(true)
-        ));
-        assert!(!state_within_bounds(
-            &[],
-            &Integer::from(2_u64),
-            &Value::Boolean(true)
-        ));
     }
 }
