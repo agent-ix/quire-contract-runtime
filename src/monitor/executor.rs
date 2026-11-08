@@ -4,7 +4,7 @@
 use alloc::{boxed::Box, rc::Rc};
 use core::fmt;
 
-use quire_exact::{NodeKey, Outcome, Value};
+use quire_exact::{FieldValue, NodeKey, Outcome, Value};
 use quire_semantic_value::supplied_membership::{
     MembershipPathArena, PathArenaCapacity, SuppliedAdmissionError,
 };
@@ -58,6 +58,8 @@ pub enum ExecutorInvariantCode {
     Binding,
     /// A body produced a value outside its admitted signature.
     Membership,
+    /// A returned State holds more buffer or activation elements than the plan admits.
+    StateBound,
 }
 
 /// A terminal executor defect, distinct from resources and temporal outcomes.
@@ -244,6 +246,16 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
             },
         ));
     };
+    let layout = plan.program.layout();
+    if !state_within_bounds(&layout.buffers, &layout.activation_capacity, &value) {
+        return Err(build_failure(
+            &plan.program,
+            vm::Failure::Invariant {
+                site: vm::Site::Function(plan.program.layout().entries.init),
+                cause: vm::Broken::StateBound,
+            },
+        ));
+    }
     let state = value;
     Ok(Monitor {
         program: plan.program,
@@ -254,6 +266,46 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
         progress: None,
         terminated: false,
     })
+}
+
+/// Read sequence lengths of a returned State against the plan capacities.
+///
+/// Each `buffer_<n>` may hold its capacity plus the one summary cell of an
+/// unbounded past operator; `activations` holds at most the activation capacity.
+/// Entries are never interpreted. The State shape was fixed at construction.
+pub(super) fn state_within_bounds(
+    buffer_plan: &[super::Buffer],
+    activation_capacity: &quire_exact::Integer,
+    state: &Value,
+) -> bool {
+    let Value::Composite(record) = state else {
+        return false;
+    };
+    let slots = record.slots();
+    let buffers = buffer_plan.len();
+    let length = |slot: Option<&FieldValue>| match slot {
+        Some(FieldValue::Present(Value::Collection(sequence))) => Some(sequence.elements().len()),
+        _ => None,
+    };
+    // `spare` is the one summary cell a buffer keeps beyond its capacity.
+    let within = |len: Option<usize>, spare: usize, limit: &quire_exact::Integer| {
+        len.is_some_and(|len| {
+            let counted = len.saturating_sub(spare);
+            quire_exact::Integer::from(u64::try_from(counted).unwrap_or(u64::MAX)) <= *limit
+        })
+    };
+    // Slots: now, history_start, buffer_0.., activations, event_position.
+    buffer_plan.iter().enumerate().all(|(index, buffer)| {
+        within(
+            length(slots.get(index.saturating_add(2))),
+            1,
+            &buffer.capacity,
+        )
+    }) && within(
+        length(slots.get(buffers.saturating_add(2))),
+        0,
+        activation_capacity,
+    )
 }
 
 fn source_node(program: &Program, site: ExecutionSite) -> Option<&NodeKey> {
@@ -331,6 +383,7 @@ pub(super) fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> Moni
                 vm::Broken::Condition => ExecutorInvariantCode::Condition,
                 vm::Broken::Binding => ExecutorInvariantCode::Binding,
                 vm::Broken::Projection => ExecutorInvariantCode::Projection,
+                vm::Broken::StateBound => ExecutorInvariantCode::StateBound,
             };
             result.invariant = Some(Box::new(ExecutorInvariantFailure {
                 code,
@@ -362,4 +415,96 @@ pub(super) fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> Moni
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec;
+    use ix_trace_rs::trace;
+    use quire_exact::{CollectionKind, CollectionType, Integer, ValueType};
+
+    fn key() -> NodeKey {
+        NodeKey::new(
+            "package",
+            vec![quire_exact::PathSegment::Text("state".into())],
+            0,
+        )
+        .unwrap()
+    }
+
+    fn sequence(len: usize) -> Value {
+        quire_exact::from_admitted(
+            CollectionType::new(CollectionKind::Sequence, ValueType::Integer, None),
+            vec![Value::Integer(Integer::from(0_u64)); len],
+        )
+    }
+
+    fn state(buffer: usize, activations: usize) -> Value {
+        let element = ValueType::collection(CollectionType::new(
+            CollectionKind::Sequence,
+            ValueType::Integer,
+            None,
+        ));
+        quire_exact::tuple(
+            &[
+                ValueType::Integer,
+                ValueType::Integer,
+                element.clone(),
+                element,
+                ValueType::Integer,
+            ],
+            key(),
+            vec![
+                Value::Integer(Integer::from(0_u64)),
+                Value::Integer(Integer::from(0_u64)),
+                sequence(buffer),
+                sequence(activations),
+                Value::Integer(Integer::from(0_u64)),
+            ],
+        )
+        .unwrap()
+    }
+
+    fn within(buffer: usize, activations: usize) -> bool {
+        let plan = [super::super::Buffer {
+            owner: key(),
+            capacity: Integer::from(22_u64),
+        }];
+        state_within_bounds(&plan, &Integer::from(2_u64), &state(buffer, activations))
+    }
+
+    #[trace("TC-200", "FR-276-AC-12")]
+    #[test]
+    fn state_bound_admits_capacity_plus_summary_cell_and_activation_capacity() {
+        assert!(within(0, 0));
+        assert!(within(22, 2));
+        assert!(within(23, 2));
+    }
+
+    #[trace("TC-200", "FR-276-AC-12")]
+    #[test]
+    fn state_bound_refuses_one_buffer_element_or_activation_beyond() {
+        assert!(!within(24, 2));
+        assert!(!within(23, 3));
+    }
+
+    #[trace("TC-200", "FR-276-AC-12")]
+    #[test]
+    fn state_bound_refuses_a_state_without_the_planned_sequences() {
+        let plan = [super::super::Buffer {
+            owner: key(),
+            capacity: Integer::from(22_u64),
+        }];
+        assert!(!state_within_bounds(
+            &plan,
+            &Integer::from(2_u64),
+            &Value::Boolean(true)
+        ));
+        assert!(!state_within_bounds(
+            &[],
+            &Integer::from(2_u64),
+            &Value::Boolean(true)
+        ));
+    }
 }

@@ -5,8 +5,9 @@ use alloc::rc::Rc;
 use quire_exact::{FieldValue, Value};
 
 use super::{
-    executor::build_failure, input, vm, Event, FunctionId, InputRefusal, Monitor, MonitorFailure,
-    MonitorFailureCode, MonitorStep, Reading, Watermark,
+    executor::{build_failure, state_within_bounds},
+    input, vm, Event, FunctionId, InputRefusal, Monitor, MonitorFailure, MonitorFailureCode,
+    MonitorStep, Reading, Watermark,
 };
 
 impl Monitor {
@@ -142,6 +143,13 @@ impl Monitor {
                 Some(FieldValue::Present(results @ Value::Collection(_))),
             ) = (tuple.slots().first(), tuple.slots().get(1))
             {
+                let layout = self.program.layout();
+                if !state_within_bounds(&layout.buffers, &layout.activation_capacity, state) {
+                    return Err(self.failed(vm::Failure::Invariant {
+                        site: vm::Site::Function(function),
+                        cause: vm::Broken::StateBound,
+                    }));
+                }
                 return Ok((state.clone(), results.clone()));
             }
         }

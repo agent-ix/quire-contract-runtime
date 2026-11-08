@@ -38,6 +38,7 @@ pub(super) enum Broken {
     Condition,
     Binding,
     Projection,
+    StateBound,
 }
 
 pub(super) enum Failure {
