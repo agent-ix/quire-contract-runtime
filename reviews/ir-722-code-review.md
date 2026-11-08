@@ -38,3 +38,17 @@ assigned, and `failed` sets `terminated` for the `Invariant` code. In `build` th
 before the `Monitor` is constructed. Suggested fix for FND-001: test an identity-free core,
 for example a function over capacities and slot lengths, so no `NodeKey`, `Buffer.owner` or
 tuple key is needed.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-004 | medium | The fix adds a heap `Vec` in `state_within_bounds`, and `try_reserve_exact(...).ok()?` maps an allocator refusal to `None`, which `state_defect` reports as `Broken::Projection`. A refused allocation therefore terminates the monitor as an executor invariant failure. FR-276 says allocation or resource failure is not an invariant defect. The allocation is also not charged to `StepBudget` scratch. It is unneeded: iterate `buffer_plan` and check each `length(index)?` in place, with no allocation | src/monitor/executor.rs:300-304, src/monitor/executor.rs:315-321 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | f6d3cff tests only `lengths_within_bounds` over (len, capacity) pairs with no `NodeKey`; tc_033 and both state_bound tests pass on f6d3cff |
+| FND-002 | fixed | `state_within_bounds` returns `Option<bool>`; `state_defect` maps `None` to `Broken::Projection` and only `Some(false)` to `StateBound`; the shape test is removed |
+| FND-003 | fixed | `quire_exact::Integer::from(len.saturating_sub(1))` and `Integer::from(activations.0)` replace the u64 conversion |

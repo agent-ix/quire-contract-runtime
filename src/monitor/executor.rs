@@ -298,16 +298,18 @@ pub(super) fn state_within_bounds(
         Some(FieldValue::Present(Value::Collection(sequence))) => Some(sequence.elements().len()),
         _ => None,
     };
-    let mut lengths = alloc::vec::Vec::new();
-    lengths.try_reserve_exact(buffer_plan.len()).ok()?;
+    let mut buffers_hold = true;
     for (index, buffer) in buffer_plan.iter().enumerate() {
-        lengths.push((length(index)?, &buffer.capacity));
+        buffers_hold &= lengths_within_bounds(
+            core::iter::once((length(index)?, &buffer.capacity)),
+            (0, activation_capacity),
+        );
     }
     let activations = length(buffer_plan.len())?;
-    Some(lengths_within_bounds(
-        lengths.into_iter(),
-        (activations, activation_capacity),
-    ))
+    Some(
+        buffers_hold
+            && lengths_within_bounds(core::iter::empty(), (activations, activation_capacity)),
+    )
 }
 
 /// The invariant a returned State breaks, if any: a missing planned sequence
