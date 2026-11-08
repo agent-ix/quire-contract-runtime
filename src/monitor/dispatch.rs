@@ -5,8 +5,9 @@ use alloc::rc::Rc;
 use quire_exact::{FieldValue, Value};
 
 use super::{
-    executor::build_failure, input, vm, Event, FunctionId, InputRefusal, Monitor, MonitorFailure,
-    MonitorFailureCode, MonitorStep, Reading, Watermark,
+    executor::{build_failure, state_defect},
+    input, vm, Event, FunctionId, InputRefusal, Monitor, MonitorFailure, MonitorFailureCode,
+    MonitorStep, Reading, Watermark,
 };
 
 impl Monitor {
@@ -142,6 +143,12 @@ impl Monitor {
                 Some(FieldValue::Present(results @ Value::Collection(_))),
             ) = (tuple.slots().first(), tuple.slots().get(1))
             {
+                if let Some(cause) = state_defect(self.program.layout(), state) {
+                    return Err(self.failed(vm::Failure::Invariant {
+                        site: vm::Site::Function(function),
+                        cause,
+                    }));
+                }
                 return Ok((state.clone(), results.clone()));
             }
         }

@@ -4,7 +4,7 @@
 use alloc::{boxed::Box, rc::Rc};
 use core::fmt;
 
-use quire_exact::{NodeKey, Outcome, Value};
+use quire_exact::{FieldValue, NodeKey, Outcome, Value};
 use quire_semantic_value::supplied_membership::{
     MembershipPathArena, PathArenaCapacity, SuppliedAdmissionError,
 };
@@ -58,6 +58,8 @@ pub enum ExecutorInvariantCode {
     Binding,
     /// A body produced a value outside its admitted signature.
     Membership,
+    /// A returned State holds more buffer or activation elements than the plan admits.
+    StateBound,
 }
 
 /// A terminal executor defect, distinct from resources and temporal outcomes.
@@ -244,6 +246,16 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
             },
         ));
     };
+    let layout = plan.program.layout();
+    if let Some(cause) = state_defect(layout, &value) {
+        return Err(build_failure(
+            &plan.program,
+            vm::Failure::Invariant {
+                site: vm::Site::Function(layout.entries.init),
+                cause,
+            },
+        ));
+    }
     let state = value;
     Ok(Monitor {
         program: plan.program,
@@ -254,6 +266,60 @@ pub fn build(plan: BuildPlan) -> Result<Monitor, MonitorFailure> {
         progress: None,
         terminated: false,
     })
+}
+
+/// Compare sequence lengths with the plan capacities.
+///
+/// Each buffer may hold its capacity plus the one summary cell of an unbounded
+/// past operator; activations hold at most the activation capacity.
+pub(super) fn lengths_within_bounds<'a>(
+    mut buffers: impl Iterator<Item = (usize, &'a quire_exact::Integer)>,
+    activations: (usize, &quire_exact::Integer),
+) -> bool {
+    buffers.all(|(len, capacity)| quire_exact::Integer::from(len.saturating_sub(1)) <= *capacity)
+        && quire_exact::Integer::from(activations.0) <= *activations.1
+}
+
+/// Read a returned State's sequence lengths against the plan capacities.
+///
+/// `None` means the State lacks a planned sequence slot (a shape defect, not a
+/// bound violation). Entries are never interpreted.
+pub(super) fn state_within_bounds(
+    buffer_plan: &[super::Buffer],
+    activation_capacity: &quire_exact::Integer,
+    state: &Value,
+) -> Option<bool> {
+    let Value::Composite(record) = state else {
+        return None;
+    };
+    let slots = record.slots();
+    // Slots: now, history_start, buffer_0.., activations, event_position.
+    let length = |index: usize| match slots.get(index.saturating_add(2)) {
+        Some(FieldValue::Present(Value::Collection(sequence))) => Some(sequence.elements().len()),
+        _ => None,
+    };
+    let mut buffers_hold = true;
+    for (index, buffer) in buffer_plan.iter().enumerate() {
+        buffers_hold &= lengths_within_bounds(
+            core::iter::once((length(index)?, &buffer.capacity)),
+            (0, activation_capacity),
+        );
+    }
+    let activations = length(buffer_plan.len())?;
+    Some(
+        buffers_hold
+            && lengths_within_bounds(core::iter::empty(), (activations, activation_capacity)),
+    )
+}
+
+/// The invariant a returned State breaks, if any: a missing planned sequence
+/// is a projection defect and only a length violation is `StateBound`.
+pub(super) fn state_defect(layout: &super::Layout, state: &Value) -> Option<vm::Broken> {
+    match state_within_bounds(&layout.buffers, &layout.activation_capacity, state) {
+        Some(true) => None,
+        Some(false) => Some(vm::Broken::StateBound),
+        None => Some(vm::Broken::Projection),
+    }
 }
 
 fn source_node(program: &Program, site: ExecutionSite) -> Option<&NodeKey> {
@@ -331,6 +397,7 @@ pub(super) fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> Moni
                 vm::Broken::Condition => ExecutorInvariantCode::Condition,
                 vm::Broken::Binding => ExecutorInvariantCode::Binding,
                 vm::Broken::Projection => ExecutorInvariantCode::Projection,
+                vm::Broken::StateBound => ExecutorInvariantCode::StateBound,
             };
             result.invariant = Some(Box::new(ExecutorInvariantFailure {
                 code,
@@ -362,4 +429,34 @@ pub(super) fn build_failure(program: &Rc<Program>, failure: vm::Failure) -> Moni
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ix_trace_rs::trace;
+    use quire_exact::Integer;
+
+    fn within(buffer: usize, activations: usize) -> bool {
+        let capacity = Integer::from(22_u64);
+        lengths_within_bounds(
+            core::iter::once((buffer, &capacity)),
+            (activations, &Integer::from(2_u64)),
+        )
+    }
+
+    #[trace("TC-200", "FR-276-AC-12")]
+    #[test]
+    fn state_bound_admits_capacity_plus_summary_cell_and_activation_capacity() {
+        assert!(within(0, 0));
+        assert!(within(22, 2));
+        assert!(within(23, 2));
+    }
+
+    #[trace("TC-200", "FR-276-AC-12")]
+    #[test]
+    fn state_bound_refuses_one_buffer_element_or_activation_beyond() {
+        assert!(!within(24, 2));
+        assert!(!within(23, 3));
+    }
 }
