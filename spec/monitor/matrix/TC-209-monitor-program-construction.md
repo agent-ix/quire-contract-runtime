@@ -29,8 +29,9 @@ interface-002-AC-1 are backed in quire-integration `tests/monitor_program.rs` by
 preparation parts are consumed and one `Rc` owner drops, it asserts the root key,
 package lock, occurrence, the original clock, admitted-order and progress
 selection bytes against literals written in the test (not values read back from the
-returned Layout), the four entry associations, literal bodies, shared nominal
-declarations and absent invalid arena lookups. The complete TC-209 case stays
+returned Layout), the four entry associations, literal bodies, one nominal
+declaration lookup (`types().composite(..).is_some()`) and absent invalid arena
+lookups. The complete TC-209 case stays
 Planned because interface-002-AC-5/AC-6 remain Planned. No native rerun was needed
 for this evidence update.
 
@@ -38,10 +39,10 @@ PR #41 is now published on integration main with the evaluated source unchanged.
 The unchanged main-only guard accepted the clean owner main checkout, and the
 completed strict reference scan reports 161 unbacked rows and zero contradicted
 statuses (exit 1). This is a completed scan, not a passing global coverage gate.
-It does not fill the missing retention assertions or accept every IT-018 intention:
-the source-body provenance finding in IT-018-SC-15 also remains open. TC-200 and
-all FR-276 temporal criteria remain Planned independently. No source tag,
-diagnostic literal arena or landing sequence supplies that missing evidence.
+It does not accept every IT-018 intention: the source-body provenance finding in
+IT-018-SC-15 also remains open. TC-200 is judged independently, row by row, in
+`tests.md`; its Partial and Planned FR-276 rows remain so. No source tag,
+diagnostic literal arena or landing sequence supplies evidence for them.
 
 ## Test Procedure
 

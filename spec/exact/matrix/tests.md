@@ -60,7 +60,7 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | FR-007 | FR-007-AC-24 | TC-201; TC-096 (`quire-integration`) | 🚧 `admitted_affine_units_refuse_arithmetic_without_charging` checks typed affine refusal and an empty charge log. |
 | FR-007 | FR-007-AC-25 | TC-201; TC-096 (`quire-integration`) | 🚧 `admitted_conversion_retention_denial_has_exact_incomplete_fields` and `admitted_conversion_denials_preserve_charge_point_prefix_and_amounts` check denied conversion fields and prefixes. |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
-| FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented: the `compile_fail` doctest on `IeeeDisposition` in `src/scalar/ieee.rs` fails to compile a conversion into `Outcome`, and `cargo test --doc` runs it; Quire has no doctest binder, so `quire coverage` lists the row as unbacked although the check is delivered |
+| FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented: the `compile_fail` doctest on `IeeeDisposition` in `src/scalar/ieee.rs` fails to compile a conversion into `Outcome`, and `cargo test --doc --features exact` runs it (plain `cargo test --doc` does not collect it); Quire has no doctest binder, so `quire coverage` lists the row as unbacked although the check is delivered |
 | FR-010 | FR-010-AC-1 | TC-031 | ✅ retained RT residue charge-point driver; owner-backed by quire-exact FR-358-AC-1 for generic injection |
 | FR-010 | FR-010-AC-4 | TC-031 | 🚧 owner-backed by quire-exact FR-358-AC-1 for named admitted occurrence; RT-local kernel test removed |
 | FR-010 | FR-010-AC-5 | TC-031 | 🚧 owner-backed by quire-exact FR-358-AC-1/2 for one-shot retry; RT-local kernel test removed |
