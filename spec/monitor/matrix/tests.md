@@ -51,33 +51,67 @@ named passing controls backs these complete construction or ordinary-executor cr
 - interface-011-AC-1 and AC-2;
 - interface-012-AC-2 through AC-4.
 
-These are 29 component criteria. TC-209's procedures 2 through 4 are backed,
-but procedure 1 lacks independent retained-selection-byte assertions, so the
-complete TC-209 case remains Planned. The observed 86/0 harness result does not
+These are 29 component criteria, and the five criteria listed below under
+"Backed by tests" are also backed. TC-209's procedures 1 through 4 are backed,
+but interface-002-AC-5 and AC-6 remain Planned, so the complete TC-209 case
+remains Planned. The observed 86/0 harness result does not
 establish every stated test intention or accept the whole IT-018/TC-098 contract.
 
-**Planned: incomplete whole-criterion evidence (eight criteria):**
+**Backed by tests in `quire-integration` `tests/monitor_program.rs`:** each criterion
+below is exercised by the named test, tagged `TC-098` or `IT-018-SC-14`, in the
+owner repository. A reviewer read each test against its criterion text.
 
-- interface-002-AC-1: root, entries, literal contents, package lock and occurrence
-  retention are checked, but original clock, admitted-order and progress selection
-  bytes have no independent expected-value oracle. Dispatch expectations derived
-  from the returned Layout do not supply that missing retention observation.
+- interface-002-AC-1: `retained_program_outlives_preparation_and_keeps_four_entry_keys`
+  checks root, entries, literal bodies, package lock, occurrence and the original
+  clock, admitted-order and progress selection bytes against literals written in
+  the test, not values derived from the returned Layout.
+- interface-004-AC-1: `lexical_missing_duplicate_sparse_and_foreign_declarations_refuse`
+  covers the four refusals; the retained Let/Local source key and body path are
+  asserted by `lexical_value_is_evaluated_once_within_its_scoped_body`.
+- interface-006-AC-3: `tuple_projection_retained_addresses_respect_scratch_budget`
+  (scratch charge, retained source key and body path) and
+  `tuple_deep_projections_use_explicit_continuations_without_subtree_copies`
+  (2000-deep projection on a 512 KiB stack; the temporary owner count returns to 1);
+  `tuple_projected_state_outlives_the_temporary_owner_in_declared_position_order`
+  checks the original owner counts (2 at the monitor State).
+- interface-011-AC-3: `equality_and_union_scratch_denials_leave_no_partial_initial_state`,
+  `checked_equality_and_union_retention_keep_native_operating_shortages` and
+  `union_payloads_stop_in_declaration_order_before_a_later_native_denial`.
+- interface-012-AC-1: `dispatch_checks_each_independent_context_component_before_executing`
+  refuses each of package, clause, subject, occurrence, clock, counter, unit, width,
+  profile and order with state and reading baseline unchanged, and a lower valid
+  watermark afterwards shows a rejected progress was not committed;
+  `dispatch_refuses_foreign_associations_ranges_and_regressing_progress_atomically`
+  covers invalid values.
+
+**Planned: incomplete whole-criterion evidence (three criteria):**
+
 - interface-003-AC-3: invalid membership and native Work-limit channels are observed;
   native shared-conformance storage/path-capacity failure is not. An outer stack
   reservation failure during budget replacement is a different channel.
-- interface-004-AC-1: lexical refusal and functional controls pass, but no positive
-  retained Let/Local source-key/body-path assertion establishes the location clause.
-
-- interface-006-AC-3 and interface-007-AC-3: scratch, continuation, original-value
-  ownership and declaration-scan controls pass, but no projection-specific assertion
-  checks the retained original source key/body path.
-- interface-010-AC-3: visit, element formation, work/stack/scratch and retry controls
-  pass; a post-formation native collection-retention denial remains unexercised.
-- interface-011-AC-3: payload-order and native equality/union shortage controls pass;
-  operation-specific equality/union scratch-denial evidence remains absent.
-- interface-012-AC-1: context components, invalid values, State and reading-baseline
-  checks pass; preservation of the progress frontier after foreign/invalid rejection
-  needs a distinguishing subsequent-watermark control.
+- interface-007-AC-3: scratch charging and the retained source key and body path are
+  asserted by `record_member_addresses_consume_scratch_before_returning_state`, and
+  declaration scans are charged by
+  `record_dynamic_declaration_uses_its_own_order_and_charges_every_inspected_field`.
+  Original-value ownership is asserted by
+  `record_members_retain_declared_identity_and_original_value_owners` (owner count 1,
+  State count 2). Record and tuple projection share one `Frame::TupleElement`
+  continuation in `src/monitor/vm.rs`, which the deep tuple test reaches, but no deep
+  record projection test exists, so the explicit-continuation clause is unproven for
+  records.
+- interface-010-AC-3: native visit, element and collection-result-retain stops are
+  asserted by `sequence_visit_and_formation_stops_retain_native_causes_without_a_partial_value`
+  and `collection_result_retention_denials_keep_the_native_charge_and_no_partial_state`.
+  Explicit scratch stops are asserted by `sequence_fold_temporary_addresses_are_bounded_by_explicit_scratch`
+  and `dispatch_stopped_fold_restores_slots_before_same_machine_retry`.
+  `sequence_kind_and_authored_bound_are_not_reinterpreted_or_replaced_by_scratch_limits`
+  asserts refusals, not a stop.
+  `exhausting_work_stack_or_scratch_stops_map_and_filter_as_it_stops_a_fold`
+  (interface-010-AC-5) stops fold, map and filter under Work 40, Stack 4 and
+  ScratchElements 6. It asserts only the failure code and the resource kind, not the
+  exact limit and spent evidence, and its full-budget run uses freshly built
+  programs, not a later invocation on the same machine. The row stays Planned for
+  that reason.
 
 **Partial: complete temporal acceptance:** TC-200 is partially covered by
 quire-integration `tests/monitor_tick_producer.rs` (IR-722 and its follow-up, Refs IR-722)
@@ -92,8 +126,14 @@ re-read package with the original selection); AC-8 a producer-plan executor-inva
 AC-13/AC-14 allocator denials with producer-admitted `ProgramParts` (a driver entry returning
 `ProgramParts`) and `PathArenaCapacity` in `path_capacity`.
 IT-018-SC-15's source-body provenance finding remains open: a manually constructed
-event-position arena is not execution of the admitted source bodies. Passing the
-count sequence alone does not grant FR-276-AC-11 qualification.
+event-position arena is not execution of the admitted source bodies. FR-276-AC-11 is
+nevertheless backed: `step_9_event_position_counts_ingested_events_through_the_producer_plan`
+runs the stated reading sequence through the producer plan, and
+`event_position_counts_ingested_events_and_not_watermarks_polls_or_gap_faults` in
+`tests/monitor_program.rs` asserts the State has exactly four slots with
+`event_position` last. `closed_state_refuses_missing_optional_mistyped_extra_and_misordered_fields`
+shows `Program::try_new` refuses an extra State field, so no extra counter field can
+exist.
 
 ## Map and Filter Evidence
 
