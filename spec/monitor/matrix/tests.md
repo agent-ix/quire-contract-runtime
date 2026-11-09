@@ -10,25 +10,26 @@ type: TestMatrix
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 | --- | --- | --- | --- |
-| FR-276 | FR-276-AC-1 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
-| FR-276 | FR-276-AC-2 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
-| FR-276 | FR-276-AC-3 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
-| FR-276 | FR-276-AC-4 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
-| FR-276 | FR-276-AC-5 | TC-200 | 🚧 Planned: not covered; pending coherent integration evidence |
-| FR-276 | FR-276-AC-6 | TC-200 | 🚧 Planned: partial: build from the admitted plan is exercised; retention of subject/atoms/topology and rebinding are not covered; pending coherent integration evidence |
-| FR-276 | FR-276-AC-7 | TC-200 | 🚧 Planned: partial: component-injection cases are covered by quire-driver tests/monitor_lowering.rs, monitor_refusal.rs and monitor_closure.rs, not by the integration test; Unsupported is not covered; pending coherent integration evidence |
-| FR-276 | FR-276-AC-8 | TC-200 | 🚧 Planned: partial: false activation and executor-invariant failure are not covered; pending coherent integration evidence |
-| FR-276 | FR-276-AC-9 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-10 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-11 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-12 | TC-200 | 🚧 Planned: the bound predicate is unit-tested in RT; the build and step enforcement cells are integration-owned and pending producer-admitted controls |
-| FR-276 | FR-276-AC-13 | TC-200 | 🚧 Planned: construction scratch bound and budget boundary |
+| FR-276 | FR-276-AC-1 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-2 | TC-200 | 🚧 Partial: capacity 22 and the 23rd-event Incomplete are covered in quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle; the sibling-live-obligation case is not covered |
+| FR-276 | FR-276-AC-3 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-4 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-5 | TC-200 | 🚧 Planned: not covered; the producer gives both buffers of an and-ed clause the same capacity, so no live sibling survives an overflow to observe |
+| FR-276 | FR-276-AC-6 | TC-200 | 🚧 Partial: independence of two monitors, no verdict from build and one shared plan are covered in tests/monitor_tick_producer.rs; subject/atom-body/topology retention and rebinding are not covered |
+| FR-276 | FR-276-AC-7 | TC-200 | 🚧 Partial: foreign source selection and starved build are covered in tests/monitor_tick_producer.rs; target-premise refusals in quire-driver monitor_refusal.rs and monitor_closure.rs; Unsupported in quire-driver monitor_lowering.rs; altered atom/transition/initializer/interval/buffer/activation bindings and equal subformula ids under two subjects are not covered |
+| FR-276 | FR-276-AC-8 | TC-200 | 🚧 Partial: covered in tests/monitor_tick_producer.rs except false activation and a producer-plan executor-invariant failure, which are not covered |
+| FR-276 | FR-276-AC-9 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-10 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-11 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-12 | TC-200 | ✅ Implemented: quire-integration tests/monitor_program.rs state_bound_violations_fail_at_the_entry_site_commit_nothing_and_terminate over a controlled arena (the real producer never emits an over-bound entry) |
+| FR-276 | FR-276-AC-13 | TC-200 | ✅ Implemented: quire-integration tests/monitor_program.rs (first_layout_type_allocation_returns_native_membership_then_retries, later_declared_type_walk_denials_keep_native_membership_and_source, rt_validation_scratch_denial_stays_storage_after_five_layout_walks, native_type_projection_keeps_allocation_and_capacity_requests_distinct, deeply_shared_inline_arena_validates_on_a_small_native_stack) |
+| FR-276 | FR-276-AC-14 | TC-200 | ✅ Implemented: quire-integration tests/monitor_program.rs executor_operating_stops_and_budget_replacement_are_typed_and_atomic |
 
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 | --- | --- | --- | --- | --- | --- |
-| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13 | 🚧 Partial: steps 1-3 implemented in quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722) and passing against the QSL TickMonitorReference oracle, plus tests/monitor_program.rs; steps 4-6 partial; remaining criteria Planned |
+| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13, FR-276-AC-14 | 🚧 Partial: steps 1, 2, 3, 7-12 covered (AC-2 sibling-live case not covered); steps 4-6 partial; FR-276-AC-5 not covered; see Evidence Status |
 
 ## Component Execution Evidence
 
@@ -78,15 +79,17 @@ establish every stated test intention or accept the whole IT-018/TC-098 contract
   checks pass; preservation of the progress frontier after foreign/invalid rejection
   needs a distinguishing subsequent-watermark control.
 
-**Partial: complete temporal acceptance:** FR-276-AC-1 through AC-4 and TC-200
-steps 1-3 are implemented in quire-integration `tests/monitor_tick_producer.rs`
-(PR agent-ix/quire-integration#96, Refs IR-722) and `tests/monitor_program.rs`, and
-pass against the QSL `TickMonitorReference` oracle. Steps 4-6 are partial.
+**Partial: complete temporal acceptance:** TC-200 is partially covered by
+quire-integration `tests/monitor_tick_producer.rs` (PR agent-ix/quire-integration#96,
+Refs IR-722; head 755a41d0) and `tests/monitor_program.rs`, against the QSL
+`TickMonitorReference` oracle. Steps 1, 2 (capacity 22; the sibling-live case of
+FR-276-AC-2 is not covered), 3, 7, 8, 9 and 10 are covered; steps 4, 5 and 6 are
+partial; steps 11 and 12 are covered by existing `tests/monitor_program.rs` tests.
 Not covered: FR-276-AC-5; AC-6 retention of subject/atoms/topology and rebinding;
-AC-7 component-injection cases (the driver tests quire-driver
-`tests/monitor_lowering.rs`, `monitor_refusal.rs` and `monitor_closure.rs` cover
-them) and Unsupported; AC-8 false activation and executor-invariant failure.
-AC-9 through AC-13 remain Planned.
+AC-7 altered bindings and equal subformula ids (target-premise refusals and
+Unsupported are covered by quire-driver `monitor_refusal.rs`, `monitor_closure.rs`
+and `monitor_lowering.rs`); AC-8 false activation and executor-invariant failure
+of a producer plan.
 IT-018-SC-15's source-body provenance finding remains open: a manually constructed
 event-position arena is not execution of the admitted source bodies. Passing the
 count sequence alone does not grant FR-276-AC-11 qualification.

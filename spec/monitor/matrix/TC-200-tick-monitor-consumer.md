@@ -36,7 +36,7 @@ No complete temporal criterion is upgraded by the retained run, publication or r
    obligation's complete typed result with the independent expectations below; do not compare
    one runtime output with another runtime output as the oracle.
 2. Obtain the QSL plan for `once[0 ms, 10 ms] holds(p)` at 2 events/ms. Assert its supplied
-   capacity is 23 (16-bit 1 ms counter; FR-251 rule ceil(rate*R)+1, R=b+(1+2u)), feed 23 in-window events, then offer a 24th while another independent
+   capacity is 22 (1 MHz counter), feed 22 in-window events, then offer a 23rd while another independent
    obligation remains live. Check the event is neither silently dropped nor silently accepted
    beyond the fixed capacity, and check both obligation identities and states.
 3. Under a 16-bit counter with maximum reading gap 100, offer readings 65530 then 4, then in a
@@ -79,7 +79,7 @@ No complete temporal criterion is upgraded by the retained run, publication or r
    watermark and a clock poll: both preserve 1. The gap-faulting reading calls on_gap
    and preserves 1; the next admitted event changes it to 2. Inspect the final required
    Integer field after activations; no host-width mirror supplies the observation.
-10. With the plan of Step 2 (capacity 23) and activation capacity 2, build a fresh monitor for
+10. With the plan of Step 2 (capacity 22) and activation capacity 2, build a fresh monitor for
     each case: an `on_event` returning 23 buffer elements and 2 activations; one returning 24
     elements; one returning 3 activations. After each failing case offer one further input. Build
     separately with an `init` returning 3 activations.
@@ -117,9 +117,9 @@ PR must land before the combined IR-1400 adoption is considered complete.
   (`(2999, 3001)`), definite false at 3001 (`(3000, 3002)`), and indeterminate at 2998 with 2 µs
   uncertainty (`(2993, 3003)`). Pending remains distinct from indeterminate
   when a future observation could still resolve the window.
-- Step 2 uses the producer's 23-slot capacity and settles only affected obligations
-  `Incomplete(LimitReached{limit, value, setting})`, naming limit `event_buffer` and setting `monitor.max_event_rate` (capacity 23 is the amount)
-  on the 24th event. It never drops an event or changes an unrelated sibling's result.
+- Step 2 uses the producer's 22-slot capacity and settles only affected obligations
+  `Incomplete(LimitReached{limit, value, setting})`, naming limit `event_buffer` and setting `monitor.max_event_rate` (capacity 22 is the amount)
+  on the 23rd event. It never drops an event or changes an unrelated sibling's result.
 - Step 3 computes the wrap difference 10 in RT and passes `on_event` that delta (the entry never
   sees a raw wrapping reading), reports
   `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` for the backward-looking pair,
