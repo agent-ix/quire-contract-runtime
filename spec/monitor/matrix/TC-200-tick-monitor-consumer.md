@@ -79,9 +79,10 @@ No complete temporal criterion is upgraded by the retained run, publication or r
    watermark and a clock poll: both preserve 1. The gap-faulting reading calls on_gap
    and preserves 1; the next admitted event changes it to 2. Inspect the final required
    Integer field after activations; no host-width mirror supplies the observation.
-10. With the plan of Step 2 (capacity 22) and activation capacity 2, build a fresh monitor for
-    each case: an `on_event` returning 23 buffer elements and 2 activations; one returning 24
-    elements; one returning 3 activations. After each failing case offer one further input. Build
+10. With the plan of Step 2 (capacity 22 by the formula `ceil(rate x R) + 1` of FR-276-AC-12, so a
+    buffer of at most 22 + 1 = 23 elements with its summary cell) and activation capacity 2, build a
+    fresh monitor for each case: an `on_event` returning 23 buffer elements and 2 activations; one
+    returning 24 elements; one returning 3 activations. After each failing case offer one further input. Build
     separately with an `init` returning 3 activations.
 11. Construct a Program from complete parts. In a dedicated test binary with a failing global
     allocator, refuse the first allocation inside `try_new`, then the first RT-owned scratch
@@ -119,7 +120,7 @@ PR must land before the combined IR-1400 adoption is considered complete.
   when a future observation could still resolve the window.
 - Step 2 uses the producer's 22-slot capacity and settles only affected obligations
   `Incomplete(LimitReached{limit, value, setting})`, naming limit `event_buffer` and setting `monitor.max_event_rate` (capacity 22 is the amount)
-  on the 23rd event. It never drops an event or changes an unrelated sibling's result.
+  on the 23rd event, and an instance beyond the activation capacity is not started and names limit `activation`, setting `monitor.max_activations`. It never drops an event or changes an unrelated sibling's result.
 - Step 3 computes the wrap difference 10 in RT and passes `on_event` that delta (the entry never
   sees a raw wrapping reading), reports
   `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` for the backward-looking pair,
