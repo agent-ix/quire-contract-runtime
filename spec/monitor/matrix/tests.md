@@ -85,11 +85,12 @@ IT-018-SC-15's source-body provenance finding remains open: a manually construct
 event-position arena is not execution of the admitted source bodies. Passing the
 count sequence alone does not grant FR-276-AC-11 qualification.
 
-## Runtime-Local Map and Filter Evidence
+## Map and Filter Evidence (Pending Owner Controls)
 
-interface-010-AC-4 and AC-5 (`SequenceMap`, `SequenceFilter`) are exercised by
-this repository's own `tests/monitor_sequence_map_filter.rs`, built on a
-controlled executable arena. They add no temporal, TC-200 or IT-018 qualification.
+interface-010-AC-4 and AC-5 (`SequenceMap`, `SequenceFilter`) need controls built on
+admitted source identities. RT's TC-033 guard (FR-012-AC-8) forbids this repository
+from minting NodeKeys, so those controls belong in the `quire-integration`
+`tests/monitor_program.rs` owner file. Both criteria remain Planned until they land.
 
 ## Published Reference Qualification
 

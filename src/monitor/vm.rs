@@ -3,6 +3,7 @@
 
 mod collections;
 mod folding;
+mod mapping;
 mod unions;
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -135,6 +136,12 @@ enum Frame {
     },
     FoldNext(folding::FoldState),
     FoldBody(folding::FoldState),
+    MapStart {
+        expression: ExpressionId,
+        scope: Scope,
+    },
+    MapNext(mapping::MapState),
+    MapBody(mapping::MapState),
     Unary {
         expression: ExpressionId,
     },
@@ -231,7 +238,8 @@ impl Checks {
                 | Operation::UnionIs { .. }
                 | Operation::UnionPayload { .. }
                 | Operation::SequenceSize { .. }
-                | Operation::SequenceFlatten { .. } => {}
+                | Operation::SequenceFlatten { .. }
+                | Operation::SequenceFilter { .. } => {}
                 Operation::Record { .. }
                 | Operation::Tuple { .. }
                 | Operation::Union { .. }
@@ -266,6 +274,22 @@ impl Checks {
                         program
                             .types()
                             .same_type(value_type, &expression.value_type),
+                    );
+                }
+                Operation::SequenceMap { body, .. } => {
+                    let value = program
+                        .expression(*body)
+                        .ok_or_else(|| broken(site, Broken::Address))?;
+                    let ValueType::Collection(result) = &expression.value_type else {
+                        return Err(broken(site, Broken::Address));
+                    };
+                    edges
+                        .try_reserve_exact(1)
+                        .map_err(|_| StepResourceStop::storage(1))?;
+                    edges.push(
+                        program
+                            .types()
+                            .same_type(&value.value_type, result.element()),
                     );
                 }
                 Operation::SequenceFold { initial, body, .. } => {
@@ -486,6 +510,8 @@ impl Machine {
                     | Operation::RecordField { .. }
                     | Operation::UnionPayload { .. }
                     | Operation::SequenceFold { .. }
+                    | Operation::SequenceMap { .. }
+                    | Operation::SequenceFilter { .. }
             )
         }) {
             projections
@@ -506,6 +532,8 @@ impl Machine {
                     | Operation::Sequence { .. }
                     | Operation::SequenceSize { .. }
                     | Operation::SequenceFlatten { .. }
+                    | Operation::SequenceMap { .. }
+                    | Operation::SequenceFilter { .. }
             )
         }) {
             computed
@@ -690,6 +718,11 @@ impl Machine {
                 }
                 Frame::FoldNext(state) => self.fold_next(program, supplied, state, resources)?,
                 Frame::FoldBody(state) => self.fold_body(program, supplied, state, resources)?,
+                Frame::MapStart { expression, scope } => {
+                    self.map_start(program, supplied, expression, scope, resources)?
+                }
+                Frame::MapNext(state) => self.map_next(program, state, resources)?,
+                Frame::MapBody(state) => self.map_body(program, supplied, state, resources)?,
                 Frame::Equality { expression } => {
                     self.equality(program, supplied, expression, resources)?
                 }
@@ -839,6 +872,17 @@ impl Machine {
                     },
                     resources,
                 )?;
+                self.frame(
+                    Frame::Evaluate {
+                        expression: *sequence,
+                        scope,
+                    },
+                    resources,
+                )
+            }
+            Operation::SequenceMap { sequence, .. }
+            | Operation::SequenceFilter { sequence, .. } => {
+                self.frame(Frame::MapStart { expression, scope }, resources)?;
                 self.frame(
                     Frame::Evaluate {
                         expression: *sequence,

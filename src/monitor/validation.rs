@@ -179,6 +179,46 @@ pub(super) fn validate(parts: &ProgramParts) -> Result<(), ProgramRefusal> {
                 expression(parts, *initial, &value.key)?;
                 expression(parts, *body, &value.key)?;
             }
+            Operation::SequenceMap {
+                sequence,
+                item,
+                body,
+            }
+            | Operation::SequenceFilter {
+                sequence,
+                item,
+                predicate: body,
+            } => {
+                let source = expression(parts, *sequence, &value.key)?;
+                let ValueType::Collection(source_type) = &source.value_type else {
+                    return Err(refusal(Code::InvalidBinding, Some(&value.key)));
+                };
+                if source_type.kind() != CollectionKind::Sequence
+                    || parts.functions.get(item.function.0).is_none()
+                {
+                    return Err(refusal(Code::InvalidBinding, Some(&value.key)));
+                }
+                let scoped = expression(parts, *body, &value.key)?;
+                let ValueType::Collection(result) = &value.value_type else {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                };
+                let expected = if matches!(value.operation, Operation::SequenceMap { .. }) {
+                    &scoped.value_type
+                } else {
+                    if !parts
+                        .types
+                        .same_type(&scoped.value_type, &ValueType::Boolean)
+                    {
+                        return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                    }
+                    source_type.element()
+                };
+                if result.kind() != CollectionKind::Sequence
+                    || !parts.types.same_type(result.element(), expected)
+                {
+                    return Err(refusal(Code::TypeMismatch, Some(&value.key)));
+                }
+            }
             Operation::Equality { left, right, .. } => {
                 expression(parts, *left, &value.key)?;
                 expression(parts, *right, &value.key)?;
@@ -646,6 +686,18 @@ fn operands(
             visit(*initial)?;
             visit(*sequence)?;
         }
+        Operation::SequenceMap { sequence, body, .. } => {
+            visit(*body)?;
+            visit(*sequence)?;
+        }
+        Operation::SequenceFilter {
+            sequence,
+            predicate,
+            ..
+        } => {
+            visit(*predicate)?;
+            visit(*sequence)?;
+        }
         Operation::Record { fields } => {
             for (_, child) in fields.iter().rev() {
                 visit(*child)?;
@@ -732,6 +784,10 @@ fn validate_expression_graph(parts: &ProgramParts) -> Result<Vec<BindingOwner>, 
                         accumulator, item, ..
                     } => BindingOwner::one(accumulator.function, true)
                         .merge(BindingOwner::one(item.function, true)),
+                    Operation::SequenceMap { item, .. }
+                    | Operation::SequenceFilter { item, .. } => {
+                        BindingOwner::one(item.function, true)
+                    }
                     Operation::Local(binding) | Operation::Let { binding, .. } => {
                         BindingOwner::one(binding.function, true)
                     }
