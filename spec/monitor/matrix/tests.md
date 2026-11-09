@@ -13,7 +13,7 @@ type: TestMatrix
 | FR-276 | FR-276-AC-1 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
 | FR-276 | FR-276-AC-2 | TC-200 | 🚧 Partial: capacity 22 and the 23rd-event Incomplete are covered in quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle; the sibling-live-obligation case is not covered |
 | FR-276 | FR-276-AC-3 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
-| FR-276 | FR-276-AC-4 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
+| FR-276 | FR-276-AC-4 | TC-200 | 🚧 Partial: counter identity/unit/width/profile/admitted-order changes are covered in quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722); the equal-timestamp-without-admitted-order clause is NOT confirmed covered (open question: arrival order of two equal-tick events settles different obligations, and the test only pins the runtime to the oracle; see the FINDING comment in that file) |
 | FR-276 | FR-276-AC-5 | TC-200 | 🚧 Planned: not covered; the producer gives both buffers of an and-ed clause the same capacity, so no live sibling survives an overflow to observe |
 | FR-276 | FR-276-AC-6 | TC-200 | 🚧 Partial: independence of two monitors, no verdict from build and one shared plan are covered in tests/monitor_tick_producer.rs; subject/atom-body/topology retention and rebinding are not covered |
 | FR-276 | FR-276-AC-7 | TC-200 | 🚧 Partial: foreign source selection and starved build are covered in tests/monitor_tick_producer.rs; target-premise refusals in quire-driver monitor_refusal.rs and monitor_closure.rs; Unsupported in quire-driver monitor_lowering.rs; altered atom/transition/initializer/interval/buffer/activation bindings and equal subformula ids under two subjects are not covered |
@@ -22,14 +22,14 @@ type: TestMatrix
 | FR-276 | FR-276-AC-10 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
 | FR-276 | FR-276-AC-11 | TC-200 | ✅ Implemented: quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722), against the QSL TickMonitorReference oracle |
 | FR-276 | FR-276-AC-12 | TC-200 | ✅ Implemented: quire-integration tests/monitor_program.rs state_bound_violations_fail_at_the_entry_site_commit_nothing_and_terminate over a controlled arena (the real producer never emits an over-bound entry) |
-| FR-276 | FR-276-AC-13 | TC-200 | ✅ Implemented: quire-integration tests/monitor_program.rs (first_layout_type_allocation_returns_native_membership_then_retries, later_declared_type_walk_denials_keep_native_membership_and_source, rt_validation_scratch_denial_stays_storage_after_five_layout_walks, native_type_projection_keeps_allocation_and_capacity_requests_distinct, deeply_shared_inline_arena_validates_on_a_small_native_stack) |
-| FR-276 | FR-276-AC-14 | TC-200 | ✅ Implemented: quire-integration tests/monitor_program.rs executor_operating_stops_and_budget_replacement_are_typed_and_atomic |
+| FR-276 | FR-276-AC-13 | TC-200 | 🚧 Partial: covered only by existing quire-integration tests/monitor_program.rs tests tagged TC-098 / IT-018-SC-16 / interface-002-AC-3 (not tagged FR-276-AC-13/14), which exercise nearby denial and stop paths: first_layout_type_allocation_returns_native_membership_then_retries, later_declared_type_walk_denials_keep_native_membership_and_source, rt_validation_scratch_denial_stays_storage_after_five_layout_walks, native_type_projection_keeps_allocation_and_capacity_requests_distinct, deeply_shared_inline_arena_validates_on_a_small_native_stack; not asserted: one-below StepBudget per field with the failure's limit/spent/requested; PathArenaCapacity mapped to path_capacity; separate function parameter, result and expression type-validation denials |
+| FR-276 | FR-276-AC-14 | TC-200 | 🚧 Partial: covered only by existing quire-integration tests/monitor_program.rs tests tagged TC-098 / IT-018-SC-16 / interface-002-AC-3 (not tagged FR-276-AC-13/14), which exercise nearby denial and stop paths: executor_operating_stops_and_budget_replacement_are_typed_and_atomic; not asserted: one-below StepBudget per field with the failure's limit/spent/requested; PathArenaCapacity mapped to path_capacity; separate function parameter, result and expression type-validation denials |
 
 ## Test Case Summary
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 | --- | --- | --- | --- | --- | --- |
-| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13, FR-276-AC-14 | 🚧 Partial: steps 1, 2, 3, 7-12 covered (AC-2 sibling-live case not covered); steps 4-6 partial; FR-276-AC-5 not covered; see Evidence Status |
+| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13, FR-276-AC-14 | 🚧 Partial: steps 1, 2, 3, 7-10 covered (AC-2 sibling-live case not covered); steps 4-6 and 11-12 partial; AC-4 equal-timestamp clause unconfirmed; FR-276-AC-5 not covered; see Evidence Status |
 
 ## Component Execution Evidence
 
@@ -81,10 +81,15 @@ establish every stated test intention or accept the whole IT-018/TC-098 contract
 
 **Partial: complete temporal acceptance:** TC-200 is partially covered by
 quire-integration `tests/monitor_tick_producer.rs` (PR agent-ix/quire-integration#96,
-Refs IR-722; head 755a41d0) and `tests/monitor_program.rs`, against the QSL
+Refs IR-722; head 63cfc90d) and `tests/monitor_program.rs`, against the QSL
 `TickMonitorReference` oracle. Steps 1, 2 (capacity 22; the sibling-live case of
 FR-276-AC-2 is not covered), 3, 7, 8, 9 and 10 are covered; steps 4, 5 and 6 are
-partial; steps 11 and 12 are covered by existing `tests/monitor_program.rs` tests.
+partial; steps 11 and 12 (AC-13, AC-14) are Partial, covered only by existing
+`tests/monitor_program.rs` tests tagged TC-098 / IT-018-SC-16 / interface-002-AC-3,
+and the one-below-`StepBudget` per-field limit/spent/requested, `PathArenaCapacity` to
+`path_capacity` and separate parameter/result/expression type-validation denials are
+not asserted. FR-276-AC-4 is Partial: the equal-timestamp-without-admitted-order
+clause is not confirmed covered (open question).
 Not covered: FR-276-AC-5; AC-6 retention of subject/atoms/topology and rebinding;
 AC-7 altered bindings and equal subformula ids (target-premise refusals and
 Unsupported are covered by quire-driver `monitor_refusal.rs`, `monitor_closure.rs`
