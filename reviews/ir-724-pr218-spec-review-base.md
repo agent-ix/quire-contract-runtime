@@ -97,3 +97,25 @@ scope:
   role: examined
   excerpt: Build observes event_position 0 from init. With width 16 and maximum gap 100, the baseline event reading 65530 calls on_event(0) and leaves event_position 1; a watermark and poll leave it 1; reading 65500 faults through on_gap and leaves it 1; admitted reading 65510 calls on_event(10) and leaves it 2. The unwrapped exact Integer count is independent of tick time, and State keeps it after activations with no extra field.
 ```
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-007 | medium | The fix round states no test exercises an explicit StepResource::Work or Stack stop over a sequence operation, but exhausting_work_stack_or_scratch_stops_map_and_filter_as_it_stops_a_fold does so for fold, map and filter | spec/monitor/matrix/tests.md:108-109 |
+
+FND-007. quire-integration tests/monitor_program.rs:7918 (tagged interface-010-AC-5) runs fold, map and filter under work 40, stack_frames 4 and scratch_elements 6, asserts MonitorFailureCode::Resource with StepResource::Work, Stack and ScratchElements (:7949-7953), and completes the same programs under a full budget (:7956-7959). The stated reason for Planned is therefore false. Original FND-004 led to this by limiting its search to tests tagged interface-010-AC-3. Scenario: the M5 gate records a missing test and schedules work that already exists. Planned can still be truthful on a different reason: that test asserts only the failure code and resource kind, not exact limit and spent evidence, and retries with freshly built programs. Fix: cite the test and either back the Work and Stack clauses or state that remaining gap.
+
+## Dispositions
+
+Round 1, head 4727c06d76572c4f8cc1c71f33970f349a414ab9.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | interface-007-AC-3 is Planned and names the absent deep record projection test; no RecordField occurs in any depth loop in monitor_program.rs |
+| FND-002 | fixed | Evidence text cites the producer test, the four-slot assertion and the State refusal; closed_state_refuses_missing_optional_mistyped_extra_and_misordered_fields (:1232) refuses state-extra-field; the row at line 23 is unchanged and the citation is in the Partial section |
+| FND-003 | fixed | Row cites tuple_projected_state_outlives_the_temporary_owner_in_declared_position_order |
+| FND-004 | fixed | Row names both scratch tests and addresses the work and stack clauses; the regression in that wording is FND-007 |
+| FND-005 | fixed | Row states cargo test --doc --features exact |
+| FND-006 | fixed | TC-209 now says one nominal declaration lookup |
+| FND-007 | still-open | Found this round; the false negative claim at tests.md:108-109 needs correcting |

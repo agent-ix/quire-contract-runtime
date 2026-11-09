@@ -57,3 +57,12 @@ scope:
   role: examined
   excerpt: Consumer of QSL's admitted executable `TimedMonitorPlan`; bounded counter steps and typed results, without temporal-semantic ownership
 ```
+
+## Dispositions
+
+Round 1, head 4727c06d76572c4f8cc1c71f33970f349a414ab9.
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | tests.md now gives interface-002-AC-5 and AC-6 as the reason TC-209 stays Planned, and the backed count is five |
+| FND-002 | fixed | TC-209 drops the retention clause and defers FR-276 status to tests.md row by row |

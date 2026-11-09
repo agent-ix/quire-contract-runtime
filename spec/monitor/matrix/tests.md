@@ -105,8 +105,13 @@ owner repository. A reviewer read each test against its criterion text.
   Explicit scratch stops are asserted by `sequence_fold_temporary_addresses_are_bounded_by_explicit_scratch`
   and `dispatch_stopped_fold_restores_slots_before_same_machine_retry`.
   `sequence_kind_and_authored_bound_are_not_reinterpreted_or_replaced_by_scratch_limits`
-  asserts refusals, not a stop. No test exercises an explicit `StepResource::Work` or
-  `StepResource::Stack` stop over a sequence operation, so those clauses are unproven.
+  asserts refusals, not a stop.
+  `exhausting_work_stack_or_scratch_stops_map_and_filter_as_it_stops_a_fold`
+  (interface-010-AC-5) stops fold, map and filter under Work 40, Stack 4 and
+  ScratchElements 6. It asserts only the failure code and the resource kind, not the
+  exact limit and spent evidence, and its full-budget run uses freshly built
+  programs, not a later invocation on the same machine. The row stays Planned for
+  that reason.
 
 **Partial: complete temporal acceptance:** TC-200 is partially covered by
 quire-integration `tests/monitor_tick_producer.rs` (IR-722 and its follow-up, Refs IR-722)
