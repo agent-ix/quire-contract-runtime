@@ -55,7 +55,11 @@ impl Machine {
         )
     }
 
-    fn value_storage(&self, count: usize, resources: &Resources) -> Result<Vec<Value>, Failure> {
+    pub(super) fn value_storage(
+        &self,
+        count: usize,
+        resources: &Resources,
+    ) -> Result<Vec<Value>, Failure> {
         let live = self
             .values
             .len()

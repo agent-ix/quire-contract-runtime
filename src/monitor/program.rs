@@ -177,6 +177,24 @@ pub enum Operation {
         /// Scoped step expression.
         body: ExpressionId,
     },
+    /// Scoped order-preserving map over sequence occurrences.
+    SequenceMap {
+        /// Sequence receiver, evaluated first and once.
+        sequence: ExpressionId,
+        /// Distinct current-function element slot.
+        item: LocalId,
+        /// Scoped expression whose result becomes the mapped element.
+        body: ExpressionId,
+    },
+    /// Scoped order-preserving filter over sequence occurrences.
+    SequenceFilter {
+        /// Sequence receiver, evaluated first and once.
+        sequence: ExpressionId,
+        /// Distinct current-function element slot.
+        item: LocalId,
+        /// Scoped Boolean expression selecting retained occurrences.
+        predicate: ExpressionId,
+    },
     /// Count sequence occurrences as an exact shared Integer.
     SequenceSize {
         /// Sequence-valued operand.

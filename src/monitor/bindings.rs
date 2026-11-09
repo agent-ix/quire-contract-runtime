@@ -39,6 +39,10 @@ fn declarations(node: &Operation, id: ExpressionId) -> [Option<(LocalId, TypeSou
             Some((*accumulator, TypeSource::Expression(id))),
             Some((*item, TypeSource::SequenceElement(*sequence))),
         ],
+        Operation::SequenceMap { item, sequence, .. }
+        | Operation::SequenceFilter { item, sequence, .. } => {
+            [Some((*item, TypeSource::SequenceElement(*sequence))), None]
+        }
         _ => [None, None],
     }
 }
