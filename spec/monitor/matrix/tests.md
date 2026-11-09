@@ -10,14 +10,14 @@ type: TestMatrix
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 | --- | --- | --- | --- |
-| FR-276 | FR-276-AC-1 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-2 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-3 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-4 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-5 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-6 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-7 | TC-200 | 🚧 Planned: pending coherent integration evidence |
-| FR-276 | FR-276-AC-8 | TC-200 | 🚧 Planned: pending coherent integration evidence |
+| FR-276 | FR-276-AC-1 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
+| FR-276 | FR-276-AC-2 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
+| FR-276 | FR-276-AC-3 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
+| FR-276 | FR-276-AC-4 | TC-200 | ✅ Implemented (quire-integration tests/monitor_tick_producer.rs, PR agent-ix/quire-integration#96, Refs IR-722; passing against the QSL TickMonitorReference oracle) |
+| FR-276 | FR-276-AC-5 | TC-200 | 🚧 Planned: not covered; pending coherent integration evidence |
+| FR-276 | FR-276-AC-6 | TC-200 | 🚧 Planned: partial: build from the admitted plan is exercised; retention of subject/atoms/topology and rebinding are not covered; pending coherent integration evidence |
+| FR-276 | FR-276-AC-7 | TC-200 | 🚧 Planned: partial: component-injection cases are covered by quire-driver tests/monitor_lowering.rs, monitor_refusal.rs and monitor_closure.rs, not by the integration test; Unsupported is not covered; pending coherent integration evidence |
+| FR-276 | FR-276-AC-8 | TC-200 | 🚧 Planned: partial: false activation and executor-invariant failure are not covered; pending coherent integration evidence |
 | FR-276 | FR-276-AC-9 | TC-200 | 🚧 Planned: pending coherent integration evidence |
 | FR-276 | FR-276-AC-10 | TC-200 | 🚧 Planned: pending coherent integration evidence |
 | FR-276 | FR-276-AC-11 | TC-200 | 🚧 Planned: pending coherent integration evidence |
@@ -28,7 +28,7 @@ type: TestMatrix
 
 | Test ID | Title | Type | Priority | Traces To | Status |
 | --- | --- | --- | --- | --- | --- |
-| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13 | 🚧 Planned |
+| TC-200 | Tick monitor boundaries, limits and faults | Integration | P0 | FR-276-AC-1, FR-276-AC-2, FR-276-AC-3, FR-276-AC-4, FR-276-AC-5, FR-276-AC-6, FR-276-AC-7, FR-276-AC-8, FR-276-AC-9, FR-276-AC-10, FR-276-AC-11, FR-276-AC-12, FR-276-AC-13 | 🚧 Partial: steps 1-3 implemented in quire-integration tests/monitor_tick_producer.rs (PR agent-ix/quire-integration#96, Refs IR-722) and passing against the QSL TickMonitorReference oracle, plus tests/monitor_program.rs; steps 4-6 partial; remaining criteria Planned |
 
 ## Component Execution Evidence
 
@@ -78,19 +78,24 @@ establish every stated test intention or accept the whole IT-018/TC-098 contract
   checks pass; preservation of the progress frontier after foreign/invalid rejection
   needs a distinguishing subsequent-watermark control.
 
-**Planned: complete temporal acceptance:** FR-276-AC-1 through AC-11 and TC-200
-remain Planned. These require real QSL-emitted plan admission/lowering and the
-independent tick-reference comparison, beyond controlled executable arenas.
+**Partial: complete temporal acceptance:** FR-276-AC-1 through AC-4 and TC-200
+steps 1-3 are implemented in quire-integration `tests/monitor_tick_producer.rs`
+(PR agent-ix/quire-integration#96, Refs IR-722) and `tests/monitor_program.rs`, and
+pass against the QSL `TickMonitorReference` oracle. Steps 4-6 are partial.
+Not covered: FR-276-AC-5; AC-6 retention of subject/atoms/topology and rebinding;
+AC-7 component-injection cases (the driver tests quire-driver
+`tests/monitor_lowering.rs`, `monitor_refusal.rs` and `monitor_closure.rs` cover
+them) and Unsupported; AC-8 false activation and executor-invariant failure.
+AC-9 through AC-13 remain Planned.
 IT-018-SC-15's source-body provenance finding remains open: a manually constructed
 event-position arena is not execution of the admitted source bodies. Passing the
 count sequence alone does not grant FR-276-AC-11 qualification.
 
-## Map and Filter Evidence (Pending Owner Controls)
+## Map and Filter Evidence
 
-interface-010-AC-4 and AC-5 (`SequenceMap`, `SequenceFilter`) need controls built on
-admitted source identities. RT's TC-033 guard (FR-012-AC-8) forbids this repository
-from minting NodeKeys, so those controls belong in the `quire-integration`
-`tests/monitor_program.rs` owner file. Both criteria remain Planned until they land.
+interface-010-AC-4 and AC-5 (`SequenceMap`, `SequenceFilter`; TC-098, IT-018-SC-12)
+coverage has moved to the `quire-integration` `tests/monitor_program.rs` owner file,
+because RT's TC-033 guard (FR-012-AC-8) forbids this repository from minting NodeKeys.
 
 ## Published Reference Qualification
 
