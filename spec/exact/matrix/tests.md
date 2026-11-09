@@ -60,11 +60,11 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | FR-007 | FR-007-AC-24 | TC-201; TC-096 (`quire-integration`) | 🚧 `admitted_affine_units_refuse_arithmetic_without_charging` checks typed affine refusal and an empty charge log. |
 | FR-007 | FR-007-AC-25 | TC-201; TC-096 (`quire-integration`) | 🚧 `admitted_conversion_retention_denial_has_exact_incomplete_fields` and `admitted_conversion_denials_preserve_charge_point_prefix_and_amounts` check denied conversion fields and prefixes. |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4 | TC-030 | ✅ implemented |
-| FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented (compile_fail doctest on `IeeeDisposition`, `src/scalar/ieee.rs`) |
+| FR-009 | FR-009-AC-5 | TC-195 | ✅ implemented: the `compile_fail` doctest on `IeeeDisposition` in `src/scalar/ieee.rs` fails to compile a conversion into `Outcome`, and `cargo test --doc` runs it; Quire has no doctest binder, so `quire coverage` lists the row as unbacked although the check is delivered |
 | FR-010 | FR-010-AC-1 | TC-031 | ✅ retained RT residue charge-point driver; owner-backed by quire-exact FR-358-AC-1 for generic injection |
 | FR-010 | FR-010-AC-4 | TC-031 | 🚧 owner-backed by quire-exact FR-358-AC-1 for named admitted occurrence; RT-local kernel test removed |
 | FR-010 | FR-010-AC-5 | TC-031 | 🚧 owner-backed by quire-exact FR-358-AC-1/2 for one-shot retry; RT-local kernel test removed |
-| FR-010 | FR-010-AC-6 | TC-031 | ✅ owner-backed by quire-exact FR-358-AC-3 Inspection of nonzero occurrence type |
+| FR-010 | FR-010-AC-6 | TC-031 | ✅ backed by a test in quire-exact: `injected_denial_occurrence_requires_nonzero` (`src/accounting.rs`, tagged FR-358-AC-3) asserts `NonZeroU64::new(0)` is `None` and that `InjectedDenial::occurrence` has type `NonZeroU64`; RT has no local test for this row |
 | FR-010 | FR-010-AC-2 | owner TC-906; TC-031 RT driver only | 🚧 owner quire-exact FR-358-AC-12 has direct public-meter record tests; RT TC-031 does not repeat the two-limit case, and RT's lockfile still resolves the older kernel revision and needs a separate refresh |
 | FR-010 | FR-010-AC-3 | owner TC-906; TC-031 RT driver only | 🚧 owner quire-exact FR-358-AC-13 has direct public-meter ordinary-limit precedence tests; RT TC-031 does not test competing refusals, and RT's lockfile still resolves the older kernel revision and needs a separate refresh |
 | FR-011 | FR-011-AC-1 | TC-032 | 🚧 owner-backed by quire-exact FR-362-AC-11 for scalar stop prefixes; RT-local kernel test removed |
@@ -123,8 +123,8 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | TC-204 | Runtime checked-invariant producer controls | Unit | P0 | FR-278-AC-1, FR-278-AC-2 | 🚧 bind RT function producer evidence and shared-owner collection/composite controls; inspect QSV FR-122 owner controls for equality/quantity |
 | TC-205 | Inspect QSV semantic-node vocabulary ownership | Integration | P0 | FR-275-AC-22 | ✅ `tests/ir882_qsv_vocabulary.rs` inspects all runtime source for local semantic-node definitions and aliases and rejects representative copies |
 
-FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 uses owner
-FR-358-AC-3 Inspection of the nonzero occurrence type. TC-198 and
+FR-009-AC-5 and FR-273-AC-4 use `compile_fail` doctests; FR-010-AC-6 is backed by the
+quire-exact test `injected_denial_occurrence_requires_nonzero` (FR-358-AC-3). TC-198 and
 TC-199 use the gate targets named under Evidence Locations. The retired TC-016 four-code
 Rust tests and tags are absent. FR-006-AC-6 is an ownership inspection of the direct
 typed kernel outcome boundary; quire-exact FR-096-AC-8 owns the kernel code/cause census.

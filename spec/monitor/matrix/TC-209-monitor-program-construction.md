@@ -24,10 +24,14 @@ back the original procedures 2 through 4 and interface-002-AC-2 through AC-4. Th
 cross-function source-location controls in procedure 3 and interface-002-AC-5/AC-6
 remain Planned until the RT representation change and a direct RT construction
 test land. Procedure 1 and
-interface-002-AC-1 remain partial: the retained-program test independently checks
-package lock and occurrence, but not the original clock, admitted-order and
-progress selection bytes. Expected context values derived from returned Layout
-are not an independent oracle for those original bytes. No native rerun was needed
+interface-002-AC-1 are backed in quire-integration `tests/monitor_program.rs` by
+`retained_program_outlives_preparation_and_keeps_four_entry_keys`: after the
+preparation parts are consumed and one `Rc` owner drops, it asserts the root key,
+package lock, occurrence, the original clock, admitted-order and progress
+selection bytes against literals written in the test (not values read back from the
+returned Layout), the four entry associations, literal bodies, shared nominal
+declarations and absent invalid arena lookups. The complete TC-209 case stays
+Planned because interface-002-AC-5/AC-6 remain Planned. No native rerun was needed
 for this evidence update.
 
 PR #41 is now published on integration main with the evaluated source unchanged.

@@ -51,33 +51,48 @@ named passing controls backs these complete construction or ordinary-executor cr
 - interface-011-AC-1 and AC-2;
 - interface-012-AC-2 through AC-4.
 
-These are 29 component criteria. TC-209's procedures 2 through 4 are backed,
+These are 29 component criteria, and the seven criteria listed below under
+"Backed by tests" are also backed. TC-209's procedures 2 through 4 are backed,
 but procedure 1 lacks independent retained-selection-byte assertions, so the
 complete TC-209 case remains Planned. The observed 86/0 harness result does not
 establish every stated test intention or accept the whole IT-018/TC-098 contract.
 
-**Planned: incomplete whole-criterion evidence (eight criteria):**
+**Backed by tests in `quire-integration` `tests/monitor_program.rs`:** each criterion
+below is exercised by the named test, tagged `TC-098` or `IT-018-SC-14`, in the
+owner repository. A reviewer read each test against its criterion text.
 
-- interface-002-AC-1: root, entries, literal contents, package lock and occurrence
-  retention are checked, but original clock, admitted-order and progress selection
-  bytes have no independent expected-value oracle. Dispatch expectations derived
-  from the returned Layout do not supply that missing retention observation.
+- interface-002-AC-1: `retained_program_outlives_preparation_and_keeps_four_entry_keys`
+  checks root, entries, literal bodies, package lock, occurrence and the original
+  clock, admitted-order and progress selection bytes against literals written in
+  the test, not values derived from the returned Layout.
+- interface-004-AC-1: `lexical_missing_duplicate_sparse_and_foreign_declarations_refuse`
+  covers the four refusals; the retained Let/Local source key and body path are
+  asserted by `lexical_value_is_evaluated_once_within_its_scoped_body`.
+- interface-006-AC-3: `tuple_projection_retained_addresses_respect_scratch_budget`
+  (scratch charge, retained source key and body path) and
+  `tuple_deep_projections_use_explicit_continuations_without_subtree_copies`.
+- interface-007-AC-3: `record_member_addresses_consume_scratch_before_returning_state`
+  (scratch charge, retained source key and body path) and
+  `record_dynamic_declaration_uses_its_own_order_and_charges_every_inspected_field`.
+- interface-010-AC-3: `sequence_visit_and_formation_stops_retain_native_causes_without_a_partial_value`
+  and `collection_result_retention_denials_keep_the_native_charge_and_no_partial_state`
+  (native `CollectionResultRetain` denial under both retention counters, later
+  invocation clean).
+- interface-011-AC-3: `equality_and_union_scratch_denials_leave_no_partial_initial_state`,
+  `checked_equality_and_union_retention_keep_native_operating_shortages` and
+  `union_payloads_stop_in_declaration_order_before_a_later_native_denial`.
+- interface-012-AC-1: `dispatch_checks_each_independent_context_component_before_executing`
+  refuses each of package, clause, subject, occurrence, clock, counter, unit, width,
+  profile and order with state and reading baseline unchanged, and a lower valid
+  watermark afterwards shows a rejected progress was not committed;
+  `dispatch_refuses_foreign_associations_ranges_and_regressing_progress_atomically`
+  covers invalid values.
+
+**Planned: incomplete whole-criterion evidence (one criterion):**
+
 - interface-003-AC-3: invalid membership and native Work-limit channels are observed;
   native shared-conformance storage/path-capacity failure is not. An outer stack
   reservation failure during budget replacement is a different channel.
-- interface-004-AC-1: lexical refusal and functional controls pass, but no positive
-  retained Let/Local source-key/body-path assertion establishes the location clause.
-
-- interface-006-AC-3 and interface-007-AC-3: scratch, continuation, original-value
-  ownership and declaration-scan controls pass, but no projection-specific assertion
-  checks the retained original source key/body path.
-- interface-010-AC-3: visit, element formation, work/stack/scratch and retry controls
-  pass; a post-formation native collection-retention denial remains unexercised.
-- interface-011-AC-3: payload-order and native equality/union shortage controls pass;
-  operation-specific equality/union scratch-denial evidence remains absent.
-- interface-012-AC-1: context components, invalid values, State and reading-baseline
-  checks pass; preservation of the progress frontier after foreign/invalid rejection
-  needs a distinguishing subsequent-watermark control.
 
 **Partial: complete temporal acceptance:** TC-200 is partially covered by
 quire-integration `tests/monitor_tick_producer.rs` (IR-722 and its follow-up, Refs IR-722)
