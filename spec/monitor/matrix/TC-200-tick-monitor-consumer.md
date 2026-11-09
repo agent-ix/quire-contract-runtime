@@ -120,7 +120,7 @@ PR must land before the combined IR-1400 adoption is considered complete.
   when a future observation could still resolve the window.
 - Step 2 uses the producer's 22-slot capacity and settles only affected obligations
   `Incomplete(LimitReached{limit, value, setting})`, naming limit `event_buffer` and setting `monitor.max_event_rate` (capacity 22 is the amount)
-  on the 23rd event. It never drops an event or changes an unrelated sibling's result.
+  on the 23rd event, and an instance beyond the activation capacity is not started and names limit `activation`, setting `monitor.max_activations`. It never drops an event or changes an unrelated sibling's result.
 - Step 3 computes the wrap difference 10 in RT and passes `on_event` that delta (the entry never
   sees a raw wrapping reading), reports
   `Failed(ReadingGapExceeded{gap: 65506, max_reading_gap: 100})` for the backward-looking pair,
