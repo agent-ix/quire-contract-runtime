@@ -93,7 +93,7 @@ not semantic IDs. Inline terms can share one source node key and differ by their
 body-child paths. No runtime code mints a NodeKey or substitutes a digest for a key.
 
 An expression's source location is its exact admitted `(key, body_path)` pair.
-Construction derives its binding owner from `Argument`, `Local`, `Let` and fold
+Construction derives its binding owner from `Argument`, `Local`, `Let` and fold, map and filter
 bindings and from their transitive operands. When that derivation identifies exactly
 one function without mixed ownership, its `FunctionId` qualifies the expression's
 execution context for duplicate-location validation only. Copies of one admitted

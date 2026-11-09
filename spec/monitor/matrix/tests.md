@@ -85,6 +85,12 @@ IT-018-SC-15's source-body provenance finding remains open: a manually construct
 event-position arena is not execution of the admitted source bodies. Passing the
 count sequence alone does not grant FR-276-AC-11 qualification.
 
+## Runtime-Local Map and Filter Evidence
+
+interface-010-AC-4 and AC-5 (`SequenceMap`, `SequenceFilter`) are exercised by
+this repository's own `tests/monitor_sequence_map_filter.rs`, built on a
+controlled executable arena. They add no temporal, TC-200 or IT-018 qualification.
+
 ## Published Reference Qualification
 
 The evaluated PR #41 controls are now published on integration main. The owner
