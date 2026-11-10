@@ -31,7 +31,7 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | FR-008 | FR-008-AC-13 | TC-024 | 🚧 RT duplicate ValueType removed; kernel deep metadata owner evidence requires mapping |
 | FR-008 | FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-096 (`quire-integration`) | 🚧 TC-096 `admitted_model_roots_set_the_reference_universe_and_distinct_owner_result` covers the foreign-reference owner/result control; remaining kernel and consumer evidence is open. |
 | FR-007 | FR-007-AC-8 | TC-034 | 🚧 RT-local tests cover all six literal spellings and their consumed `RoundingMode` mapping, the consumed enum's `Exact` default, all six modes on positive and negative ties, and explicit `Exact` refusal; compiler package omission selecting `Exact` remains unbacked here |
-| FR-007 | FR-007-AC-13 | TC-035 | 🚧 RT's duplicate `CompoundUnit` is removed; `tests/exact_unit_owner.rs` pins the consumed QSV Debug rendering, while the complete nine-type obligation needs owner evidence mapping |
+| FR-007 | FR-007-AC-13 | TC-035 | ✅ `tests/exact_unit_owner.rs` pins the consumed QSV `CompoundUnit` Debug rendering; other boxed exact-kernel Debug obligations are specified by quire-exact. |
 | FR-007 | FR-007-AC-15 | TC-034 | ✅ RT-local test checks all three quotient-sign vectors, rounded coefficients and exact loss |
 | FR-007 | FR-007-AC-18 | TC-034 | ✅ RT-local test checks all four Euclidean `mod` sign vectors and typed out-of-domain refusal |
 | FR-007 | FR-007-AC-19 | TC-034 | ✅ RT-local test checks both admitted exposed members and both typed refusals under every division profile |
@@ -68,7 +68,7 @@ here. Rows below retain 🚧 where a separate criterion or owner mapping is open
 | TC-032 | Read a determinate meter state at every stop | Unit | P0 | FR-011-AC-3, FR-011-AC-8 | 🚧 RT retains its lazy-connective control. |
 | TC-033 | Carry the compiler vocabulary byte-exactly | Integration | P0 | FR-012-AC-3, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8 | 🚧 RT definition/refusal controls, constructor absence, owner-only refusal vocabulary and identity-fixture inspection remain. |
 | TC-034 | Pin the retained exact scalar semantics | Unit | P0 | FR-007-AC-8, FR-007-AC-15, FR-007-AC-18, FR-007-AC-19 | 🚧 RT retains rounding, mod and integer-division consumer controls. |
-| TC-035 | Pin boxed value and type structs' hand-written Debug rendering | Unit | P1 | FR-007-AC-13 | 🚧 `tests/exact_unit_owner.rs` pins QSV's `CompoundUnit` Debug rendering; full owner evidence needs mapping |
+| TC-035 | Pin the consumed CompoundUnit Debug rendering | Unit | P1 | FR-007-AC-13 | ✅ `tests/exact_unit_owner.rs` pins the consumed QSV `CompoundUnit` Debug rendering. |
 | TC-194 | Apply checked functions with explicit frames and work fuel | Unit | P0 | FR-273-AC-1, FR-273-AC-2, FR-273-AC-3, FR-273-AC-6, FR-273-AC-7, FR-273-AC-8, FR-273-AC-9, FR-273-AC-10, FR-273-AC-11, FR-273-AC-12, FR-273-AC-13 | 🚧 RT retains linked-only input, explicit-frame, deep-call and work-fuel controls; identity-dependent plan/refusal controls now run in quire-integration TC-096. |
 | TC-195 | Negotiate a function's undischargeable capability as unsupported | Unit | P0 | FR-273-AC-4, FR-009-AC-5 | ✅ implemented |
 | TC-197 | Inspect that the runtime holds one kernel and no copy | Integration | P0 | FR-275-AC-1, FR-275-AC-2, FR-275-AC-3, FR-275-AC-4, FR-275-AC-5, FR-275-AC-12, FR-275-AC-13, FR-275-AC-14, FR-275-AC-15, FR-275-AC-16, FR-275-AC-17, FR-275-AC-18, FR-275-AC-19 | 🚧 planned across IR-349 (independent steps 1–4) and IR-1009 (step 5 and dependent end state): FR-275-AC-22 has its own inspection in TC-205. Function-application deletion awaits IR-590 target acceptance; step 7 fails while residue exists |
@@ -142,8 +142,8 @@ in TC-032 and backend negotiation in TC-030/TC-195; kernel deletion shall not re
   `IeeeDisposition` (`src/scalar/ieee.rs`), mirroring `InjectedDenial`'s.
 - TC-030: `tests/exact_negotiation.rs`; retained TC-032 RT quantity, lazy and graph
   cases: `tests/exact_meter_state.rs`; TC-033: `tests/exact_vocabulary.rs`;
-  retained and extended TC-034 cases: `tests/exact_semantics.rs`; retained TC-035
-  residue Debug cases: `tests/exact_debug_parity.rs`.
+  retained TC-034 cases: `tests/exact_semantics.rs`; TC-035 `CompoundUnit` Debug evidence:
+  `tests/exact_unit_owner.rs`.
 - TC-031: the retained residue charge-point driver in `tests/exact_outcomes.rs`.
   TC-016/017 kernel tests left with the RT kernel copy. Their matching owner evidence is in quire-exact.
 
