@@ -57,27 +57,28 @@ but interface-002-AC-5 and AC-6 remain Planned, so the complete TC-209 case
 remains Planned. The observed 86/0 harness result does not
 establish every stated test intention or accept the whole IT-018/TC-098 contract.
 
-**Backed by tests in `quire-integration` `tests/monitor_program.rs`:** each criterion
-below is exercised by the named test, tagged `TC-098` or `IT-018-SC-14`, in the
-owner repository. A reviewer read each test against its criterion text.
+**Implemented: backed by tests in `quire-integration` `tests/monitor_program.rs`:**
+each criterion below is exercised by the named test, tagged `TC-098` or
+`IT-018-SC-14`, in the owner repository. A reviewer read each test against its
+criterion text.
 
-- interface-002-AC-1: `retained_program_outlives_preparation_and_keeps_four_entry_keys`
+- interface-002-AC-1 (Implemented): `retained_program_outlives_preparation_and_keeps_four_entry_keys`
   checks root, entries, literal bodies, package lock, occurrence and the original
   clock, admitted-order and progress selection bytes against literals written in
   the test, not values derived from the returned Layout.
-- interface-004-AC-1: `lexical_missing_duplicate_sparse_and_foreign_declarations_refuse`
+- interface-004-AC-1 (Implemented): `lexical_missing_duplicate_sparse_and_foreign_declarations_refuse`
   covers the four refusals; the retained Let/Local source key and body path are
   asserted by `lexical_value_is_evaluated_once_within_its_scoped_body`.
-- interface-006-AC-3: `tuple_projection_retained_addresses_respect_scratch_budget`
+- interface-006-AC-3 (Implemented): `tuple_projection_retained_addresses_respect_scratch_budget`
   (scratch charge, retained source key and body path) and
   `tuple_deep_projections_use_explicit_continuations_without_subtree_copies`
   (2000-deep projection on a 512 KiB stack; the temporary owner count returns to 1);
   `tuple_projected_state_outlives_the_temporary_owner_in_declared_position_order`
   checks the original owner counts (2 at the monitor State).
-- interface-011-AC-3: `equality_and_union_scratch_denials_leave_no_partial_initial_state`,
+- interface-011-AC-3 (Implemented): `equality_and_union_scratch_denials_leave_no_partial_initial_state`,
   `checked_equality_and_union_retention_keep_native_operating_shortages` and
   `union_payloads_stop_in_declaration_order_before_a_later_native_denial`.
-- interface-012-AC-1: `dispatch_checks_each_independent_context_component_before_executing`
+- interface-012-AC-1 (Implemented): `dispatch_checks_each_independent_context_component_before_executing`
   refuses each of package, clause, subject, occurrence, clock, counter, unit, width,
   profile and order with state and reading baseline unchanged, and a lower valid
   watermark afterwards shows a rejected progress was not committed;
@@ -89,7 +90,7 @@ owner repository. A reviewer read each test against its criterion text.
 - interface-003-AC-3: invalid membership and native Work-limit channels are observed;
   native shared-conformance storage/path-capacity failure is not. An outer stack
   reservation failure during budget replacement is a different channel.
-- interface-007-AC-3: scratch charging and the retained source key and body path are
+- interface-007-AC-3 (Planned): scratch charging and the retained source key and body path are
   asserted by `record_member_addresses_consume_scratch_before_returning_state`, and
   declaration scans are charged by
   `record_dynamic_declaration_uses_its_own_order_and_charges_every_inspected_field`.
@@ -99,7 +100,7 @@ owner repository. A reviewer read each test against its criterion text.
   continuation in `src/monitor/vm.rs`, which the deep tuple test reaches, but no deep
   record projection test exists, so the explicit-continuation clause is unproven for
   records.
-- interface-010-AC-3: native visit, element and collection-result-retain stops are
+- interface-010-AC-3 (Planned): native visit, element and collection-result-retain stops are
   asserted by `sequence_visit_and_formation_stops_retain_native_causes_without_a_partial_value`
   and `collection_result_retention_denials_keep_the_native_charge_and_no_partial_state`.
   Explicit scratch stops are asserted by `sequence_fold_temporary_addresses_are_bounded_by_explicit_scratch`
