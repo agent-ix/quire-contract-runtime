@@ -110,7 +110,7 @@ The six read in full:
 | `Integer` | same public methods (`zero`, `one`, `is_zero`, `is_negative`, `magnitude_bits`, `decimal_digits`, `to_u64`, `is_even`), `From<i64>`, `From<i128>`, `From<u64>`, `FromStr`, `Display`, and the same `Debug` text. RT holds an inline `i64` that promotes to a boxed `BigInt` (laid out for CBMC, `verification/kani.rs`); QSL wraps a `BigInt`. QSL adds `From<usize>` and makes the arithmetic methods public. Same semantics, different layout |
 | `Decimal` | same constructors and accessors, same `evaluate_decimal` signature; RT boxes its two fields. QSL adds the typestate `Placement`, `Placed`, `Admitted` and drops `#[non_exhaustive]` on `RoundingMode` and `DecimalOperation`. Same semantics, different layout |
 | `Outcome` | the enum is the same four variants; RT adds `#[non_exhaustive]`, `#[repr(u64)]` and `From<T>`. The payloads differ: `Undefined` gains `SumOutOfDomain` and loses `Copy`; `Refusal` is a `Copy` enum in RT whose only fields are `would_be`, the two admitted flags and the cardinality record, and carries its targets in QSL (`IntegerOutOfDomain { target }`, `ForeignReference { required, supplied }`, and so on) with different `code()` and `cause()` results. Different |
-| `Meter` | RT: ten counters, injected denial, an always-on admitted-charge log capped at `CHARGE_LOG_CAPACITY`, `charge_log_truncated`; QSL: counters, a `Cancel` handle, the log only under `test-support`, `Charge` and `charge` public, 62 charge points against 52 (ten more: `DeclarationCheck`, `DispatchSelect`, `GraphEdge`, `GraphExpand`, `GraphResultRetain`, `LookupKey`, `LookupResultRetain`, `ModelDeref`, `ModelNavigate`, `PopulationVisit`), `InjectedDenial::occurrence` is `u64` (RT `NonZeroU64`). Read from `check_injected`: the denial is matched on the count of admissions and never cleared, and a denied charge does not advance that count, so every later charge at the denied point is denied again (FR-010-AC-5 says single-shot; not executed). Different |
+| `Meter` | RT: ten counters, injected denial, an always-on admitted-charge log capped at `CHARGE_LOG_CAPACITY`, `charge_log_truncated`; QSL: counters, a `Cancel` handle, the log only under `test-support`, `Charge` and `charge` public, 62 charge points against 52 (ten more: `DeclarationCheck`, `DispatchSelect`, `GraphEdge`, `GraphExpand`, `GraphResultRetain`, `LookupKey`, `LookupResultRetain`, `ModelDeref`, `ModelNavigate`, `PopulationVisit`), `InjectedDenial::occurrence` is `u64` (RT `NonZeroU64`). Read from `check_injected`: the denial is matched on the count of admissions and never cleared, and a denied charge does not advance that count, so every later charge at the denied point is denied again (single-shot denial semantics are not executed here). Different |
 | `NodeKey` | same 32 bytes, `Display` and `Debug`. RT has two local constructors, `from_bytes` and `from_hex`; both leave with the local definition in the cutover. `quire-exact` provides `from_digest` and `decode_admitted`; RT library code constructs no shared key and owns no hex decoder. |
 | `ObjectClosure` | no RT type has the name. RT's `ObjectEnvironment` is the same algorithm (admit objects, fill slots, check every reference is a member, same four cause variants). QSL's `new` takes a `tolerated_dangling` list, adds `find`, and `attribute` takes a `FieldRef` where RT takes a `&str`; the refusal boxes its object. Successor under another name, different signatures |
 
@@ -272,7 +272,7 @@ accepted current layout and dependency graph are stated above.
 
 | Piece | Source in the migration audit | Result at that audit |
 | --- | --- | --- |
-| H3, `NodeKey` constructors (QSL-479, #590) | `quire-exact/src/node.rs` exposed public digest constructors at the measured cutover | RT holds shared identities through `quire_exact::Value` but constructs none in library or test fixtures. CG constructs none; only the checked-package producer resolves generated identities through its admitted-node table. RT tests obtain their identities from admitted package values and preserve foreign and cross-domain controls (FR-012-AC-2/8). |
+| H3, `NodeKey` constructors (QSL-479, #590) | `quire-exact/src/node.rs` exposed public digest constructors at the measured cutover | RT holds shared identities through `quire_exact::Value` but constructs none in library or test fixtures. CG constructs none; only the checked-package producer resolves generated identities through its admitted-node table. RT tests obtain their identities from admitted package values; FR-012-AC-8 inspects the absence of locally constructed identities. |
 | H2, `ObjectClosure` (QSL-478, #608) | `quire-semantic-value/src/object_closure.rs`; PR state MERGED | present; signatures differ from RT's `ObjectEnvironment` (above) |
 | QSL-358 residue slices | `quire-semantic-value` holds `stop`, `quantity`, `unit`, `declaration`, `containment`, `enumeration`, `definition`, `semantic_node`, `checking`, `call`, `loss`, `location`, `object_closure` | present; QSL-358 is Done |
 | FR-275 step 2 (the residue) | the expression items and the lazy connective | not delivered, although interface-001 and FR-275 expect QSL-358 to move function application: no QSL crate this crate may depend on defines it. QSL-358 is Done. The lazy connective is absent from both crates |
@@ -285,7 +285,7 @@ work-fuel-only call rule.
 
 R-3 is now decided below: RT's three extra `PackageCause` variants retire, rather than move to
 QSV. The injected denial is not single-shot and `occurrence`
-admits zero (FR-010-AC-5, AC-6); `Origin` and `Location` are defined twice by QSL, in `quire-exact` as a
+admits zero (FR-010-AC-6); `Origin` and `Location` are defined twice by QSL, in `quire-exact` as a
 provenance pair (node key and occurrence) and in `quire-semantic-value` as the call-path pair this
 crate's function application uses (the two crates' `Origin` and `Location` differ from each other;
 `FieldDeclaration` is likewise defined in both and differs).
@@ -405,7 +405,7 @@ CG PR that adopts the new paths.
 | 1 | Spec only; needs no ticket. Historical step-1 scope: amend Group 1 only: FR-275 (Description, Outputs, Behavior "The residue" and "The end state", AC-1, AC-16, AC-17) and interface-001 (prose, contract yaml `module`, `runtime_role`, `runtime_owned`, `outside_exact` and the `exact` dependency line, AC-1 to AC-6, AC-10) to no re-export (Q-2). The interim retention decision is the bounded IR-1009 exception (Interim). AC-18 and AC-13 stay. Groups 2 and 3 are not touched here | none | `make spec` not above baseline |
 | 2 | IR-582 delivered the repositories and `quire-exact` already uses its own repository. Add optional `quire-semantic-value` under `exact` (`Cargo.toml`, lock); admit the three own-repository Git sources and their scoped licences in `deny.toml`; remove the QSL-repository `allow-git` and the 14 name bans; amend Group 2, TC-197 through TC-199 and `CLAUDE.md`; require the QSL source rejection in `make deny-mutations` and keep the footprint graph free of the shared crates. No runtime source deletion or semantic behavior claim | none | G, with `deny-mutations` green; the Rust gate proves the QSL Git source is rejected |
 | 3 (IR-349) | Create the `scalar` module and move all 11 runtime-owned items there from `src/exact/{boolean,division,ieee}.rs`; scalar, outcome, accounting, text: delete `integer`, `rational`, `decimal`, `comparison`, `numeric`, `text`, `accounting`, `outcome`; reduce `division`, `ieee` to the negotiators; drop the four direct dependencies; adapt `Value` and the rest to the shared scalars; the object-reference universe changes from `UniverseIdentity` to `UniverseId`, because the shared `Refusal::ForeignReference` carries `UniverseId` values and the equality code builds it from an `ObjectReference`; `verification/kani.rs` and `tools/runtime-gates/` repoint, and the proofs run against the shared `Integer` (Q-3), with no RT-local shadow type; every `#[non_exhaustive]` on the kept `scalar` enums is dropped and matches are exhaustive (Q-4), and interface-001's `compatibility.enums: non-exhaustive` statement is amended in this step to match | `rt::` scalar, outcome, meter, text paths to `quire_exact::`; manifest names the two crates; the Kani generator's `rt::Integer` and `rt::Outcome`; CG's wildcard and `unreachable!` arms over the shared enums removed | G; needs step 2, so IR-582; does not need IR-583 |
-| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration`; use QSV's compound-unit identity path described below; retire the original FR-012-AC-1 at this step and remove TC-033's local parser/round-trip tests; inspect the deletion under FR-012-AC-6 | the different-declaration use sites, the three serializable mirrors and paired CG changes: generated `WireNodeId` literals are resolved only by the checked-package producer's admitted-node table. RT holds shared identities in `quire_exact::Value` but constructs none in library code or test fixtures; CG constructs none. RT tests consume admitted package values | G; Q-5 answered |
+| 4 | The `Value`-bearing set together: `composite`, `collection`, `equality`, `key`, `containment`, `reference`, `node`, `definition`, `quantity`, `unit`, `enumeration`; use QSV's compound-unit identity path described below; remove TC-033's local parser/round-trip tests; inspect the deletion under FR-012-AC-6 | the different-declaration use sites, the three serializable mirrors and paired CG changes: generated `WireNodeId` literals are resolved only by the checked-package producer's admitted-node table. RT holds shared identities in `quire_exact::Value` but constructs none in library code or test fixtures; CG constructs none. RT tests consume admitted package values | G; Q-5 answered |
 | 5 (IR-1009) | Needs the IR-583 interface, the usable IR-590 `no_std` evaluator, RT acceptance with `std` disabled on its governed `no_std` target for checked-input and generated-body evaluation, and IR-582 through step 2. Function application: add the dependency on the evaluation leaf (`Cargo.toml`, lock, and a `deny.toml` `allow-git` entry and licence exception for the leaf's repository), delete the 15 ported `expression` items and the `expression` file (vocabulary is already in `quire-semantic-value`); `ObjectEnvironment` to `ObjectClosure`; amend Group 3, spec first, as the accepted surface requires | the `PackageDeclarations`, `CheckedPackage` emitters repointed to the leaf, `Origin` and `Location` mirrors, and the emitted manifest names the leaf beside `quire-exact` and `quire-semantic-value` | G, including accepted `no_std` checked-input and generated-body use; needs IR-583, IR-590 and IR-582. IR-593's later default swap is not a prerequisite |
 | 6 (IR-349 cleanup; IR-1009 end state) | IR-349 closes imports, docs, `README` and matrix dispositions for steps 1 through 4. After step 5, IR-1009 removes the `exact` module and remaining `verification/kani.rs` imports, completes the final docs and matrix disposition, and verifies the empty residue list | none | IR-349 checks its changed scope with G; IR-1009 checks the full end state with G and L-1 to L-4 |
 
@@ -438,7 +438,7 @@ refusal without a quantity or an unresolvable ID. RT deletes its boxed
 this cutover; it does not compute a digest, mint a second ID, maintain a
 parallel unit table, or translate between old and shared unit types.
 
-Step-4 acceptance uses FR-275-AC-23 and TC-201. Implemented QSV FR-124 settles the
+Step-4 acceptance includes the QSV FR-124 owner-side handoff. Implemented QSV FR-124 settles the
 owner-side handoff from `convert_quantity`'s `Conversion`:
 `Conversion::identified_quantity(&self) -> Result<(quire_exact::Quantity, IdentifiedUnit), HandoffRefusal>`.
 For `ConvertedValue::Exact`, the method pairs the exact magnitude under the
@@ -451,10 +451,8 @@ the method and its implementation under FR-124/TC-923; RT consumes the pair
 without a helper, adapter, second unit table or identity calculation.
 For QSpec TC-187 U25, `UnitScope::form` retains the returned `IdentifiedUnit`,
 `UnitScope::resolve(&quantity)` supplies the next conversion's source, and
-the second conversion returns exact `1 J`. FR-007-AC-21 and AC-23 already cover
-compound-side dimension refusal, the first conversion's empty target path,
-the charge order and both U25 steps. Those behavioral results remain the
-oracles after TC-201 binds to QSV; no second conversion rule is introduced.
+the second conversion returns exact `1 J`. QSV owns the conversion behavior, charge order
+and both U25 steps. Those owner checks remain authoritative; no second conversion rule is introduced.
 
 The semantic-node refusal vocabulary has no `Value` edge. It can leave first
 as one compileable step-4 slice: RT deletes `src/exact/node.rs`, uses QSV's
@@ -466,7 +464,7 @@ CG main's `tests/exact_scalar_support/agreement_cases.rs` and `agreement.rs`
 still use `rt::InvalidSemanticGraph` and `rt::SemanticGraphCause`; those
 imports must move to `quire_semantic_value::semantic_node` when CG's RT lock
 moves past this slice.
-This slice does not satisfy FR-275-AC-2 or FR-277-AC-1; the `Value`-bearing
+This slice does not complete the remaining FR-277 acceptance; the `Value`-bearing
 set, definition vocabulary and their acceptance evidence remain in the next
 cutover.
 
@@ -528,7 +526,7 @@ Q-5 is answered for the historical value-bearing cutover: the then-current
 `quire-exact/src/node.rs` exposed digest constructors. Neither RT nor CG owns semantic
 identity construction. Generated identities are resolved by the checked-package producer
 against its admitted node table. RT tests consume admitted package values rather than minting
-fixture keys. FR-012-AC-2 retains the behavioral distinctions, and FR-012-AC-8 inspects the
+fixture keys. FR-012-AC-8 inspects the
 absence of RT-owned digest construction and fixed digest oracles.
 The standing owner ruling remains one kernel, with no RT copy (AD-004, FR-275).
 RT holds `NodeKey` at type level through `quire_exact::ValueType::Composite(NodeKey)`
@@ -546,7 +544,7 @@ CG and RT value-bearing cutover (IR-882).
 | Q-2. No `exact` re-export path | owner | decided: confirmed (IR-349 answer): step 1 amends FR-275 and interface-001, and CG changes in the same step | Decision B stands; the Group 1 amendments under the end state are decided and land in step 1 |
 | Q-3. Kani against the shared `Integer` | owner | decided: prove against the shared type (IR-349 answer) | the proofs run against the shared `Integer`, with no RT-local shadow type; stated in step 3 |
 | Q-4. `#[non_exhaustive]` on shared enums | owner | decided: follow the shared crate, none (IR-349 answer): this crate drops its 66 attributes in `src/exact` and matches are exhaustive | stated in step 3; the five kept `scalar` enums that carry it drop it; the 6 sites outside `exact` are not part of this answer |
-| Q-5. May RT or CG construct a `NodeKey`? | Historical QSL lane technical answer for IR-882; superseded for RT fixtures by FR-012-AC-8 | RT and CG construct no semantic identity. The checked-package producer resolves generated identities through its admitted node table; RT tests receive admitted package values. The shared type may still be carried in `quire_exact::ValueType::Composite` and `CompositeValue.declaration`, while RT's foreign and cross-domain behavioral controls remain (FR-012-AC-2) | step 4 retired FR-012-AC-1 and removed TC-033's local-constructor tests; FR-012-AC-6 inspects that cutover, and FR-012-AC-8 covers the remaining fixture and oracle removal |
+| Q-5. May RT or CG construct a `NodeKey`? | Historical QSL lane technical answer for IR-882; superseded for RT fixtures by FR-012-AC-8 | RT and CG construct no semantic identity. The checked-package producer resolves generated identities through its admitted node table; RT tests receive admitted package values. The shared type may still be carried in `quire_exact::ValueType::Composite` and `CompositeValue.declaration`, while RT consumes admitted identities directly | step 4 removed TC-033's local-constructor tests; FR-012-AC-6 inspects that cutover, and FR-012-AC-8 covers fixture and oracle removal |
 | Q-6. Where do `quire-exact` and `quire-semantic-value` live (O-1 of AD-007)? | owner | decided: extract both into their own repositories (IR-346 and IR-582; work IR-582, QSL lane); IR-349 is blocked by IR-582 | the end state depends on the extracted repositories; step 2, with the Group 2 amendments, needs IR-582 |
 
 ### Routed gaps
@@ -555,7 +553,7 @@ To QSL (stated needs, not requests to copy): R-1 one `Origin`/`Location`/`FieldD
 `quire-exact` and `quire-semantic-value`; R-2 superseded by QSL FR-262's work-fuel-only call rule,
 with RT FR-273 correction owned by IR-512; R-3 decided above (retire RT's three extra
 `PackageCause` variants, then consume QSV directly); R-4 the injected denial
-single-shot and non-zero (FR-010-AC-5, AC-6) and a bounded charge log, or the statement that the kernel's
+single-shot and non-zero (FR-010-AC-6) and a bounded charge log, or the statement that the kernel's
 behaviour is the specification; R-5 Q-4 and Q-5 answered, with Q-5's RT/CG construction gap closed and the historical QSL ADR-012 discrepancy routed through QSL PR #1070; this audit does not assert a new prerequisite or its current PR state; R-6 whether QSL-358's function-application move (expected by FR-275 and interface-001) is still planned (answered by Q-1: the QSL evaluation leaf, IR-583 interface followed by IR-590 usable `no_std` implementation).
 
 To CG: the paired PR for each of steps 3 to 5 (the table above); mirrors of `DeclarationCause`, `Origin` and

@@ -1,36 +1,26 @@
 ---
 id: TC-035
-title: "Pin boxed value and type structs' hand-written Debug rendering"
+title: "Pin the consumed CompoundUnit Debug rendering"
 type: TC
 relationships:
   - target: ix://agent-ix/quire-contract-runtime/FR-007
     type: verifies
 ---
-# TC-035: Pin boxed value and type structs' hand-written Debug rendering
+# TC-035: Pin the consumed CompoundUnit Debug rendering
 
 ## Description
 
-`Rational`, `RationalDomain`, `Decimal`, `DecimalType`, `Quantity`, `Text`, `EnumValue`,
-`ObjectReference` and `CompoundUnit` each hold their fields behind one `Box` (a Kani-provability
-layout constraint; see `AD-002`'s risk section), which turned their derived `Debug` into a
-hand-written impl that lists each `*Fields` field explicitly. A field added to a `*Fields` struct
-but not to its `Debug` impl would disappear from the rendering with nothing to notice, since
-FR-007-AC-6's own Debug-parity oracle (equal renderings against the quire-spec-language authority) is removed from
-this repository; recreating it in agent-ix/quire-integration is planned with open quire-integration ticket IR-669 (IR-430 removal is Done).
-The kernel move retired RT's boxed scalar and enum implementations. The retained RT evidence is
-`tests/exact_debug_parity.rs` (`--features exact`) for `CompoundUnit`; the rest is planned owner
-evidence. The nine-type procedure below is preserved as the original obligation.
-
-This is not FR-007-AC-6's oracle: it makes no comparison against the quire-spec-language authority, and it
-covers only these nine boxed structs, not the shared corpus. It is a same-tree regression pin.
+The runtime consumes QSV's `CompoundUnit`. Preserve a same-tree regression pin for its `Debug`
+rendering through `tests/exact_unit_owner.rs` (`--features exact`), the one remaining RT-owned
+obligation in FR-007-AC-13.
 
 ## Test Procedure
 
-1. Construct one instance of each of the nine boxed structs through its public API.
-2. Render each with `{:?}` and compare the result to a fixed string listing every field the
-   corresponding `*Fields` struct declares, in declaration order.
+1. Construct a `CompoundUnit` through its public API.
+2. Render it with `{:?}` and compare the result to a fixed string listing every field its
+   `CompoundUnitFields` struct declares, in declaration order.
 
 ## Expected Results
 
-Every rendering matches its pinned string exactly. A field added to a `*Fields` struct without a
-matching addition to its `Debug` impl changes the rendering and fails the comparison.
+The `CompoundUnit` rendering matches its pinned string exactly. A field added to `CompoundUnitFields`
+without a matching addition to its `Debug` impl changes the rendering and fails the comparison.
