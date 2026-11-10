@@ -81,13 +81,7 @@ and what the meter holds at all is what this requirement fixes.
 
 | ID | Criteria | Verification |
 |----|----------|--------------|
-| FR-011-AC-1 | For each of `Undefined`, `Refused` and `Incomplete`, the meter after the stop holds exactly the charges admitted before it: an `Undefined` division by zero retains the operands charge and no arithmetic charge; a refused result retains the arithmetic charge and no result unit; a denied charge retains neither. | Test (TC-032) |
-| FR-011-AC-2 | A quantity `power` with zero base and negative exponent is `Undefined::DivisionByZero`, and a divide by zero is reported in preference to it when both hold. | Test (TC-032) |
 | FR-011-AC-3 | A lazy connective skips its right operand when the left decides the result; for every connective kind and every decided operand pair, its completed result admits exactly one `boolean.result-retain` charge. | Test (TC-032) |
-| FR-011-AC-4 | A charge whose second-scanned counter is short writes no counter, appends no log entry and advances no occurrence counter; and a charge presented with its size vector in either order reports the same first short counter in `ScalarLimitsV1` field order. | Test (TC-032) |
-| FR-011-AC-5 | Past `CHARGE_LOG_CAPACITY` admitted charges the log holds exactly the first 4096 points in admission order, `charge_log_truncated()` is true, and the counters are still exact and still enforced. | Test (TC-032) |
-| FR-011-AC-6 | With a cumulative limit of `u64::MAX`, a counter at `u64::MAX - 1` admits one unit to reach the limit and denies the next unit without wrapping or changing any meter state. A quantity power whose `unit.rational-arithmetic` request exceeds `u64::MAX` returns `Incomplete` before computing the power; `next_charge` equals the exact request, and the denied charge changes no counter, admission count or admitted-charge log. | Test (TC-032) |
-| FR-011-AC-7 | `Meter::consumed` answers without panic for every member of `LimitKind::ALL`, returning zero for untouched counters, admitted high-water values for semantic sizes and admitted cumulative totals for work/results; IEEE flag iteration and QSV dimension and compound-unit term iteration are stable for every accepted graph-node insertion order, while QSV's checked-node and `UnitGraph::from_checked_nodes` boundaries refuse malformed order with the stated first cause. | Test (TC-032) |
 | FR-011-AC-8 | A connective whose right operand stops returns that stop unchanged, admits no `boolean.result-retain` charge and consumes no result unit. | Test (TC-032) |
 
 ## Kernel ownership

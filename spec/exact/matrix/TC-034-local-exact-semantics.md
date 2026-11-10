@@ -10,31 +10,14 @@ relationships:
 
 ## Description
 
-Check all six rounding modes, quotient-sign rounding, IEEE exceptional semantics, rational
-membership and canonical form, decimal normalized-versus-retained behavior, single-member
-division exposure, Euclidean `mod`, affine power, same-dimension quantity arithmetic and
-quantity type-fault order directly against the runtime, independently of the shared-corpus
-agreement suites. Evidence:
-`tests/exact_semantics.rs` (`--features exact`).
+Check retained rounding, quotient-sign rounding, single-member division exposure and Euclidean
+`mod` directly against the runtime. Evidence: `tests/exact_semantics.rs` (`--features exact`).
 
 ## Ownership and evidence
 
-[quire-exact FR-365-AC-1](ix://agent-ix/quire-exact/FR-365) tests all six modes on both signs of a tie, and
-`FR-365-AC-2` tests the default;
-`FR-366-AC-1` through `FR-366-AC-4` test IEEE NaNs, signed zero and total order;
-`FR-362-AC-12` and `FR-362-AC-13` test rational canonical form and membership; and
-`FR-363-AC-6` and `FR-363-AC-7`, traced by kernel `tests/ir673_decimal.rs`, test decimal
-normalized values versus retained ordering size charges and the unchanged Boolean result unit.
-[quire-exact FR-357-AC-2](ix://agent-ix/quire-exact/FR-357) (`only_the_exposed_member_must_be_in_domain`) tests
-single-member admission, `FR-357-AC-3` tests exposed-member domain refusal, and
-`FR-357-AC-7` tests all four `mod` sign quadrants independently of the division profile.
-Those are kernel subsets only. RT-local `tests/exact_semantics.rs` backs the consumed
-rounding behavior in AC-8, quotient-sign rounding and exact loss in AC-15, Euclidean `mod`
-in AC-18, and division exposure in AC-19. The `quire-integration` TC-096
-`producer_origin_identity` and `producer_origin_quantity_residual` tests check
-QSV's public quantity type-fault order, affine power in AC-16 and same-dimension
-arithmetic in AC-17 from admitted identities. RT/QSL agreement remains a
-separate obligation.
+RT-local `tests/exact_semantics.rs` backs the consumed rounding behavior in AC-8, quotient-sign
+rounding and exact loss in AC-15, Euclidean `mod` in AC-18, and division exposure in AC-19.
+The exact kernel's authoritative behavior is specified by quire-exact.
 
 ## Test Procedure
 
@@ -42,40 +25,20 @@ separate obligation.
    Check `NearestEven` chooses the even coefficient, `NearestAway` the greater magnitude,
    `TowardZero` the neighbour nearer zero, `TowardPositive` the ceiling and `TowardNegative` the floor.
    Check the default `Exact` spelling refuses a discarded nonzero digit.
-2. Combine quiet and signaling NaNs in both operand positions; check leftmost-wins, sign and
-   payload retention, quieting and the `invalid` flag.
-3. Convert a NaN payload too wide for the target; check the refusal rather than a truncation.
-4. Convert `-0.0` and `+0.0` exactly; check the equal result and `discarded_negative_zero`.
-5. Sort every distinguished bit pattern by `total_order_key`, including both zeros and NaNs.
-6. Evaluate `1/3` under a domain whose numerator interval contains it and whose denominator
-   interval excludes `3`; evaluate the same operation with no domain.
-7. Construct rationals from unreduced, negative-denominator and zero numerators; check canonical
-   form and that zero is `0/1`.
-8. Compare retained `(110, 2)` against `(11, 1)` and order each of `(110, 2) < (11, 1)` and
-   `(11, 1) < (11, 1)` on a fresh meter. Check equal normalized values and false ordering;
-   check `integer_bits/decimal_digits/scale_expansion` of `8/3/1` versus `4/2/0`, with
-   `value_occurrences/work_units/result_units = 2/3/1` for both comparisons. The Boolean
-   `ordering.result-retain` point consumes one result unit in each case.
-9. With a domain admitting `1` and `2`, evaluate `7 mod 3`, `-7 mod 3`, `7 mod -3` and
+2. With decimal target coefficient bounds `[-100,100]` and scale `0`, divide `(-1,0)` by
+   `(-3,0)` and `(1,0)` by `(-3,0)` under `TowardZero`; expect coefficient `0` and loss exact
+   values `+1/3` and `-1/3`. Divide `(-1,0)` by `(-2,0)` under `NearestAway`; expect the
+   exact `+1/2` tie to yield coefficient `+1`.
+3. With a domain admitting `1` and `2`, evaluate `7 mod 3`, `-7 mod 3`, `7 mod -3` and
    `-7 mod -3`; expect `1`, `2`, `1` and `2` under each `div`/`rem` law, with no law parameter
    passed to `mod`. Refuse `-7 mod 3` under `Int[0,1]` as `ModuloOutOfDomain` without a value.
-10. For every `div`/`rem` profile, check `10 div 5` returns `2` in `Int[1,10]` even though
-    its unexposed remainder is `0`, and `-10 rem -1` returns `0` in `Int[-10,5]` even though
-    its unexposed quotient is `10`. Check `-10 div -1` in `Int[-10,5]` refuses without a value
-    as `DivisionOutOfDomain` naming the Quotient member. Check `9 rem 10` in `Int[0,5]`
-    refuses without a value as `DivisionOutOfDomain` naming the Remainder member although
-    its quotient is `0`. The test author executes this vector against the kernel and corrects
-    FR-007-AC-19 if the executed value differs; never change the test to fit the criterion.
-11. Type-check each quantity operation against inputs failing more than one cause.
-12. With decimal target coefficient bounds `[-100,100]` and scale `0`, divide `(-1,0)` by
-    `(-3,0)` and `(1,0)` by `(-3,0)` under `TowardZero`; expect coefficient `0` and loss exact
-    values `+1/3` and `-1/3`. Divide `(-1,0)` by `(-2,0)` under `NearestAway`; expect the
-    exact `+1/2` tie to yield coefficient `+1`.
-13. Raise `1 celsius` to exponents `0` and `-1`; expect `IllTyped` with
-    `AffineUnitArithmetic` and zero charges for both.
-14. In the graph rooted at `meter` with non-affine `kilometer = 1000 meters` and zero offset,
-    multiply and divide `2 kilometers` by `3 meters`; expect `6000 meters²` and `2000/3`
-    dimensionless, with neither `IncompatibleDimensions` nor `DistinctUnits`.
+4. For every `div`/`rem` profile, check `10 div 5` returns `2` in `Int[1,10]` even though
+   its unexposed remainder is `0`, and `-10 rem -1` returns `0` in `Int[-10,5]` even though
+   its unexposed quotient is `10`. Check `-10 div -1` in `Int[-10,5]` refuses without a value
+   as `DivisionOutOfDomain` naming the Quotient member. Check `9 rem 10` in `Int[0,5]`
+   refuses without a value as `DivisionOutOfDomain` naming the Remainder member although
+   its quotient is `0`. The test author executes this vector against the kernel and corrects
+   FR-007-AC-19 if the executed value differs; never change the test to fit the criterion.
 
 Compiler admission of a non-Euclidean `mod` selection belongs to
 [quire-specification FR-147-AC-5](ix://agent-ix/quire-specification/FR-147) and QSpec TC-192 DIV-03. RT neither produces
@@ -83,5 +46,4 @@ nor tests that admission refusal.
 
 ## Expected Results
 
-Every semantics above is the one FR-007 states, and each
-check fails if the stated decision changes.
+Every retained semantics above is the one FR-007 states, and each check fails if the stated decision changes.

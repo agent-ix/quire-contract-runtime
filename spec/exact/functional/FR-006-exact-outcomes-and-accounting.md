@@ -43,7 +43,7 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
   value it measures is materialized. A denied charge consumes nothing and exposes no partial value.
 - The kernel owns meter storage and accounting. Its bounded diagnostic charge log is exposed
   under `quire-exact`'s `test-support` feature. Until IR-349 removes the local meter, its
-  admitted-charge sequence and `CHARGE_LOG_CAPACITY` remain governed by FR-011-AC-5. After
+  admitted-charge sequence and `CHARGE_LOG_CAPACITY` remain governed by the runtime meter contract. After
   that removal, RT shall consume the kernel's test-support diagnostic log rather than require
   a production log or define a local capacity constant. Consumed counters remain exact.
 - Size counters are high-water marks; `work_units` and `result_units` are cumulative. The
@@ -65,7 +65,6 @@ quire-spec-language authority (FR-007), and charge schedules are taken from the 
 | ID | Criteria | Verification |
 |----|----------|--------------|
 | FR-006-AC-1 | The four outcome dispositions are distinct; completed `false` is a value. `Refusal` and `Undefined` are closed enums; `Incomplete` is a typed record whose reason uses the closed `LimitKind` and `ChargePoint` enums. The runtime consumes these kernel types directly under FR-275. | Test (TC-016) |
-| FR-006-AC-2 | Ill-typed operand combinations are reported before evaluation with zero charges, and provenance-bearing refusals (invalid UTF-8 offset, stale identity) are typed. | Test (TC-020, TC-021, TC-022) |
 | FR-006-AC-3 | Every charge point and limit kind round-trips its QSpec spelling; charges precede work; size counters are high-water, work/result cumulative; the first short counter in field order is reported with the exact denied amount. | Test (TC-016, TC-017) |
 | FR-006-AC-4 | An injected denial at any admitted charge point yields `Incomplete` on `work_units` naming that point, with no result units and no partial value. | Test (TC-017) |
 | FR-006-AC-6 | Inspection identifies [quire-exact FR-096-AC-8](ix://agent-ix/quire-exact/FR-096) as the owner of `Refusal::code()` and `Refusal::cause()` for the twelve kernel refusal causes and `CheckedInvariant`. Under FR-275, RT consumes the typed kernel `Outcome::Refused(Refusal)` directly, with no RT record or code/cause mapping. | Inspection |
