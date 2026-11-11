@@ -6,9 +6,9 @@ mod charge_points;
 use charge_points::ChargePoints;
 use ix_trace_rs::trace;
 use quire_exact::{
-    compare_keys, construct_collection, form_collection, BoundViolation, CardinalityBound,
-    ChargePoint, CheckedInvariantCause, CollectionKind, CollectionType, Component,
-    ConstructionCause, ConstructionRefusal, Decimal, DecimalType, Deferred, Incomplete,
+    compare_keys, construct_collection, form_collection, planned_equality, BoundViolation,
+    CardinalityBound, ChargePoint, CheckedInvariantCause, CollectionKind, CollectionType,
+    Component, ConstructionCause, ConstructionRefusal, Decimal, DecimalType, Deferred, Incomplete,
     InjectedDenial, Integer, LimitKind, Meter, OptionValue, Outcome, Refusal, RoundingMode,
     ScalarLimits, Undefined, Value, ValueType,
 };
@@ -152,6 +152,39 @@ fn coalescence_charges_each_comparison_before_bound_and_retention() {
                 .unwrap()
                 .value_occurrences,
             Some(1)
+        );
+    }
+}
+
+#[trace("FR-008-AC-12")]
+#[test]
+fn equality_planning_pairs_elements_in_stored_order() {
+    let decimals = |pairs: [(i128, u32); 2]| -> Vec<Value> {
+        pairs
+            .into_iter()
+            .map(|(c, s)| Value::Decimal(Decimal::new(Integer::from(c), s)))
+            .collect()
+    };
+    // 2.0 sorts after 1.10 by canonical key, so the first input is descending.
+    let descending = || decimals([(20, 1), (110, 2)]);
+    let ascending = || decimals([(110, 2), (20, 1)]);
+    assert_eq!(
+        compare_keys(&descending()[0], &descending()[1]),
+        Some(std::cmp::Ordering::Greater)
+    );
+
+    for (kind, expected) in [
+        (CollectionKind::Sequence, false),
+        (CollectionKind::OrderedSet, false),
+        (CollectionKind::Set, true),
+        (CollectionKind::Bag, true),
+    ] {
+        let left = form(kind, descending(), &mut Meter::new(UNLIMITED));
+        let right = form(kind, ascending(), &mut Meter::new(UNLIMITED));
+        let outcome = planned_equality(&left, &right, &mut Meter::new(UNLIMITED));
+        assert!(
+            matches!(outcome, Outcome::Completed(equal) if equal == expected),
+            "{kind:?}: expected Completed({expected})"
         );
     }
 }
