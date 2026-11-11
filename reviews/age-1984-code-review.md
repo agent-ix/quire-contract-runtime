@@ -28,3 +28,14 @@ Ticket AGE-1984, PR #221, head b3fb6224b5c6d9b4d0045b256bd928fad1c82ca1 against 
 | --- | --- | --- | --- |
 | FND-001 | high | The FR-008-AC-12 test has no oracle for visiting order: it re-asserts AC-11 stored order and a caller-side copy into a sequence, so it stays green if equality planning or formation visited in canonical-key order. | tests/exact_collection_consumer.rs:159-210 |
 | FND-002 | low | The trailing ordered-set block re-forms the same collection to re-prove a key inequality already established by the opening assertion and the ordered-set expectation. | tests/exact_collection_consumer.rs:196-210 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Verified at 29e351bc: `equality_planning_pairs_elements_in_stored_order` forms each kind from descending and ascending inputs and asserts `planned_equality` gives `Completed(false)` for sequence and ordered set and `Completed(true)` for set and bag. Scratch mutation (left formed from canonically sorted input) went red on Sequence, then on OrderedSet. |
+| FND-002 | fixed | Verified at 29e351bc: the redundant trailing ordered-set re-formation block is removed. |
+
+## Disposition verdict (round 1)
+
+**PASS** — both findings fixed at 29e351bc; no new finding. Focused binary `exact_collection_consumer` passes 14 of 14. A same-order positive control for the ordered kinds would also rule out a planner that always answers false for them; this is optional hardening, not a defect.

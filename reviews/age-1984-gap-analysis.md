@@ -30,3 +30,14 @@ Ticket AGE-1984, PR #221, head b3fb6224b5c6d9b4d0045b256bd928fad1c82ca1. Planles
 ## Coverage
 
 FR-008-AC-10 and FR-008-AC-11 have real RT-local consumer tests. FR-008-AC-12 has a tag but no discriminating assertion. A direct observable exists through the public kernel API: form two ordered sets (and two sequences) from the same members in different supplied orders, e.g. [2.0, 1.10] and [1.10, 2.0]; `planned_equality` must return `Completed(false)` because pairs are formed by stored rank, while two sets and two bags from the same inputs return `Completed(true)`. That goes red if planning visits canonical-key order while storage keeps supplied order.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Verified at 29e351bc: the FR-008-AC-12 tag now binds `equality_planning_pairs_elements_in_stored_order`, which observes equality-planning visitation through public `planned_equality` and goes red under canonical-key visiting (scratch mutation red on Sequence and OrderedSet). |
+| FND-002 | fixed | Verified at 29e351bc: prose now scopes AC-12 evidence to `planned_equality`, states set and bag pair by canonical stored order, keeps 🚧 and "remaining kernel evidence is open"; no overclaim found. |
+
+## Disposition verdict (round 1)
+
+**PASS** — both findings fixed at 29e351bc; no new finding. The further-formation clause of FR-008-AC-12 is evidenced only by caller enumeration in the untagged `further_formation_consumes_retained_order_and_repeated_occurrences`, since the kernel exposes no formation over a retained collection; the new prose does not claim it. Plan completion: not assessed.
