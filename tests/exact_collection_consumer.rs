@@ -156,6 +156,59 @@ fn coalescence_charges_each_comparison_before_bound_and_retention() {
     }
 }
 
+#[trace("FR-008-AC-12")]
+#[test]
+fn visiting_a_retained_collection_follows_its_stored_order() {
+    let supplied = input();
+    // The supplied order is not canonical-key order, so a visit that sorted
+    // sequences or ordered sets by key would differ from the stored order.
+    assert_eq!(
+        compare_keys(&supplied[0], &supplied[2]),
+        Some(std::cmp::Ordering::Greater)
+    );
+
+    for (kind, expected) in [
+        (
+            CollectionKind::Sequence,
+            &[(20, 1), (110, 2), (11, 1), (2, 0), (1100, 3)][..],
+        ),
+        (CollectionKind::OrderedSet, &[(20, 1), (110, 2)][..]),
+        (CollectionKind::Set, &[(110, 2), (20, 1)][..]),
+        (
+            CollectionKind::Bag,
+            &[(110, 2), (110, 2), (110, 2), (20, 1), (20, 1)][..],
+        ),
+    ] {
+        let value = form(kind, supplied.clone(), &mut Meter::new(UNLIMITED));
+        assert_representations(&value, expected);
+        let Value::Collection(collection) = &value else {
+            panic!("expected collection");
+        };
+        // A further formation visits the retained elements in stored order.
+        let revisited = form(
+            CollectionKind::Sequence,
+            collection.elements().to_vec(),
+            &mut Meter::new(UNLIMITED),
+        );
+        assert_representations(&revisited, expected);
+    }
+
+    let ordered = form(
+        CollectionKind::OrderedSet,
+        supplied,
+        &mut Meter::new(UNLIMITED),
+    );
+    let Value::Collection(ordered) = &ordered else {
+        panic!("expected collection");
+    };
+    let members = ordered.elements();
+    assert_eq!(
+        compare_keys(&members[0], &members[1]),
+        Some(std::cmp::Ordering::Greater),
+        "ordered-set stored order must differ from canonical-key order"
+    );
+}
+
 // Callers explicitly enumerate
 // the public retained slice. This does not observe equality-planner visitation.
 #[test]
